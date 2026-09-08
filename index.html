@@ -126,20 +126,74 @@
                             <select id="p_sample" class="w-full" required></select>
                         </div>
                         
-                        <div class="md:col-span-4 bg-blue-50 p-4 rounded-lg border border-blue-100">
-                            <label class="block text-sm font-bold text-blue-800 mb-2">Selective Organism</label>
+                        <!-- Selective Organism (Internal Record) -->
+                        <div class="md:col-span-2 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                            <label class="block text-sm font-bold text-blue-800 mb-2">Selective Organism (Lab Record)</label>
                             <select id="p_organism" class="w-full select2-enable" required>
                                 <option value="">Type name or shortcode (e.g., ECO, PAE)...</option>
                             </select>
-                            <div class="mt-3 flex flex-wrap gap-2 items-center">
-                                <span class="text-xs text-gray-500 font-semibold mr-2">Quick Select:</span>
-                                <button type="button" onclick="quickSelectOrganism('Escherichia coli (E.coli)')" class="text-xs bg-white text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-600 hover:text-white transition">E. coli</button>
-                                <button type="button" onclick="quickSelectOrganism('Klebsiella pneumoniae')" class="text-xs bg-white text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-600 hover:text-white transition">K. pneumoniae</button>
-                                <button type="button" onclick="quickSelectOrganism('Staphylococcus aureus')" class="text-xs bg-white text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-600 hover:text-white transition">S. aureus</button>
-                                <button type="button" onclick="quickSelectOrganism('Pseudomonas aeruginosa')" class="text-xs bg-white text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-600 hover:text-white transition">P. aeruginosa</button>
-                                <button type="button" onclick="quickSelectOrganism('Acinetobacter baumannii')" class="text-xs bg-white text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-600 hover:text-white transition">A. baumannii</button>
+                            <div class="mt-3 flex flex-wrap gap-1 items-center">
+                                <span class="text-xs text-gray-500 font-semibold mr-1">Quick:</span>
+                                <button type="button" onclick="quickSelectOrganism('Escherichia coli (E.coli)')" class="text-[10px] bg-white text-blue-700 border border-blue-200 px-2 py-1 rounded-full hover:bg-blue-600 hover:text-white transition">E. coli</button>
+                                <button type="button" onclick="quickSelectOrganism('Klebsiella pneumoniae')" class="text-[10px] bg-white text-blue-700 border border-blue-200 px-2 py-1 rounded-full hover:bg-blue-600 hover:text-white transition">K. pneumoniae</button>
+                                <button type="button" onclick="quickSelectOrganism('Staphylococcus aureus')" class="text-[10px] bg-white text-blue-700 border border-blue-200 px-2 py-1 rounded-full hover:bg-blue-600 hover:text-white transition">S. aureus</button>
+                                <button type="button" onclick="quickSelectOrganism('Pseudomonas aeruginosa')" class="text-[10px] bg-white text-blue-700 border border-blue-200 px-2 py-1 rounded-full hover:bg-blue-600 hover:text-white transition">P. aeruginosa</button>
                             </div>
                         </div>
+
+                        <!-- Antibiogram Export Organism (Ministry Template) -->
+                        <div class="md:col-span-2 bg-purple-50 p-4 rounded-lg border border-purple-200">
+                            <label class="block text-sm font-bold text-purple-800 mb-2">Antibiogram Organism List (Export)</label>
+                            <select id="p_antibiogram_org" class="w-full select2-enable">
+                                <option value="">Do not include in Antibiogram (Optional)...</option>
+                                <optgroup label="Gram Negative">
+                                    <option value="E.coli">E.coli</option>
+                                    <option value="klebsiella pneumoniae">klebsiella pneumoniae</option>
+                                    <option value="proteus mirabillis">proteus mirabillis</option>
+                                    <option value="proteus (other spp)">proteus (other spp)</option>
+                                    <option value="citrobacter (spp)">citrobacter (spp)</option>
+                                    <option value="enterobacter (spp)">enterobacter (spp)</option>
+                                    <option value="providencia spp">providencia spp</option>
+                                    <option value="salmonella spp">salmonella spp</option>
+                                    <option value="shigella (spp)">shigella (spp)</option>
+                                    <option value="serratia">serratia</option>
+                                    <option value="yersinia enterocoliticae">yersinia enterocoliticae</option>
+                                    <option value="enterobacteriaceae (other spp)">enterobacteriaceae (other spp)</option>
+                                    <option value="acinetobacter baumannii">acinetobacter baumannii</option>
+                                    <option value="acinetobacter spp.">acinetobacter spp.</option>
+                                    <option value="burkholderia cepacia complex">burkholderia cepacia complex</option>
+                                    <option value="pseudomonas aeruginosa">pseudomonas aeruginosa</option>
+                                    <option value="hemophilus influenzae">hemophilus influenzae</option>
+                                    <option value="neisseria gonorrhoeae">neisseria gonorrhoeae</option>
+                                    <option value="neisseria meningitis">neisseria meningitis</option>
+                                    <option value="bacteroides fragilis">bacteroides fragilis</option>
+                                    <option value="chlamydia trachomatis">chlamydia trachomatis</option>
+                                    <option value="helicobacter pylori">helicobacter pylori</option>
+                                    <option value="Fusobacterium canifelinum">Fusobacterium canifelinum</option>
+                                </optgroup>
+                                <optgroup label="Gram Positive">
+                                    <option value="staphylococcus aureus">staphylococcus aureus</option>
+                                    <option value="staphylococcus non-aureus (spp)">staphylococcus non-aureus (spp)</option>
+                                    <option value="streptococcus pneumoniae">streptococcus pneumoniae</option>
+                                    <option value="streptococcus pyogenes (groupnA)">streptococcus pyogenes (groupnA)</option>
+                                    <option value="listeria">listeria</option>
+                                    <option value="clostridium Spp">clostridium Spp</option>
+                                    <option value="bacillus">bacillus</option>
+                                    <option value="enterococcus faecalis">enterococcus faecalis</option>
+                                    <option value="enterococcus spp">enterococcus spp</option>
+                                    <option value="mycobacterium tuberculosis">mycobacterium tuberculosis</option>
+                                    <option value="streptococcus spp (β-hemolytic group)">streptococcus spp (β-hemolytic group)</option>
+                                    <option value="streptococcus viridans">streptococcus viridans</option>
+                                    <option value="anaerobes">anaerobes</option>
+                                    <option value="Enterococcus faecium">Enterococcus faecium</option>
+                                    <option value="Enterococcus gallinarum/E. casseliflavus">Enterococcus gallinarum/E. casseliflavus</option>
+                                </optgroup>
+                            </select>
+                            <div class="mt-3 text-[11px] text-purple-700 font-semibold italic">
+                                * Select the exact category to calculate isolates and resistance in the Antibiogram Excel file.
+                            </div>
+                        </div>
+
                     </div>
 
                     <!-- Antibiotics Master Panel -->
@@ -273,8 +327,7 @@
         };
         const abxList = Object.values(abxGroups).flat();
 
-        // 1-based indexing for XlsxPopulate
-        // t = Tested Column (Sample Size), r = Resistant Column
+        // 1-based indexing for XlsxPopulate. t = Tested Column (Sample Size), r = Resistant Column
         const abxMapExport = {
             "Ampicillin (AM)": {t:4, r:5}, "Flouxacillin": {t:7, r:8}, "Penicillin (P)": {t:10, r:11},
             "Ampicillin/Salbactam (SAM)": {t:13, r:14}, "Amoxicillin": {t:16, r:17}, "Oxacillin (OX)": {t:19, r:20},
@@ -296,23 +349,21 @@
             "Metronidazole": {t:157, r:158}, "Fucidin": {t:160, r:161}
         };
 
+        // NEW: Direct exact mapping from the new Antibiogram Organism dropdown to the Excel Row
         const orgMapExport = {
-            "Escherichia coli (E.coli)": 6, "Klebsiella pneumoniae": 7, "Proteus mirabilis": 8, "Proteus (other spp)": 9, 
-            "Citrobacter (spp)": 10, "Enterobacter (spp)": 11, "Providencia spp": 12, "Salmonella spp": 13, 
-            "Shigella (spp)": 14, "Serratia spp": 15, "Yersinia enterocolitica": 16, "Enterobacteriaceae (other spp)": 17,
-            "Acinetobacter baumannii": 18, "Acinetobacter spp.": 19, "Burkholderia cepacia complex": 20,
-            "Pseudomonas aeruginosa": 21, "Haemophilus influenzae": 22, "Neisseria gonorrhoeae": 23,
-            "Neisseria meningitidis": 24, "Bacteroides fragilis": 25, "Chlamydia trachomatis": 26,
-            "Helicobacter pylori": 27, "Fusobacterium canifelinum": 28, "Staphylococcus aureus": 29,
-            "Staphylococcus non-aureus (spp) / CoNS": 30, "Streptococcus pneumoniae": 31,
-            "Streptococcus pyogenes (Group A)": 32, "Listeria spp": 33, "Clostridium Spp": 34,
-            "Bacillus spp": 35, "Enterococcus faecalis": 36, "Enterococcus spp": 37,
-            "Mycobacterium tuberculosis": 38, "Streptococcus spp (β-hemolytic group)": 39,
-            "Streptococcus viridans": 40, "Anaerobes (General)": 41, "Enterococcus faecium": 42,
-            "Enterococcus gallinarum / E. casseliflavus": 43,
-            // Grouping mapped species
-            "Klebsiella oxytoca": 7, "Klebsiella aerogenes": 7, "Citrobacter freundii": 10, "Citrobacter koseri": 10,
-            "Enterobacter cloacae": 11, "Serratia marcescens": 15
+            "E.coli": 6, "klebsiella pneumoniae": 7, "proteus mirabillis": 8, "proteus (other spp)": 9, 
+            "citrobacter (spp)": 10, "enterobacter (spp)": 11, "providencia spp": 12, "salmonella spp": 13, 
+            "shigella (spp)": 14, "serratia": 15, "yersinia enterocoliticae": 16, "enterobacteriaceae (other spp)": 17,
+            "acinetobacter baumannii": 18, "acinetobacter spp.": 19, "burkholderia cepacia complex": 20,
+            "pseudomonas aeruginosa": 21, "hemophilus influenzae": 22, "neisseria gonorrhoeae": 23,
+            "neisseria meningitis": 24, "bacteroides fragilis": 25, "chlamydia trachomatis": 26,
+            "helicobacter pylori": 27, "Fusobacterium canifelinum": 28, "staphylococcus aureus": 29,
+            "staphylococcus non-aureus (spp)": 30, "streptococcus pneumoniae": 31,
+            "streptococcus pyogenes (groupnA)": 32, "listeria": 33, "clostridium Spp": 34,
+            "bacillus": 35, "enterococcus faecalis": 36, "enterococcus spp": 37,
+            "mycobacterium tuberculosis": 38, "streptococcus spp (β-hemolytic group)": 39,
+            "streptococcus viridans": 40, "anaerobes": 41, "Enterococcus faecium": 42,
+            "Enterococcus gallinarum/E. casseliflavus": 43
         };
 
         const defaultSamples = ["Blood", "Urine", "Sputum", "Wound Swab", "CSF", "Pus", "Stool", "Aspirate"];
@@ -328,8 +379,7 @@
             $('.select2-enable').select2({ width: '100%', dropdownParent: $('#formModal') });
             $('#p_sample').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new sample..." });
             $('#abx_selector').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Type custom antibiotic name..." });
-            $('#p_organism').select2({ width: '100%', dropdownParent: $('#formModal') });
-
+            
             let today = new Date().toISOString().split('T')[0];
             $('#p_date').val(today);
 
@@ -412,7 +462,9 @@
                 }},
                 { data: 'Name', title: 'Name' }, { data: 'Age', title: 'Age' }, { data: 'Sex', title: 'Sex' },
                 { data: 'Ward', title: 'Ward', defaultContent: '-' }, { data: 'Sample', title: 'Sample' },
-                { data: 'Date', title: 'Date' }, { data: 'Selective organism', title: 'Selective organism' }
+                { data: 'Date', title: 'Date' }, 
+                { data: 'Selective organism', title: 'Selective organism' },
+                { data: 'Antibiogram organism', title: 'Antibiogram Organism', defaultContent: '-' } // NEW COLUMN
             ];
 
             let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
@@ -437,7 +489,9 @@
             $('#active_abx_container').empty(); selectedAbxMap = {};
             
             $('#p_ward').val('').trigger('change'); $('#p_sex').val('Male').trigger('change');
-            $('#p_sample').val(null).trigger('change'); $('#p_organism').val(null).trigger('change');
+            $('#p_sample').val(null).trigger('change'); 
+            $('#p_organism').val(null).trigger('change');
+            $('#p_antibiogram_org').val('').trigger('change'); // RESET NEW FIELD
             $('#abx_selector').val(null).trigger('change');
             $('.default-abx-select').val('').removeClass('bg-green-100 bg-yellow-100 bg-red-100');
             
@@ -496,7 +550,8 @@
             let record = {
                 'Name': $('#p_name').val(), 'Age': $('#p_age').val(), 'Sex': $('#p_sex').val(),
                 'Ward': $('#p_ward').val() || "-", 'Sample': currentSample, 'Date': $('#p_date').val(),
-                'Selective organism': $('#p_organism').val()
+                'Selective organism': $('#p_organism').val(),
+                'Antibiogram organism': $('#p_antibiogram_org').val() // SAVE NEW FIELD
             };
 
             if (!record['Selective organism']) { Swal.fire({ icon: 'error', title: 'Oops...', text: 'Please select an organism.' }); return; }
@@ -537,6 +592,13 @@
             
             if ($('#p_organism').find("option[value='" + record['Selective organism'] + "']").length) { $('#p_organism').val(record['Selective organism']).trigger('change'); } 
             else { $('#p_organism').append(new Option(record['Selective organism'], record['Selective organism'], true, true)).trigger('change'); }
+
+            // LOAD NEW FIELD
+            if (record['Antibiogram organism']) {
+                $('#p_antibiogram_org').val(record['Antibiogram organism']).trigger('change');
+            } else {
+                $('#p_antibiogram_org').val('').trigger('change');
+            }
 
             abxList.forEach(abx => {
                 if(record[abx] && record[abx] !== '-') { $(`.default-abx-select[data-abx="${abx}"]`).val(record[abx]).trigger('change'); }
@@ -600,7 +662,6 @@
 
         // --- 4. 100% Exact Ministry File Export using Fetch + XlsxPopulate ---
         function showExportModal() {
-            // Set default dates to current month
             const today = new Date();
             const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
             const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
@@ -651,35 +712,32 @@
             });
 
             try {
-                // Fetch the Antibiogram_5.xlsx directly from the repository
                 const response = await fetch('Antibiogram_5.xlsx');
                 if (!response.ok) {
                     throw new Error("Could not find 'Antibiogram_5.xlsx' in the repository. Please ensure it is uploaded correctly next to the index.html file.");
                 }
                 const arrayBuffer = await response.arrayBuffer();
 
-                // 1. Calculate stats exactly matching the requested logic
                 let stats = {};
                 records.forEach(r => {
-                    let orgName = r['Selective organism'];
+                    // NEW: Use the Antibiogram Organism field exclusively for the export
+                    let orgName = r['Antibiogram organism'];
+                    if (!orgName) return; // Skip if user left it blank
+
                     let rowNum = orgMapExport[orgName];
                     if (!rowNum) return; 
 
                     if (!stats[orgName]) stats[orgName] = { total: 0, abx: {} };
                     
-                    // Increment Total Isolates
                     stats[orgName].total += 1;
 
                     Object.keys(abxMapExport).forEach(appAbx => {
                         let result = r[appAbx];
-                        // If antibiotic was tested (S, I, or R)
                         if (result && result !== '-' && result !== '') {
                             if (!stats[orgName].abx[appAbx]) stats[orgName].abx[appAbx] = { tested: 0, resistant: 0 };
                             
-                            // Increment sample size (Tested)
                             stats[orgName].abx[appAbx].tested += 1; 
                             
-                            // Increment Resistant (R) if applicable
                             if (result === 'R') {
                                 stats[orgName].abx[appAbx].resistant += 1; 
                             }
@@ -687,36 +745,35 @@
                     });
                 });
 
-                // 2. Populate the Excel file using XlsxPopulate (preserves formulas & formatting)
                 const workbook = await XlsxPopulate.fromDataAsync(arrayBuffer);
                 const sheet = workbook.sheet(0);
                 
                 Object.keys(stats).forEach(org => {
                     let rowNum = orgMapExport[org];
                     if (rowNum) {
-                        // Populate No. of isolates (Column C / Index 3)
-                        sheet.cell(rowNum, 3).value(stats[org].total);
+                        
+                        if (stats[org].total > 0) {
+                            sheet.cell(rowNum, 3).value(stats[org].total);
+                        }
 
                         Object.keys(stats[org].abx).forEach(abx => {
                             let cols = abxMapExport[abx];
                             if (cols) {
                                 let s = stats[org].abx[abx];
-                                // Populate 'no of sample size' (Column before antibiotic)
-                                sheet.cell(rowNum, cols.t).value(s.tested);
-                                // Populate Antibiotic column (Resistant count)
-                                sheet.cell(rowNum, cols.r).value(s.resistant);
-                                // % of resistance (Column after) is left untouched for Excel's built-in formulas!
+                                
+                                if (s.tested > 0) {
+                                    sheet.cell(rowNum, cols.t).value(s.tested);
+                                    sheet.cell(rowNum, cols.r).value(s.resistant);
+                                }
                             }
                         });
                     }
                 });
 
-                // Write Dates in the header
                 const sDate = new Date(startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
                 const eDate = new Date(endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
                 sheet.cell("C1").value(`Period: ${sDate} to ${eDate}`);
 
-                // 3. Download the populated file
                 const blob = await workbook.outputAsync();
                 saveAs(blob, `Ministry_Antibiogram_${sDate}_to_${eDate}.xlsx`);
                 Swal.fire('Success!', 'The official file has been exported successfully.', 'success');
