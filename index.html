@@ -27,7 +27,7 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
-    <!-- XlsxPopulate (For flawless template manipulation & FileSaver) -->
+    <!-- XlsxPopulate (For flawless template manipulation without breaking formulas) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx-populate/1.21.0/xlsx-populate.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
@@ -58,12 +58,7 @@
                 <button onclick="showTab('report')" id="btnTabReport" class="bg-transparent text-blue-100 border border-blue-600 px-5 py-2 rounded shadow-md font-bold transition hover:bg-blue-700">
                     📊 Antibiogram Report
                 </button>
-                <div class="w-px bg-blue-700 mx-1 h-8"></div>
-                <!-- زر الإعدادات الجديد لحفظ القالب -->
-                <button onclick="showSettings()" class="bg-transparent text-gray-300 hover:text-white px-3 py-2 font-bold text-xl transition" title="System Settings & Template">
-                    ⚙️
-                </button>
-                <div class="w-px bg-blue-700 mx-1 h-8"></div>
+                <div class="w-px bg-blue-700 mx-2 h-8"></div>
                 <button onclick="openModal()" class="bg-green-500 text-white px-5 py-2 rounded shadow-md font-bold hover:bg-green-600 transition">
                     + New Entry
                 </button>
@@ -103,30 +98,12 @@
                 <div class="text-center text-gray-400 py-10 italic">Select a date range and click 'View Report' to view the Antibiogram.</div>
             </div>
 
-            <!-- الزر السحري الجديد لتصدير ملف الوزارة طبق الأصل -->
+            <!-- Export to Official Template Button -->
             <button onclick="exportMinistryExcel()" id="btnExportMinistry" class="hidden bg-green-600 text-white px-6 py-3 rounded shadow-lg font-bold hover:bg-green-700 transition w-full text-lg mt-6 flex justify-center items-center gap-2 border-2 border-green-700">
                 📥 Download Official Ministry Excel Replica
             </button>
         </div>
     </main>
-
-    <!-- Settings Modal (لرفع وحفظ قالب الوزارة محلياً) -->
-    <div id="settingsModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden flex justify-center items-center z-50">
-        <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-1/2 p-6">
-            <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">⚙️ System Settings</h3>
-            <p class="text-sm text-gray-600 mb-4">Upload the blank official Ministry Antibiogram Excel Template here <b>ONCE</b>. It will be securely saved inside your browser forever so you never need to upload it again when exporting reports.</p>
-            
-            <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-gray-50 transition relative">
-                <input type="file" id="templateUploader" accept=".xlsx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleTemplateUpload(this)">
-                <p class="font-bold text-blue-700 text-lg">Click or Drag & Drop the blank Antibiogram.xlsx here</p>
-                <p id="templateStatus" class="text-sm font-bold text-red-500 mt-3 bg-white inline-block px-3 py-1 rounded border shadow-sm">Status: Template Not Uploaded ❌</p>
-            </div>
-            
-            <div class="flex justify-end mt-6">
-                <button onclick="closeSettings()" class="bg-gray-200 px-6 py-2 rounded font-bold hover:bg-gray-300 transition">Close</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Modal for Data Entry -->
     <div id="formModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden flex justify-center items-center z-50">
@@ -211,6 +188,7 @@
                             <button type="button" onclick="manageAntibiotics()" class="text-xs text-red-500 font-semibold bg-red-50 px-2 py-1 rounded">⚙️ Manage Custom</button>
                         </div>
                         
+                        <!-- Search Bar for Custom/New Antibiotics -->
                         <div class="flex gap-2 mb-6 bg-white p-3 rounded border">
                             <div class="flex-1">
                                 <label class="block text-xs font-bold text-gray-500 mb-1">Add Custom Antibiotic (if not found below)</label>
@@ -221,8 +199,13 @@
                             <button type="button" onclick="addAntibiotic()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-semibold mt-5 shadow">+ Add</button>
                         </div>
 
+                        <!-- Container for Custom added antibiotics -->
                         <div id="active_abx_container" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 mb-6 empty:hidden"></div>
-                        <div id="default_abx_container" class="space-y-6"></div>
+                        
+                        <!-- Container for Automatically Grouped Default Antibiotics -->
+                        <div id="default_abx_container" class="space-y-6">
+                            <!-- Populated by JS -->
+                        </div>
                     </div>
 
                     <div class="flex justify-end gap-3 mt-8 pt-4 border-t sticky bottom-0 bg-white py-4 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-10 px-2 -mx-2">
@@ -235,7 +218,7 @@
     </div>
 
     <script>
-        // 1. Data Definitions
+        // --- 1. Master Data Definitions ---
         const bacteriaLibrary = [
             { name: "Escherichia coli (E.coli)", code: "ECO", group: "Gram-Negative" },
             { name: "Klebsiella pneumoniae", code: "KPN", group: "Gram-Negative" },
@@ -336,6 +319,7 @@
         const abxList = Object.values(abxGroups).flat();
 
         // الخريطة الذكية لملف الوزارة (يحدد رقم العمود للمضاد ورقم الصف للبكتيريا) 1-based indexing for XlsxPopulate
+        // t = Tested Column (Sample Size), r = Resistant Column
         const abxMapExport = {
             "Ampicillin (AM)": {t:4, r:5}, "Flouxacillin": {t:7, r:8}, "Penicillin (P)": {t:10, r:11},
             "Ampicillin/Salbactam (SAM)": {t:13, r:14}, "Amoxicillin": {t:16, r:17}, "Oxacillin (OX)": {t:19, r:20},
@@ -418,6 +402,62 @@
             { group: 'Gram positive', name: 'Enterococcus gallinarum/E. casseliflavus', appNames: ['Enterococcus gallinarum / E. casseliflavus'] }
         ];
 
+        const reportAntibiotics = [
+            { repName: "ampicillin", appName: "Ampicillin (AM)" },
+            { repName: "flouxacillin", appName: "Flouxacillin" },
+            { repName: "penicillin", appName: "Penicillin (P)" },
+            { repName: "ampicillin-sulbactam", appName: "Ampicillin/Salbactam (SAM)" },
+            { repName: "amoxicillin", appName: "Amoxicillin" },
+            { repName: "oxacilline", appName: "Oxacillin (OX)" },
+            { repName: "amoxicillin-clavulanate", appName: "Amoxicillin/ Clavulonic acid (AMC)" },
+            { repName: "piperacillin", appName: "Piperacillin (PR)" },
+            { repName: "ticarcillin", appName: "Ticarcillin (TIC)" },
+            { repName: "ticarcillin-clavulanate", appName: "Ticarcillin/Clavulonic acid (TIM)" },
+            { repName: "piperacillin-tazobactam", appName: "Piperacillin / Tazobactam (TPZ)" },
+            { repName: "ceftriaxone", appName: "Ceftriaxone (CRO)" },
+            { repName: "cefotaxime", appName: "Cefotaxim (CTX)" },
+            { repName: "ceftazidime", appName: "Ceftazidime (CAZ)" },
+            { repName: "cefepime", appName: "Cefepime (FEP)" },
+            { repName: "cefoxitine", appName: "Cefoxitin" },
+            { repName: "cefazoline", appName: "Cefazolin" },
+            { repName: "cefixime", appName: "Cefixime (CFM)" },
+            { repName: "cefaclor", appName: "Cefaclor" },
+            { repName: "cefpodoxime", appName: "Cefpodoxime" },
+            { repName: "cefdinir", appName: "Cefdinir" },
+            { repName: "cephalothin", appName: "Cephalothin" },
+            { repName: "cefuroxime", appName: "Cefuroxime (CXM)" },
+            { repName: "amikacin", appName: "Amikacin (AK)" },
+            { repName: "gentamicin", appName: "Gentamicin (CN)" },
+            { repName: "tobramycin", appName: "Tobramycin (TOB)" },
+            { repName: "netilmicin", appName: "Netlimicin (NET)" },
+            { repName: "imipinem", appName: "Imipenem (IMP)" },
+            { repName: "meropenem", appName: "Meropenem (MEM)" },
+            { repName: "ertapenem", appName: "Ertapenem" },
+            { repName: "aztreonam", appName: "Aztreonam (ATM)" },
+            { repName: "azithromycin", appName: "Azithromycin (AZM)" },
+            { repName: "clarithromycin", appName: "Clarithromycin (CLR)" },
+            { repName: "erythromycin", appName: "Erythromycin (E)" },
+            { repName: "ciprofloxacin", appName: "Ciprofloxacin (CIP)" },
+            { repName: "moxifloxacin", appName: "Moxifloxacin" },
+            { repName: "levofloxacin", appName: "Levofloxacin (LEV)" },
+            { repName: "teicoplanin", appName: "Teicoplanin" },
+            { repName: "vancomycin", appName: "Vancomycin (VA)" },
+            { repName: "tigecycline", appName: "Tigecycline" },
+            { repName: "tetracycline", appName: "Tetracycline (TE)" },
+            { repName: "doxycycline", appName: "Doxacycline(DO)" },
+            { repName: "colistin", appName: "Colistin" },
+            { repName: "chloramphenicol", appName: "Chloramphenicol" },
+            { repName: "trimethoprime-sulfamethoxazole", appName: "Trimethoprim/Sulfamethoxazole (TXS)" },
+            { repName: "rifampiin", appName: "Rifampicin (RA)" },
+            { repName: "nitrofurantoin", appName: "Nitrofurantoin (F)" },
+            { repName: "trimethoprime", appName: "Trimethoprim (TIM)" },
+            { repName: "sulfisoxazole", appName: "Sulfisoxazole" },
+            { repName: "fosfomycin", appName: "Fosfomycin (FOS)" },
+            { repName: "clindamycin", appName: "Clindamycin (DA)" },
+            { repName: "metronidazole", appName: "Metronidazole" },
+            { repName: "fucidic acid", appName: "Fucidin" }
+        ];
+
         const defaultSamples = ["Blood", "Urine", "Sputum", "Wound Swab", "CSF", "Pus", "Stool", "Aspirate"];
         let dataTable; let reportTable; let selectedAbxMap = {}; 
 
@@ -454,40 +494,7 @@
             }
         }
 
-        // --- 3. Settings & Template Upload Logic ---
-        function showSettings() {
-            checkTemplateStatus();
-            $('#settingsModal').removeClass('hidden');
-        }
-
-        function closeSettings() {
-            $('#settingsModal').addClass('hidden');
-        }
-
-        function checkTemplateStatus() {
-            if (localStorage.getItem('amr_template_base64')) {
-                $('#templateStatus').removeClass('text-red-500').addClass('text-green-600 border-green-200').text('Status: Official Template is Saved & Ready ✅');
-            } else {
-                $('#templateStatus').removeClass('text-green-600 border-green-200').addClass('text-red-500 border-red-200').text('Status: Template Not Uploaded ❌');
-            }
-        }
-
-        function handleTemplateUpload(input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                // استخراج كود Base64 لحفظه للأبد
-                const base64 = e.target.result.split(',')[1];
-                localStorage.setItem('amr_template_base64', base64);
-                Swal.fire('Template Saved!', 'The official template is now permanently saved in this browser. You can export exactly matching files from the Report tab anytime.', 'success');
-                checkTemplateStatus();
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // --- 4. Data Entry UI Functions ---
+        // --- 3. Data Entry UI Functions ---
         function renderDefaultAntibiotics() {
             let html = '';
             for (const [group, abxs] of Object.entries(abxGroups)) {
@@ -710,7 +717,46 @@
             });
         }
 
-        // --- 5. Generate Internal Dashboard Report ---
+        function manageSamples() {
+            let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
+            let customSamples = savedSamples.filter(s => !defaultSamples.includes(s));
+            if (customSamples.length === 0) { Swal.fire({ icon: 'info', title: 'No Custom Samples' }); return; }
+            let html = '<div class="text-left space-y-2 mt-4">';
+            customSamples.forEach(sample => {
+                html += `<div class="flex justify-between items-center bg-gray-100 p-3 rounded border">
+                    <span class="font-medium text-gray-700">${sample}</span>
+                    <button type="button" onclick="deleteCustomSample('${sample.replace(/'/g, "\\'")}')" class="text-red-500 font-bold bg-white px-3 py-1 rounded border">Delete</button></div>`;
+            });
+            html += '</div>';
+            Swal.fire({ title: 'Manage Custom Samples', html: html, confirmButtonText: 'Done' });
+        }
+
+        window.deleteCustomSample = function(sample) {
+            let s = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
+            localStorage.setItem('amr_samples', JSON.stringify(s.filter(x => x !== sample)));
+            loadSampleOptions(); manageSamples();
+        };
+
+        function manageAntibiotics() {
+            let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
+            if (savedCustomAbx.length === 0) { Swal.fire({ icon: 'info', title: 'No Custom Antibiotics' }); return; }
+            let html = '<div class="text-left space-y-2 mt-4">';
+            savedCustomAbx.forEach(abx => {
+                html += `<div class="flex justify-between items-center bg-gray-100 p-3 rounded border">
+                    <span class="font-medium text-gray-700 truncate w-3/4">${abx}</span>
+                    <button type="button" onclick="deleteCustomAntibiotic('${abx.replace(/'/g, "\\'")}')" class="text-red-500 font-bold bg-white px-3 py-1 rounded border">Delete</button></div>`;
+            });
+            html += '</div>';
+            Swal.fire({ title: 'Manage Custom Antibiotics', html: html, confirmButtonText: 'Done' });
+        }
+
+        window.deleteCustomAntibiotic = function(abx) {
+            let s = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
+            localStorage.setItem('amr_custom_abx', JSON.stringify(s.filter(a => a !== abx)));
+            loadAntibioticOptions(); initDataTable(); manageAntibiotics();
+        };
+
+        // --- 4. Generate Internal Dashboard Report ---
         function generateReport() {
             const startDate = $('#rep_start').val();
             const endDate = $('#rep_end').val();
@@ -730,7 +776,7 @@
             let stats = {};
             reportOrganisms.forEach(org => {
                 stats[org.name] = { total: 0, group: org.group, abx: {} };
-                Object.keys(abxMapExport).forEach(a => { stats[org.name].abx[a] = { tested: 0, resistant: 0 }; });
+                reportAntibiotics.forEach(a => { stats[org.name].abx[a.repName] = { tested: 0, resistant: 0 }; });
             });
 
             records.forEach(r => {
@@ -740,11 +786,13 @@
 
                 stats[matchedOrg.name].total += 1;
 
-                Object.keys(abxMapExport).forEach(appAbx => {
-                    let result = r[appAbx];
+                reportAntibiotics.forEach(abxDef => {
+                    let result = r[abxDef.appName];
                     if (result && result !== '-' && result !== '') {
-                        stats[matchedOrg.name].abx[appAbx].tested += 1;
-                        if (result === 'R') stats[matchedOrg.name].abx[appAbx].resistant += 1;
+                        stats[matchedOrg.name].abx[abxDef.repName].tested += 1;
+                        if (result === 'R') {
+                            stats[matchedOrg.name].abx[abxDef.repName].resistant += 1;
+                        }
                     }
                 });
             });
@@ -753,16 +801,17 @@
                 <table id="reportTable" class="stripe row-border order-column cell-border w-full text-xs">
                     <thead><tr><th rowspan="2" class="report-header-group">Organism Group</th><th rowspan="2" class="report-header-group">Organisms Isolated</th><th rowspan="2" class="report-header-group">Total Isolates</th>
             `;
-            Object.keys(abxMapExport).forEach(a => { html += `<th colspan="2" class="bg-blue-600">${a}</th>`; });
+            reportAntibiotics.forEach(a => { html += `<th colspan="2" class="bg-blue-600">${a.repName}</th>`; });
             html += `</tr><tr>`;
-            Object.keys(abxMapExport).forEach(a => { html += `<th>Sample Size</th><th>% Resistance</th>`; });
+            reportAntibiotics.forEach(a => { html += `<th>Sample Size</th><th>% Resistance</th>`; });
             html += `</tr></thead><tbody>`;
 
             reportOrganisms.forEach(org => {
                 let s = stats[org.name];
                 html += `<tr><td class="font-bold bg-gray-50">${org.group}</td><td class="font-bold bg-white whitespace-nowrap">${org.name}</td><td class="font-bold bg-blue-50 text-blue-900">${s.total > 0 ? s.total : ''}</td>`;
-                Object.keys(abxMapExport).forEach(appAbx => {
-                    let abxStats = s.abx[appAbx];
+                
+                reportAntibiotics.forEach(abxDef => {
+                    let abxStats = s.abx[abxDef.repName];
                     let pct = abxStats.tested > 0 ? Math.round((abxStats.resistant / abxStats.tested) * 100) : '';
                     let tested = abxStats.tested > 0 ? abxStats.tested : '';
                     html += `<td>${tested}</td><td class="font-semibold ${pct >= 50 ? 'text-red-600' : ''}">${pct !== '' ? pct + '%' : ''}</td>`;
@@ -782,90 +831,98 @@
             });
         }
 
-        // --- 6. 100% Exact Ministry File Export (XlsxPopulate) ---
-        function base64ToArrayBuffer(base64) {
-            let binary_string = window.atob(base64);
-            let len = binary_string.length;
-            let bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) { bytes[i] = binary_string.charCodeAt(i); }
-            return bytes.buffer;
-        }
-
-        function exportMinistryExcel() {
+        // --- 5. 100% Exact Ministry File Export using Fetch + XlsxPopulate ---
+        async function exportMinistryExcel() {
             const startDate = $('#rep_start').val();
             const endDate = $('#rep_end').val();
-            
-            const base64 = localStorage.getItem('amr_template_base64');
-            if (!base64) {
-                Swal.fire({ title: 'Template Missing', text: 'You need to upload the blank Ministry Excel file first. Go to Settings (⚙️).', icon: 'warning' });
-                return;
-            }
 
             let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
             let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
 
             if (records.length === 0) return;
 
-            Swal.fire({ title: 'Generating Ministry File...', text: 'Applying data to the exact official template...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-
-            let stats = {};
-            records.forEach(r => {
-                let orgName = r['Selective organism'];
-                let rowNum = orgMapExport[orgName];
-                if (!rowNum) return; 
-
-                if (!stats[orgName]) stats[orgName] = { total: 0, abx: {} };
-                stats[orgName].total += 1;
-
-                Object.keys(abxMapExport).forEach(appAbx => {
-                    let result = r[appAbx];
-                    if (result && result !== '-' && result !== '') {
-                        if (!stats[orgName].abx[appAbx]) stats[orgName].abx[appAbx] = { tested: 0, resistant: 0 };
-                        stats[orgName].abx[appAbx].tested += 1; 
-                        if (result === 'R') stats[orgName].abx[appAbx].resistant += 1; 
-                    }
-                });
+            Swal.fire({ 
+                title: 'Generating Ministry File...', 
+                text: 'Fetching template and applying data directly...', 
+                allowOutsideClick: false, 
+                didOpen: () => { Swal.showLoading(); } 
             });
 
-            // ملء الملف المرفوع سابقاً باستخدام XlsxPopulate
-            XlsxPopulate.fromDataAsync(base64ToArrayBuffer(base64))
-                .then(workbook => {
-                    const sheet = workbook.sheet(0);
-                    
-                    Object.keys(stats).forEach(org => {
-                        let rowNum = orgMapExport[org];
-                        if (rowNum) {
-                            sheet.cell(rowNum, 3).value(stats[org].total);
+            try {
+                // Fetch the Antibiogram_5.xlsx directly from the repository
+                const response = await fetch('Antibiogram_5.xlsx');
+                if (!response.ok) {
+                    throw new Error("Could not find 'Antibiogram_5.xlsx' in the repository. Please ensure it is uploaded correctly.");
+                }
+                const arrayBuffer = await response.arrayBuffer();
 
-                            Object.keys(stats[org].abx).forEach(abx => {
-                                let cols = abxMapExport[abx];
-                                if (cols) {
-                                    let s = stats[org].abx[abx];
-                                    sheet.cell(rowNum, cols.t).value(s.tested);
-                                    sheet.cell(rowNum, cols.r).value(s.resistant);
-                                    // نترك معادلة النسبة المئوية كما هي دون المساس بها!
-                                }
-                            });
+                // 1. Calculate stats exactly matching the requested logic
+                let stats = {};
+                records.forEach(r => {
+                    let orgName = r['Selective organism'];
+                    let rowNum = orgMapExport[orgName];
+                    if (!rowNum) return; 
+
+                    if (!stats[orgName]) stats[orgName] = { total: 0, abx: {} };
+                    
+                    // Increment Total Isolates
+                    stats[orgName].total += 1;
+
+                    Object.keys(abxMapExport).forEach(appAbx => {
+                        let result = r[appAbx];
+                        // If antibiotic was tested (S, I, or R)
+                        if (result && result !== '-' && result !== '') {
+                            if (!stats[orgName].abx[appAbx]) stats[orgName].abx[appAbx] = { tested: 0, resistant: 0 };
+                            
+                            // Increment sample size (Tested)
+                            stats[orgName].abx[appAbx].tested += 1; 
+                            
+                            // Increment Resistant (R) if applicable
+                            if (result === 'R') {
+                                stats[orgName].abx[appAbx].resistant += 1; 
+                            }
                         }
                     });
-
-                    // كتابة التاريخ في رأس التقرير
-                    const sDate = new Date(startDate).toLocaleDateString('ar-IQ', { month: 'long', year: 'numeric' });
-                    const eDate = new Date(endDate).toLocaleDateString('ar-IQ', { month: 'long', year: 'numeric' });
-                    sheet.cell("C1").value(`الفترة الزمنية للاحصائية بالاشهر : ${sDate} إلى ${eDate}`);
-
-                    return workbook.outputAsync();
-                })
-                .then(blob => {
-                    const sD = new Date(startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-                    const eD = new Date(endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-                    saveAs(blob, `Ministry_Antibiogram_${sD}_to_${eD}.xlsx`);
-                    Swal.fire('Success!', 'The official file has been exported exactly like the template.', 'success');
-                })
-                .catch(err => {
-                    console.error(err);
-                    Swal.fire('Error', 'Failed to generate file. ' + err.message, 'error');
                 });
+
+                // 2. Populate the Excel file using XlsxPopulate (preserves formulas & formatting)
+                const workbook = await XlsxPopulate.fromDataAsync(arrayBuffer);
+                const sheet = workbook.sheet(0);
+                
+                Object.keys(stats).forEach(org => {
+                    let rowNum = orgMapExport[org];
+                    if (rowNum) {
+                        // Populate No. of isolates (Column C / Index 3)
+                        sheet.cell(rowNum, 3).value(stats[org].total);
+
+                        Object.keys(stats[org].abx).forEach(abx => {
+                            let cols = abxMapExport[abx];
+                            if (cols) {
+                                let s = stats[org].abx[abx];
+                                // Populate 'no of sample size' (Column before antibiotic)
+                                sheet.cell(rowNum, cols.t).value(s.tested);
+                                // Populate Antibiotic column (Resistant count)
+                                sheet.cell(rowNum, cols.r).value(s.resistant);
+                                // % of resistance (Column after) is left untouched for Excel's built-in formulas!
+                            }
+                        });
+                    }
+                });
+
+                // Write Dates in the header
+                const sDate = new Date(startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                const eDate = new Date(endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                sheet.cell("C1").value(`Period: ${sDate} to ${eDate}`);
+
+                // 3. Download the populated file
+                const blob = await workbook.outputAsync();
+                saveAs(blob, `Ministry_Antibiogram_${sDate}_to_${eDate}.xlsx`);
+                Swal.fire('Success!', 'The official file has been exported successfully.', 'success');
+
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Error', err.message, 'error');
+            }
         }
     </script>
 </body>
