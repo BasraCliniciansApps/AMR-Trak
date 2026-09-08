@@ -12,12 +12,14 @@
     <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/4.3.0/css/fixedColumns.dataTables.min.css">
     
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedcolumns/4.3.0/js/dataTables.fixedColumns.min.js"></script>
 
     <!-- Select2 -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -37,6 +39,10 @@
         .select2-container .select2-selection--single { height: 42px; border: 1px solid #d1d5db; border-radius: 0.375rem; display: flex; align-items: center; }
         .select2-container { z-index: 9999 !important; }
         select.compact-dropdown { -webkit-appearance: none; -moz-appearance: none; text-align: center; cursor: pointer; }
+        
+        #reportTable th { background-color: #1e3a8a; color: white; border: 1px solid #3b82f6; text-align: center; font-size: 0.8rem; padding: 8px;}
+        #reportTable td { border: 1px solid #e5e7eb; text-align: center; padding: 6px; }
+        .report-header-group { background-color: #1e40af !important; font-weight: bold; }
     </style>
 </head>
 <body class="text-gray-800 font-sans antialiased">
@@ -46,7 +52,6 @@
         <div class="max-w-[98%] mx-auto px-4 py-3 flex justify-between items-center">
             <h1 class="text-2xl font-bold tracking-wide">AMR Tracker</h1>
             <div class="space-x-3 flex items-center">
-                <!-- زر الاستخراج المباشر للإكسل -->
                 <button onclick="showExportModal()" class="bg-green-600 text-white border-2 border-green-500 px-5 py-2 rounded shadow-md font-bold transition hover:bg-green-700 flex items-center gap-2">
                     📥 Export to Antibiogram
                 </button>
@@ -80,28 +85,29 @@
                     
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
                         <div class="md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Patient Name</label>
-                            <input type="text" id="p_name" required class="w-full border-gray-300 border rounded-md p-2 focus:ring-blue-500">
+                            <label class="block text-sm font-bold text-gray-700 mb-1">Patient Name (الاسم)</label>
+                            <!-- تم إضافة dir="rtl" و lang="ar" لتهيئة الحقل للغة العربية -->
+                            <input type="text" id="p_name" required dir="rtl" lang="ar" placeholder="اكتب الاسم هنا..." class="w-full border-gray-300 border rounded-md p-2 focus:ring-blue-500 text-right font-semibold bg-blue-50">
                         </div>
                         <div class="md:col-span-1">
                             <label class="block text-sm font-medium text-gray-600 mb-1">Age</label>
-                            <input type="number" id="p_age" class="w-full border-gray-300 border rounded-md p-2 focus:ring-blue-500">
+                            <input type="number" id="p_age" dir="ltr" lang="en" class="w-full border-gray-300 border rounded-md p-2 focus:ring-blue-500">
                         </div>
                         <div class="md:col-span-1">
                             <label class="block text-sm font-medium text-gray-600 mb-1">Sex</label>
-                            <select id="p_sex" class="w-full border-gray-300 border rounded-md p-2 h-[42px]">
+                            <select id="p_sex" dir="ltr" lang="en" class="w-full border-gray-300 border rounded-md p-2 h-[42px]">
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
                             </select>
                         </div>
                         <div class="md:col-span-1">
                             <label class="block text-sm font-medium text-gray-600 mb-1">Date</label>
-                            <input type="date" id="p_date" required class="w-full border-gray-300 border rounded-md p-2 h-[42px]">
+                            <input type="date" id="p_date" dir="ltr" lang="en" required class="w-full border-gray-300 border rounded-md p-2 h-[42px]">
                         </div>
 
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-600 mb-1">Ward</label>
-                            <select id="p_ward" class="w-full select2-enable">
+                            <select id="p_ward" dir="ltr" lang="en" class="w-full select2-enable">
                                 <option value="">Select Ward (Optional)...</option>
                                 <option value="Pediatrics">Pediatrics</option>
                                 <option value="Resuscitation / CCU">Resuscitation / CCU</option>
@@ -123,13 +129,13 @@
                                 <label class="block text-sm font-medium text-gray-600">Sample</label>
                                 <button type="button" onclick="manageSamples()" class="text-xs text-red-500 font-semibold">⚙️ Manage</button>
                             </div>
-                            <select id="p_sample" class="w-full" required></select>
+                            <select id="p_sample" dir="ltr" lang="en" class="w-full" required></select>
                         </div>
                         
                         <!-- Selective Organism (Internal Record) -->
                         <div class="md:col-span-2 bg-blue-50 p-4 rounded-lg border border-blue-100">
                             <label class="block text-sm font-bold text-blue-800 mb-2">Selective Organism (Lab Record)</label>
-                            <select id="p_organism" class="w-full select2-enable" required>
+                            <select id="p_organism" dir="ltr" lang="en" class="w-full select2-enable" required>
                                 <option value="">Type name or shortcode (e.g., ECO, PAE)...</option>
                             </select>
                             <div class="mt-3 flex flex-wrap gap-1 items-center">
@@ -144,7 +150,7 @@
                         <!-- Antibiogram Export Organism (Ministry Template) -->
                         <div class="md:col-span-2 bg-purple-50 p-4 rounded-lg border border-purple-200">
                             <label class="block text-sm font-bold text-purple-800 mb-2">Antibiogram Organism List (Export)</label>
-                            <select id="p_antibiogram_org" class="w-full select2-enable">
+                            <select id="p_antibiogram_org" dir="ltr" lang="en" class="w-full select2-enable">
                                 <option value="">Do not include in Antibiogram (Optional)...</option>
                                 <optgroup label="Gram Negative">
                                     <option value="E.coli">E.coli</option>
@@ -206,7 +212,7 @@
                         <div class="flex gap-2 mb-6 bg-white p-3 rounded border">
                             <div class="flex-1">
                                 <label class="block text-xs font-bold text-gray-500 mb-1">Add Custom Antibiotic (if not found below)</label>
-                                <select id="abx_selector" class="w-full">
+                                <select id="abx_selector" dir="ltr" lang="en" class="w-full">
                                     <option value="">Type custom antibiotic name...</option>
                                 </select>
                             </div>
@@ -349,7 +355,6 @@
             "Metronidazole": {t:157, r:158}, "Fucidin": {t:160, r:161}
         };
 
-        // NEW: Direct exact mapping from the new Antibiogram Organism dropdown to the Excel Row
         const orgMapExport = {
             "E.coli": 6, "klebsiella pneumoniae": 7, "proteus mirabillis": 8, "proteus (other spp)": 9, 
             "citrobacter (spp)": 10, "enterobacter (spp)": 11, "providencia spp": 12, "salmonella spp": 13, 
@@ -464,7 +469,7 @@
                 { data: 'Ward', title: 'Ward', defaultContent: '-' }, { data: 'Sample', title: 'Sample' },
                 { data: 'Date', title: 'Date' }, 
                 { data: 'Selective organism', title: 'Selective organism' },
-                { data: 'Antibiogram organism', title: 'Antibiogram Organism', defaultContent: '-' } // NEW COLUMN
+                { data: 'Antibiogram organism', title: 'Antibiogram Organism', defaultContent: '-' } 
             ];
 
             let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
@@ -491,7 +496,7 @@
             $('#p_ward').val('').trigger('change'); $('#p_sex').val('Male').trigger('change');
             $('#p_sample').val(null).trigger('change'); 
             $('#p_organism').val(null).trigger('change');
-            $('#p_antibiogram_org').val('').trigger('change'); // RESET NEW FIELD
+            $('#p_antibiogram_org').val('').trigger('change'); 
             $('#abx_selector').val(null).trigger('change');
             $('.default-abx-select').val('').removeClass('bg-green-100 bg-yellow-100 bg-red-100');
             
@@ -551,7 +556,7 @@
                 'Name': $('#p_name').val(), 'Age': $('#p_age').val(), 'Sex': $('#p_sex').val(),
                 'Ward': $('#p_ward').val() || "-", 'Sample': currentSample, 'Date': $('#p_date').val(),
                 'Selective organism': $('#p_organism').val(),
-                'Antibiogram organism': $('#p_antibiogram_org').val() // SAVE NEW FIELD
+                'Antibiogram organism': $('#p_antibiogram_org').val() 
             };
 
             if (!record['Selective organism']) { Swal.fire({ icon: 'error', title: 'Oops...', text: 'Please select an organism.' }); return; }
@@ -593,7 +598,6 @@
             if ($('#p_organism').find("option[value='" + record['Selective organism'] + "']").length) { $('#p_organism').val(record['Selective organism']).trigger('change'); } 
             else { $('#p_organism').append(new Option(record['Selective organism'], record['Selective organism'], true, true)).trigger('change'); }
 
-            // LOAD NEW FIELD
             if (record['Antibiogram organism']) {
                 $('#p_antibiogram_org').val(record['Antibiogram organism']).trigger('change');
             } else {
@@ -720,9 +724,8 @@
 
                 let stats = {};
                 records.forEach(r => {
-                    // NEW: Use the Antibiogram Organism field exclusively for the export
                     let orgName = r['Antibiogram organism'];
-                    if (!orgName) return; // Skip if user left it blank
+                    if (!orgName) return; 
 
                     let rowNum = orgMapExport[orgName];
                     if (!rowNum) return; 
