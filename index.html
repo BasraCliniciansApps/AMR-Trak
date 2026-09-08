@@ -12,57 +12,95 @@
     <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/4.3.0/css/fixedColumns.dataTables.min.css">
+    
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedcolumns/4.3.0/js/dataTables.fixedColumns.min.js"></script>
+
     <!-- Select2 -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- ExcelJS & FileSaver -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <style>
         body { background-color: #f3f4f6; }
-        .dataTables_wrapper { font-size: 0.875rem; padding: 1.5rem; background: #fff; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .dataTables_wrapper { font-size: 0.85rem; padding: 1.5rem; background: #fff; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .dt-buttons button { background-color: #2563eb !important; color: white !important; border-radius: 0.375rem !important; border: none !important; padding: 0.5rem 1rem !important; margin-bottom: 1rem; font-weight: 600 !important; }
         .dt-buttons button:hover { background-color: #1d4ed8 !important; }
         .select2-container .select2-selection--single { height: 42px; border: 1px solid #d1d5db; border-radius: 0.375rem; display: flex; align-items: center; }
         .select2-container { z-index: 9999 !important; }
-        /* Style for compact dropdowns */
         select.compact-dropdown { -webkit-appearance: none; -moz-appearance: none; text-align: center; cursor: pointer; }
+        
+        /* Styles specifically for the Antibiogram Report Table */
+        #reportTable th { background-color: #1e3a8a; color: white; border: 1px solid #3b82f6; text-align: center; font-size: 0.8rem; padding: 8px;}
+        #reportTable td { border: 1px solid #e5e7eb; text-align: center; padding: 6px; }
+        .report-header-group { background-color: #1e40af !important; font-weight: bold; }
     </style>
 </head>
 <body class="text-gray-800 font-sans antialiased">
 
     <!-- Top Navigation -->
-    <nav class="bg-blue-800 text-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+    <nav class="bg-blue-900 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-[98%] mx-auto px-4 py-3 flex justify-between items-center">
             <h1 class="text-2xl font-bold tracking-wide">AMR Tracker</h1>
-            <div class="space-x-3 flex">
-                <button onclick="showExportModal()" class="bg-green-600 text-white px-4 py-2 rounded shadow-md font-bold hover:bg-green-700 transition flex items-center gap-2">
-                    📥 Export to Antibiogram
+            <div class="space-x-2 flex">
+                <button onclick="showTab('records')" id="btnTabRecords" class="bg-blue-700 text-white border border-blue-500 px-5 py-2 rounded shadow-md font-bold transition hover:bg-blue-600">
+                    📋 Patients Records
                 </button>
-                <button onclick="openModal()" class="bg-white text-blue-800 px-4 py-2 rounded shadow-md font-bold hover:bg-gray-100 transition">
+                <button onclick="showTab('report')" id="btnTabReport" class="bg-transparent text-blue-100 border border-blue-600 px-5 py-2 rounded shadow-md font-bold transition hover:bg-blue-700">
+                    📊 Antibiogram Report
+                </button>
+                <div class="w-px bg-blue-700 mx-2"></div>
+                <button onclick="openModal()" class="bg-green-500 text-white px-5 py-2 rounded shadow-md font-bold hover:bg-green-600 transition">
                     + New Entry
                 </button>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content: Records Table -->
-    <main class="w-[98%] mx-auto mt-8 mb-10">
-        <div class="bg-white rounded-lg shadow-md p-2 overflow-hidden">
+    <!-- TAB 1: Patients Records Table -->
+    <main id="viewRecords" class="w-[98%] mx-auto mt-6 mb-10 block">
+        <div class="bg-white rounded-lg shadow-md p-2 overflow-hidden border-t-4 border-blue-500">
+            <h2 class="text-xl font-bold text-gray-700 m-4">📋 Culture & Susceptibility Records</h2>
             <table id="recordsTable" class="display nowrap w-full" style="width:100%"></table>
+        </div>
+    </main>
+
+    <!-- TAB 2: Antibiogram Report Dashboard -->
+    <main id="viewReport" class="w-[98%] mx-auto mt-6 mb-10 hidden">
+        <div class="bg-white rounded-lg shadow-md p-6 border-t-4 border-green-500">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <h2 class="text-xl font-bold text-gray-700">📊 Interactive Antibiogram Report</h2>
+                <div class="flex gap-3 items-end">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">From Date</label>
+                        <input type="date" id="rep_start" class="border rounded p-2 text-sm bg-gray-50 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">To Date</label>
+                        <input type="date" id="rep_end" class="border rounded p-2 text-sm bg-gray-50 focus:ring-blue-500">
+                    </div>
+                    <button onclick="generateReport()" class="bg-blue-800 text-white px-6 py-2 rounded shadow font-bold hover:bg-blue-900 transition">
+                        Generate Report
+                    </button>
+                </div>
+            </div>
+            
+            <div id="reportContainer" class="w-full">
+                <!-- The Report Table will be injected here -->
+                <div class="text-center text-gray-400 py-10 italic">Select a date range and click 'Generate Report' to view the Antibiogram.</div>
+            </div>
         </div>
     </main>
 
     <!-- Modal for Data Entry -->
     <div id="formModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden flex justify-center items-center z-50">
+        <!-- نفس نافذة الإدخال السابقة بدون أي تغيير -->
         <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-11/12 lg:w-4/5 max-w-6xl max-h-[95vh] overflow-y-auto relative">
             <div class="px-6 py-4 border-b flex justify-between items-center sticky top-0 bg-white z-10 shadow-sm">
                 <h3 class="text-xl font-bold text-gray-800" id="modalTitle">Add New Patient Record</h3>
@@ -137,14 +175,12 @@
                         </div>
                     </div>
 
-                    <!-- Antibiotics Master Panel -->
                     <div class="border border-gray-200 rounded-lg p-5 bg-gray-50 mt-6 shadow-inner">
                         <div class="flex justify-between items-center mb-4 border-b border-gray-300 pb-2">
                             <h4 class="font-bold text-gray-800 text-lg">Antibiotics Susceptibility Panel</h4>
                             <button type="button" onclick="manageAntibiotics()" class="text-xs text-red-500 font-semibold bg-red-50 px-2 py-1 rounded">⚙️ Manage Custom</button>
                         </div>
                         
-                        <!-- Search Bar for Custom/New Antibiotics -->
                         <div class="flex gap-2 mb-6 bg-white p-3 rounded border">
                             <div class="flex-1">
                                 <label class="block text-xs font-bold text-gray-500 mb-1">Add Custom Antibiotic (if not found below)</label>
@@ -155,13 +191,9 @@
                             <button type="button" onclick="addAntibiotic()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-semibold mt-5 shadow">+ Add</button>
                         </div>
 
-                        <!-- Container for Custom added antibiotics -->
                         <div id="active_abx_container" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 mb-6 empty:hidden"></div>
                         
-                        <!-- Container for Automatically Grouped Default Antibiotics -->
-                        <div id="default_abx_container" class="space-y-6">
-                            <!-- Populated by JS -->
-                        </div>
+                        <div id="default_abx_container" class="space-y-6"></div>
                     </div>
 
                     <div class="flex justify-end gap-3 mt-8 pt-4 border-t sticky bottom-0 bg-white py-4 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-10 px-2 -mx-2">
@@ -174,7 +206,7 @@
     </div>
 
     <script>
-        // 1. Comprehensive Bacteria Library
+        // --- 1. Master Data Definitions ---
         const bacteriaLibrary = [
             { name: "Escherichia coli (E.coli)", code: "ECO", group: "Gram-Negative" },
             { name: "Klebsiella pneumoniae", code: "KPN", group: "Gram-Negative" },
@@ -261,7 +293,6 @@
             { name: "Candida auris", code: "CAU", group: "Fungi" }
         ];
 
-        // 2. Antibiotics categorized by class for the UI
         const abxGroups = {
             "Penicillins": ["Benzylpenicillin", "Penicillin (P)", "Ampicillin (AM)", "Amoxicillin", "Cloxacillin", "Oxacillin (OX)", "Amoxicillin/ Clavulonic acid (AMC)", "Ampicillin/Salbactam (SAM)", "Amoxicillin/ Salbactam", "Piperacillin (PR)", "Piperacillin / Tazobactam (TPZ)", "Ticarcillin (TIC)", "Ticarcillin/Clavulonic acid (TIM)"],
             "Cephalosporins": ["Cefazolin", "Cefoxitin", "Cefuroxime (CXM)", "Cefixime (CFM)", "Ceftriaxone (CRO)", "Cefotaxim (CTX)", "Ceftazidime (CAZ)", "Cefepime (FEP)", "Cefaclor", "Cefpodoxime", "Cefdinir", "Cephalothin", "Cefoxitin screen"],
@@ -273,50 +304,114 @@
             "Tetracyclines": ["Tetracycline (TE)", "Doxacycline(DO)", "Tigecycline"],
             "Others": ["Trimethoprim/Sulfamethoxazole (TXS)", "Trimethoprim (TIM)", "Nitrofurantoin (F)", "Fosfomycin (FOS)", "Colistin", "Linezolid (LNZ)", "Rifampicin (RA)", "Fucidin", "Mupirocin"]
         };
-
         const abxList = Object.values(abxGroups).flat();
-
-        const abxMapExport = {
-            "Ampicillin (AM)": "ampicillin", "Penicillin (P)": "penicillin", "Ampicillin/Salbactam (SAM)": "ampicillin-sulbactam",
-            "Amoxicillin": "amoxicillin", "Oxacillin (OX)": "oxacilline", "Amoxicillin/ Clavulonic acid (AMC)": "amoxicillin-clavulanate",
-            "Piperacillin (PR)": "piperacillin", "Ticarcillin (TIC)": "ticarcillin", "Ticarcillin/Clavulonic acid (TIM)": "ticarcillin-clavulanate",
-            "Piperacillin / Tazobactam (TPZ)": "piperacillin-tazobactam", "Ceftriaxone (CRO)": "ceftriaxone", "Cefotaxim (CTX)": "cefotaxime",
-            "Ceftazidime (CAZ)": "ceftazidime", "Cefepime (FEP)": "cefepime", "Cefoxitin": "cefoxitine", "Cefazolin": "cefazoline",
-            "Cefixime (CFM)": "cefixime", "Cefuroxime (CXM)": "cefuroxime", "Amikacin (AK)": "amikacin", "Gentamicin (CN)": "gentamicin",
-            "Tobramycin (TOB)": "tobramycin", "Netlimicin (NET)": "netilmicin", "Imipenem (IMP)": "imipinem", "Meropenem (MEM)": "meropenem",
-            "Ertapenem": "ertapenem", "Aztreonam (ATM)": "aztreonam", "Azithromycin (AZM)": "azithromycin", "Clarithromycin (CLR)": "clarithromycin",
-            "Erythromycin (E)": "erythromycin", "Ciprofloxacin (CIP)": "ciprofloxacin", "Moxifloxacin": "moxifloxacin", "Levofloxacin (LEV)": "levofloxacin",
-            "Teicoplanin": "teicoplanin", "Vancomycin (VA)": "vancomycin", "Tigecycline": "tigecycline", "Tetracycline (TE)": "tetracycline",
-            "Doxacycline(DO)": "doxycycline", "Colistin": "colistin", "Trimethoprim/Sulfamethoxazole (TXS)": "trimethoprime-sulfamethoxazole",
-            "Rifampicin (RA)": "rifampiin", "Nitrofurantoin (F)": "nitrofurantoin", "Trimethoprim (TIM)": "trimethoprime", 
-            "Fosfomycin (FOS)": "fosfomycin", "Clindamycin (DA)": "clindamycin", "Fucidin": "fucidic acid",
-            "Cefaclor": "cefaclor", "Cefpodoxime": "cefpodoxime", "Cefdinir": "cefdinir", "Cephalothin": "cephalothin",
-            "Ofloxacin (OFX)": "ofloxacin", "Norfloxacin (ROR)": "norfloxacin", "Daptomycin": "daptomycin", "Mupirocin": "mupirocin"
-        };
-
-        const orgMapExport = {
-            "Escherichia coli (E.coli)": "e.coli", "Klebsiella pneumoniae": "klebsiella pneumoniae", "Proteus mirabilis": "proteus mirabillis",
-            "Proteus (other spp)": "proteus (other spp)", "Citrobacter (spp)": "citrobacter (spp)", "Enterobacter (spp)": "enterobacter (spp)",
-            "Providencia spp": "providencia spp", "Salmonella spp": "salmonella spp", "Shigella (spp)": "shigella (spp)", "Serratia spp": "serratia",
-            "Yersinia enterocolitica": "yersinia enterocoliticae", "Enterobacteriaceae (other spp)": "enterobacteriaceae (other spp)",
-            "Acinetobacter baumannii": "acinetobacter baumannii", "Acinetobacter spp.": "acinetobacter spp.", "Burkholderia cepacia complex": "burkholderia cepacia complex",
-            "Pseudomonas aeruginosa": "pseudomonas aeruginosa", "Haemophilus influenzae": "hemophilus influenzae", "Neisseria gonorrhoeae": "neisseria gonorrhoeae",
-            "Neisseria meningitidis": "neisseria meningitis", "Bacteroides fragilis": "bacteroides fragilis", "Chlamydia trachomatis": "chlamydia trachomatis",
-            "Helicobacter pylori": "helicobacter pylori", "Fusobacterium canifelinum": "fusobacterium canifelinum", "Staphylococcus aureus": "staphylococcus aureus",
-            "Staphylococcus non-aureus (spp) / CoNS": "staphylococcus non-aureus (spp)", "Streptococcus pneumoniae": "streptococcus pneumoniae",
-            "Streptococcus pyogenes (Group A)": "streptococcus pyogenes (groupna)", "Listeria spp": "listeria", "Clostridium Spp": "clostridium spp",
-            "Bacillus spp": "bacillus", "Enterococcus faecalis": "enterococcus faecalis", "Enterococcus spp": "enterococcus spp",
-            "Mycobacterium tuberculosis": "mycobacterium tuberculosis", "Streptococcus spp (β-hemolytic group)": "streptococcus spp (β-hemolytic group)",
-            "Streptococcus viridans": "streptococcus viridans", "Anaerobes (General)": "anaerobes", "Enterococcus faecium": "enterococcus faecium",
-            "Enterococcus gallinarum / E. casseliflavus": "enterococcus gallinarum/e. casseliflavus",
-            "Klebsiella oxytoca": "klebsiella pneumoniae", "Klebsiella aerogenes": "klebsiella pneumoniae", "Citrobacter freundii": "citrobacter (spp)", 
-            "Enterobacter cloacae": "enterobacter (spp)", "Serratia marcescens": "serratia"
-        };
 
         const defaultSamples = ["Blood", "Urine", "Sputum", "Wound Swab", "CSF", "Pus", "Stool", "Aspirate"];
         let dataTable;
-        let selectedAbxMap = {}; // Tracks CUSTOM added antibiotics only
+        let reportTable;
+        let selectedAbxMap = {}; 
 
+        // 2. Report Configuration (Matches the exact layout of the Excel file)
+        const reportOrganisms = [
+            { group: 'Gram negative', name: 'E.coli', appNames: ['Escherichia coli (E.coli)'] },
+            { group: 'Gram negative', name: 'klebsiella pneumoniae', appNames: ['Klebsiella pneumoniae', 'Klebsiella oxytoca', 'Klebsiella aerogenes'] },
+            { group: 'Gram negative', name: 'proteus mirabillis', appNames: ['Proteus mirabilis'] },
+            { group: 'Gram negative', name: 'proteus (other spp)', appNames: ['Proteus (other spp)', 'Proteus vulgaris'] },
+            { group: 'Gram negative', name: 'citrobacter (spp)', appNames: ['Citrobacter (spp)', 'Citrobacter freundii', 'Citrobacter koseri'] },
+            { group: 'Gram negative', name: 'enterobacter (spp)', appNames: ['Enterobacter (spp)', 'Enterobacter cloacae'] },
+            { group: 'Gram negative', name: 'providencia spp', appNames: ['Providencia spp', 'Providencia stuartii', 'Providencia rettgeri'] },
+            { group: 'Gram negative', name: 'salmonella spp', appNames: ['Salmonella spp', 'Salmonella Typhi', 'Salmonella Typhimurium', 'Salmonella Enteritidis'] },
+            { group: 'Gram negative', name: 'shigella (spp)', appNames: ['Shigella (spp)', 'Shigella sonnei', 'Shigella flexneri', 'Shigella dysenteriae'] },
+            { group: 'Gram negative', name: 'serratia', appNames: ['Serratia spp', 'Serratia marcescens'] },
+            { group: 'Gram negative', name: 'yersinia enterocoliticae', appNames: ['Yersinia enterocolitica'] },
+            { group: 'Gram negative', name: 'enterobacteriaceae (other spp)', appNames: ['Enterobacteriaceae (other spp)', 'Morganella morganii'] },
+            { group: 'Gram negative', name: 'acinetobacter baumannii', appNames: ['Acinetobacter baumannii'] },
+            { group: 'Gram negative', name: 'acinetobacter spp.', appNames: ['Acinetobacter spp.', 'Acinetobacter lwoffii'] },
+            { group: 'Gram negative', name: 'burkholderia cepacia complex', appNames: ['Burkholderia cepacia complex'] },
+            { group: 'Gram negative', name: 'pseudomonas aeruginosa', appNames: ['Pseudomonas aeruginosa', 'Pseudomonas putida'] },
+            { group: 'Gram negative', name: 'hemophilus influenzae', appNames: ['Haemophilus influenzae', 'Haemophilus parainfluenzae'] },
+            { group: 'Gram negative', name: 'neisseria gonorrhoeae', appNames: ['Neisseria gonorrhoeae'] },
+            { group: 'Gram negative', name: 'neisseria meningitis', appNames: ['Neisseria meningitidis'] },
+            { group: 'Gram negative', name: 'bacteroides fragilis', appNames: ['Bacteroides fragilis'] },
+            { group: 'Gram negative', name: 'chlamydia trachomatis', appNames: ['Chlamydia trachomatis'] },
+            { group: 'Gram negative', name: 'helicobacter pylori', appNames: ['Helicobacter pylori'] },
+            { group: 'Gram negative', name: 'Fusobacterium canifelinum', appNames: ['Fusobacterium canifelinum'] },
+            
+            { group: 'Gram positive', name: 'staphylococcus aureus', appNames: ['Staphylococcus aureus'] },
+            { group: 'Gram positive', name: 'staphylococcus non-aureus (spp)', appNames: ['Staphylococcus non-aureus (spp) / CoNS', 'Staphylococcus epidermidis', 'Staphylococcus saprophyticus', 'Staphylococcus haemolyticus', 'Staphylococcus hominis', 'Staphylococcus lugdunensis'] },
+            { group: 'Gram positive', name: 'streptococcus pneumoniae', appNames: ['Streptococcus pneumoniae'] },
+            { group: 'Gram positive', name: 'streptococcus pyogenes (groupnA)', appNames: ['Streptococcus pyogenes (Group A)'] },
+            { group: 'Gram positive', name: 'listeria', appNames: ['Listeria spp', 'Listeria monocytogenes'] },
+            { group: 'Gram positive', name: 'clostridium Spp', appNames: ['Clostridium Spp', 'Clostridium perfringens', 'Clostridioides difficile', 'Clostridium tetani'] },
+            { group: 'Gram positive', name: 'bacillus', appNames: ['Bacillus spp', 'Bacillus cereus', 'Bacillus anthracis'] },
+            { group: 'Gram positive', name: 'enterococcus faecalis', appNames: ['Enterococcus faecalis'] },
+            { group: 'Gram positive', name: 'enterococcus spp', appNames: ['Enterococcus spp'] },
+            { group: 'Gram positive', name: 'mycobacterium tuberculosis', appNames: ['Mycobacterium tuberculosis'] },
+            { group: 'Gram positive', name: 'streptococcus spp (β-hemolytic group)', appNames: ['Streptococcus spp (β-hemolytic group)', 'Streptococcus agalactiae (Group B)', 'Streptococcus mutans'] },
+            { group: 'Gram positive', name: 'streptococcus viridans', appNames: ['Streptococcus viridans'] },
+            { group: 'Gram positive', name: 'anaerobes', appNames: ['Anaerobes (General)', 'Cutibacterium acnes'] },
+            { group: 'Gram positive', name: 'Enterococcus faecium', appNames: ['Enterococcus faecium'] },
+            { group: 'Gram positive', name: 'Enterococcus gallinarum/E. casseliflavus', appNames: ['Enterococcus gallinarum / E. casseliflavus'] }
+        ];
+
+        // The exact antibiotics columns needed for the report
+        const reportAntibiotics = [
+            { repName: "ampicillin", appName: "Ampicillin (AM)" },
+            { repName: "flouxacillin", appName: "Flouxacillin" }, // Not in default, but mapped just in case added
+            { repName: "penicillin", appName: "Penicillin (P)" },
+            { repName: "ampicillin-sulbactam", appName: "Ampicillin/Salbactam (SAM)" },
+            { repName: "amoxicillin", appName: "Amoxicillin" },
+            { repName: "oxacilline", appName: "Oxacillin (OX)" },
+            { repName: "amoxicillin-clavulanate", appName: "Amoxicillin/ Clavulonic acid (AMC)" },
+            { repName: "piperacillin", appName: "Piperacillin (PR)" },
+            { repName: "ticarcillin", appName: "Ticarcillin (TIC)" },
+            { repName: "ticarcillin-clavulanate", appName: "Ticarcillin/Clavulonic acid (TIM)" },
+            { repName: "piperacillin-tazobactam", appName: "Piperacillin / Tazobactam (TPZ)" },
+            { repName: "ceftriaxone", appName: "Ceftriaxone (CRO)" },
+            { repName: "cefotaxime", appName: "Cefotaxim (CTX)" },
+            { repName: "ceftazidime", appName: "Ceftazidime (CAZ)" },
+            { repName: "cefepime", appName: "Cefepime (FEP)" },
+            { repName: "cefoxitine", appName: "Cefoxitin" },
+            { repName: "cefazoline", appName: "Cefazolin" },
+            { repName: "cefixime", appName: "Cefixime (CFM)" },
+            { repName: "cefaclor", appName: "Cefaclor" },
+            { repName: "cefpodoxime", appName: "Cefpodoxime" },
+            { repName: "cefdinir", appName: "Cefdinir" },
+            { repName: "cephalothin", appName: "Cephalothin" },
+            { repName: "cefuroxime", appName: "Cefuroxime (CXM)" },
+            { repName: "amikacin", appName: "Amikacin (AK)" },
+            { repName: "gentamicin", appName: "Gentamicin (CN)" },
+            { repName: "tobramycin", appName: "Tobramycin (TOB)" },
+            { repName: "netilmicin", appName: "Netlimicin (NET)" },
+            { repName: "imipinem", appName: "Imipenem (IMP)" },
+            { repName: "meropenem", appName: "Meropenem (MEM)" },
+            { repName: "ertapenem", appName: "Ertapenem" },
+            { repName: "aztreonam", appName: "Aztreonam (ATM)" },
+            { repName: "azithromycin", appName: "Azithromycin (AZM)" },
+            { repName: "clarithromycin", appName: "Clarithromycin (CLR)" },
+            { repName: "erythromycin", appName: "Erythromycin (E)" },
+            { repName: "ciprofloxacin", appName: "Ciprofloxacin (CIP)" },
+            { repName: "moxifloxacin", appName: "Moxifloxacin" },
+            { repName: "levofloxacin", appName: "Levofloxacin (LEV)" },
+            { repName: "teicoplanin", appName: "Teicoplanin" },
+            { repName: "vancomycin", appName: "Vancomycin (VA)" },
+            { repName: "tigecycline", appName: "Tigecycline" },
+            { repName: "tetracycline", appName: "Tetracycline (TE)" },
+            { repName: "doxycycline", appName: "Doxacycline(DO)" },
+            { repName: "colistin", appName: "Colistin" },
+            { repName: "chloramphenicol", appName: "Chloramphenicol" },
+            { repName: "trimethoprime-sulfamethoxazole", appName: "Trimethoprim/Sulfamethoxazole (TXS)" },
+            { repName: "rifampiin", appName: "Rifampicin (RA)" },
+            { repName: "nitrofurantoin", appName: "Nitrofurantoin (F)" },
+            { repName: "trimethoprime", appName: "Trimethoprim (TIM)" },
+            { repName: "sulfisoxazole", appName: "Sulfisoxazole" },
+            { repName: "fosfomycin", appName: "Fosfomycin (FOS)" },
+            { repName: "clindamycin", appName: "Clindamycin (DA)" },
+            { repName: "metronidazole", appName: "Metronidazole" },
+            { repName: "fucidic acid", appName: "Fucidin" }
+        ];
+
+        // --- 3. Initialization ---
         $(document).ready(function() {
             loadBacteriaOptions();
             loadSampleOptions();
@@ -324,16 +419,37 @@
             renderDefaultAntibiotics();
 
             $('.select2-enable').select2({ width: '100%', dropdownParent: $('#formModal') });
-            
             $('#p_sample').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new sample..." });
-            
             $('#abx_selector').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Type custom antibiotic name..." });
             $('#p_organism').select2({ width: '100%', dropdownParent: $('#formModal') });
 
-            $('#p_date').val(new Date().toISOString().split('T')[0]);
+            let today = new Date().toISOString().split('T')[0];
+            $('#p_date').val(today);
+            
+            // Set default report dates (current year)
+            let currentYear = new Date().getFullYear();
+            $('#rep_start').val(`${currentYear}-01-01`);
+            $('#rep_end').val(`${currentYear}-12-31`);
+
             initDataTable();
         });
 
+        // --- 4. Tab Switching Logic ---
+        function showTab(tabName) {
+            if (tabName === 'records') {
+                $('#viewRecords').removeClass('hidden');
+                $('#viewReport').addClass('hidden');
+                $('#btnTabRecords').removeClass('bg-transparent text-blue-100 border-blue-600').addClass('bg-blue-700 text-white border-blue-500');
+                $('#btnTabReport').removeClass('bg-blue-700 text-white border-blue-500').addClass('bg-transparent text-blue-100 border-blue-600');
+            } else {
+                $('#viewRecords').addClass('hidden');
+                $('#viewReport').removeClass('hidden');
+                $('#btnTabReport').removeClass('bg-transparent text-blue-100 border-blue-600').addClass('bg-blue-700 text-white border-blue-500');
+                $('#btnTabRecords').removeClass('bg-blue-700 text-white border-blue-500').addClass('bg-transparent text-blue-100 border-blue-600');
+            }
+        }
+
+        // --- 5. Data Entry Functions ---
         function renderDefaultAntibiotics() {
             let html = '';
             for (const [group, abxs] of Object.entries(abxGroups)) {
@@ -423,7 +539,7 @@
                 data: records, columns: cols, scrollX: true, 
                 dom: '<"flex justify-between items-center mb-4"Bf>rt<"flex justify-between items-center mt-4"ip>',
                 buttons: [
-                    { extend: 'excelHtml5', text: 'Export to Excel', className: 'mr-2 rounded shadow' },
+                    { extend: 'excelHtml5', text: 'Export Data to Excel', className: 'mr-2 rounded shadow' },
                     { extend: 'print', text: 'Print Records', className: 'rounded shadow' }
                 ],
                 pageLength: 15
@@ -437,7 +553,6 @@
             $('#p_ward').val('').trigger('change'); $('#p_sex').val('Male').trigger('change');
             $('#p_sample').val(null).trigger('change'); $('#p_organism').val(null).trigger('change');
             $('#abx_selector').val(null).trigger('change');
-            
             $('.default-abx-select').val('').removeClass('bg-green-100 bg-yellow-100 bg-red-100');
             
             $('#modalTitle').text('Add New Patient Record'); $('#formModal').removeClass('hidden');
@@ -457,10 +572,7 @@
                 }
             });
 
-            if (isDefault) {
-                $('#abx_selector').val(null).trigger('change');
-                return; 
-            }
+            if (isDefault) { $('#abx_selector').val(null).trigger('change'); return; }
 
             if (selectedAbxMap[abx]) return; 
             selectedAbxMap[abx] = result;
@@ -510,9 +622,7 @@
 
             $('.default-abx-select').each(function() {
                 const val = $(this).val();
-                if (val && val !== "") {
-                    record[$(this).attr('data-abx')] = val;
-                }
+                if (val && val !== "") { record[$(this).attr('data-abx')] = val; }
             });
 
             if (newAbxAdded) { localStorage.setItem('amr_custom_abx', JSON.stringify(savedCustomAbx)); loadAntibioticOptions(); }
@@ -543,16 +653,12 @@
             else { $('#p_organism').append(new Option(record['Selective organism'], record['Selective organism'], true, true)).trigger('change'); }
 
             abxList.forEach(abx => {
-                if(record[abx] && record[abx] !== '-') {
-                    $(`.default-abx-select[data-abx="${abx}"]`).val(record[abx]).trigger('change');
-                }
+                if(record[abx] && record[abx] !== '-') { $(`.default-abx-select[data-abx="${abx}"]`).val(record[abx]).trigger('change'); }
             });
 
             let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
             savedCustomAbx.forEach(abx => {
-                if(record[abx] && record[abx] !== '-') {
-                    addAntibiotic(abx, record[abx]);
-                }
+                if(record[abx] && record[abx] !== '-') { addAntibiotic(abx, record[abx]); }
             });
         }
 
@@ -606,141 +712,121 @@
             loadAntibioticOptions(); initDataTable(); manageAntibiotics();
         };
 
-        // --- Export to Antibiogram Feature (FileReader Approach for Maximum Compatibility) ---
-        function showExportModal() {
-            Swal.fire({
-                title: 'Export to Antibiogram',
-                html: `
-                    <div class="text-left space-y-4">
-                        <p class="text-sm text-gray-500 bg-blue-50 p-2 rounded">Offline Mode: Select the date range and choose the blank 'Antibiogram.xlsx' file from your PC.</p>
-                        <div class="flex gap-4">
-                            <div class="flex-1">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
-                                <input type="date" id="export_start" class="w-full border p-2 rounded focus:ring-blue-500">
-                            </div>
-                            <div class="flex-1">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
-                                <input type="date" id="export_end" class="w-full border p-2 rounded focus:ring-blue-500">
-                            </div>
-                        </div>
-                        <div class="mt-3">
-                            <label class="block text-sm font-bold text-gray-700 mb-1">Upload Antibiogram Template (.xlsx)</label>
-                            <input type="file" id="template_file" accept=".xlsx" class="w-full border border-gray-300 p-2 rounded bg-gray-50">
-                        </div>
-                    </div>
-                `,
-                showCancelButton: true, confirmButtonText: 'Generate & Download', confirmButtonColor: '#16a34a',
-                preConfirm: () => {
-                    const start = document.getElementById('export_start').value;
-                    const end = document.getElementById('export_end').value;
-                    const fileInput = document.getElementById('template_file');
-                    
-                    if (!start || !end) { Swal.showValidationMessage('Please select dates'); return false; }
-                    if (fileInput.files.length === 0) { Swal.showValidationMessage('Please upload the Excel template'); return false; }
-                    
-                    return { start, end, file: fileInput.files[0] };
-                }
-            }).then((result) => {
-                if (result.isConfirmed) processAntibiogramExport(result.value.start, result.value.end, result.value.file);
-            });
-        }
+        // --- 6. The New Integrated Antibiogram Dashboard ---
+        function generateReport() {
+            const startDate = $('#rep_start').val();
+            const endDate = $('#rep_end').val();
 
-        async function processAntibiogramExport(startDate, endDate, templateFile) {
+            if (!startDate || !endDate) {
+                Swal.fire('Required', 'Please select both From and To dates.', 'warning');
+                return;
+            }
+
             let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
             let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
 
-            if(records.length === 0) { 
-                Swal.fire('No Data', 'No records found in this date range.', 'info'); 
-                return; 
+            if (records.length === 0) {
+                Swal.fire('No Data', 'No records found in this date range.', 'info');
+                $('#reportContainer').html(`<div class="text-center text-gray-400 py-10 italic">No records found between ${startDate} and ${endDate}.</div>`);
+                return;
             }
 
-            Swal.fire({ title: 'Generating File...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            // 6.1 Calculate Statistics
+            let stats = {};
+            // Initialize stats structure for all specific report organisms
+            reportOrganisms.forEach(org => {
+                stats[org.name] = { total: 0, group: org.group, abx: {} };
+                reportAntibiotics.forEach(a => {
+                    stats[org.name].abx[a.repName] = { tested: 0, resistant: 0 };
+                });
+            });
 
-            const reader = new FileReader();
-            
-            reader.onload = async function(e) {
-                try {
-                    const arrayBuffer = e.target.result;
-                    const workbook = new ExcelJS.Workbook();
-                    
-                    try {
-                        await workbook.xlsx.load(arrayBuffer);
-                    } catch (loadErr) {
-                        throw new Error("Invalid Excel format. Please open your file in Excel, choose 'Save As', and save it strictly as an 'Excel Workbook (*.xlsx)'.");
-                    }
+            // Populate stats
+            records.forEach(r => {
+                let orgName = r['Selective organism'];
+                // Find matching report organism
+                let matchedOrg = reportOrganisms.find(o => o.appNames.includes(orgName));
+                if (!matchedOrg) return;
 
-                    const sheet = workbook.worksheets[0]; 
-                    if (!sheet) throw new Error("Could not find any sheets in the Excel file.");
+                stats[matchedOrg.name].total += 1;
 
-                    let excelAbxColumns = {};
-                    sheet.getRow(5).eachCell((cell, colNum) => {
-                        let val = cell.value ? cell.value.toString().trim().toLowerCase() : "";
-                        if (val) excelAbxColumns[val] = { tested: colNum - 1, resistant: colNum, percent: colNum + 1 };
-                    });
-
-                    let excelOrgRows = {};
-                    for (let r = 6; r <= 50; r++) {
-                        let cellVal = sheet.getCell(r, 2).value;
-                        if (cellVal) excelOrgRows[cellVal.toString().trim().toLowerCase()] = r;
-                    }
-
-                    let stats = {};
-                    records.forEach(r => {
-                        let orgName = r['Selective organism'];
-                        let mappedOrg = orgMapExport[orgName];
-                        if (!mappedOrg) return; 
-
-                        if (!stats[mappedOrg]) stats[mappedOrg] = { total: 0, abx: {} };
-                        stats[mappedOrg].total += 1;
-
-                        Object.keys(abxMapExport).forEach(appAbx => {
-                            let excelAbx = abxMapExport[appAbx].toLowerCase();
-                            let result = r[appAbx];
-                            
-                            if (result && result !== '-' && result !== '') {
-                                if (!stats[mappedOrg].abx[excelAbx]) stats[mappedOrg].abx[excelAbx] = { tested: 0, resistant: 0 };
-                                stats[mappedOrg].abx[excelAbx].tested += 1; 
-                                if (result === 'R') stats[mappedOrg].abx[excelAbx].resistant += 1; 
-                            }
-                        });
-                    });
-
-                    Object.keys(stats).forEach(org => {
-                        let rowNum = excelOrgRows[org];
-                        if (rowNum) {
-                            sheet.getCell(rowNum, 3).value = stats[org].total;
-                            Object.keys(stats[org].abx).forEach(abx => {
-                                let cols = excelAbxColumns[abx];
-                                if (cols) {
-                                    let s = stats[org].abx[abx];
-                                    sheet.getCell(rowNum, cols.tested).value = s.tested;
-                                    sheet.getCell(rowNum, cols.resistant).value = s.resistant;
-                                    
-                                    let pct = s.tested > 0 ? Math.round((s.resistant / s.tested) * 100) : 0;
-                                    sheet.getCell(rowNum, cols.percent).value = pct + '%';
-                                }
-                            });
+                reportAntibiotics.forEach(abxDef => {
+                    let result = r[abxDef.appName];
+                    if (result && result !== '-' && result !== '') {
+                        stats[matchedOrg.name].abx[abxDef.repName].tested += 1;
+                        if (result === 'R') {
+                            stats[matchedOrg.name].abx[abxDef.repName].resistant += 1;
                         }
-                    });
+                    }
+                });
+            });
 
-                    const buffer = await workbook.xlsx.writeBuffer();
-                    const sDate = new Date(startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-                    const eDate = new Date(endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-                    saveAs(new Blob([buffer]), `Antibiogram ${sDate} to ${eDate}.xlsx`);
-                    
-                    Swal.fire('Success!', `File Downloaded.`, 'success');
-
-                } catch (error) {
-                    console.error(error);
-                    Swal.fire('Error', error.message || 'Failed to process the Excel file. Make sure it is the correct template.', 'error');
-                }
-            };
+            // 6.2 Build HTML Table
+            let html = `
+                <table id="reportTable" class="stripe row-border order-column cell-border w-full text-xs">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" class="report-header-group">Organism Group</th>
+                            <th rowspan="2" class="report-header-group">Organisms Isolated</th>
+                            <th rowspan="2" class="report-header-group">Total Isolates</th>
+            `;
             
-            reader.onerror = function() {
-                Swal.fire('Error', 'Failed to read the file from your computer.', 'error');
-            };
+            // Top Header: Antibiotic Names (Colspan 2)
+            reportAntibiotics.forEach(a => {
+                html += `<th colspan="2" class="bg-blue-600">${a.repName}</th>`;
+            });
+            html += `</tr><tr>`;
+            
+            // Sub Header: Tested & %R
+            reportAntibiotics.forEach(a => {
+                html += `<th>Sample Size</th><th>% Resistance</th>`;
+            });
+            html += `</tr></thead><tbody>`;
 
-            reader.readAsArrayBuffer(templateFile);
+            // Table Body
+            reportOrganisms.forEach(org => {
+                let s = stats[org.name];
+                html += `<tr>
+                    <td class="font-bold bg-gray-50">${org.group}</td>
+                    <td class="font-bold bg-white whitespace-nowrap">${org.name}</td>
+                    <td class="font-bold bg-blue-50 text-blue-900">${s.total > 0 ? s.total : ''}</td>
+                `;
+
+                reportAntibiotics.forEach(abxDef => {
+                    let abxStats = s.abx[abxDef.repName];
+                    let pct = abxStats.tested > 0 ? Math.round((abxStats.resistant / abxStats.tested) * 100) : '';
+                    let tested = abxStats.tested > 0 ? abxStats.tested : '';
+                    
+                    html += `<td>${tested}</td><td class="font-semibold ${pct >= 50 ? 'text-red-600' : ''}">${pct !== '' ? pct + '%' : ''}</td>`;
+                });
+                html += `</tr>`;
+            });
+
+            html += `</tbody></table>`;
+            $('#reportContainer').html(html);
+
+            // 6.3 Initialize DataTable for Report with Export Feature
+            if ($.fn.DataTable.isDataTable('#reportTable')) { $('#reportTable').DataTable().destroy(); }
+
+            reportTable = $('#reportTable').DataTable({
+                scrollX: true,
+                scrollY: "60vh",
+                scrollCollapse: true,
+                paging: false,
+                ordering: false, // Maintain exact Excel order
+                fixedColumns: {
+                    leftColumns: 3 // Freeze Group, Name, and Total Isolates columns
+                },
+                dom: '<"flex justify-between items-center mb-4"B>rt',
+                buttons: [
+                    { 
+                        extend: 'excelHtml5', 
+                        text: '📥 Export Report to Excel', 
+                        className: 'bg-green-600 hover:bg-green-700 text-white rounded shadow-md px-6 py-2 !font-bold',
+                        title: `Antibiogram Report (${startDate} to ${endDate})`
+                    }
+                ]
+            });
         }
     </script>
 </body>
