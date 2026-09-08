@@ -97,7 +97,6 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-600 mb-1">Ward</label>
-                            <!-- تمت إضافة الخيار الفارغ هنا (بدون required) ليكون اختيارياً -->
                             <select id="p_ward" class="w-full select2-enable">
                                 <option value="">Select Ward (Optional)...</option>
                                 <option value="Pediatrics">Pediatrics</option>
@@ -146,11 +145,17 @@
 
                     <!-- Smart Antibiotics Panel -->
                     <div class="border border-gray-200 rounded-lg p-5 bg-gray-50 mt-6 shadow-inner">
-                        <h4 class="font-bold text-gray-700 mb-3 border-b pb-2">Antibiotics Susceptibility Panel</h4>
+                        <!-- Header with Manage Button -->
+                        <div class="flex justify-between items-center mb-4 border-b border-gray-300 pb-2">
+                            <h4 class="font-bold text-gray-700">Antibiotics Susceptibility Panel</h4>
+                            <button type="button" onclick="manageAntibiotics()" class="text-xs text-red-500 hover:text-red-700 font-semibold" title="Delete custom antibiotics">⚙️ Manage</button>
+                        </div>
+                        
                         <div class="flex gap-2 mb-5">
                             <div class="flex-1">
-                                <select id="abx_selector" class="w-full select2-enable">
-                                    <option value="">Search and select antibiotic...</option>
+                                <!-- Changed to support tags (free text entry) -->
+                                <select id="abx_selector" class="w-full">
+                                    <option value="">Search, select, or type new antibiotic...</option>
                                 </select>
                             </div>
                             <button type="button" onclick="addAntibiotic()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md shadow transition font-semibold">
@@ -262,7 +267,7 @@
             { name: "Candida auris", code: "CAU", group: "Fungi" }
         ];
 
-        // 2. Antibiotics List
+        // 2. Default Antibiotics List
         const abxList = [
             "Benzylpenicillin", "Piperacillin (PR)", "Penicillin (P)", "Ampicillin (AM)", "Cloxacillin",
             "Oxacillin (OX)", "Amoxicillin", "Amoxicillin/ Clavulonic acid (AMC)", "Piperacillin / Tazobactam (TPZ)",
@@ -320,6 +325,7 @@
         $(document).ready(function() {
             loadBacteriaOptions();
             loadSampleOptions();
+            loadAntibioticOptions();
 
             $('.select2-enable').select2({ width: '100%', dropdownParent: $('#formModal') });
             
@@ -330,13 +336,15 @@
                 placeholder: "Select or type new sample..."
             });
 
-            $('#abx_selector').select2({ width: '100%', dropdownParent: $('#formModal') });
-            $('#p_organism').select2({ width: '100%', dropdownParent: $('#formModal') });
-
-            const selector = $('#abx_selector');
-            abxList.forEach(abx => {
-                selector.append(new Option(abx, abx));
+            // جعل قائمة المضادات الحيوية تدعم الإدخال اليدوي (Tags)
+            $('#abx_selector').select2({ 
+                width: '100%', 
+                dropdownParent: $('#formModal'),
+                tags: true,
+                placeholder: "Search, select, or type new antibiotic..."
             });
+            
+            $('#p_organism').select2({ width: '100%', dropdownParent: $('#formModal') });
 
             $('#p_date').val(new Date().toISOString().split('T')[0]);
             initDataTable();
@@ -369,6 +377,21 @@
             });
         }
 
+        // دالة جديدة لتحميل المضادات الافتراضية والاضافية
+        function loadAntibioticOptions() {
+            let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
+            const selector = $('#abx_selector');
+            selector.empty();
+            selector.append(new Option("Search, select, or type new antibiotic...", ""));
+            
+            // دمج المضادات الافتراضية مع المضادات التي يضيفها المستخدم
+            let allAbx = [...new Set([...abxList, ...savedCustomAbx])];
+            
+            allAbx.forEach(abx => {
+                selector.append(new Option(abx, abx));
+            });
+        }
+
         function quickSelectOrganism(organismName) {
             $('#p_organism').val(organismName).trigger('change');
         }
@@ -393,7 +416,11 @@
                 { data: 'Selective organism', title: 'Selective organism' }
             ];
 
-            abxList.forEach(abx => {
+            // انشاء أعمدة الجدول بناءً على القائمة الشاملة للمضادات (الافتراضية + الإضافية)
+            let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
+            let allAbxColumns = [...new Set([...abxList, ...savedCustomAbx])];
+
+            allAbxColumns.forEach(abx => {
                 cols.push({ data: abx, title: abx, defaultContent: '-' });
             });
 
@@ -422,11 +449,11 @@
             $('#active_abx_container').empty();
             selectedAbxMap = {};
             
-            // جعل الردهة فارغة عند الاضافة
             $('#p_ward').val('').trigger('change');
             $('#p_sex').val('Male').trigger('change');
             $('#p_sample').val(null).trigger('change');
             $('#p_organism').val(null).trigger('change');
+            $('#abx_selector').val(null).trigger('change');
             
             $('#modalTitle').text('Add New Patient Record');
             $('#formModal').removeClass('hidden');
@@ -441,7 +468,7 @@
             if(!abx || selectedAbxMap[abx]) return;
 
             selectedAbxMap[abx] = result;
-            const safeId = abx.replace(/[^a-zA-Z0-9]/g, '_');
+            const safeId = abx.replace(/[^a-zA-Z0-9\s]/g, '_').trim(); // تأمين الـ ID للمضادات الجديدة
 
             const html = `
                 <div id="row_${safeId}" class="flex items-center justify-between bg-white border border-gray-200 rounded-md p-3 shadow-sm hover:shadow transition">
@@ -478,11 +505,15 @@
                 $('#p_sample').append(new Option(currentSample, currentSample, true, true)).trigger('change');
             }
 
+            // التأكد من حفظ المضادات الجديدة المُضافة يدوياً
+            let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
+            let newAbxAdded = false;
+
             let record = {
                 'Name': $('#p_name').val(),
                 'Age': $('#p_age').val(),
                 'Sex': $('#p_sex').val(),
-                'Ward': $('#p_ward').val() || "-", // حفظ كشارحة إذا تركت فارغة
+                'Ward': $('#p_ward').val() || "-", 
                 'Sample': currentSample,
                 'Date': $('#p_date').val(),
                 'Selective organism': $('#p_organism').val()
@@ -495,7 +526,17 @@
 
             Object.keys(selectedAbxMap).forEach(abx => {
                 record[abx] = selectedAbxMap[abx];
+                // إذا كان المضاد جديداً وغير موجود في القائمة، نضيفه
+                if (!abxList.includes(abx) && !savedCustomAbx.includes(abx)) {
+                    savedCustomAbx.push(abx);
+                    newAbxAdded = true;
+                }
             });
+
+            if (newAbxAdded) {
+                localStorage.setItem('amr_custom_abx', JSON.stringify(savedCustomAbx));
+                loadAntibioticOptions();
+            }
 
             let records = JSON.parse(localStorage.getItem('amr_records')) || [];
             let editIndex = $('#editIndex').val();
@@ -508,7 +549,7 @@
 
             localStorage.setItem('amr_records', JSON.stringify(records));
             closeModal();
-            initDataTable();
+            initDataTable(); // سيتم تحديث الجدول لإضافة عمود المضاد الجديد إن وجد
 
             Swal.fire({ icon: 'success', title: 'Record Saved!', text: 'The data has been updated successfully.', timer: 1500, showConfirmButton: false });
         });
@@ -547,7 +588,11 @@
                 $('#p_organism').append(newOrgOption).trigger('change');
             }
 
-            abxList.forEach(abx => {
+            // دمج كل المضادات المتاحة لضمان ظهورها عند التعديل
+            let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
+            let allAbxColumns = [...new Set([...abxList, ...savedCustomAbx])];
+
+            allAbxColumns.forEach(abx => {
                 if(record[abx] && record[abx] !== '-') addAntibiotic(abx, record[abx]);
             });
         }
@@ -572,6 +617,7 @@
             });
         }
 
+        // --- إدارة وحذف العينات ---
         function manageSamples() {
             let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
             let customSamples = savedSamples.filter(s => !defaultSamples.includes(s));
@@ -601,6 +647,38 @@
             localStorage.setItem('amr_samples', JSON.stringify(savedSamples));
             loadSampleOptions();
             manageSamples();
+        };
+
+        // --- إدارة وحذف المضادات المضافة يدوياً ---
+        function manageAntibiotics() {
+            let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
+            
+            if (savedCustomAbx.length === 0) {
+                Swal.fire({ icon: 'info', title: 'No Custom Antibiotics', text: 'You have not added any new antibiotics manually yet.' });
+                return;
+            }
+
+            let html = '<div class="text-left space-y-2 mt-4">';
+            savedCustomAbx.forEach(abx => {
+                let escapedAbx = abx.replace(/'/g, "\\'");
+                html += `
+                <div class="flex justify-between items-center bg-gray-100 p-3 rounded border">
+                    <span class="font-medium text-gray-700 truncate w-3/4">${abx}</span>
+                    <button type="button" onclick="deleteCustomAntibiotic('${escapedAbx}')" class="text-red-500 hover:text-red-700 font-bold bg-white px-3 py-1 rounded shadow-sm border border-red-200">Delete</button>
+                </div>`;
+            });
+            html += '</div>';
+
+            Swal.fire({ title: 'Manage Custom Antibiotics', html: html, showConfirmButton: true, confirmButtonText: 'Done' });
+        }
+
+        window.deleteCustomAntibiotic = function(abxToDelete) {
+            let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
+            savedCustomAbx = savedCustomAbx.filter(a => a !== abxToDelete);
+            localStorage.setItem('amr_custom_abx', JSON.stringify(savedCustomAbx));
+            loadAntibioticOptions();
+            initDataTable(); // تحديث أعمدة الجدول لإزالة المضاد المحذوف
+            manageAntibiotics();
         };
 
         // --- Export to Antibiogram Feature ---
@@ -686,6 +764,8 @@
                     if (!stats[mappedOrg]) stats[mappedOrg] = { total: 0, abx: {} };
                     stats[mappedOrg].total += 1;
 
+                    // هنا خوارزمية التصدير تعتمد فقط على المضادات الأصلية (abxMapExport) 
+                    // ولن تتأثر بالمضادات المُضافة يدوياً أبداً.
                     Object.keys(abxMapExport).forEach(appAbx => {
                         let excelAbx = abxMapExport[appAbx].toLowerCase();
                         let result = r[appAbx];
