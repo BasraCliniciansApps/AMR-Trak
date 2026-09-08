@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMR Tracker | Antibiogram</title>
+    
+    <!-- Tailwind CSS (For Modern UI) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- jQuery (Required for DataTables & Select2) -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    
+    <!-- DataTables & Export Buttons -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+    
+    <!-- Select2 (For Smart Searchable Dropdowns) -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
+    <!-- SweetAlert2 (For Stylish Popups & Alerts) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- ExcelJS & FileSaver (For Smart Antibiogram Export) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <style>
+        /* Custom Styling for DataTables to match Tailwind */
+        body { background-color: #f3f4f6; }
+        .dataTables_wrapper { font-size: 0.875rem; padding: 1.5rem; background: #fff; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .dt-buttons button { background-color: #2563eb !important; color: white !important; border-radius: 0.375rem !important; border: none !important; padding: 0.5rem 1rem !important; margin-bottom: 1rem; font-weight: 600 !important; }
+        .dt-buttons button:hover { background-color: #1d4ed8 !important; }
+        /* Fix Select2 UI inside Modals */
+        .select2-container .select2-selection--single { height: 42px; border: 1px solid #d1d5db; border-radius: 0.375rem; display: flex; align-items: center; }
+        .select2-container { z-index: 9999 !important; }
+    </style>
+</head>
+<body class="text-gray-800 font-sans antialiased">
+
+    <!-- Top Navigation -->
+    <nav class="bg-blue-800 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-2xl font-bold tracking-wide">AMR Tracker</h1>
+            <div class="space-x-3 flex">
+                <button onclick="showExportModal()" class="bg-green-600 text-white px-4 py-2 rounded shadow-md font-bold hover:bg-green-700 transition flex items-center gap-2">
+                    📥 Export to Antibiogram
+                </button>
+                <button onclick="openModal()" class="bg-white text-blue-800 px-4 py-2 rounded shadow-md font-bold hover:bg-gray-100 transition">
+                    + New Entry
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content: Records Table -->
+    <main class="w-[98%] mx-auto mt-8 mb-10">
+        <div class="bg-white rounded-lg shadow-md p-2 overflow-hidden">
+            <table id="recordsTable" class="display nowrap w-full" style="width:100%"></table>
+        </div>
+    </main>
+
+    <!-- Modal for Data Entry / Editing -->
+    <div id="formModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden flex justify-center items-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-3/4 max-w-5xl max-h-[90vh] overflow-y-auto relative">
+            <div class="px-6 py-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+                <h3 class="text-xl font-bold text-gray-800" id="modalTitle">Add New Patient Record</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-red-500 font-bold text-2xl transition">&times;</button>
+            </div>
+            
+            <div class="p-6">
+                <form id="entryForm" class="space-y-6">
+                    <input type="hidden" id="editIndex" value="-1">
+                    
+                    <!-- Demographics Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Patient Name</label>
+                            <input type="text" id="p_name" required class="w-full border-gray-300 border rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Age</label>
+                            <input type="number" id="p_age" class="w-full border-gray-300 border rounded-md p-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Sex</label>
+                            <select id="p_sex" class="w-full border-gray-300 border rounded-md p-2 h-[42px]">
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Ward</label>
+                            <select id="p_ward" class="w-full select2-enable">
+                                <option value="Pediatrics">Pediatrics</option>
+                                <option value="Resuscitation / CCU">Resuscitation / CCU</option>
+                                <option value="Internal Medicine">Internal Medicine</option>
+                                <option value="General Surgery">General Surgery</option>
+                                <option value="Private Ward">Private Ward</option>
+                                <option value="Neonatal Unit">Neonatal Unit</option>
+                                <option value="NICU">NICU</option>
+                                <option value="ICU">ICU</option>
+                                <option value="General Obstetrics & Gynecology">General Obstetrics & Gynecology</option>
+                                <option value="Private Obstetrics & Gynecology">Private Obstetrics & Gynecology</option>
+                                <option value="Neurology & Neurosurgery">Neurology & Neurosurgery</option>
+                                <option value="Delivery Room">Delivery Room</option>
+                                <option value="Orthopedics">Orthopedics</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-sm font-medium text-gray-600">Sample</label>
+                                <button type="button" onclick="manageSamples()" class="text-xs text-red-500 hover:text-red-700 font-semibold" title="Delete custom samples">⚙️ Manage</button>
+                            </div>
+                            <select id="p_sample" class="w-full" required></select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Date</label>
+                            <input type="date" id="p_date" required class="w-full border-gray-300 border rounded-md p-2 h-[42px]">
+                        </div>
+                        
+                        <!-- Smart Organism Selector with Quick Tags -->
+                        <div class="md:col-span-3 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                            <label class="block text-sm font-bold text-blue-800 mb-2">Selective Organism</label>
+                            <select id="p_organism" class="w-full select2-enable" required>
+                                <option value="">Type name or shortcode (e.g., ECO, PAE)...</option>
+                            </select>
+                            <div class="mt-3 flex flex-wrap gap-2 items-center">
+                                <span class="text-xs text-gray-500 font-semibold mr-2">Quick Select:</span>
+                                <button type="button" onclick="quickSelectOrganism('Escherichia coli (E.coli)')" class="text-xs bg-white text-blue-700 hover:bg-blue-600 hover:text-white border border-blue-200 px-3 py-1.5 rounded-full shadow-sm transition">E. coli</button>
+                                <button type="button" onclick="quickSelectOrganism('Klebsiella pneumoniae')" class="text-xs bg-white text-blue-700 hover:bg-blue-600 hover:text-white border border-blue-200 px-3 py-1.5 rounded-full shadow-sm transition">K. pneumoniae</button>
+                                <button type="button" onclick="quickSelectOrganism('Staphylococcus aureus')" class="text-xs bg-white text-blue-700 hover:bg-blue-600 hover:text-white border border-blue-200 px-3 py-1.5 rounded-full shadow-sm transition">S. aureus</button>
+                                <button type="button" onclick="quickSelectOrganism('Pseudomonas aeruginosa')" class="text-xs bg-white text-blue-700 hover:bg-blue-600 hover:text-white border border-blue-200 px-3 py-1.5 rounded-full shadow-sm transition">P. aeruginosa</button>
+                                <button type="button" onclick="quickSelectOrganism('Acinetobacter baumannii')" class="text-xs bg-white text-blue-700 hover:bg-blue-600 hover:text-white border border-blue-200 px-3 py-1.5 rounded-full shadow-sm transition">A. baumannii</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Smart Antibiotics Panel -->
+                    <div class="border border-gray-200 rounded-lg p-5 bg-gray-50 mt-6 shadow-inner">
+                        <h4 class="font-bold text-gray-700 mb-3 border-b pb-2">Antibiotics Susceptibility Panel</h4>
+                        <div class="flex gap-2 mb-5">
+                            <div class="flex-1">
+                                <select id="abx_selector" class="w-full select2-enable">
+                                    <option value="">Search and select antibiotic...</option>
+                                </select>
+                            </div>
+                            <button type="button" onclick="addAntibiotic()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md shadow transition font-semibold">
+                                + Add
+                            </button>
+                        </div>
+                        
+                        <!-- Dynamically added antibiotics -->
+                        <div id="active_abx_container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+                    </div>
+
+                    <div class="flex justify-end gap-3 mt-8 pt-4 border-t">
+                        <button type="button" onclick="closeModal()" class="px-6 py-2 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-100 font-semibold transition">Cancel</button>
+                        <button type="submit" class="px-6 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md shadow-md font-bold transition">Save Record</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. Comprehensive Bacteria Library
+        const bacteriaLibrary = [
+            { name: "Escherichia coli (E.coli)", code: "ECO", group: "Gram-Negative" },
+            { name: "Klebsiella pneumoniae", code: "KPN", group: "Gram-Negative" },
+            { name: "Klebsiella oxytoca", code: "KOX", group: "Gram-Negative" },
+            { name: "Klebsiella aerogenes", code: "KAE", group: "Gram-Negative" },
+            { name: "Enterobacter cloacae", code: "ECL", group: "Gram-Negative" },
+            { name: "Enterobacter (spp)", code: "ENT", group: "Gram-Negative" },
+            { name: "Proteus mirabilis", code: "PMI", group: "Gram-Negative" },
+            { name: "Proteus vulgaris", code: "PVU", group: "Gram-Negative" },
+            { name: "Proteus (other spp)", code: "PRO", group: "Gram-Negative" },
+            { name: "Morganella morganii", code: "MMO", group: "Gram-Negative" },
+            { name: "Providencia stuartii", code: "PST", group: "Gram-Negative" },
+            { name: "Providencia rettgeri", code: "PRE", group: "Gram-Negative" },
+            { name: "Providencia spp", code: "PRV", group: "Gram-Negative" },
+            { name: "Serratia marcescens", code: "SMA", group: "Gram-Negative" },
+            { name: "Serratia spp", code: "SER", group: "Gram-Negative" },
+            { name: "Citrobacter freundii", code: "CFR", group: "Gram-Negative" },
+            { name: "Citrobacter koseri", code: "CKO", group: "Gram-Negative" },
+            { name: "Citrobacter (spp)", code: "CIT", group: "Gram-Negative" },
+            { name: "Salmonella Typhi", code: "STY", group: "Gram-Negative" },
+            { name: "Salmonella Typhimurium", code: "STM", group: "Gram-Negative" },
+            { name: "Salmonella Enteritidis", code: "SEN", group: "Gram-Negative" },
+            { name: "Salmonella spp", code: "SAL", group: "Gram-Negative" },
+            { name: "Shigella sonnei", code: "SSO", group: "Gram-Negative" },
+            { name: "Shigella flexneri", code: "SFL", group: "Gram-Negative" },
+            { name: "Shigella dysenteriae", code: "SDY", group: "Gram-Negative" },
+            { name: "Shigella (spp)", code: "SHI", group: "Gram-Negative" },
+            { name: "Yersinia enterocolitica", code: "YEN", group: "Gram-Negative" },
+            { name: "Enterobacteriaceae (other spp)", code: "EBO", group: "Gram-Negative" },
+            
+            { name: "Pseudomonas aeruginosa", code: "PAE", group: "Gram-Negative" },
+            { name: "Pseudomonas putida", code: "PPU", group: "Gram-Negative" },
+            { name: "Acinetobacter baumannii", code: "ABA", group: "Gram-Negative" },
+            { name: "Acinetobacter lwoffii", code: "ALW", group: "Gram-Negative" },
+            { name: "Acinetobacter spp.", code: "ACI", group: "Gram-Negative" },
+            { name: "Stenotrophomonas maltophilia", code: "SML", group: "Gram-Negative" },
+            { name: "Burkholderia cepacia complex", code: "BCC", group: "Gram-Negative" },
+            { name: "Haemophilus influenzae", code: "HIN", group: "Gram-Negative" },
+            { name: "Haemophilus parainfluenzae", code: "HPA", group: "Gram-Negative" },
+            { name: "Neisseria gonorrhoeae", code: "NGO", group: "Gram-Negative" },
+            { name: "Neisseria meningitidis", code: "NME", group: "Gram-Negative" },
+            { name: "Moraxella catarrhalis", code: "MCA", group: "Gram-Negative" },
+            { name: "Campylobacter jejuni", code: "CJE", group: "Gram-Negative" },
+            { name: "Helicobacter pylori", code: "HPY", group: "Gram-Negative" },
+            { name: "Vibrio cholerae", code: "VCH", group: "Gram-Negative" },
+            { name: "Brucella melitensis", code: "BME", group: "Gram-Negative" },
+            { name: "Brucella abortus", code: "BAB", group: "Gram-Negative" },
+            { name: "Bacteroides fragilis", code: "BFR", group: "Gram-Negative" },
+            { name: "Legionella pneumophila", code: "LPN", group: "Gram-Negative" },
+            { name: "Chlamydia trachomatis", code: "CTR", group: "Gram-Negative" },
+            { name: "Fusobacterium canifelinum", code: "FCA", group: "Gram-Negative" },
+
+            { name: "Staphylococcus aureus", code: "SAU", group: "Gram-Positive" },
+            { name: "Staphylococcus epidermidis", code: "SEP", group: "Gram-Positive" },
+            { name: "Staphylococcus saprophyticus", code: "SSP", group: "Gram-Positive" },
+            { name: "Staphylococcus haemolyticus", code: "SHM", group: "Gram-Positive" },
+            { name: "Staphylococcus hominis", code: "SHO", group: "Gram-Positive" },
+            { name: "Staphylococcus lugdunensis", code: "SLG", group: "Gram-Positive" },
+            { name: "Staphylococcus non-aureus (spp) / CoNS", code: "CNS", group: "Gram-Positive" },
+            { name: "Streptococcus pneumoniae", code: "SPN", group: "Gram-Positive" },
+            { name: "Streptococcus pyogenes (Group A)", code: "SPY", group: "Gram-Positive" },
+            { name: "Streptococcus agalactiae (Group B)", code: "SAG", group: "Gram-Positive" },
+            { name: "Streptococcus mutans", code: "SMU", group: "Gram-Positive" },
+            { name: "Streptococcus spp (β-hemolytic group)", code: "SBH", group: "Gram-Positive" },
+            { name: "Streptococcus viridans", code: "SVI", group: "Gram-Positive" },
+            { name: "Enterococcus faecalis", code: "EFA", group: "Gram-Positive" },
+            { name: "Enterococcus faecium", code: "EFM", group: "Gram-Positive" },
+            { name: "Enterococcus gallinarum / E. casseliflavus", code: "EGC", group: "Gram-Positive" },
+            { name: "Enterococcus spp", code: "ENC", group: "Gram-Positive" },
+            { name: "Listeria monocytogenes", code: "LMO", group: "Gram-Positive" },
+            { name: "Listeria spp", code: "LIS", group: "Gram-Positive" },
+            { name: "Corynebacterium diphtheriae", code: "CDI", group: "Gram-Positive" },
+            { name: "Corynebacterium jeikeium", code: "CJE", group: "Gram-Positive" },
+            { name: "Bacillus cereus", code: "BCE", group: "Gram-Positive" },
+            { name: "Bacillus anthracis", code: "BAN", group: "Gram-Positive" },
+            { name: "Bacillus spp", code: "BAC", group: "Gram-Positive" },
+            { name: "Clostridium perfringens", code: "CPE", group: "Gram-Positive" },
+            { name: "Clostridioides difficile", code: "CDF", group: "Gram-Positive" },
+            { name: "Clostridium tetani", code: "CTE", group: "Gram-Positive" },
+            { name: "Clostridium Spp", code: "CLO", group: "Gram-Positive" },
+            { name: "Cutibacterium acnes", code: "CAC", group: "Gram-Positive" },
+            
+            { name: "Mycobacterium tuberculosis", code: "MTB", group: "Others" },
+            { name: "Mycoplasma pneumoniae", code: "MPN", group: "Others" },
+            { name: "Anaerobes (General)", code: "ANA", group: "Others" },
+            { name: "Candida albicans", code: "CAL", group: "Fungi" },
+            { name: "Candida auris", code: "CAU", group: "Fungi" }
+        ];
+
+        // 2. Antibiotics List
+        const abxList = [
+            "Benzylpenicillin", "Piperacillin (PR)", "Penicillin (P)", "Ampicillin (AM)", "Cloxacillin",
+            "Oxacillin (OX)", "Amoxicillin", "Amoxicillin/ Clavulonic acid (AMC)", "Piperacillin / Tazobactam (TPZ)",
+            "Ticarcillin/Clavulonic acid (TIM)", "Ampicillin/Salbactam (SAM)", "Amoxicillin/ Salbactam", "Ticarcillin (TIC)",
+            "Meropenem (MEM)", "Imipenem (IMP)", "Ertapenem", "Aztreonam (ATM)", "Cefazolin", "Cefoxitin",
+            "Cefuroxime (CXM)", "Cefixime (CFM)", "Ceftriaxone (CRO)", "Cefotaxim (CTX)", "Ceftazidime (CAZ)",
+            "Cefepime (FEP)", "Nalidixic acid (NA)", "Ofloxacin (OFX)", "Norfloxacin (ROR)", "Ciprofloxacin (CIP)",
+            "Levofloxacin (LEV)", "Moxifloxacin", "Trimethoprim/Sulfamethoxazole (TXS)", "Trimethoprim (TIM)",
+            "Tetracycline (TE)", "Doxacycline(DO)", "Tigecycline", "Vancomycin (VA)", "Teicoplanin", "Erythromycin (E)",
+            "Clarithromycin (CLR)", "Azithromycin (AZM)", "Gentamicin (CN)", "Amikacin (AK)", "Tobramycin (TOB)",
+            "Netlimicin (NET)", "Clindamycin (DA)", "Rifampicin (RA)", "Linezolid (LNZ)", "Fucidin", "Colistin",
+            "Nitrofurantoin (F)", "Fosfomycin (FOS)", "Daptomycin", "Mupirocin", "Inducible Clindamycin Resistance", "Cefoxitin screen"
+        ];
+
+        // 3. Mapping objects for Antibiogram Export
+        const abxMapExport = {
+            "Ampicillin (AM)": "ampicillin", "Penicillin (P)": "penicillin", "Ampicillin/Salbactam (SAM)": "ampicillin-sulbactam",
+            "Amoxicillin": "amoxicillin", "Oxacillin (OX)": "oxacilline", "Amoxicillin/ Clavulonic acid (AMC)": "amoxicillin-clavulanate",
+            "Piperacillin (PR)": "piperacillin", "Ticarcillin (TIC)": "ticarcillin", "Ticarcillin/Clavulonic acid (TIM)": "ticarcillin-clavulanate",
+            "Piperacillin / Tazobactam (TPZ)": "piperacillin-tazobactam", "Ceftriaxone (CRO)": "ceftriaxone", "Cefotaxim (CTX)": "cefotaxime",
+            "Ceftazidime (CAZ)": "ceftazidime", "Cefepime (FEP)": "cefepime", "Cefoxitin": "cefoxitine", "Cefazolin": "cefazoline",
+            "Cefixime (CFM)": "cefixime", "Cefuroxime (CXM)": "cefuroxime", "Amikacin (AK)": "amikacin", "Gentamicin (CN)": "gentamicin",
+            "Tobramycin (TOB)": "tobramycin", "Netlimicin (NET)": "netilmicin", "Imipenem (IMP)": "imipinem", "Meropenem (MEM)": "meropenem",
+            "Ertapenem": "ertapenem", "Aztreonam (ATM)": "aztreonam", "Azithromycin (AZM)": "azithromycin", "Clarithromycin (CLR)": "clarithromycin",
+            "Erythromycin (E)": "erythromycin", "Ciprofloxacin (CIP)": "ciprofloxacin", "Moxifloxacin": "moxifloxacin", "Levofloxacin (LEV)": "levofloxacin",
+            "Teicoplanin": "teicoplanin", "Vancomycin (VA)": "vancomycin", "Tigecycline": "tigecycline", "Tetracycline (TE)": "tetracycline",
+            "Doxacycline(DO)": "doxycycline", "Colistin": "colistin", "Trimethoprim/Sulfamethoxazole (TXS)": "trimethoprime-sulfamethoxazole",
+            "Rifampicin (RA)": "rifampiin", "Nitrofurantoin (F)": "nitrofurantoin", "Trimethoprim (TIM)": "trimethoprime", 
+            "Fosfomycin (FOS)": "fosfomycin", "Clindamycin (DA)": "clindamycin", "Fucidin": "fucidic acid"
+        };
+
+        const orgMapExport = {
+            "Escherichia coli (E.coli)": "e.coli", "Klebsiella pneumoniae": "klebsiella pneumoniae", "Proteus mirabilis": "proteus mirabillis",
+            "Proteus (other spp)": "proteus (other spp)", "Citrobacter (spp)": "citrobacter (spp)", "Enterobacter (spp)": "enterobacter (spp)",
+            "Providencia spp": "providencia spp", "Salmonella spp": "salmonella spp", "Shigella (spp)": "shigella (spp)", "Serratia spp": "serratia",
+            "Yersinia enterocolitica": "yersinia enterocoliticae", "Enterobacteriaceae (other spp)": "enterobacteriaceae (other spp)",
+            "Acinetobacter baumannii": "acinetobacter baumannii", "Acinetobacter spp.": "acinetobacter spp.", "Burkholderia cepacia complex": "burkholderia cepacia complex",
+            "Pseudomonas aeruginosa": "pseudomonas aeruginosa", "Haemophilus influenzae": "hemophilus influenzae", "Neisseria gonorrhoeae": "neisseria gonorrhoeae",
+            "Neisseria meningitidis": "neisseria meningitis", "Bacteroides fragilis": "bacteroides fragilis", "Chlamydia trachomatis": "chlamydia trachomatis",
+            "Helicobacter pylori": "helicobacter pylori", "Fusobacterium canifelinum": "fusobacterium canifelinum", "Staphylococcus aureus": "staphylococcus aureus",
+            "Staphylococcus non-aureus (spp) / CoNS": "staphylococcus non-aureus (spp)", "Streptococcus pneumoniae": "streptococcus pneumoniae",
+            "Streptococcus pyogenes (Group A)": "streptococcus pyogenes (groupna)", "Listeria spp": "listeria", "Clostridium Spp": "clostridium spp",
+            "Bacillus spp": "bacillus", "Enterococcus faecalis": "enterococcus faecalis", "Enterococcus spp": "enterococcus spp",
+            "Mycobacterium tuberculosis": "mycobacterium tuberculosis", "Streptococcus spp (β-hemolytic group)": "streptococcus spp (β-hemolytic group)",
+            "Streptococcus viridans": "streptococcus viridans", "Anaerobes (General)": "anaerobes", "Enterococcus faecium": "enterococcus faecium",
+            "Enterococcus gallinarum / E. casseliflavus": "enterococcus gallinarum/e. casseliflavus",
+            "Klebsiella oxytoca": "klebsiella pneumoniae", "Klebsiella aerogenes": "klebsiella pneumoniae", "Citrobacter freundii": "citrobacter (spp)", 
+            "Enterobacter cloacae": "enterobacter (spp)", "Serratia marcescens": "serratia"
+        };
+
+        const defaultSamples = ["Blood", "Urine", "Sputum", "Wound Swab", "CSF", "Pus", "Stool", "Aspirate"];
+        let dataTable;
+        let selectedAbxMap = {}; 
+
+        $(document).ready(function() {
+            loadBacteriaOptions();
+            loadSampleOptions();
+
+            $('.select2-enable').select2({ width: '100%', dropdownParent: $('#formModal') });
+            
+            $('#p_sample').select2({ 
+                width: '100%', 
+                dropdownParent: $('#formModal'),
+                tags: true, 
+                placeholder: "Select or type new sample..."
+            });
+
+            $('#abx_selector').select2({ width: '100%', dropdownParent: $('#formModal') });
+            $('#p_organism').select2({ width: '100%', dropdownParent: $('#formModal') });
+
+            const selector = $('#abx_selector');
+            abxList.forEach(abx => {
+                selector.append(new Option(abx, abx));
+            });
+
+            $('#p_date').val(new Date().toISOString().split('T')[0]);
+            initDataTable();
+        });
+
+        function loadBacteriaOptions() {
+            const select = $('#p_organism');
+            const groups = { "Gram-Negative": [], "Gram-Positive": [], "Others": [], "Fungi": [] };
+
+            bacteriaLibrary.forEach(bact => {
+                const optionText = `${bact.name} (${bact.code})`;
+                groups[bact.group].push(new Option(optionText, bact.name));
+            });
+
+            for (const [groupName, options] of Object.entries(groups)) {
+                if (options.length > 0) {
+                    const optgroup = $(`<optgroup label="${groupName}"></optgroup>`);
+                    options.forEach(opt => optgroup.append(opt));
+                    select.append(optgroup);
+                }
+            }
+        }
+
+        function loadSampleOptions() {
+            let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
+            const sampleSelect = $('#p_sample');
+            sampleSelect.empty(); 
+            savedSamples.forEach(sample => {
+                sampleSelect.append(new Option(sample, sample));
+            });
+        }
+
+        function quickSelectOrganism(organismName) {
+            $('#p_organism').val(organismName).trigger('change');
+        }
+
+        function initDataTable() {
+            let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+            
+            let cols = [
+                { data: null, title: 'Action', orderable: false, render: function(data, type, row, meta) {
+                    return `
+                    <div class="flex gap-2">
+                        <button onclick="editRecord(${meta.row})" class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs shadow-sm font-bold">Edit</button>
+                        <button onclick="deleteRecord(${meta.row})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs shadow-sm font-bold">Delete</button>
+                    </div>`;
+                }},
+                { data: 'Name', title: 'Name' },
+                { data: 'Age', title: 'Age' },
+                { data: 'Sex', title: 'Sex' },
+                { data: 'Ward', title: 'Ward' },
+                { data: 'Sample', title: 'Sample' },
+                { data: 'Date', title: 'Date' },
+                { data: 'Selective organism', title: 'Selective organism' }
+            ];
+
+            abxList.forEach(abx => {
+                cols.push({ data: abx, title: abx, defaultContent: '-' });
+            });
+
+            if ($.fn.DataTable.isDataTable('#recordsTable')) {
+                $('#recordsTable').DataTable().destroy();
+            }
+
+            dataTable = $('#recordsTable').DataTable({
+                data: records,
+                columns: cols,
+                scrollX: true, 
+                dom: '<"flex justify-between items-center mb-4"Bf>rt<"flex justify-between items-center mt-4"ip>',
+                buttons: [
+                    { extend: 'excelHtml5', text: 'Export to Excel', className: 'mr-2 rounded shadow' },
+                    { extend: 'print', text: 'Print Records', className: 'rounded shadow' }
+                ],
+                pageLength: 15,
+                language: { search: "Search Records: " }
+            });
+        }
+
+        function openModal() {
+            $('#entryForm')[0].reset();
+            $('#editIndex').val('-1');
+            $('#p_date').val(new Date().toISOString().split('T')[0]);
+            $('#active_abx_container').empty();
+            selectedAbxMap = {};
+            
+            $('#p_ward').trigger('change');
+            $('#p_sex').trigger('change');
+            $('#p_sample').val(null).trigger('change');
+            $('#p_organism').val(null).trigger('change');
+            
+            $('#modalTitle').text('Add New Patient Record');
+            $('#formModal').removeClass('hidden');
+        }
+
+        function closeModal() {
+            $('#formModal').addClass('hidden');
+        }
+
+        function addAntibiotic(abxName = null, result = 'S') {
+            const abx = abxName || $('#abx_selector').val();
+            if(!abx || selectedAbxMap[abx]) return;
+
+            selectedAbxMap[abx] = result;
+            const safeId = abx.replace(/[^a-zA-Z0-9]/g, '_');
+
+            const html = `
+                <div id="row_${safeId}" class="flex items-center justify-between bg-white border border-gray-200 rounded-md p-3 shadow-sm hover:shadow transition">
+                    <span class="text-sm font-semibold text-gray-700 truncate w-3/5" title="${abx}">${abx}</span>
+                    <select class="abx-result-select border border-gray-300 rounded-md p-1.5 text-sm font-bold bg-gray-50 focus:ring-blue-500 w-1/4" onchange="updateAbxResult('${abx}', this.value)">
+                        <option value="S" class="text-green-600" ${result==='S'?'selected':''}>S</option>
+                        <option value="I" class="text-yellow-600" ${result==='I'?'selected':''}>I</option>
+                        <option value="R" class="text-red-600" ${result==='R'?'selected':''}>R</option>
+                    </select>
+                    <button type="button" onclick="removeAntibiotic('${abx}', '${safeId}')" class="text-red-400 hover:text-red-600 font-bold px-2 text-lg transition">&times;</button>
+                </div>
+            `;
+            $('#active_abx_container').append(html);
+        }
+
+        function updateAbxResult(abx, val) {
+            selectedAbxMap[abx] = val;
+        }
+
+        function removeAntibiotic(abx, safeId) {
+            delete selectedAbxMap[abx];
+            $(`#row_${safeId}`).remove();
+        }
+
+        $('#entryForm').submit(function(e) {
+            e.preventDefault();
+            
+            let currentSample = $('#p_sample').val();
+            let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
+
+            if (currentSample && !savedSamples.includes(currentSample)) {
+                savedSamples.push(currentSample);
+                localStorage.setItem('amr_samples', JSON.stringify(savedSamples));
+                $('#p_sample').append(new Option(currentSample, currentSample, true, true)).trigger('change');
+            }
+
+            let record = {
+                'Name': $('#p_name').val(),
+                'Age': $('#p_age').val(),
+                'Sex': $('#p_sex').val(),
+                'Ward': $('#p_ward').val(),
+                'Sample': currentSample,
+                'Date': $('#p_date').val(),
+                'Selective organism': $('#p_organism').val()
+            };
+
+            if (!record['Selective organism']) {
+                Swal.fire({ icon: 'error', title: 'Oops...', text: 'Please select an organism.' });
+                return;
+            }
+
+            Object.keys(selectedAbxMap).forEach(abx => {
+                record[abx] = selectedAbxMap[abx];
+            });
+
+            let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+            let editIndex = $('#editIndex').val();
+
+            if (editIndex > -1) {
+                records[editIndex] = record; 
+            } else {
+                records.push(record); 
+            }
+
+            localStorage.setItem('amr_records', JSON.stringify(records));
+            closeModal();
+            initDataTable();
+
+            Swal.fire({ icon: 'success', title: 'Record Saved!', text: 'The data has been updated successfully.', timer: 1500, showConfirmButton: false });
+        });
+
+        function editRecord(index) {
+            let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+            let record = records[index];
+            
+            openModal();
+            $('#modalTitle').text('Edit Patient Record');
+            $('#editIndex').val(index);
+            
+            $('#p_name').val(record['Name']);
+            $('#p_age').val(record['Age']);
+            $('#p_sex').val(record['Sex']).trigger('change');
+            $('#p_ward').val(record['Ward']).trigger('change');
+            
+            if ($('#p_sample').find("option[value='" + record['Sample'] + "']").length) {
+                $('#p_sample').val(record['Sample']).trigger('change');
+            } else {
+                var newSampleOption = new Option(record['Sample'], record['Sample'], true, true);
+                $('#p_sample').append(newSampleOption).trigger('change');
+            }
+
+            $('#p_date').val(record['Date']);
+            
+            if ($('#p_organism').find("option[value='" + record['Selective organism'] + "']").length) {
+                $('#p_organism').val(record['Selective organism']).trigger('change');
+            } else {
+                var newOrgOption = new Option(record['Selective organism'], record['Selective organism'], true, true);
+                $('#p_organism').append(newOrgOption).trigger('change');
+            }
+
+            abxList.forEach(abx => {
+                if(record[abx] && record[abx] !== '-') addAntibiotic(abx, record[abx]);
+            });
+        }
+
+        function deleteRecord(index) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this record!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+                    records.splice(index, 1);
+                    localStorage.setItem('amr_records', JSON.stringify(records));
+                    initDataTable();
+                    Swal.fire('Deleted!', 'The record has been deleted.', 'success');
+                }
+            });
+        }
+
+        function manageSamples() {
+            let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
+            let customSamples = savedSamples.filter(s => !defaultSamples.includes(s));
+            
+            if (customSamples.length === 0) {
+                Swal.fire({ icon: 'info', title: 'No Custom Samples', text: 'You have not added any new samples manually yet.' });
+                return;
+            }
+
+            let html = '<div class="text-left space-y-2 mt-4">';
+            customSamples.forEach(sample => {
+                let escapedSample = sample.replace(/'/g, "\\'");
+                html += `
+                <div class="flex justify-between items-center bg-gray-100 p-3 rounded border">
+                    <span class="font-medium text-gray-700">${sample}</span>
+                    <button type="button" onclick="deleteCustomSample('${escapedSample}')" class="text-red-500 hover:text-red-700 font-bold bg-white px-3 py-1 rounded shadow-sm border border-red-200">Delete</button>
+                </div>`;
+            });
+            html += '</div>';
+
+            Swal.fire({ title: 'Manage Custom Samples', html: html, showConfirmButton: true, confirmButtonText: 'Done' });
+        }
+
+        window.deleteCustomSample = function(sampleToDelete) {
+            let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
+            savedSamples = savedSamples.filter(s => s !== sampleToDelete);
+            localStorage.setItem('amr_samples', JSON.stringify(savedSamples));
+            loadSampleOptions();
+            manageSamples();
+        };
+
+        // --- Export to Antibiogram Feature ---
+        function showExportModal() {
+            Swal.fire({
+                title: 'Export to Antibiogram',
+                html: `
+                    <div class="text-left space-y-4">
+                        <p class="text-sm text-gray-500">Select the date range to generate statistics. Ensure 'Antibiogram.xlsx' is uploaded in your repository.</p>
+                        <div class="flex gap-4">
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                                <input type="date" id="export_start" class="w-full border border-gray-300 p-2 rounded focus:ring-blue-500">
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                                <input type="date" id="export_end" class="w-full border border-gray-300 p-2 rounded focus:ring-blue-500">
+                            </div>
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Generate & Download',
+                confirmButtonColor: '#16a34a',
+                preConfirm: () => {
+                    const start = document.getElementById('export_start').value;
+                    const end = document.getElementById('export_end').value;
+                    if (!start || !end) {
+                        Swal.showValidationMessage('Please select both start and end dates');
+                        return false;
+                    }
+                    return { start, end };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) processAntibiogramExport(result.value.start, result.value.end);
+            });
+        }
+
+        async function processAntibiogramExport(startDate, endDate) {
+            try {
+                Swal.fire({
+                    title: 'Generating File...',
+                    text: 'Calculating resistance rates and formatting the Excel template. Please wait...',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+
+                let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+                let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
+
+                if(records.length === 0) {
+                    Swal.fire('No Data Found', 'There are no patient records in the selected date range.', 'info');
+                    return;
+                }
+
+                const response = await fetch('Antibiogram.xlsx');
+                if (!response.ok) throw new Error('Template file not found.');
+                const arrayBuffer = await response.arrayBuffer();
+
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(arrayBuffer);
+                const sheet = workbook.worksheets[0]; 
+
+                let excelAbxColumns = {};
+                const headerRow = sheet.getRow(5);
+                headerRow.eachCell((cell, colNum) => {
+                    let val = cell.value ? cell.value.toString().trim().toLowerCase() : "";
+                    if (val) excelAbxColumns[val] = { tested: colNum - 1, resistant: colNum, percent: colNum + 1 };
+                });
+
+                let excelOrgRows = {};
+                for (let r = 6; r <= 50; r++) {
+                    let cellVal = sheet.getCell(r, 2).value;
+                    if (cellVal) excelOrgRows[cellVal.toString().trim().toLowerCase()] = r;
+                }
+
+                let stats = {};
+                records.forEach(r => {
+                    let orgName = r['Selective organism'];
+                    let mappedOrg = orgMapExport[orgName];
+                    if (!mappedOrg) return; 
+
+                    if (!stats[mappedOrg]) stats[mappedOrg] = { total: 0, abx: {} };
+                    stats[mappedOrg].total += 1;
+
+                    Object.keys(abxMapExport).forEach(appAbx => {
+                        let excelAbx = abxMapExport[appAbx].toLowerCase();
+                        let result = r[appAbx];
+                        
+                        if (result && result !== '-' && result !== '') {
+                            if (!stats[mappedOrg].abx[excelAbx]) stats[mappedOrg].abx[excelAbx] = { tested: 0, resistant: 0 };
+                            
+                            stats[mappedOrg].abx[excelAbx].tested += 1; 
+                            if (result === 'R') stats[mappedOrg].abx[excelAbx].resistant += 1; 
+                        }
+                    });
+                });
+
+                Object.keys(stats).forEach(org => {
+                    let rowNum = excelOrgRows[org];
+                    if (rowNum) {
+                        sheet.getCell(rowNum, 3).value = stats[org].total;
+                        
+                        Object.keys(stats[org].abx).forEach(abx => {
+                            let cols = excelAbxColumns[abx];
+                            if (cols) {
+                                let s = stats[org].abx[abx];
+                                sheet.getCell(rowNum, cols.tested).value = s.tested;
+                                sheet.getCell(rowNum, cols.resistant).value = s.resistant;
+                                
+                                let pct = (s.resistant / s.tested) * 100;
+                                sheet.getCell(rowNum, cols.percent).value = Math.round(pct) + '%';
+                            }
+                        });
+                    }
+                });
+
+                const buffer = await workbook.xlsx.writeBuffer();
+                
+                const sDate = new Date(startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                const eDate = new Date(endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                const fileName = `Antibiogram ${sDate} to ${eDate}.xlsx`;
+
+                saveAs(new Blob([buffer]), fileName);
+                Swal.fire('Success!', `Your Antibiogram has been exported successfully.<br><b>File:</b> ${fileName}`, 'success');
+
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Error', 'Failed to generate Antibiogram. Ensure you have uploaded "Antibiogram.xlsx" to your GitHub repository in the exact same folder as this page.', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
