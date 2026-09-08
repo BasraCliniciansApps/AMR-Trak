@@ -33,6 +33,8 @@
         .dt-buttons button:hover { background-color: #1d4ed8 !important; }
         .select2-container .select2-selection--single { height: 42px; border: 1px solid #d1d5db; border-radius: 0.375rem; display: flex; align-items: center; }
         .select2-container { z-index: 9999 !important; }
+        /* Style for compact dropdowns */
+        select.compact-dropdown { -webkit-appearance: none; -moz-appearance: none; text-align: center; cursor: pointer; }
     </style>
 </head>
 <body class="text-gray-800 font-sans antialiased">
@@ -57,9 +59,10 @@
         </div>
     </main>
 
+    <!-- Modal for Data Entry -->
     <div id="formModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden flex justify-center items-center z-50">
-        <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-3/4 max-w-5xl max-h-[90vh] overflow-y-auto relative">
-            <div class="px-6 py-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+        <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-11/12 lg:w-4/5 max-w-6xl max-h-[95vh] overflow-y-auto relative">
+            <div class="px-6 py-4 border-b flex justify-between items-center sticky top-0 bg-white z-10 shadow-sm">
                 <h3 class="text-xl font-bold text-gray-800" id="modalTitle">Add New Patient Record</h3>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-red-500 font-bold text-2xl transition">&times;</button>
             </div>
@@ -68,23 +71,28 @@
                 <form id="entryForm" class="space-y-6">
                     <input type="hidden" id="editIndex" value="-1">
                     
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        <div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+                        <div class="md:col-span-1">
                             <label class="block text-sm font-medium text-gray-600 mb-1">Patient Name</label>
                             <input type="text" id="p_name" required class="w-full border-gray-300 border rounded-md p-2 focus:ring-blue-500">
                         </div>
-                        <div>
+                        <div class="md:col-span-1">
                             <label class="block text-sm font-medium text-gray-600 mb-1">Age</label>
                             <input type="number" id="p_age" class="w-full border-gray-300 border rounded-md p-2 focus:ring-blue-500">
                         </div>
-                        <div>
+                        <div class="md:col-span-1">
                             <label class="block text-sm font-medium text-gray-600 mb-1">Sex</label>
                             <select id="p_sex" class="w-full border-gray-300 border rounded-md p-2 h-[42px]">
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
                             </select>
                         </div>
-                        <div>
+                        <div class="md:col-span-1">
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Date</label>
+                            <input type="date" id="p_date" required class="w-full border-gray-300 border rounded-md p-2 h-[42px]">
+                        </div>
+
+                        <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-600 mb-1">Ward</label>
                             <select id="p_ward" class="w-full select2-enable">
                                 <option value="">Select Ward (Optional)...</option>
@@ -103,19 +111,15 @@
                                 <option value="Orthopedics">Orthopedics</option>
                             </select>
                         </div>
-                        <div>
+                        <div class="md:col-span-2">
                             <div class="flex justify-between items-center mb-1">
                                 <label class="block text-sm font-medium text-gray-600">Sample</label>
                                 <button type="button" onclick="manageSamples()" class="text-xs text-red-500 font-semibold">⚙️ Manage</button>
                             </div>
                             <select id="p_sample" class="w-full" required></select>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Date</label>
-                            <input type="date" id="p_date" required class="w-full border-gray-300 border rounded-md p-2 h-[42px]">
-                        </div>
                         
-                        <div class="md:col-span-3 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        <div class="md:col-span-4 bg-blue-50 p-4 rounded-lg border border-blue-100">
                             <label class="block text-sm font-bold text-blue-800 mb-2">Selective Organism</label>
                             <select id="p_organism" class="w-full select2-enable" required>
                                 <option value="">Type name or shortcode (e.g., ECO, PAE)...</option>
@@ -131,25 +135,36 @@
                         </div>
                     </div>
 
+                    <!-- Antibiotics Master Panel -->
                     <div class="border border-gray-200 rounded-lg p-5 bg-gray-50 mt-6 shadow-inner">
                         <div class="flex justify-between items-center mb-4 border-b border-gray-300 pb-2">
-                            <h4 class="font-bold text-gray-700">Antibiotics Susceptibility Panel</h4>
-                            <button type="button" onclick="manageAntibiotics()" class="text-xs text-red-500 font-semibold">⚙️ Manage</button>
+                            <h4 class="font-bold text-gray-800 text-lg">Antibiotics Susceptibility Panel</h4>
+                            <button type="button" onclick="manageAntibiotics()" class="text-xs text-red-500 font-semibold bg-red-50 px-2 py-1 rounded">⚙️ Manage Custom</button>
                         </div>
-                        <div class="flex gap-2 mb-5">
+                        
+                        <!-- Search Bar for Custom/New Antibiotics -->
+                        <div class="flex gap-2 mb-6 bg-white p-3 rounded border">
                             <div class="flex-1">
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Add Custom Antibiotic (if not found below)</label>
                                 <select id="abx_selector" class="w-full">
-                                    <option value="">Search, select, or type new antibiotic...</option>
+                                    <option value="">Type custom antibiotic name...</option>
                                 </select>
                             </div>
-                            <button type="button" onclick="addAntibiotic()" class="bg-green-600 text-white px-6 py-2 rounded-md font-semibold">+ Add</button>
+                            <button type="button" onclick="addAntibiotic()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-semibold mt-5 shadow">+ Add</button>
                         </div>
-                        <div id="active_abx_container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+
+                        <!-- Container for Custom added antibiotics -->
+                        <div id="active_abx_container" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 mb-6 empty:hidden"></div>
+                        
+                        <!-- Container for Automatically Grouped Default Antibiotics -->
+                        <div id="default_abx_container" class="space-y-6">
+                            <!-- Populated by JS -->
+                        </div>
                     </div>
 
-                    <div class="flex justify-end gap-3 mt-8 pt-4 border-t">
-                        <button type="button" onclick="closeModal()" class="px-6 py-2 border border-gray-300 rounded-md text-gray-600">Cancel</button>
-                        <button type="submit" class="px-6 py-2 bg-blue-700 text-white rounded-md font-bold">Save Record</button>
+                    <div class="flex justify-end gap-3 mt-8 pt-4 border-t sticky bottom-0 bg-white py-4 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-10 px-2 -mx-2">
+                        <button type="button" onclick="closeModal()" class="px-6 py-2 border border-gray-300 rounded-md text-gray-600 font-bold hover:bg-gray-100">Cancel</button>
+                        <button type="submit" class="px-8 py-2 bg-blue-700 text-white rounded-md font-bold text-lg shadow-lg hover:bg-blue-800">Save Record</button>
                     </div>
                 </form>
             </div>
@@ -243,19 +258,20 @@
             { name: "Candida auris", code: "CAU", group: "Fungi" }
         ];
 
-        const abxList = [
-            "Benzylpenicillin", "Piperacillin (PR)", "Penicillin (P)", "Ampicillin (AM)", "Cloxacillin",
-            "Oxacillin (OX)", "Amoxicillin", "Amoxicillin/ Clavulonic acid (AMC)", "Piperacillin / Tazobactam (TPZ)",
-            "Ticarcillin/Clavulonic acid (TIM)", "Ampicillin/Salbactam (SAM)", "Amoxicillin/ Salbactam", "Ticarcillin (TIC)",
-            "Meropenem (MEM)", "Imipenem (IMP)", "Ertapenem", "Aztreonam (ATM)", "Cefazolin", "Cefoxitin",
-            "Cefuroxime (CXM)", "Cefixime (CFM)", "Ceftriaxone (CRO)", "Cefotaxim (CTX)", "Ceftazidime (CAZ)",
-            "Cefepime (FEP)", "Nalidixic acid (NA)", "Ofloxacin (OFX)", "Norfloxacin (ROR)", "Ciprofloxacin (CIP)",
-            "Levofloxacin (LEV)", "Moxifloxacin", "Trimethoprim/Sulfamethoxazole (TXS)", "Trimethoprim (TIM)",
-            "Tetracycline (TE)", "Doxacycline(DO)", "Tigecycline", "Vancomycin (VA)", "Teicoplanin", "Erythromycin (E)",
-            "Clarithromycin (CLR)", "Azithromycin (AZM)", "Gentamicin (CN)", "Amikacin (AK)", "Tobramycin (TOB)",
-            "Netlimicin (NET)", "Clindamycin (DA)", "Rifampicin (RA)", "Linezolid (LNZ)", "Fucidin", "Colistin",
-            "Nitrofurantoin (F)", "Fosfomycin (FOS)", "Daptomycin", "Mupirocin", "Inducible Clindamycin Resistance", "Cefoxitin screen"
-        ];
+        // 2. Antibiotics categorized by class for the UI
+        const abxGroups = {
+            "Penicillins": ["Benzylpenicillin", "Penicillin (P)", "Ampicillin (AM)", "Amoxicillin", "Cloxacillin", "Oxacillin (OX)", "Amoxicillin/ Clavulonic acid (AMC)", "Ampicillin/Salbactam (SAM)", "Amoxicillin/ Salbactam", "Piperacillin (PR)", "Piperacillin / Tazobactam (TPZ)", "Ticarcillin (TIC)", "Ticarcillin/Clavulonic acid (TIM)"],
+            "Cephalosporins": ["Cefazolin", "Cefoxitin", "Cefuroxime (CXM)", "Cefixime (CFM)", "Ceftriaxone (CRO)", "Cefotaxim (CTX)", "Ceftazidime (CAZ)", "Cefepime (FEP)", "Cefaclor", "Cefpodoxime", "Cefdinir", "Cephalothin", "Cefoxitin screen"],
+            "Carbapenems & Monobactams": ["Imipenem (IMP)", "Meropenem (MEM)", "Ertapenem", "Aztreonam (ATM)"],
+            "Aminoglycosides": ["Amikacin (AK)", "Gentamicin (CN)", "Tobramycin (TOB)", "Netlimicin (NET)"],
+            "Fluoroquinolones": ["Nalidixic acid (NA)", "Ciprofloxacin (CIP)", "Levofloxacin (LEV)", "Moxifloxacin", "Ofloxacin (OFX)", "Norfloxacin (ROR)"],
+            "Macrolides & Lincosamides": ["Erythromycin (E)", "Azithromycin (AZM)", "Clarithromycin (CLR)", "Clindamycin (DA)", "Inducible Clindamycin Resistance"],
+            "Glycopeptides": ["Vancomycin (VA)", "Teicoplanin", "Daptomycin"],
+            "Tetracyclines": ["Tetracycline (TE)", "Doxacycline(DO)", "Tigecycline"],
+            "Others": ["Trimethoprim/Sulfamethoxazole (TXS)", "Trimethoprim (TIM)", "Nitrofurantoin (F)", "Fosfomycin (FOS)", "Colistin", "Linezolid (LNZ)", "Rifampicin (RA)", "Fucidin", "Mupirocin"]
+        };
+
+        const abxList = Object.values(abxGroups).flat();
 
         const abxMapExport = {
             "Ampicillin (AM)": "ampicillin", "Penicillin (P)": "penicillin", "Ampicillin/Salbactam (SAM)": "ampicillin-sulbactam",
@@ -270,7 +286,10 @@
             "Teicoplanin": "teicoplanin", "Vancomycin (VA)": "vancomycin", "Tigecycline": "tigecycline", "Tetracycline (TE)": "tetracycline",
             "Doxacycline(DO)": "doxycycline", "Colistin": "colistin", "Trimethoprim/Sulfamethoxazole (TXS)": "trimethoprime-sulfamethoxazole",
             "Rifampicin (RA)": "rifampiin", "Nitrofurantoin (F)": "nitrofurantoin", "Trimethoprim (TIM)": "trimethoprime", 
-            "Fosfomycin (FOS)": "fosfomycin", "Clindamycin (DA)": "clindamycin", "Fucidin": "fucidic acid"
+            "Fosfomycin (FOS)": "fosfomycin", "Clindamycin (DA)": "clindamycin", "Fucidin": "fucidic acid",
+            // Mapping for the extra ones to prevent export errors
+            "Cefaclor": "cefaclor", "Cefpodoxime": "cefpodoxime", "Cefdinir": "cefdinir", "Cephalothin": "cephalothin",
+            "Ofloxacin (OFX)": "ofloxacin", "Norfloxacin (ROR)": "norfloxacin", "Daptomycin": "daptomycin", "Mupirocin": "mupirocin"
         };
 
         const orgMapExport = {
@@ -294,22 +313,60 @@
 
         const defaultSamples = ["Blood", "Urine", "Sputum", "Wound Swab", "CSF", "Pus", "Stool", "Aspirate"];
         let dataTable;
-        let selectedAbxMap = {}; 
+        let selectedAbxMap = {}; // Tracks CUSTOM added antibiotics only
 
         $(document).ready(function() {
             loadBacteriaOptions();
             loadSampleOptions();
             loadAntibioticOptions();
+            renderDefaultAntibiotics();
 
             $('.select2-enable').select2({ width: '100%', dropdownParent: $('#formModal') });
             
             $('#p_sample').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new sample..." });
-            $('#abx_selector').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Search, select, or type new antibiotic..." });
+            
+            // The custom antibiotic selector
+            $('#abx_selector').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Type custom antibiotic name..." });
             $('#p_organism').select2({ width: '100%', dropdownParent: $('#formModal') });
 
             $('#p_date').val(new Date().toISOString().split('T')[0]);
             initDataTable();
         });
+
+        function renderDefaultAntibiotics() {
+            let html = '';
+            for (const [group, abxs] of Object.entries(abxGroups)) {
+                html += `
+                <div class="bg-white rounded border border-gray-200 shadow-sm overflow-hidden mb-4">
+                    <h5 class="text-sm font-bold bg-blue-100 text-blue-800 px-3 py-1.5 border-b border-blue-200">${group}</h5>
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-0">`;
+                
+                abxs.forEach(abx => {
+                    const safeId = abx.replace(/[^a-zA-Z0-9]/g, '_');
+                    html += `
+                        <div class="flex items-center justify-between border-r border-b border-gray-100 p-2 hover:bg-gray-50 transition">
+                            <span class="text-[11px] font-bold text-gray-700 truncate mr-1 w-2/3" title="${abx}">${abx}</span>
+                            <select data-abx="${abx}" id="default_abx_${safeId}" class="default-abx-select compact-dropdown border border-gray-300 rounded text-xs font-bold bg-white focus:ring-blue-500 w-1/3 py-1">
+                                <option value="" class="text-gray-400">-</option>
+                                <option value="S" class="text-green-600 bg-green-50">S</option>
+                                <option value="I" class="text-yellow-600 bg-yellow-50">I</option>
+                                <option value="R" class="text-red-600 bg-red-50">R</option>
+                            </select>
+                        </div>
+                    `;
+                });
+                html += `</div></div>`;
+            }
+            $('#default_abx_container').html(html);
+            
+            // Color changing logic for visual feedback
+            $('.default-abx-select').change(function() {
+                $(this).removeClass('bg-green-100 bg-yellow-100 bg-red-100');
+                if ($(this).val() === 'S') $(this).addClass('bg-green-100');
+                if ($(this).val() === 'I') $(this).addClass('bg-yellow-100');
+                if ($(this).val() === 'R') $(this).addClass('bg-red-100');
+            });
+        }
 
         function loadBacteriaOptions() {
             const select = $('#p_organism');
@@ -335,9 +392,9 @@
             let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
             const selector = $('#abx_selector');
             selector.empty();
-            selector.append(new Option("Search, select, or type new antibiotic...", ""));
-            let allAbx = [...new Set([...abxList, ...savedCustomAbx])];
-            allAbx.forEach(abx => { selector.append(new Option(abx, abx)); });
+            selector.append(new Option("Type custom antibiotic name...", ""));
+            // Only add custom ones to this list, default are already in UI
+            savedCustomAbx.forEach(abx => { selector.append(new Option(abx, abx)); });
         }
 
         function quickSelectOrganism(organismName) { $('#p_organism').val(organismName).trigger('change'); }
@@ -348,8 +405,8 @@
                 { data: null, title: 'Action', orderable: false, render: function(data, type, row, meta) {
                     return `
                     <div class="flex gap-2">
-                        <button onclick="editRecord(${meta.row})" class="bg-yellow-400 text-white px-3 py-1 rounded text-xs font-bold">Edit</button>
-                        <button onclick="deleteRecord(${meta.row})" class="bg-red-500 text-white px-3 py-1 rounded text-xs font-bold">Delete</button>
+                        <button onclick="editRecord(${meta.row})" class="bg-yellow-400 text-white px-3 py-1 rounded text-xs font-bold shadow-sm">Edit</button>
+                        <button onclick="deleteRecord(${meta.row})" class="bg-red-500 text-white px-3 py-1 rounded text-xs font-bold shadow-sm">Delete</button>
                     </div>`;
                 }},
                 { data: 'Name', title: 'Name' }, { data: 'Age', title: 'Age' }, { data: 'Sex', title: 'Sex' },
@@ -377,9 +434,15 @@
         function openModal() {
             $('#entryForm')[0].reset(); $('#editIndex').val('-1'); $('#p_date').val(new Date().toISOString().split('T')[0]);
             $('#active_abx_container').empty(); selectedAbxMap = {};
+            
+            // Reset Selects
             $('#p_ward').val('').trigger('change'); $('#p_sex').val('Male').trigger('change');
             $('#p_sample').val(null).trigger('change'); $('#p_organism').val(null).trigger('change');
             $('#abx_selector').val(null).trigger('change');
+            
+            // Reset Default Antibiotic Grid
+            $('.default-abx-select').val('').removeClass('bg-green-100 bg-yellow-100 bg-red-100');
+            
             $('#modalTitle').text('Add New Patient Record'); $('#formModal').removeClass('hidden');
         }
 
@@ -387,21 +450,39 @@
 
         function addAntibiotic(abxName = null, result = 'S') {
             const abx = abxName || $('#abx_selector').val();
-            if(!abx || selectedAbxMap[abx]) return;
+            if(!abx) return;
+
+            // Check if user is trying to add an antibiotic that is already in the default grid
+            let isDefault = false;
+            $('.default-abx-select').each(function() {
+                if ($(this).attr('data-abx').toLowerCase() === abx.toLowerCase()) {
+                    $(this).val(result).trigger('change');
+                    isDefault = true;
+                }
+            });
+
+            if (isDefault) {
+                $('#abx_selector').val(null).trigger('change'); // Clear input
+                return; // Prevent duplicate adding
+            }
+
+            // Custom Add Logic
+            if (selectedAbxMap[abx]) return; 
             selectedAbxMap[abx] = result;
             const safeId = abx.replace(/[^a-zA-Z0-9\s]/g, '_').trim();
             const html = `
-                <div id="row_${safeId}" class="flex items-center justify-between bg-white border rounded-md p-3 shadow-sm">
-                    <span class="text-sm font-semibold text-gray-700 truncate w-3/5" title="${abx}">${abx}</span>
-                    <select class="border rounded-md p-1.5 text-sm font-bold bg-gray-50 focus:ring-blue-500 w-1/4" onchange="updateAbxResult('${abx}', this.value)">
+                <div id="row_${safeId}" class="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-md p-2 shadow-sm">
+                    <span class="text-xs font-semibold text-blue-900 truncate w-3/5" title="${abx}">${abx}</span>
+                    <select class="border border-blue-300 rounded-md p-1 text-xs font-bold bg-white focus:ring-blue-500 w-1/4 text-center" onchange="updateAbxResult('${abx}', this.value)">
                         <option value="S" class="text-green-600" ${result==='S'?'selected':''}>S</option>
                         <option value="I" class="text-yellow-600" ${result==='I'?'selected':''}>I</option>
                         <option value="R" class="text-red-600" ${result==='R'?'selected':''}>R</option>
                     </select>
-                    <button type="button" onclick="removeAntibiotic('${abx}', '${safeId}')" class="text-red-400 font-bold px-2 text-lg">&times;</button>
+                    <button type="button" onclick="removeAntibiotic('${abx}', '${safeId}')" class="text-red-500 font-bold px-2">&times;</button>
                 </div>
             `;
             $('#active_abx_container').append(html);
+            $('#abx_selector').val(null).trigger('change');
         }
 
         function updateAbxResult(abx, val) { selectedAbxMap[abx] = val; }
@@ -427,9 +508,18 @@
 
             if (!record['Selective organism']) { Swal.fire({ icon: 'error', title: 'Oops...', text: 'Please select an organism.' }); return; }
 
+            // 1. Gather Custom Added Antibiotics
             Object.keys(selectedAbxMap).forEach(abx => {
                 record[abx] = selectedAbxMap[abx];
                 if (!abxList.includes(abx) && !savedCustomAbx.includes(abx)) { savedCustomAbx.push(abx); newAbxAdded = true; }
+            });
+
+            // 2. Gather Default Grid Antibiotics
+            $('.default-abx-select').each(function() {
+                const val = $(this).val();
+                if (val && val !== "") {
+                    record[$(this).attr('data-abx')] = val;
+                }
             });
 
             if (newAbxAdded) { localStorage.setItem('amr_custom_abx', JSON.stringify(savedCustomAbx)); loadAntibioticOptions(); }
@@ -459,9 +549,20 @@
             if ($('#p_organism').find("option[value='" + record['Selective organism'] + "']").length) { $('#p_organism').val(record['Selective organism']).trigger('change'); } 
             else { $('#p_organism').append(new Option(record['Selective organism'], record['Selective organism'], true, true)).trigger('change'); }
 
+            // Populate Default Grid
+            abxList.forEach(abx => {
+                if(record[abx] && record[abx] !== '-') {
+                    $(`.default-abx-select[data-abx="${abx}"]`).val(record[abx]).trigger('change');
+                }
+            });
+
+            // Populate Custom Added
             let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
-            let allAbxColumns = [...new Set([...abxList, ...savedCustomAbx])];
-            allAbxColumns.forEach(abx => { if(record[abx] && record[abx] !== '-') addAntibiotic(abx, record[abx]); });
+            savedCustomAbx.forEach(abx => {
+                if(record[abx] && record[abx] !== '-') {
+                    addAntibiotic(abx, record[abx]);
+                }
+            });
         }
 
         function deleteRecord(index) {
@@ -514,7 +615,7 @@
             loadAntibioticOptions(); initDataTable(); manageAntibiotics();
         };
 
-        // --- تصدير أوفلاين كلياً عبر رفع الملف وقت التصدير ---
+        // --- Export to Antibiogram Feature ---
         function showExportModal() {
             Swal.fire({
                 title: 'Export to Antibiogram',
@@ -562,7 +663,6 @@
 
                 if(records.length === 0) { Swal.fire('No Data', 'No records found in this range.', 'info'); return; }
 
-                // قراءة الملف المرفوع محلياً باستخدام FileReader لتجاوز حجب المتصفح
                 const arrayBuffer = await templateFile.arrayBuffer();
                 const workbook = new ExcelJS.Workbook();
                 await workbook.xlsx.load(arrayBuffer);
