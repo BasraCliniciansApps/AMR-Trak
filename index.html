@@ -97,7 +97,9 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-600 mb-1">Ward</label>
+                            <!-- تمت إضافة الخيار الفارغ هنا (بدون required) ليكون اختيارياً -->
                             <select id="p_ward" class="w-full select2-enable">
+                                <option value="">Select Ward (Optional)...</option>
                                 <option value="Pediatrics">Pediatrics</option>
                                 <option value="Resuscitation / CCU">Resuscitation / CCU</option>
                                 <option value="Internal Medicine">Internal Medicine</option>
@@ -385,7 +387,7 @@
                 { data: 'Name', title: 'Name' },
                 { data: 'Age', title: 'Age' },
                 { data: 'Sex', title: 'Sex' },
-                { data: 'Ward', title: 'Ward' },
+                { data: 'Ward', title: 'Ward', defaultContent: '-' },
                 { data: 'Sample', title: 'Sample' },
                 { data: 'Date', title: 'Date' },
                 { data: 'Selective organism', title: 'Selective organism' }
@@ -420,8 +422,9 @@
             $('#active_abx_container').empty();
             selectedAbxMap = {};
             
-            $('#p_ward').trigger('change');
-            $('#p_sex').trigger('change');
+            // جعل الردهة فارغة عند الاضافة
+            $('#p_ward').val('').trigger('change');
+            $('#p_sex').val('Male').trigger('change');
             $('#p_sample').val(null).trigger('change');
             $('#p_organism').val(null).trigger('change');
             
@@ -479,7 +482,7 @@
                 'Name': $('#p_name').val(),
                 'Age': $('#p_age').val(),
                 'Sex': $('#p_sex').val(),
-                'Ward': $('#p_ward').val(),
+                'Ward': $('#p_ward').val() || "-", // حفظ كشارحة إذا تركت فارغة
                 'Sample': currentSample,
                 'Date': $('#p_date').val(),
                 'Selective organism': $('#p_organism').val()
@@ -521,7 +524,12 @@
             $('#p_name').val(record['Name']);
             $('#p_age').val(record['Age']);
             $('#p_sex').val(record['Sex']).trigger('change');
-            $('#p_ward').val(record['Ward']).trigger('change');
+            
+            if (record['Ward'] && record['Ward'] !== "-") {
+                $('#p_ward').val(record['Ward']).trigger('change');
+            } else {
+                $('#p_ward').val('').trigger('change');
+            }
             
             if ($('#p_sample').find("option[value='" + record['Sample'] + "']").length) {
                 $('#p_sample').val(record['Sample']).trigger('change');
