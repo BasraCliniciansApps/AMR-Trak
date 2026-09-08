@@ -39,6 +39,7 @@
 </head>
 <body class="text-gray-800 font-sans antialiased">
 
+    <!-- Top Navigation -->
     <nav class="bg-blue-800 text-white shadow-lg">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <h1 class="text-2xl font-bold tracking-wide">AMR Tracker</h1>
@@ -53,6 +54,7 @@
         </div>
     </nav>
 
+    <!-- Main Content: Records Table -->
     <main class="w-[98%] mx-auto mt-8 mb-10">
         <div class="bg-white rounded-lg shadow-md p-2 overflow-hidden">
             <table id="recordsTable" class="display nowrap w-full" style="width:100%"></table>
@@ -126,11 +128,11 @@
                             </select>
                             <div class="mt-3 flex flex-wrap gap-2 items-center">
                                 <span class="text-xs text-gray-500 font-semibold mr-2">Quick Select:</span>
-                                <button type="button" onclick="quickSelectOrganism('Escherichia coli (E.coli)')" class="text-xs bg-white text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full">E. coli</button>
-                                <button type="button" onclick="quickSelectOrganism('Klebsiella pneumoniae')" class="text-xs bg-white text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full">K. pneumoniae</button>
-                                <button type="button" onclick="quickSelectOrganism('Staphylococcus aureus')" class="text-xs bg-white text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full">S. aureus</button>
-                                <button type="button" onclick="quickSelectOrganism('Pseudomonas aeruginosa')" class="text-xs bg-white text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full">P. aeruginosa</button>
-                                <button type="button" onclick="quickSelectOrganism('Acinetobacter baumannii')" class="text-xs bg-white text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full">A. baumannii</button>
+                                <button type="button" onclick="quickSelectOrganism('Escherichia coli (E.coli)')" class="text-xs bg-white text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-600 hover:text-white transition">E. coli</button>
+                                <button type="button" onclick="quickSelectOrganism('Klebsiella pneumoniae')" class="text-xs bg-white text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-600 hover:text-white transition">K. pneumoniae</button>
+                                <button type="button" onclick="quickSelectOrganism('Staphylococcus aureus')" class="text-xs bg-white text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-600 hover:text-white transition">S. aureus</button>
+                                <button type="button" onclick="quickSelectOrganism('Pseudomonas aeruginosa')" class="text-xs bg-white text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-600 hover:text-white transition">P. aeruginosa</button>
+                                <button type="button" onclick="quickSelectOrganism('Acinetobacter baumannii')" class="text-xs bg-white text-blue-700 border border-blue-200 px-3 py-1.5 rounded-full hover:bg-blue-600 hover:text-white transition">A. baumannii</button>
                             </div>
                         </div>
                     </div>
@@ -172,6 +174,7 @@
     </div>
 
     <script>
+        // 1. Comprehensive Bacteria Library
         const bacteriaLibrary = [
             { name: "Escherichia coli (E.coli)", code: "ECO", group: "Gram-Negative" },
             { name: "Klebsiella pneumoniae", code: "KPN", group: "Gram-Negative" },
@@ -287,7 +290,6 @@
             "Doxacycline(DO)": "doxycycline", "Colistin": "colistin", "Trimethoprim/Sulfamethoxazole (TXS)": "trimethoprime-sulfamethoxazole",
             "Rifampicin (RA)": "rifampiin", "Nitrofurantoin (F)": "nitrofurantoin", "Trimethoprim (TIM)": "trimethoprime", 
             "Fosfomycin (FOS)": "fosfomycin", "Clindamycin (DA)": "clindamycin", "Fucidin": "fucidic acid",
-            // Mapping for the extra ones to prevent export errors
             "Cefaclor": "cefaclor", "Cefpodoxime": "cefpodoxime", "Cefdinir": "cefdinir", "Cephalothin": "cephalothin",
             "Ofloxacin (OFX)": "ofloxacin", "Norfloxacin (ROR)": "norfloxacin", "Daptomycin": "daptomycin", "Mupirocin": "mupirocin"
         };
@@ -325,7 +327,6 @@
             
             $('#p_sample').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new sample..." });
             
-            // The custom antibiotic selector
             $('#abx_selector').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Type custom antibiotic name..." });
             $('#p_organism').select2({ width: '100%', dropdownParent: $('#formModal') });
 
@@ -359,7 +360,6 @@
             }
             $('#default_abx_container').html(html);
             
-            // Color changing logic for visual feedback
             $('.default-abx-select').change(function() {
                 $(this).removeClass('bg-green-100 bg-yellow-100 bg-red-100');
                 if ($(this).val() === 'S') $(this).addClass('bg-green-100');
@@ -393,7 +393,6 @@
             const selector = $('#abx_selector');
             selector.empty();
             selector.append(new Option("Type custom antibiotic name...", ""));
-            // Only add custom ones to this list, default are already in UI
             savedCustomAbx.forEach(abx => { selector.append(new Option(abx, abx)); });
         }
 
@@ -435,12 +434,10 @@
             $('#entryForm')[0].reset(); $('#editIndex').val('-1'); $('#p_date').val(new Date().toISOString().split('T')[0]);
             $('#active_abx_container').empty(); selectedAbxMap = {};
             
-            // Reset Selects
             $('#p_ward').val('').trigger('change'); $('#p_sex').val('Male').trigger('change');
             $('#p_sample').val(null).trigger('change'); $('#p_organism').val(null).trigger('change');
             $('#abx_selector').val(null).trigger('change');
             
-            // Reset Default Antibiotic Grid
             $('.default-abx-select').val('').removeClass('bg-green-100 bg-yellow-100 bg-red-100');
             
             $('#modalTitle').text('Add New Patient Record'); $('#formModal').removeClass('hidden');
@@ -452,7 +449,6 @@
             const abx = abxName || $('#abx_selector').val();
             if(!abx) return;
 
-            // Check if user is trying to add an antibiotic that is already in the default grid
             let isDefault = false;
             $('.default-abx-select').each(function() {
                 if ($(this).attr('data-abx').toLowerCase() === abx.toLowerCase()) {
@@ -462,11 +458,10 @@
             });
 
             if (isDefault) {
-                $('#abx_selector').val(null).trigger('change'); // Clear input
-                return; // Prevent duplicate adding
+                $('#abx_selector').val(null).trigger('change');
+                return; 
             }
 
-            // Custom Add Logic
             if (selectedAbxMap[abx]) return; 
             selectedAbxMap[abx] = result;
             const safeId = abx.replace(/[^a-zA-Z0-9\s]/g, '_').trim();
@@ -508,13 +503,11 @@
 
             if (!record['Selective organism']) { Swal.fire({ icon: 'error', title: 'Oops...', text: 'Please select an organism.' }); return; }
 
-            // 1. Gather Custom Added Antibiotics
             Object.keys(selectedAbxMap).forEach(abx => {
                 record[abx] = selectedAbxMap[abx];
                 if (!abxList.includes(abx) && !savedCustomAbx.includes(abx)) { savedCustomAbx.push(abx); newAbxAdded = true; }
             });
 
-            // 2. Gather Default Grid Antibiotics
             $('.default-abx-select').each(function() {
                 const val = $(this).val();
                 if (val && val !== "") {
@@ -549,14 +542,12 @@
             if ($('#p_organism').find("option[value='" + record['Selective organism'] + "']").length) { $('#p_organism').val(record['Selective organism']).trigger('change'); } 
             else { $('#p_organism').append(new Option(record['Selective organism'], record['Selective organism'], true, true)).trigger('change'); }
 
-            // Populate Default Grid
             abxList.forEach(abx => {
                 if(record[abx] && record[abx] !== '-') {
                     $(`.default-abx-select[data-abx="${abx}"]`).val(record[abx]).trigger('change');
                 }
             });
 
-            // Populate Custom Added
             let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
             savedCustomAbx.forEach(abx => {
                 if(record[abx] && record[abx] !== '-') {
@@ -615,7 +606,7 @@
             loadAntibioticOptions(); initDataTable(); manageAntibiotics();
         };
 
-        // --- Export to Antibiogram Feature ---
+        // --- Export to Antibiogram Feature (FileReader Approach for Maximum Compatibility) ---
         function showExportModal() {
             Swal.fire({
                 title: 'Export to Antibiogram',
@@ -655,78 +646,101 @@
         }
 
         async function processAntibiogramExport(startDate, endDate, templateFile) {
-            try {
-                Swal.fire({ title: 'Generating File...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+            let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
 
-                let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-                let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
+            if(records.length === 0) { 
+                Swal.fire('No Data', 'No records found in this date range.', 'info'); 
+                return; 
+            }
 
-                if(records.length === 0) { Swal.fire('No Data', 'No records found in this range.', 'info'); return; }
+            Swal.fire({ title: 'Generating File...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
-                const arrayBuffer = await templateFile.arrayBuffer();
-                const workbook = new ExcelJS.Workbook();
-                await workbook.xlsx.load(arrayBuffer);
-                const sheet = workbook.worksheets[0]; 
+            const reader = new FileReader();
+            
+            reader.onload = async function(e) {
+                try {
+                    const arrayBuffer = e.target.result;
+                    const workbook = new ExcelJS.Workbook();
+                    
+                    try {
+                        await workbook.xlsx.load(arrayBuffer);
+                    } catch (loadErr) {
+                        throw new Error("Invalid Excel format. Please open your file in Excel, choose 'Save As', and save it strictly as an 'Excel Workbook (*.xlsx)'.");
+                    }
 
-                let excelAbxColumns = {};
-                sheet.getRow(5).eachCell((cell, colNum) => {
-                    let val = cell.value ? cell.value.toString().trim().toLowerCase() : "";
-                    if (val) excelAbxColumns[val] = { tested: colNum - 1, resistant: colNum, percent: colNum + 1 };
-                });
+                    const sheet = workbook.worksheets[0]; 
+                    if (!sheet) throw new Error("Could not find any sheets in the Excel file.");
 
-                let excelOrgRows = {};
-                for (let r = 6; r <= 50; r++) {
-                    let cellVal = sheet.getCell(r, 2).value;
-                    if (cellVal) excelOrgRows[cellVal.toString().trim().toLowerCase()] = r;
-                }
-
-                let stats = {};
-                records.forEach(r => {
-                    let orgName = r['Selective organism'];
-                    let mappedOrg = orgMapExport[orgName];
-                    if (!mappedOrg) return; 
-
-                    if (!stats[mappedOrg]) stats[mappedOrg] = { total: 0, abx: {} };
-                    stats[mappedOrg].total += 1;
-
-                    Object.keys(abxMapExport).forEach(appAbx => {
-                        let excelAbx = abxMapExport[appAbx].toLowerCase();
-                        let result = r[appAbx];
-                        
-                        if (result && result !== '-' && result !== '') {
-                            if (!stats[mappedOrg].abx[excelAbx]) stats[mappedOrg].abx[excelAbx] = { tested: 0, resistant: 0 };
-                            stats[mappedOrg].abx[excelAbx].tested += 1; 
-                            if (result === 'R') stats[mappedOrg].abx[excelAbx].resistant += 1; 
-                        }
+                    let excelAbxColumns = {};
+                    sheet.getRow(5).eachCell((cell, colNum) => {
+                        let val = cell.value ? cell.value.toString().trim().toLowerCase() : "";
+                        if (val) excelAbxColumns[val] = { tested: colNum - 1, resistant: colNum, percent: colNum + 1 };
                     });
-                });
 
-                Object.keys(stats).forEach(org => {
-                    let rowNum = excelOrgRows[org];
-                    if (rowNum) {
-                        sheet.getCell(rowNum, 3).value = stats[org].total;
-                        Object.keys(stats[org].abx).forEach(abx => {
-                            let cols = excelAbxColumns[abx];
-                            if (cols) {
-                                let s = stats[org].abx[abx];
-                                sheet.getCell(rowNum, cols.tested).value = s.tested;
-                                sheet.getCell(rowNum, cols.resistant).value = s.resistant;
-                                sheet.getCell(rowNum, cols.percent).value = Math.round((s.resistant / s.tested) * 100) + '%';
+                    let excelOrgRows = {};
+                    for (let r = 6; r <= 50; r++) {
+                        let cellVal = sheet.getCell(r, 2).value;
+                        if (cellVal) excelOrgRows[cellVal.toString().trim().toLowerCase()] = r;
+                    }
+
+                    let stats = {};
+                    records.forEach(r => {
+                        let orgName = r['Selective organism'];
+                        let mappedOrg = orgMapExport[orgName];
+                        if (!mappedOrg) return; 
+
+                        if (!stats[mappedOrg]) stats[mappedOrg] = { total: 0, abx: {} };
+                        stats[mappedOrg].total += 1;
+
+                        Object.keys(abxMapExport).forEach(appAbx => {
+                            let excelAbx = abxMapExport[appAbx].toLowerCase();
+                            let result = r[appAbx];
+                            
+                            if (result && result !== '-' && result !== '') {
+                                if (!stats[mappedOrg].abx[excelAbx]) stats[mappedOrg].abx[excelAbx] = { tested: 0, resistant: 0 };
+                                stats[mappedOrg].abx[excelAbx].tested += 1; 
+                                if (result === 'R') stats[mappedOrg].abx[excelAbx].resistant += 1; 
                             }
                         });
-                    }
-                });
+                    });
 
-                const buffer = await workbook.xlsx.writeBuffer();
-                const sDate = new Date(startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-                const eDate = new Date(endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-                saveAs(new Blob([buffer]), `Antibiogram ${sDate} to ${eDate}.xlsx`);
-                Swal.fire('Success!', `File Downloaded.`, 'success');
+                    Object.keys(stats).forEach(org => {
+                        let rowNum = excelOrgRows[org];
+                        if (rowNum) {
+                            sheet.getCell(rowNum, 3).value = stats[org].total;
+                            Object.keys(stats[org].abx).forEach(abx => {
+                                let cols = excelAbxColumns[abx];
+                                if (cols) {
+                                    let s = stats[org].abx[abx];
+                                    sheet.getCell(rowNum, cols.tested).value = s.tested;
+                                    sheet.getCell(rowNum, cols.resistant).value = s.resistant;
+                                    
+                                    let pct = s.tested > 0 ? Math.round((s.resistant / s.tested) * 100) : 0;
+                                    sheet.getCell(rowNum, cols.percent).value = pct + '%';
+                                }
+                            });
+                        }
+                    });
 
-            } catch (error) {
-                console.error(error);
-                Swal.fire('Error', 'Failed to process the Excel file. Make sure it is the correct template.', 'error');
-            }
+                    const buffer = await workbook.xlsx.writeBuffer();
+                    const sDate = new Date(startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                    const eDate = new Date(endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                    saveAs(new Blob([buffer]), `Antibiogram ${sDate} to ${eDate}.xlsx`);
+                    
+                    Swal.fire('Success!', `File Downloaded.`, 'success');
+
+                } catch (error) {
+                    console.error(error);
+                    Swal.fire('Error', error.message || 'Failed to process the Excel file. Make sure it is the correct template.', 'error');
+                }
+            };
+            
+            reader.onerror = function() {
+                Swal.fire('Error', 'Failed to read the file from your computer.', 'error');
+            };
+
+            reader.readAsArrayBuffer(templateFile);
         }
     </script>
 </body>
