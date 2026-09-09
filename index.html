@@ -36,7 +36,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { background-color: #f8fafc; font-family: 'Inter', sans-serif; }
         
-        /* Modern DataTables Styling */
         .dataTables_wrapper { font-size: 0.85rem; padding: 1.5rem; background: #fff; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); }
         .dataTables_wrapper .dataTables_filter input { border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.3rem 0.75rem; margin-left: 0.5rem; outline: none; transition: ring 0.2s; }
         .dataTables_wrapper .dataTables_filter input:focus { ring: 2px solid #4f46e5; border-color: #4f46e5; }
@@ -44,6 +43,7 @@
         .dt-buttons button:hover { transform: translateY(-1px) !important; box-shadow: 0 6px 8px -1px rgba(79, 70, 229, 0.4) !important; }
         
         .select2-container .select2-selection--single { height: 42px; border: 1px solid #cbd5e1; border-radius: 0.5rem; display: flex; align-items: center; }
+        .select2-container .select2-selection--multiple { min-height: 42px; border: 1px solid #cbd5e1; border-radius: 0.5rem; display: flex; align-items: center; }
         .select2-container { z-index: 9999 !important; }
         select.compact-dropdown { -webkit-appearance: none; -moz-appearance: none; text-align: center; cursor: pointer; }
         
@@ -55,10 +55,13 @@
         .heatmap-table th:first-child { z-index: 30; }
         .heatmap-table tr:first-child th { border-top: 1px solid #e2e8f0; }
 
-        /* Print Styles */
+        /* Print Visibility Classes */
+        .print-fade { opacity: 0.3 !important; filter: grayscale(100%); transition: all 0.3s ease; }
+        
         @media print {
             body { background-color: white !important; font-size: 10pt; }
             .no-print { display: none !important; }
+            .print-hidden { display: none !important; } /* Applied by JS */
             .print-full { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: none !important; }
             .page-break { page-break-before: always; }
             .chart-container { page-break-inside: avoid; border: 1px solid #ddd !important; box-shadow: none !important; }
@@ -127,28 +130,32 @@
                     <h2 class="text-xl font-bold text-slate-800 whitespace-nowrap">Dashboard</h2>
                 </div>
 
-                <div class="flex flex-wrap gap-3 items-end w-full xl:w-auto">
-                    <div class="flex-1 min-w-[120px]">
+                <div class="flex flex-wrap gap-3 items-end w-full xl:w-auto flex-1 justify-end">
+                    <div class="w-full sm:w-32">
                         <label class="block text-xs font-bold text-slate-500 mb-1">From Date</label>
-                        <input type="date" id="ana_start" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                        <input type="date" id="ana_start" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                     </div>
-                    <div class="flex-1 min-w-[120px]">
+                    <div class="w-full sm:w-32">
                         <label class="block text-xs font-bold text-slate-500 mb-1">To Date</label>
-                        <input type="date" id="ana_end" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
+                        <input type="date" id="ana_end" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                     </div>
-                    
-                    <div class="w-full sm:w-48">
-                        <label class="block text-xs font-bold text-slate-500 mb-1">Filter by Sample</label>
+                    <div class="w-full sm:flex-1 min-w-[200px]">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Wards</label>
+                        <select id="ana_ward" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="All Wards"></select>
+                    </div>
+                    <div class="w-full sm:w-40">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Sample</label>
                         <select id="ana_sample" class="w-full border rounded text-sm select2-basic">
                             <option value="">All Samples</option>
                         </select>
                     </div>
-                    <div class="w-full sm:w-56">
-                        <!-- تم التعديل ليكون Selective Organism بدلاً من Antibiogram Export -->
-                        <label class="block text-xs font-bold text-slate-500 mb-1">Filter by Organism (Lab Record)</label>
-                        <select id="ana_organism" class="w-full border rounded text-sm select2-basic">
-                            <option value="">All Organisms</option>
-                        </select>
+                    <div class="w-full sm:flex-1 min-w-[200px]">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Organisms</label>
+                        <select id="ana_organism" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="All Organisms"></select>
+                    </div>
+                    <div class="w-full sm:flex-1 min-w-[200px]">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Antibiotics</label>
+                        <select id="ana_antibiotic" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="All Antibiotics"></select>
                     </div>
 
                     <div class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
@@ -166,14 +173,18 @@
             <div id="analyticsContainer" class="hidden">
                 <div class="mb-6 text-center no-print">
                     <h2 class="text-2xl font-bold text-slate-800" id="dashTitle">Antibiogram Analysis</h2>
-                    <p class="text-sm text-slate-500 mt-1" id="dashSubtitle">Displaying data based on selected filters</p>
+                    <p class="text-sm text-slate-500 mt-1" id="dashSubtitle"></p>
+                    <p class="text-xs text-indigo-500 mt-1 font-medium bg-indigo-50 inline-block px-3 py-1 rounded-full">Use the 👁️ icon to hide/show sections before printing.</p>
                 </div>
 
                 <!-- Heatmap -->
-                <div class="mb-8 chart-container border border-slate-200 rounded-xl p-4 bg-white shadow-sm overflow-hidden">
+                <div id="print_sect_heatmap" class="mb-8 chart-container border border-slate-200 rounded-xl p-4 bg-white shadow-sm overflow-hidden transition-all">
                     <div class="flex items-center justify-between mb-4">
                         <div>
-                            <h3 class="text-lg font-bold text-slate-800">Antibiogram Heatmap</h3>
+                            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                Antibiogram Heatmap
+                                <button type="button" onclick="togglePrintSection('print_sect_heatmap')" class="text-slate-400 hover:text-indigo-600 no-print" title="Toggle Print Visibility">👁️</button>
+                            </h3>
                             <p class="text-xs text-slate-500">Color intensity indicates Resistance % (Dark Red = High Resistance). <span class="text-red-500 font-bold">*</span> indicates sample size < 30.</p>
                         </div>
                         <div class="hidden md:flex items-center gap-2 text-[10px] font-bold text-slate-600 border border-slate-200 rounded p-1.5 bg-slate-50">
@@ -188,15 +199,18 @@
                 </div>
 
                 <!-- AMR Profile Chart & Table -->
-                <div id="amrProfileSection" class="mb-8 chart-container border border-slate-200 rounded-xl p-4 md:p-6 bg-slate-50/50 shadow-sm hidden">
+                <div id="print_sect_amr" class="mb-8 chart-container border border-slate-200 rounded-xl p-4 md:p-6 bg-slate-50/50 shadow-sm hidden transition-all">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-slate-200 pb-3 gap-2">
                         <div>
-                            <h3 class="text-lg font-bold text-indigo-900" id="amrChartTitle">AMR Profile</h3>
-                            <p class="text-xs text-slate-500">Detailed resistance breakdown for the selected organism.</p>
+                            <h3 class="text-lg font-bold text-indigo-900 flex items-center gap-2">
+                                AMR Profile Comparison
+                                <button type="button" onclick="togglePrintSection('print_sect_amr')" class="text-slate-400 hover:text-indigo-600 no-print" title="Toggle Print Visibility">👁️</button>
+                            </h3>
+                            <p class="text-xs text-slate-500">Detailed resistance breakdown for selected organisms.</p>
                         </div>
                         <span id="amrClsiWarning" class="text-xs font-bold px-3 py-1.5 rounded-md hidden bg-red-100 text-red-700 border border-red-200 shadow-sm flex items-center gap-1">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                            Total Isolates < 30 (Low Statistical Reliability)
+                            Some data points have N < 30
                         </span>
                     </div>
                     
@@ -204,8 +218,7 @@
                         <canvas id="chartAMR"></canvas>
                     </div>
                     <div class="mt-3 text-[11px] text-slate-500 text-center font-medium bg-white p-2 rounded border border-slate-100">
-                        <span class="inline-block w-3 h-3 bg-red-700 mr-1 rounded-sm align-middle"></span> Reliable (n ≥ 30) &nbsp;&nbsp;
-                        <span class="inline-block w-3 h-3 bg-slate-300 mr-1 rounded-sm align-middle"></span> Low Confidence (n < 30) - Interpret with caution per CLSI guidelines.
+                        * Faded bars indicate Low Confidence (n < 30) - Interpret with caution per CLSI guidelines.
                     </div>
                     
                     <!-- Table: 95% CI -->
@@ -215,6 +228,7 @@
                             <thead class="bg-indigo-50 text-indigo-900 uppercase tracking-wider">
                                 <tr>
                                     <th class="px-4 py-3 border-b border-slate-200">Antibiotic</th>
+                                    <th class="px-4 py-3 border-b border-slate-200">Organism</th>
                                     <th class="px-4 py-3 border-b border-slate-200 text-center">Tested (n)</th>
                                     <th class="px-4 py-3 border-b border-slate-200 text-center">Resistant (R)</th>
                                     <th class="px-4 py-3 border-b border-slate-200 text-center">% Resistance</th>
@@ -230,9 +244,12 @@
                 </div>
 
                 <!-- Row 3: Distributions -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 page-break">
+                <div id="print_sect_dist" class="grid grid-cols-1 md:grid-cols-3 gap-6 page-break transition-all">
                     <div class="chart-container border border-slate-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
-                        <h3 class="text-sm font-bold text-center text-slate-700 mb-3 border-b border-slate-100 pb-2">Organism Prevalence</h3>
+                        <h3 class="text-sm font-bold text-center text-slate-700 mb-3 border-b border-slate-100 pb-2 flex justify-center items-center gap-2">
+                            Organism Prevalence
+                            <button type="button" onclick="togglePrintSection('print_sect_dist')" class="text-slate-400 hover:text-indigo-600 no-print" title="Toggle Print Visibility">👁️</button>
+                        </h3>
                         <div class="relative h-[250px] w-full flex justify-center"><canvas id="chartOrg"></canvas></div>
                     </div>
                     <div class="chart-container border border-slate-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
@@ -293,7 +310,7 @@
                         </div>
                         <div class="md:col-span-1">
                             <label class="block text-sm font-bold text-slate-700 mb-1">Date</label>
-                            <input type="date" id="p_date" dir="ltr" lang="en" required class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] bg-white shadow-sm focus:ring-2 focus:ring-indigo-500">
+                            <input type="month" id="p_date" dir="ltr" lang="en" required class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] bg-white shadow-sm focus:ring-2 focus:ring-indigo-500">
                         </div>
 
                         <div class="md:col-span-2">
@@ -311,6 +328,7 @@
                             <select id="p_sample" dir="ltr" lang="en" class="w-full select2-enable shadow-sm" required></select>
                         </div>
                         
+                        <!-- Selective Organism -->
                         <div class="md:col-span-2 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 shadow-sm">
                             <label class="block text-sm font-bold text-indigo-900 mb-2">Selective Organism (Lab Record)</label>
                             <select id="p_organism" dir="ltr" lang="en" class="w-full select2-enable" required>
@@ -586,6 +604,18 @@
             else $(el).addClass('bg-white');
         }
 
+        // Print Visibility Toggler
+        function togglePrintSection(id) {
+            const el = document.getElementById(id);
+            if (el.classList.contains('print-hidden')) {
+                el.classList.remove('print-hidden');
+                el.classList.remove('print-fade');
+            } else {
+                el.classList.add('print-hidden');
+                el.classList.add('print-fade');
+            }
+        }
+
         // --- 3. Initialization ---
         $(document).ready(function() {
             let oldCustom = JSON.parse(localStorage.getItem('amr_custom_abx'));
@@ -598,7 +628,7 @@
             loadBacteriaOptions();
             loadSampleOptions();
             loadWardOptions();
-            loadAnalyticsFilters();
+            
             renderDefaultAntibiotics();
 
             $('#default_abx_container').on('change', '.default-abx-select', function() {
@@ -608,22 +638,33 @@
             $('.select2-enable').select2({ width: '100%', dropdownParent: $('#formModal') });
             $('#p_sample').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new sample..." });
             $('#p_ward').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new ward..." });
+            
+            // Multiple Selects for Analytics
+            $('.select2-multiple').select2({ width: '100%' });
             $('.select2-basic').select2({ width: '100%' }); 
             
-            let today = new Date().toISOString().split('T')[0];
+            let today = new Date().toISOString().slice(0, 7); // YYYY-MM
             $('#p_date').val(today);
             
             let currentYear = new Date().getFullYear();
             $('#ana_start').val(`${currentYear}-01-01`);
             $('#ana_end').val(`${currentYear}-12-31`);
 
+            // Initialize Analytics Filters
+            loadAnalyticsFilters();
+
+            // Smart Cascading Listeners
+            $('#ana_start, #ana_end, #ana_sample, #ana_ward').on('change', function() {
+                loadAnalyticsFilters(); // Updates available Orgs and Abx based on Date/Sample/Ward
+            });
+
             initDataTable();
         });
 
         // --- Tabs Logic ---
         function showTab(tabName) {
-            $('#viewRecords, #viewReport, #viewAnalytics').addClass('hidden');
-            $('#btnTabRecords, #btnTabReport, #btnTabAnalytics').removeClass('bg-indigo-600 text-white border-indigo-400/50').addClass('bg-white/5 text-indigo-100 border-indigo-300/20');
+            $('#viewRecords, #viewAnalytics').addClass('hidden');
+            $('#btnTabRecords, #btnTabAnalytics').removeClass('bg-indigo-600 text-white border-indigo-400/50').addClass('bg-white/5 text-indigo-100 border-indigo-300/20');
             
             if (tabName === 'records') {
                 $('#viewRecords').removeClass('hidden');
@@ -702,27 +743,92 @@
             savedWards.forEach(ward => { wardSelect.append(new Option(ward, ward)); });
         }
         
+        // Smart Cascading Filters for Analytics
         function loadAnalyticsFilters() {
-            // 1. Samples Filter
-            let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
-            const anaSample = $('#ana_sample');
-            anaSample.empty();
-            anaSample.append(new Option("All Samples", ""));
-            savedSamples.forEach(sample => { anaSample.append(new Option(sample, sample)); });
+            const startDate = $('#ana_start').val();
+            const endDate = $('#ana_end').val();
+            const targetSample = $('#ana_sample').val();
+            const targetWards = $('#ana_ward').val() || [];
 
-            // 2. Selective Organisms Filter (Combined Library + Any Custom inputs)
-            let records = JSON.parse(localStorage.getItem('amr_records')) || [];
-            let usedOrgs = new Set(records.map(r => r['Selective organism']).filter(Boolean));
-            let allOrgsSet = new Set(bacteriaLibrary.map(b => b.name));
-            usedOrgs.forEach(o => allOrgsSet.add(o)); 
-            let allOrgs = Array.from(allOrgsSet).sort();
+            let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
             
-            const anaSelect = $('#ana_organism');
-            let currentVal = anaSelect.val();
-            anaSelect.empty();
-            anaSelect.append(new Option("All Organisms", ""));
-            allOrgs.forEach(org => { anaSelect.append(new Option(org, org)); });
-            if(currentVal) anaSelect.val(currentVal);
+            // Filter by Date
+            let records = allRecords.filter(r => {
+                if(!startDate || !endDate) return true;
+                return r.Date >= startDate && r.Date <= endDate;
+            });
+
+            // Populate Wards Dropdown dynamically based on registered wards
+            let currentWards = $('#ana_ward').val() || [];
+            $('#ana_ward').empty();
+            
+            let specialOptGroup = $('<optgroup label="Categories"></optgroup>');
+            specialOptGroup.append(new Option("Inpatient (All except Outpatient)", "Inpatient", currentWards.includes("Inpatient"), currentWards.includes("Inpatient")));
+            specialOptGroup.append(new Option("Outpatient", "Outpatient", currentWards.includes("Outpatient"), currentWards.includes("Outpatient")));
+            $('#ana_ward').append(specialOptGroup);
+
+            let wardsOptGroup = $('<optgroup label="Specific Wards"></optgroup>');
+            let allWards = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
+            allWards.forEach(w => {
+                let isSelected = currentWards.includes(w);
+                wardsOptGroup.append(new Option(w, w, isSelected, isSelected));
+            });
+            $('#ana_ward').append(wardsOptGroup);
+
+            // Filter by Sample if selected
+            if (targetSample) {
+                records = records.filter(r => r.Sample === targetSample);
+            }
+            
+            // Filter by Ward if selected
+            if (targetWards.length > 0) {
+                let inpatientWards = allWards.filter(w => w.toLowerCase() !== 'outpatient');
+                records = records.filter(r => {
+                    let rWard = r.Ward || '';
+                    if (targetWards.includes(rWard)) return true;
+                    if (targetWards.includes('Inpatient') && inpatientWards.includes(rWard)) return true;
+                    if (targetWards.includes('Outpatient') && rWard.toLowerCase() === 'outpatient') return true;
+                    return false;
+                });
+            }
+
+            // 1. Update Sample Dropdown (Always shows all recorded samples in this date range)
+            let uniqueSamples = new Set(records.map(r => r.Sample).filter(Boolean));
+            let currentSample = $('#ana_sample').val();
+            $('#ana_sample').empty().append(new Option("All Samples", ""));
+            Array.from(uniqueSamples).sort().forEach(s => {
+                $('#ana_sample').append(new Option(s, s));
+            });
+            if (currentSample && uniqueSamples.has(currentSample)) {
+                $('#ana_sample').val(currentSample);
+            }
+
+            // 2. Update Organisms (Based on Date + Sample + Ward)
+            let orgs = new Set();
+            let abxs = new Set();
+            let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
+
+            records.forEach(r => {
+                let org = r['Selective organism'];
+                if(org) orgs.add(org);
+                allPossibleAbxs.forEach(a => {
+                    if (r[a] && r[a] !== '-' && r[a] !== '') abxs.add(a);
+                });
+            });
+
+            let currentOrgs = $('#ana_organism').val() || [];
+            $('#ana_organism').empty();
+            Array.from(orgs).sort().forEach(o => {
+                let isSelected = currentOrgs.includes(o);
+                $('#ana_organism').append(new Option(o, o, isSelected, isSelected));
+            });
+
+            let currentAbxs = $('#ana_antibiotic').val() || [];
+            $('#ana_antibiotic').empty();
+            Array.from(abxs).sort().forEach(a => {
+                let isSelected = currentAbxs.includes(a);
+                $('#ana_antibiotic').append(new Option(a, a, isSelected, isSelected));
+            });
         }
 
         function quickSelectOrganism(organismName) { $('#p_organism').val(organismName).trigger('change'); }
@@ -756,6 +862,7 @@
 
             dataTable = $('#recordsTable').DataTable({
                 data: records, columns: cols, scrollX: true, 
+                order: [[ 6, "desc" ]], // Sort backward by Date (Index 6)
                 dom: '<"flex flex-col sm:flex-row justify-between items-center mb-4 gap-3"Bf>rt<"flex flex-col sm:flex-row justify-between items-center mt-4 gap-3"ip>',
                 buttons: [
                     { extend: 'excelHtml5', text: 'Export to Excel', className: 'mr-2 rounded shadow' },
@@ -767,7 +874,8 @@
         }
 
         function openModal() {
-            $('#entryForm')[0].reset(); $('#editIndex').val('-1'); $('#p_date').val(new Date().toISOString().split('T')[0]);
+            $('#entryForm')[0].reset(); $('#editIndex').val('-1'); 
+            $('#p_date').val(new Date().toISOString().slice(0, 7)); // YYYY-MM
             
             $('#p_ward').val('').trigger('change'); $('#p_sex').val('Male').trigger('change');
             $('#p_age_unit').val('Years');
@@ -831,7 +939,6 @@
             if (currentSample && !savedSamples.includes(currentSample)) {
                 savedSamples.push(currentSample); localStorage.setItem('amr_samples', JSON.stringify(savedSamples));
                 $('#p_sample').append(new Option(currentSample, currentSample, true, true)).trigger('change');
-                loadAnalyticsFilters(); 
             }
 
             let currentWard = $('#p_ward').val();
@@ -872,6 +979,10 @@
 
             localStorage.setItem('amr_records', JSON.stringify(records));
             closeModal(); initDataTable(); 
+            
+            // Refresh Analytics Filters if currently on that tab
+            if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
+            
             Swal.fire({ icon: 'success', title: 'Saved!', showConfirmButton: false, timer: 1500 });
         });
 
@@ -898,7 +1009,8 @@
             if ($('#p_sample').find("option[value='" + record['Sample'] + "']").length) { $('#p_sample').val(record['Sample']).trigger('change'); } 
             else { $('#p_sample').append(new Option(record['Sample'], record['Sample'], true, true)).trigger('change'); }
 
-            $('#p_date').val(record['Date']);
+            // handle YYYY-MM mapping for older records seamlessly
+            $('#p_date').val(record['Date'] ? record['Date'].substring(0, 7) : '');
             
             if ($('#p_organism').find("option[value='" + record['Selective organism'] + "']").length) { $('#p_organism').val(record['Selective organism']).trigger('change'); } 
             else { $('#p_organism').append(new Option(record['Selective organism'], record['Selective organism'], true, true)).trigger('change'); }
@@ -955,7 +1067,9 @@
         window.deleteCustomSample = function(sample) {
             let s = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
             localStorage.setItem('amr_samples', JSON.stringify(s.filter(x => x !== sample)));
-            loadSampleOptions(); loadAnalyticsFilters(); manageSamples();
+            loadSampleOptions(); 
+            if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters(); 
+            manageSamples();
         };
 
         function manageWards() {
@@ -975,7 +1089,9 @@
         window.deleteCustomWard = function(ward) {
             let w = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
             localStorage.setItem('amr_wards', JSON.stringify(w.filter(x => x !== ward)));
-            loadWardOptions(); manageWards();
+            loadWardOptions(); 
+            if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters(); 
+            manageWards();
         };
 
         function manageAntibioticsDB() {
@@ -1085,19 +1201,42 @@
             return { lower: Math.max(0, Math.round(lower * 100)), upper: Math.min(100, Math.round(upper * 100)) };
         }
 
+        // Beautiful Color Palette for Multi-Organism comparison
+        const orgColorPalette = [
+            { bg: 'rgba(185, 28, 28, 0.9)', lowBg: 'rgba(185, 28, 28, 0.3)' },   // Red
+            { bg: 'rgba(30, 64, 175, 0.9)', lowBg: 'rgba(30, 64, 175, 0.3)' },   // Blue
+            { bg: 'rgba(21, 128, 61, 0.9)', lowBg: 'rgba(21, 128, 61, 0.3)' },   // Green
+            { bg: 'rgba(162, 28, 175, 0.9)', lowBg: 'rgba(162, 28, 175, 0.3)' }, // Purple
+            { bg: 'rgba(194, 65, 12, 0.9)', lowBg: 'rgba(194, 65, 12, 0.3)' }    // Orange
+        ];
+
         function generateAnalytics() {
             const startDate = $('#ana_start').val();
             const endDate = $('#ana_end').val();
             const targetSample = $('#ana_sample').val();
-            const targetOrg = $('#ana_organism').val();
+            const targetWards = $('#ana_ward').val() || [];
+            const targetOrgs = $('#ana_organism').val() || []; // Array from multi-select
+            const targetAbxs = $('#ana_antibiotic').val() || []; // Array from multi-select
 
             if (!startDate || !endDate) { Swal.fire('Required', 'Please select both dates.', 'warning'); return; }
 
             let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
             let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
 
-            if (targetSample) {
-                records = records.filter(r => r.Sample === targetSample);
+            if (targetSample) { records = records.filter(r => r.Sample === targetSample); }
+            
+            // Filter by Ward if selected
+            if (targetWards.length > 0) {
+                let allWards = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
+                let inpatientWards = allWards.filter(w => w.toLowerCase() !== 'outpatient');
+                
+                records = records.filter(r => {
+                    let rWard = r.Ward || '';
+                    if (targetWards.includes(rWard)) return true;
+                    if (targetWards.includes('Inpatient') && inpatientWards.includes(rWard)) return true;
+                    if (targetWards.includes('Outpatient') && rWard.toLowerCase() === 'outpatient') return true;
+                    return false;
+                });
             }
 
             if (records.length === 0) {
@@ -1115,6 +1254,7 @@
             let dashTitle = "Antibiogram Analysis";
             let dashSub = `${startDate} to ${endDate}`;
             if(targetSample) dashSub += ` | Sample: ${targetSample}`;
+            if(targetWards.length > 0) dashSub += ` | Wards: ${targetWards.join(', ')}`;
             $('#dashTitle').text(dashTitle);
             $('#dashSubtitle').text(dashSub);
 
@@ -1123,22 +1263,27 @@
             let genderCounts = { "Male": 0, "Female": 0 };
             
             let heatmapStats = {};
-            let allAbxColumns = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
+            let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
             
-            let amrStats = { total: 0, abx: {} };
-            allAbxColumns.forEach(a => { amrStats.abx[a] = { tested: 0, resistant: 0 }; });
+            // Stats for AMR Profile (Grouped by Organism)
+            let amrStats = {};
+            targetOrgs.forEach(org => {
+                amrStats[org] = { total: 0, abx: {} };
+                allPossibleAbxs.forEach(a => { amrStats[org].abx[a] = { tested: 0, resistant: 0 }; });
+            });
 
             records.forEach(r => {
-                // EXCLUSIVELY USE SELECTIVE ORGANISM FOR ANALYTICS
                 let org = r['Selective organism'];
                 if(!org) return;
 
+                // Distributions
                 orgCounts[org] = (orgCounts[org] || 0) + 1;
                 if(r.Sample) specCounts[r.Sample] = (specCounts[r.Sample] || 0) + 1;
                 if(r.Sex && genderCounts[r.Sex] !== undefined) genderCounts[r.Sex] += 1;
 
+                // Heatmap Base Data
                 if (!heatmapStats[org]) heatmapStats[org] = {};
-                allAbxColumns.forEach(abx => {
+                allPossibleAbxs.forEach(abx => {
                     let res = r[abx];
                     if (res && res !== '-' && res !== '') {
                         if (!heatmapStats[org][abx]) heatmapStats[org][abx] = { t: 0, r: 0 };
@@ -1147,33 +1292,55 @@
                     }
                 });
 
-                if (targetOrg && org === targetOrg) {
-                    amrStats.total += 1;
-                    allAbxColumns.forEach(abx => {
+                // AMR Profile Data
+                if (targetOrgs.includes(org)) {
+                    amrStats[org].total += 1;
+                    allPossibleAbxs.forEach(abx => {
                         let res = r[abx];
                         if (res && res !== '-' && res !== '') {
-                            amrStats.abx[abx].tested += 1;
-                            if (res === 'R') amrStats.abx[abx].resistant += 1;
+                            amrStats[org].abx[abx].tested += 1;
+                            if (res === 'R') amrStats[org].abx[abx].resistant += 1;
                         }
                     });
                 }
             });
 
             // --- Build Heatmap ---
-            let activeOrgs = Object.keys(heatmapStats).filter(o => Object.keys(heatmapStats[o]).length > 0).sort();
-            let activeAbxSet = new Set();
-            activeOrgs.forEach(o => { Object.keys(heatmapStats[o]).forEach(a => activeAbxSet.add(a)); });
-            let activeAbx = Array.from(activeAbxSet).sort();
+            // 1. Filter Heatmap Rows (Organisms)
+            let hmOrgs = Object.keys(heatmapStats);
+            if (targetOrgs.length > 0) {
+                hmOrgs = hmOrgs.filter(o => targetOrgs.includes(o));
+            }
+            
+            // 2. Filter Heatmap Columns (Antibiotics)
+            let hmAbxSet = new Set();
+            hmOrgs.forEach(o => { 
+                Object.keys(heatmapStats[o]).forEach(a => {
+                    if (heatmapStats[o][a].t > 0) hmAbxSet.add(a); // Only add if tested > 0
+                }); 
+            });
+            let hmAbxs = Array.from(hmAbxSet);
+            if (targetAbxs.length > 0) {
+                hmAbxs = hmAbxs.filter(a => targetAbxs.includes(a));
+            }
+            
+            hmOrgs.sort();
+            hmAbxs.sort();
 
-            if (activeOrgs.length > 0 && activeAbx.length > 0) {
+            if (hmOrgs.length > 0 && hmAbxs.length > 0) {
                 let hmHtml = '<table class="heatmap-table"><thead><tr><th>Organism (n)</th>';
-                activeAbx.forEach(a => { hmHtml += `<th><div class="w-20 truncate" title="${a}">${a}</div></th>`; });
+                hmAbxs.forEach(a => { hmHtml += `<th><div class="w-20 truncate" title="${a}">${a}</div></th>`; });
                 hmHtml += '</tr></thead><tbody>';
 
-                activeOrgs.forEach(o => {
+                hmOrgs.forEach(o => {
+                    // Check if this row is completely empty across selected Abxs
+                    let rowHasData = hmAbxs.some(a => heatmapStats[o][a] && heatmapStats[o][a].t > 0);
+                    if(!rowHasData) return;
+
                     let orgTotal = orgCounts[o] || 0;
                     hmHtml += `<tr><th>${o} <span class="text-xs font-normal text-slate-400">(${orgTotal})</span></th>`;
-                    activeAbx.forEach(a => {
+                    
+                    hmAbxs.forEach(a => {
                         let cell = heatmapStats[o][a];
                         if (!cell || cell.t === 0) {
                             hmHtml += '<td class="bg-slate-50 text-slate-300">-</td>';
@@ -1203,69 +1370,93 @@
                 hmHtml += '</tbody></table>';
                 $('#heatmapWrapper').html(hmHtml);
             } else {
-                $('#heatmapWrapper').html('<p class="text-center text-slate-400 py-4">No susceptibility data to generate heatmap.</p>');
+                $('#heatmapWrapper').html('<p class="text-center text-slate-400 py-4">No data matches the selected filters.</p>');
             }
 
-            // --- Build AMR Profile ---
-            if (targetOrg && amrStats.total > 0) {
-                $('#amrProfileSection').removeClass('hidden');
-                $('#amrChartTitle').text(`AMR Profile: ${targetOrg} (N = ${amrStats.total})`);
+            // --- Build AMR Profile (Grouped Bar Chart & Multi-table) ---
+            if (targetOrgs.length > 0) {
+                $('#print_sect_amr').removeClass('hidden');
                 
-                if (amrStats.total < 30) $('#amrClsiWarning').removeClass('hidden');
-                else $('#amrClsiWarning').addClass('hidden');
-
-                let labels = [];
-                let dataR = [];
-                let bgColors = [];
+                let anyLowReliability = false;
+                let chartLabelsSet = new Set();
+                
+                // Determine which antibiotics to show in the chart
+                targetOrgs.forEach(org => {
+                    Object.keys(amrStats[org].abx).forEach(abx => {
+                        if (amrStats[org].abx[abx].tested > 0) {
+                            if (targetAbxs.length === 0 || targetAbxs.includes(abx)) {
+                                chartLabelsSet.add(abx);
+                            }
+                        }
+                    });
+                });
+                
+                let chartLabels = Array.from(chartLabelsSet).sort();
+                let datasets = [];
                 let tableHtml = '';
 
-                let sortedAbx = Object.keys(amrStats.abx).filter(a => amrStats.abx[a].tested > 0).sort((a, b) => {
-                    return (amrStats.abx[b].resistant / amrStats.abx[b].tested) - (amrStats.abx[a].resistant / amrStats.abx[a].tested);
+                targetOrgs.forEach((org, orgIndex) => {
+                    let s_org = amrStats[org];
+                    let dataR = [];
+                    let bgColors = [];
+                    let palette = orgColorPalette[orgIndex % orgColorPalette.length];
+
+                    chartLabels.forEach(abx => {
+                        let s = s_org.abx[abx];
+                        if (s.tested === 0) {
+                            dataR.push(0); // or null
+                            bgColors.push(palette.lowBg);
+                        } else {
+                            let p = Math.round((s.resistant / s.tested) * 100);
+                            let isReliable = s.tested >= 30;
+                            if (!isReliable) anyLowReliability = true;
+                            
+                            dataR.push(p);
+                            bgColors.push(isReliable ? palette.bg : palette.lowBg);
+
+                            // Build Table Row (Grouped by Organism visually)
+                            let ci = wilsonScoreCI(s.resistant, s.tested);
+                            tableHtml += `
+                                <tr class="hover:bg-slate-50 transition-colors ${!isReliable ? 'text-slate-500' : 'font-semibold text-slate-700'}">
+                                    <td class="px-4 py-2 border-b border-slate-100">${abx}</td>
+                                    <td class="px-4 py-2 border-b border-slate-100"><span style="color:${palette.bg.replace('0.9','1')}">${org}</span> ${!isReliable ? '<span class="text-red-500 font-bold">*</span>' : ''}</td>
+                                    <td class="px-4 py-2 border-b border-slate-100 text-center">${s.tested}</td>
+                                    <td class="px-4 py-2 border-b border-slate-100 text-center">${s.resistant}</td>
+                                    <td class="px-4 py-2 border-b border-slate-100 text-center">${p}%</td>
+                                    <td class="px-4 py-2 border-b border-slate-100 text-center">${ci.lower}% - ${ci.upper}%</td>
+                                </tr>
+                            `;
+                        }
+                    });
+
+                    datasets.push({
+                        label: org,
+                        data: dataR,
+                        backgroundColor: bgColors,
+                        borderRadius: 4
+                    });
                 });
 
-                sortedAbx.forEach(abx => {
-                    let s = amrStats.abx[abx];
-                    let p = Math.round((s.resistant / s.tested) * 100);
-                    let ci = wilsonScoreCI(s.resistant, s.tested);
-                    let isReliable = s.tested >= 30;
-
-                    labels.push(abx);
-                    dataR.push(p);
-                    bgColors.push(isReliable ? 'rgba(185, 28, 28, 0.9)' : 'rgba(203, 213, 225, 0.8)'); 
-
-                    tableHtml += `
-                        <tr class="hover:bg-slate-50 transition-colors ${!isReliable ? 'text-slate-500' : 'font-semibold text-slate-700'}">
-                            <td class="px-4 py-3 border-b border-slate-100">${abx} ${!isReliable ? '<span class="text-red-500 font-bold ml-1">*</span>' : ''}</td>
-                            <td class="px-4 py-3 border-b border-slate-100 text-center">${s.tested}</td>
-                            <td class="px-4 py-3 border-b border-slate-100 text-center">${s.resistant}</td>
-                            <td class="px-4 py-3 border-b border-slate-100 text-center">
-                                <span class="${p >= 50 && isReliable ? 'text-rose-600' : ''}">${p}%</span>
-                            </td>
-                            <td class="px-4 py-3 border-b border-slate-100 text-center">${ci.lower}% - ${ci.upper}%</td>
-                        </tr>
-                    `;
-                });
+                if (anyLowReliability) $('#amrClsiWarning').removeClass('hidden');
+                else $('#amrClsiWarning').addClass('hidden');
 
                 $('#ciTableBody').html(tableHtml);
 
                 if (chartAMR_instance) chartAMR_instance.destroy();
                 chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
                     type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{ label: '% Resistance', data: dataR, backgroundColor: bgColors, borderRadius: 4 }]
-                    },
+                    data: { labels: chartLabels, datasets: datasets },
                     options: {
                         responsive: true, maintainAspectRatio: false,
                         scales: { 
                             y: { beginAtZero: true, max: 100, title: { display: true, text: '% Resistance', font: {weight: 'bold'} }, grid: {color: '#f1f5f9'} },
                             x: { grid: {display: false}, ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
                         },
-                        plugins: { legend: { display: false } }
+                        plugins: { legend: { display: true, position: 'top' } } // Enable legend to distinguish organisms
                     }
                 });
             } else {
-                $('#amrProfileSection').addClass('hidden');
+                $('#print_sect_amr').addClass('hidden');
                 if (chartAMR_instance) chartAMR_instance.destroy();
             }
 
