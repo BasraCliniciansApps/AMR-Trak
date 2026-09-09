@@ -100,6 +100,12 @@
                         Export Excel
                     </button>
 
+                    <!-- New Button: AMR Data Extractor and Injector -->
+                    <button onclick="triggerDataExtractor()" class="bg-violet-600 text-white border border-violet-500 px-4 py-2 rounded-lg shadow-lg font-bold transition-all hover:bg-violet-500 hover:scale-105 flex items-center gap-2 text-sm md:text-base">
+                        📥 AMR Data Extractor and Injector
+                    </button>
+                    <input type="file" id="extractorFileInput" accept=".txt,.csv" class="hidden" onchange="processDataExtraction(event)">
+
                     <!-- Backup Button -->
                     <button onclick="showBackupModal()" class="bg-slate-700 text-white border border-slate-600 px-4 py-2 rounded-lg shadow-lg font-bold transition-all hover:bg-slate-600 hover:scale-105 flex items-center gap-2 text-sm md:text-base">
                         💾 Backup
@@ -128,7 +134,7 @@
     <main id="viewAnalytics" class="w-[98%] mx-auto mt-6 mb-10 hidden print-full">
         <div class="bg-transparent print-full">
             
-            <!-- Main Analytics Controls Area (Vertical Layout) -->
+            <!-- Main Analytics Controls Area -->
             <div class="mb-6 border border-slate-200 no-print bg-white p-5 rounded-xl shadow-sm">
                 <div class="flex items-center gap-3 border-b border-slate-100 pb-4 mb-5">
                     <div class="bg-teal-100 p-2.5 rounded-lg text-teal-600 shadow-sm text-xl">📊</div>
@@ -169,7 +175,7 @@
                         <select id="ana_antibiotic" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Antibiotics"></select>
                     </div>
 
-                    <!-- Buttons Row (Bottom Right) -->
+                    <!-- Buttons Row -->
                     <div class="flex flex-wrap justify-end gap-3 mt-2 border-t border-slate-100 pt-4">
                         <button onclick="clearAnalyticsFilters()" class="bg-rose-500 hover:bg-rose-600 text-white px-6 py-2 rounded-lg shadow transition-all font-bold flex items-center gap-2" title="Clear Filters">
                             🧹 Clear
@@ -225,7 +231,7 @@
                         </div>
                         <span id="amrClsiWarning" class="text-xs font-bold px-3 py-1.5 rounded-md hidden bg-red-100 text-red-700 border border-red-200 shadow-sm flex items-center gap-1">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                            Some data points have N &lt; 30
+                            Some data points have n &lt; 30
                         </span>
                     </div>
                     
@@ -772,6 +778,106 @@
                 el.classList.add('print-hidden');
                 el.classList.add('print-fade');
             }
+        }
+
+        // --- DATA EXTRACTOR LOGIC ---
+        function triggerDataExtractor() {
+            document.getElementById('extractorFileInput').click();
+        }
+
+        function processDataExtraction(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = e => {
+                const lines = e.target.result.split('\n');
+                if(lines.length < 2) {
+                    Swal.fire('Error', 'File appears to be empty or invalid.', 'error');
+                    return;
+                }
+
+                const headers = lines[0].split(',').map(h => h.trim());
+                let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+                let addedCount = 0;
+
+                for(let i = 1; i < lines.length; i++) {
+                    if(!lines[i].trim()) continue;
+                    
+                    const cols = lines[i].split(',');
+                    const row = {};
+                    headers.forEach((h, idx) => row[h] = cols[idx] ? cols[idx].trim() : "");
+
+                    // تجاهل العينات بدون نمو بكتيري
+                    if(row['ORGANISM'] === 'xxx' || !row['ORGANISM']) continue;
+
+                    // 1. دمج اسم المريض
+                    let name = (row['FIRST_NAME'] || '') + " " + (row['LAST_NAME'] || '');
+                    name = name.trim();
+                    
+                    // 2. معالجة العمر والفئة
+                    let ageStr = row['AGE'] || "";
+                    let ageNum = ageStr.replace(/\D/g, '');
+                    let ageUnit = "Years";
+                    if(ageStr.includes('m')) ageUnit = "Months";
+                    if(ageStr.includes('d')) ageUnit = "Days";
+
+                    // 3. الجنس
+                    let sex = (row['SEX'] && row['SEX'].toLowerCase() === 'f') ? 'Female' : 'Male';
+
+                    // 4. التاريخ (استخراج السنة والشهر)
+                    let formattedDate = "";
+                    if(row['SPEC_DATE']) {
+                        let dateParts = row['SPEC_DATE'].split(' ')[0].split('/'); 
+                        if(dateParts.length >= 3) {
+                            let month = dateParts[1].padStart(2, '0');
+                            let year = dateParts[2];
+                            formattedDate = `${year}-${month}`;
+                        }
+                    }
+
+                    // 5. ترجمة الردهات
+                    let wardMap = { 'ped': 'Pediatrics', 'icu': 'ICU', 'sur': 'General Surgery', 'med': 'Internal Medicine', 'neo': 'Neonatal Unit', 'eme': 'Resuscitation / CCU', 'out': 'Outpatient', 'obg': 'General Obstetrics & Gynecology', 'ent': 'ENT' };
+                    let rawWard = (row['WARD'] || "").toLowerCase();
+                    let ward = wardMap[rawWard] || row['WARD'];
+
+                    // 6. ترجمة العينات
+                    let sampleMap = { 'ur': 'Urine', 'bl': 'Blood', 'ps': 'Pus', 'sf': 'CSF', 'wd': 'Wound Swab', 'sp': 'Sputum', 'va': 'Vaginal', 'th': 'Throat Swab', 'as': 'Aspirate', 'fl': 'Fluid', 'ea': 'Ear Swab' };
+                    let rawSample = (row['SPEC_TYPE'] || "").toLowerCase();
+                    let sample = sampleMap[rawSample] || row['SPEC_TYPE'];
+
+                    // 7. ترجمة البكتيريا لتطابق مكتبة التطبيق
+                    let orgMap = { 'eco': 'Escherichia coli (E.coli)', 'kpn': 'Klebsiella pneumoniae', 'sau': 'Staphylococcus aureus', 'pmi': 'Proteus mirabilis', 'pae': 'Pseudomonas aeruginosa', 'aba': 'Acinetobacter baumannii', 'efa': 'Enterococcus faecalis', 'sho': 'Staphylococcus hominis', 'sep': 'Staphylococcus epidermidis', 'shl': 'Staphylococcus haemolyticus', 'con': 'Staphylococcus non-aureus (spp) / CoNS', 'ecl': 'Enterobacter cloacae', 'kox': 'Klebsiella oxytoca', 'sma': 'Serratia marcescens', 'cgl': 'Candida glabrata', 'cpa': 'Candida parapsilosis', 'sat': 'Salmonella Typhi' };
+                    let rawOrg = (row['ORGANISM'] || "").toLowerCase();
+                    let organism = orgMap[rawOrg] || row['ORGANISM'];
+
+                    let newRecord = {
+                        "Name": name,
+                        "Age": ageNum,
+                        "Age Unit": ageUnit,
+                        "Sex": sex,
+                        "Ward": ward,
+                        "Sample": sample,
+                        "Date": formattedDate,
+                        "Selective organism": organism,
+                        "Antibiogram organism": organism 
+                    };
+
+                    records.push(newRecord);
+                    addedCount++;
+                }
+
+                localStorage.setItem('amr_records', JSON.stringify(records));
+                
+                // Refresh UI
+                initDataTable();
+                if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
+                
+                Swal.fire('Success!', `تم استخراج ${addedCount} عزلة بكتيرية موجبة وإضافتها إلى سجلك.`, 'success');
+                
+                event.target.value = ''; // Reset file input
+            };
+            reader.readAsText(file);
         }
 
         // --- 3. Initialization ---
