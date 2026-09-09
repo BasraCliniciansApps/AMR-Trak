@@ -44,7 +44,10 @@
         
         .select2-container .select2-selection--single { height: 42px; border: 1px solid #cbd5e1; border-radius: 0.5rem; display: flex; align-items: center; }
         .select2-container .select2-selection--multiple { min-height: 42px; border: 1px solid #cbd5e1; border-radius: 0.5rem; display: flex; align-items: center; }
-        .select2-container { z-index: 9999 !important; }
+        
+        /* Fixed z-index issue: Only apply high z-index to dropdowns, not inline inputs */
+        .select2-dropdown, .select2-container--open { z-index: 9999 !important; }
+        
         select.compact-dropdown { -webkit-appearance: none; -moz-appearance: none; text-align: center; cursor: pointer; }
         
         /* Heatmap Styles */
@@ -61,7 +64,7 @@
         @media print {
             body { background-color: white !important; font-size: 10pt; }
             .no-print { display: none !important; }
-            .print-hidden { display: none !important; } /* Applied by JS */
+            .print-hidden { display: none !important; }
             .print-full { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: none !important; }
             .page-break { page-break-before: always; }
             .chart-container { page-break-inside: avoid; border: 1px solid #ddd !important; box-shadow: none !important; }
@@ -121,59 +124,69 @@
 
     <!-- TAB 2: Analytics & Dashboard -->
     <main id="viewAnalytics" class="w-[98%] mx-auto mt-6 mb-10 hidden print-full">
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 print-full">
+        <div class="bg-transparent print-full">
             
-            <!-- Controls Area -->
-            <div class="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-6 border-b border-slate-200 pb-6 gap-4 no-print bg-slate-50 p-4 rounded-lg">
-                <div class="flex items-center gap-3 w-full xl:w-auto border-b xl:border-b-0 pb-3 xl:pb-0">
-                    <div class="bg-purple-100 p-2 rounded-lg text-purple-600">📊</div>
-                    <h2 class="text-xl font-bold text-slate-800 whitespace-nowrap">Dashboard</h2>
-                </div>
-
-                <div class="flex flex-wrap gap-3 items-end w-full xl:w-auto flex-1 justify-end">
-                    <div class="w-full sm:w-32">
-                        <label class="block text-xs font-bold text-slate-500 mb-1">From Date</label>
-                        <input type="date" id="ana_start" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
-                    </div>
-                    <div class="w-full sm:w-32">
-                        <label class="block text-xs font-bold text-slate-500 mb-1">To Date</label>
-                        <input type="date" id="ana_end" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
-                    </div>
-                    <div class="w-full sm:flex-1 min-w-[200px]">
-                        <label class="block text-xs font-bold text-slate-500 mb-1">Wards</label>
-                        <select id="ana_ward" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="All Wards"></select>
-                    </div>
-                    <div class="w-full sm:w-40">
-                        <label class="block text-xs font-bold text-slate-500 mb-1">Sample</label>
-                        <select id="ana_sample" class="w-full border rounded text-sm select2-basic">
-                            <option value="">All Samples</option>
-                        </select>
-                    </div>
-                    <div class="w-full sm:flex-1 min-w-[200px]">
-                        <label class="block text-xs font-bold text-slate-500 mb-1">Organisms</label>
-                        <select id="ana_organism" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="All Organisms"></select>
-                    </div>
-                    <div class="w-full sm:flex-1 min-w-[200px]">
-                        <label class="block text-xs font-bold text-slate-500 mb-1">Antibiotics</label>
-                        <select id="ana_antibiotic" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="All Antibiotics"></select>
+            <!-- Controls Area (New Clean Grid Layout) -->
+            <div class="mb-6 border border-slate-200 no-print bg-white p-5 rounded-xl shadow-sm">
+                <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-5">
+                    
+                    <!-- Dashboard Title -->
+                    <div class="flex items-center gap-3 border-b xl:border-b-0 pb-4 xl:pb-0 w-full xl:w-auto shrink-0">
+                        <div class="bg-indigo-100 p-2.5 rounded-lg text-indigo-600 shadow-sm text-xl">📊</div>
+                        <h2 class="text-xl font-bold text-slate-800 whitespace-nowrap">Dashboard</h2>
                     </div>
 
-                    <div class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-                        <button onclick="clearAnalyticsFilters()" class="flex-1 sm:flex-none bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-lg shadow transition-all font-bold flex items-center justify-center gap-2" title="Clear Filters">
-                            🧹 Clear
-                        </button>
-                        <button onclick="generateAnalytics()" class="flex-1 sm:flex-none bg-indigo-600 text-white px-6 py-2 rounded-lg shadow hover:bg-indigo-700 hover:shadow-lg transition-all font-bold">
-                            Analyze
-                        </button>
-                        <button onclick="window.print()" class="flex-1 sm:flex-none bg-slate-700 text-white px-4 py-2 rounded-lg shadow hover:bg-slate-800 transition-all font-bold flex items-center justify-center gap-2">
-                            🖨️ Print
-                        </button>
+                    <!-- Filters & Buttons Container -->
+                    <div class="flex-1 w-full flex flex-col lg:flex-row gap-4 lg:items-end justify-end">
+                        
+                        <!-- Filters Grid -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 flex-1 w-full items-end">
+                            <div class="w-full">
+                                <label class="block text-xs font-bold text-slate-500 mb-1">From Date</label>
+                                <input type="date" id="ana_start" class="w-full border border-slate-300 rounded-lg px-2 h-[42px] text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                            </div>
+                            <div class="w-full">
+                                <label class="block text-xs font-bold text-slate-500 mb-1">To Date</label>
+                                <input type="date" id="ana_end" class="w-full border border-slate-300 rounded-lg px-2 h-[42px] text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                            </div>
+                            <div class="w-full">
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Wards</label>
+                                <select id="ana_ward" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="All Wards"></select>
+                            </div>
+                            <div class="w-full">
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Sample</label>
+                                <select id="ana_sample" class="w-full border rounded text-sm select2-basic">
+                                    <option value="">All Samples</option>
+                                </select>
+                            </div>
+                            <div class="w-full">
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Organisms</label>
+                                <select id="ana_organism" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="All Organisms"></select>
+                            </div>
+                            <div class="w-full">
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Antibiotics</label>
+                                <select id="ana_antibiotic" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="All Antibiotics"></select>
+                            </div>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="flex gap-2 w-full lg:w-auto shrink-0 mt-3 lg:mt-0">
+                            <button onclick="clearAnalyticsFilters()" class="flex-1 lg:flex-none bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 h-[42px] rounded-lg shadow transition-all font-bold flex items-center justify-center gap-2" title="Clear Filters">
+                                🧹 Clear
+                            </button>
+                            <button onclick="generateAnalytics()" class="flex-1 lg:flex-none bg-indigo-600 text-white px-5 py-2 h-[42px] rounded-lg shadow hover:bg-indigo-700 hover:shadow-lg transition-all font-bold">
+                                Analyze
+                            </button>
+                            <button onclick="window.print()" class="flex-1 lg:flex-none bg-slate-700 text-white px-4 py-2 h-[42px] rounded-lg shadow hover:bg-slate-800 transition-all font-bold flex items-center justify-center gap-2">
+                                🖨️ Print
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Analytics Content -->
-            <div id="analyticsContainer" class="hidden">
+            <div id="analyticsContainer" class="hidden bg-white p-4 md:p-6 rounded-xl border border-slate-200 shadow-sm">
                 <div class="mb-6 text-center no-print">
                     <h2 class="text-2xl font-bold text-slate-800" id="dashTitle">Antibiogram Analysis</h2>
                     <p class="text-sm text-slate-500 mt-1" id="dashSubtitle"></p>
@@ -266,7 +279,7 @@
                 </div>
             </div>
             
-            <div id="analyticsPlaceholder" class="text-center text-slate-400 py-16 flex flex-col items-center justify-center">
+            <div id="analyticsPlaceholder" class="text-center text-slate-400 py-16 flex flex-col items-center justify-center bg-white border border-slate-200 rounded-xl shadow-sm">
                 <svg class="w-16 h-16 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                 <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view insights.</p>
             </div>
