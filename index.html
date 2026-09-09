@@ -539,7 +539,8 @@
             "Macrolides & Lincosamides": ["Erythromycin (E)", "Azithromycin (AZM)", "Clarithromycin (CLR)", "Clindamycin (DA)", "Inducible Clindamycin Resistance"],
             "Glycopeptides": ["Vancomycin (VA)", "Teicoplanin", "Daptomycin"],
             "Tetracyclines": ["Tetracycline (TE)", "Doxacycline(DO)", "Tigecycline"],
-            "Others": ["Trimethoprim/Sulfamethoxazole (TXS)", "Trimethoprim (TIM)", "Nitrofurantoin (F)", "Fosfomycin (FOS)", "Colistin", "Linezolid (LNZ)", "Rifampicin (RA)", "Fucidin", "Mupirocin"]
+            "Others": ["Trimethoprim/Sulfamethoxazole (TXS)", "Trimethoprim (TIM)", "Nitrofurantoin (F)", "Fosfomycin (FOS)", "Colistin", "Linezolid (LNZ)", "Rifampicin (RA)", "Fucidin", "Mupirocin"],
+            "Antifungals": []
         };
         const abxList = Object.values(abxGroups).flat();
 
@@ -752,7 +753,9 @@
             let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
             const sampleSelect = $('#p_sample');
             sampleSelect.empty(); 
-            savedSamples.forEach(sample => { sampleSelect.append(new Option(sample, sample)); });
+            savedSamples.forEach(sample => {
+                sampleSelect.append(new Option(sample, sample));
+            });
         }
 
         function loadWardOptions() {
@@ -851,10 +854,13 @@
             });
         }
 
-        function quickSelectOrganism(organismName) { $('#p_organism').val(organismName).trigger('change'); }
+        function quickSelectOrganism(organismName) {
+            $('#p_organism').val(organismName).trigger('change');
+        }
 
         function initDataTable() {
             let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+            
             let cols = [
                 { data: null, title: 'Action', orderable: false, render: function(data, type, row, meta) {
                     return `
@@ -863,26 +869,28 @@
                         <button onclick="deleteRecord(${meta.row})" class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm transition-colors">Delete</button>
                     </div>`;
                 }},
-                { data: 'Name', title: 'Name' }, 
-                { data: 'Age', title: 'Age', render: function(data, type, row) {
-                    return data ? data + ' ' + (row['Age Unit'] || 'Years') : '-';
-                }}, 
+                { data: 'Name', title: 'Name' },
+                { data: 'Age', title: 'Age' },
                 { data: 'Sex', title: 'Sex' },
-                { data: 'Ward', title: 'Ward', defaultContent: '-' }, { data: 'Sample', title: 'Sample' },
-                { data: 'Date', title: 'Date' }, 
-                { data: 'Selective organism', title: 'Selective organism' },
-                { data: 'Antibiogram organism', title: 'Antibiogram Organism', defaultContent: '-' } 
+                { data: 'Ward', title: 'Ward' },
+                { data: 'Sample', title: 'Sample' },
+                { data: 'Date', title: 'Date' },
+                { data: 'Selective organism', title: 'Selective organism' }
             ];
 
             let customAbx = getCustomAntibiotics();
             let allAbxColumns = [...abxList, ...customAbx.map(a=>a.name)];
             allAbxColumns.forEach(abx => { cols.push({ data: abx, title: abx, defaultContent: '-' }); });
 
-            if ($.fn.DataTable.isDataTable('#recordsTable')) { $('#recordsTable').DataTable().destroy(); }
+            if ($.fn.DataTable.isDataTable('#recordsTable')) {
+                $('#recordsTable').DataTable().destroy();
+            }
 
             dataTable = $('#recordsTable').DataTable({
-                data: records, columns: cols, scrollX: true, 
-                order: [[ 6, "desc" ]], // Sort backward by Date (Index 6)
+                data: records,
+                columns: cols,
+                scrollX: true, 
+                order: [[ 6, "desc" ]], 
                 dom: '<"flex flex-col sm:flex-row justify-between items-center mb-4 gap-3"Bf>rt<"flex flex-col sm:flex-row justify-between items-center mt-4 gap-3"ip>',
                 buttons: [
                     { extend: 'excelHtml5', text: 'Export to Excel', className: 'mr-2 rounded shadow' },
@@ -894,26 +902,31 @@
         }
 
         function openModal() {
-            $('#entryForm')[0].reset(); $('#editIndex').val('-1'); 
+            $('#entryForm')[0].reset();
+            $('#editIndex').val('-1');
             $('#p_date').val(new Date().toISOString().slice(0, 7)); // YYYY-MM
+            $('#active_abx_container').empty();
+            selectedAbxMap = {};
             
-            $('#p_ward').val('').trigger('change'); $('#p_sex').val('Male').trigger('change');
-            $('#p_age_unit').val('Years');
-            $('#p_sample').val(null).trigger('change'); 
+            // Reset Select2 fields
+            $('#p_ward').trigger('change');
+            $('#p_sex').trigger('change');
+            $('#p_sample').val(null).trigger('change');
             $('#p_organism').val(null).trigger('change');
-            $('#p_antibiogram_org').val('').trigger('change'); 
+            $('#p_antibiogram_org').val('').trigger('change');
             
             $('.default-abx-select').each(function() {
                 $(this).val('').trigger('change');
                 updateAbxColor(this);
             });
-            $('#active_abx_container').empty();
-            selectedAbxMap = {};
             
-            $('#modalTitle').text('Add Patient Record'); $('#formModal').removeClass('hidden');
+            $('#modalTitle').text('Add New Patient Record');
+            $('#formModal').removeClass('hidden');
         }
 
-        function closeModal() { $('#formModal').addClass('hidden'); }
+        function closeModal() {
+            $('#formModal').addClass('hidden');
+        }
 
         function addAntibiotic(abxName = null, result = 'S') {
             const abx = abxName || $('#abx_selector').val();
@@ -932,35 +945,42 @@
             selectedAbxMap[abx] = result;
             const safeId = abx.replace(/[^a-zA-Z0-9\s]/g, '_').trim();
             const html = `
-                <div id="row_${safeId}" class="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-md p-2 shadow-sm">
-                    <span class="text-[11px] font-bold text-indigo-900 truncate w-3/5" title="${abx}">${abx}</span>
-                    <select class="custom-abx-select border border-indigo-300 rounded-md p-1.5 text-xs font-bold bg-white focus:ring-2 focus:ring-indigo-500 w-1/3 text-center transition-colors" onchange="updateAbxResult('${abx}', this.value); updateAbxColor(this);">
-                        <option value="S" class="text-emerald-600 bg-emerald-50" ${result==='S'?'selected':''}>S</option>
-                        <option value="I" class="text-amber-600 bg-amber-50" ${result==='I'?'selected':''}>I</option>
-                        <option value="R" class="text-rose-600 bg-rose-50" ${result==='R'?'selected':''}>R</option>
+                <div id="row_${safeId}" class="flex items-center justify-between bg-white border border-gray-200 rounded-md p-3 shadow-sm hover:shadow transition">
+                    <span class="text-sm font-semibold text-gray-700 truncate w-3/5" title="${abx}">${abx}</span>
+                    <select class="abx-result-select border border-gray-300 rounded-md p-1.5 text-sm font-bold bg-gray-50 focus:ring-blue-500 w-1/4" onchange="updateAbxResult('${abx}', this.value)">
+                        <option value="S" class="text-green-600" ${result==='S'?'selected':''}>S</option>
+                        <option value="I" class="text-yellow-600" ${result==='I'?'selected':''}>I</option>
+                        <option value="R" class="text-red-600" ${result==='R'?'selected':''}>R</option>
                     </select>
-                    <button type="button" onclick="removeAntibiotic('${abx}', '${safeId}')" class="text-rose-500 font-bold px-2">&times;</button>
+                    <button type="button" onclick="removeAntibiotic('${abx}', '${safeId}')" class="text-red-400 hover:text-red-600 font-bold px-2 text-lg transition">&times;</button>
                 </div>
             `;
             $('#active_abx_container').append(html);
             $('#abx_selector').val(null).trigger('change');
-            
-            updateAbxColor($(`#row_${safeId} select`)[0]);
         }
 
-        function updateAbxResult(abx, val) { selectedAbxMap[abx] = val; }
-        function removeAntibiotic(abx, safeId) { delete selectedAbxMap[abx]; $(`#row_${safeId}`).remove(); }
+        function updateAbxResult(abx, val) {
+            selectedAbxMap[abx] = val;
+        }
+
+        function removeAntibiotic(abx, safeId) {
+            delete selectedAbxMap[abx];
+            $(`#row_${safeId}`).remove();
+        }
 
         $('#entryForm').submit(function(e) {
             e.preventDefault();
             
+            // Handle Custom Samples dynamically
             let currentSample = $('#p_sample').val();
             let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
+
             if (currentSample && !savedSamples.includes(currentSample)) {
-                savedSamples.push(currentSample); localStorage.setItem('amr_samples', JSON.stringify(savedSamples));
+                savedSamples.push(currentSample);
+                localStorage.setItem('amr_samples', JSON.stringify(savedSamples));
                 $('#p_sample').append(new Option(currentSample, currentSample, true, true)).trigger('change');
             }
-
+            
             let currentWard = $('#p_ward').val();
             let savedWards = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
             if (currentWard && !savedWards.includes(currentWard)) {
@@ -979,20 +999,22 @@
             }
 
             let record = {
-                'Name': $('#p_name').val(), 
-                'Age': $('#p_age').val(), 
+                'Name': $('#p_name').val(),
+                'Age': $('#p_age').val(),
                 'Age Unit': $('#p_age_unit').val(),
                 'Sex': $('#p_sex').val(),
-                'Ward': currentWard || "-", 
-                'Sample': currentSample, 
+                'Ward': currentWard || "-",
+                'Sample': currentSample,
                 'Date': $('#p_date').val(),
                 'Selective organism': currentOrganism,
                 'Antibiogram organism': $('#p_antibiogram_org').val() 
             };
 
-            if (!record['Selective organism']) { Swal.fire({ icon: 'error', title: 'Oops...', text: 'Please select an organism.' }); return; }
+            if (!record['Selective organism']) {
+                Swal.fire({ icon: 'error', title: 'Oops...', text: 'Please select an organism.' });
+                return;
+            }
 
-            // Add Custom temp antibiotics
             Object.keys(selectedAbxMap).forEach(abx => {
                 record[abx] = selectedAbxMap[abx];
             });
@@ -1005,24 +1027,37 @@
 
             let records = JSON.parse(localStorage.getItem('amr_records')) || [];
             let editIndex = $('#editIndex').val();
-            if (editIndex > -1) { records[editIndex] = record; } else { records.push(record); }
+
+            if (editIndex > -1) {
+                records[editIndex] = record; 
+            } else {
+                records.push(record); 
+            }
 
             localStorage.setItem('amr_records', JSON.stringify(records));
-            closeModal(); initDataTable(); 
+            closeModal();
+            initDataTable();
             
-            // Refresh Analytics Filters if currently on that tab
             if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
-            
-            Swal.fire({ icon: 'success', title: 'Saved!', showConfirmButton: false, timer: 1500 });
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Saved!',
+                timer: 1500,
+                showConfirmButton: false
+            });
         });
 
         function editRecord(index) {
             let records = JSON.parse(localStorage.getItem('amr_records')) || [];
             let record = records[index];
-            openModal(); $('#modalTitle').text('Edit Patient Record'); $('#editIndex').val(index);
             
-            $('#p_name').val(record['Name']); 
-            $('#p_age').val(record['Age']); 
+            openModal();
+            $('#modalTitle').text('Edit Patient Record');
+            $('#editIndex').val(index);
+            
+            $('#p_name').val(record['Name']);
+            $('#p_age').val(record['Age']);
             $('#p_age_unit').val(record['Age Unit'] || 'Years');
             $('#p_sex').val(record['Sex']).trigger('change');
             
@@ -1036,14 +1071,23 @@
                 $('#p_ward').val('').trigger('change'); 
             }
             
-            if ($('#p_sample').find("option[value='" + record['Sample'] + "']").length) { $('#p_sample').val(record['Sample']).trigger('change'); } 
-            else { $('#p_sample').append(new Option(record['Sample'], record['Sample'], true, true)).trigger('change'); }
+            // Set Sample
+            if ($('#p_sample').find("option[value='" + record['Sample'] + "']").length) {
+                $('#p_sample').val(record['Sample']).trigger('change');
+            } else {
+                var newSampleOption = new Option(record['Sample'], record['Sample'], true, true);
+                $('#p_sample').append(newSampleOption).trigger('change');
+            }
 
-            // handle YYYY-MM mapping for older records seamlessly
             $('#p_date').val(record['Date'] ? record['Date'].substring(0, 7) : '');
             
-            if ($('#p_organism').find("option[value='" + record['Selective organism'] + "']").length) { $('#p_organism').val(record['Selective organism']).trigger('change'); } 
-            else { $('#p_organism').append(new Option(record['Selective organism'], record['Selective organism'], true, true)).trigger('change'); }
+            // Set Organism
+            if ($('#p_organism').find("option[value='" + record['Selective organism'] + "']").length) {
+                $('#p_organism').val(record['Selective organism']).trigger('change');
+            } else {
+                var newOrgOption = new Option(record['Selective organism'], record['Selective organism'], true, true);
+                $('#p_organism').append(newOrgOption).trigger('change');
+            }
 
             if (record['Antibiogram organism']) {
                 $('#p_antibiogram_org').val(record['Antibiogram organism']).trigger('change');
@@ -1170,8 +1214,8 @@
             let html = `
                 <div class="text-left space-y-5">
                     <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                        <h5 class="font-bold text-indigo-900 mb-3">Add New Antibiotic</h5>
-                        <input type="text" id="new_abx_name" placeholder="Antibiotic Name..." class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 focus:ring-2 focus:ring-indigo-500 outline-none" dir="ltr">
+                        <h5 class="font-bold text-indigo-900 mb-3">Add New Antibiotic / Antifungal</h5>
+                        <input type="text" id="new_abx_name" placeholder="Name..." class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 focus:ring-2 focus:ring-indigo-500 outline-none" dir="ltr">
                         <select id="new_abx_group" class="w-full border border-slate-300 p-2.5 rounded-lg mb-4 focus:ring-2 focus:ring-indigo-500 outline-none" dir="ltr">
                             ${groupsOptions}
                         </select>
@@ -1188,7 +1232,7 @@
             `;
 
             Swal.fire({
-                title: 'Antibiotics Database',
+                title: 'Database Manager',
                 html: html,
                 showConfirmButton: true,
                 confirmButtonText: 'Done',
@@ -1213,7 +1257,7 @@
             
             let allCurrent = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
             if(allCurrent.map(a=>a.toLowerCase()).includes(name.toLowerCase())) {
-                errorEl.innerText = 'Antibiotic already exists!';
+                errorEl.innerText = 'Item already exists!';
                 errorEl.classList.remove('hidden');
                 return;
             }
@@ -1268,6 +1312,7 @@
             $('#ana_end').val(`${currentYear}-12-31`);
 
             // 2. تفريغ جميع القوائم المنسدلة
+            $('#ana_ward').val(null).trigger('change.select2');
             $('#ana_sample').val(null).trigger('change.select2');
             $('#ana_organism').val(null).trigger('change.select2');
             $('#ana_antibiotic').val(null).trigger('change.select2');
@@ -1287,6 +1332,7 @@
             const startDate = $('#ana_start').val();
             const endDate = $('#ana_end').val();
             const targetSample = $('#ana_sample').val();
+            const targetWards = $('#ana_ward').val() || [];
             const targetOrgs = $('#ana_organism').val() || []; // Array from multi-select
             const targetAbxs = $('#ana_antibiotic').val() || []; // Array from multi-select
 
@@ -1296,6 +1342,20 @@
             let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
 
             if (targetSample) { records = records.filter(r => r.Sample === targetSample); }
+            
+            // Filter by Ward if selected
+            if (targetWards.length > 0) {
+                let allWards = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
+                let inpatientWards = allWards.filter(w => w.toLowerCase() !== 'outpatient');
+                
+                records = records.filter(r => {
+                    let rWard = r.Ward || '';
+                    if (targetWards.includes(rWard)) return true;
+                    if (targetWards.includes('Inpatient') && inpatientWards.includes(rWard)) return true;
+                    if (targetWards.includes('Outpatient') && rWard.toLowerCase() === 'outpatient') return true;
+                    return false;
+                });
+            }
 
             if (records.length === 0) {
                 $('#analyticsPlaceholder').removeClass('hidden').html(`
@@ -1312,6 +1372,7 @@
             let dashTitle = "Antibiogram Analysis";
             let dashSub = `${startDate} to ${endDate}`;
             if(targetSample) dashSub += ` | Sample: ${targetSample}`;
+            if(targetWards.length > 0) dashSub += ` | Wards: ${targetWards.join(', ')}`;
             $('#dashTitle').text(dashTitle);
             $('#dashSubtitle').text(dashSub);
 
