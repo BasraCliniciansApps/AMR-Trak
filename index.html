@@ -2349,10 +2349,10 @@
 
                 const sDate = new Date(startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
                 const eDate = new Date(endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-                sheet.cell("C1").value(`Period: ${sDate} to ${eDate}`);
+                sheet.cell("C1").value("Period: " + sDate + " to " + eDate);
 
                 const blob = await workbook.outputAsync();
-                saveAs(blob, `Ministry_Antibiogram_${sDate}_to_${eDate}.xlsx`);
+                saveAs(blob, "Ministry_Antibiogram_" + sDate + "_to_" + eDate + ".xlsx");
                 Swal.fire('Success!', 'The official file has been exported successfully.', 'success');
 
             } catch (err) {
