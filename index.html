@@ -12,11 +12,14 @@
     <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/4.3.0/css/fixedColumns.dataTables.min.css">
+    
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedcolumns/4.3.0/js/dataTables.fixedColumns.min.js"></script>
 
     <!-- Select2 -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -45,7 +48,6 @@
         <div class="max-w-[98%] mx-auto px-4 py-3 flex justify-between items-center">
             <h1 class="text-2xl font-bold tracking-wide">AMR Tracker</h1>
             <div class="space-x-3 flex items-center">
-                <!-- Export Button -->
                 <button onclick="showExportModal()" class="bg-green-600 text-white border-2 border-green-500 px-5 py-2 rounded shadow-md font-bold transition hover:bg-green-700 flex items-center gap-2">
                     📥 Export to Antibiogram
                 </button>
@@ -125,7 +127,6 @@
                             <select id="p_sample" dir="ltr" lang="en" class="w-full" required></select>
                         </div>
                         
-                        <!-- Selective Organism (Internal Record) -->
                         <div class="md:col-span-2 bg-blue-50 p-4 rounded-lg border border-blue-100">
                             <label class="block text-sm font-bold text-blue-800 mb-2">Selective Organism (Lab Record)</label>
                             <select id="p_organism" dir="ltr" lang="en" class="w-full select2-enable" required>
@@ -140,7 +141,6 @@
                             </div>
                         </div>
 
-                        <!-- Antibiogram Export Organism (Ministry Template) -->
                         <div class="md:col-span-2 bg-purple-50 p-4 rounded-lg border border-purple-200">
                             <label class="block text-sm font-bold text-purple-800 mb-2">Antibiogram Organism List (Export)</label>
                             <select id="p_antibiogram_org" dir="ltr" lang="en" class="w-full select2-enable">
@@ -192,6 +192,7 @@
                                 * Select the exact category to calculate isolates and resistance in the Antibiogram Excel file.
                             </div>
                         </div>
+
                     </div>
 
                     <!-- Antibiotics Master Panel -->
@@ -373,7 +374,6 @@
 
         // --- 3. Initialization ---
         $(document).ready(function() {
-            // Migration script for older tags format
             let oldCustom = JSON.parse(localStorage.getItem('amr_custom_abx'));
             if (oldCustom && oldCustom.length > 0 && typeof oldCustom[0] === 'string') {
                 let migrated = oldCustom.map(a => ({ name: a, group: 'Others' }));
@@ -396,7 +396,6 @@
 
         // --- 4. Data Entry UI Functions ---
         function renderDefaultAntibiotics() {
-            // Merge defaults with custom DB seamlessly
             let currentGroups = JSON.parse(JSON.stringify(abxGroups));
             let customAbx = getCustomAntibiotics();
             customAbx.forEach(c => {
@@ -604,18 +603,27 @@
             loadSampleOptions(); manageSamples();
         };
 
-        // --- 5. Antibiotics DB Manager ---
+        // --- 5. Antibiotics DB Manager (With Edit Group Feature) ---
         function manageAntibioticsDB() {
             let customAbx = getCustomAntibiotics();
-            let groupsOptions = Object.keys(abxGroups).map(g => `<option value="${g}">${g}</option>`).join('');
+            let groupsArr = Object.keys(abxGroups);
+            if (!groupsArr.includes("Others")) groupsArr.push("Others");
+
+            let groupsOptions = groupsArr.map(g => `<option value="${g}">${g}</option>`).join('');
             
             let listHtml = customAbx.length === 0 ? '<p class="text-xs text-gray-500">No custom antibiotics added yet.</p>' : 
-                customAbx.map(a => `
-                    <div class="flex justify-between items-center bg-gray-100 px-3 py-2 rounded border mb-2">
-                        <div><span class="font-bold text-sm text-gray-800">${a.name}</span> <span class="text-[10px] text-gray-500">(${a.group})</span></div>
+                customAbx.map(a => {
+                    let opts = groupsArr.map(g => `<option value="${g}" ${a.group === g ? 'selected' : ''}>${g}</option>`).join('');
+                    return `
+                    <div class="flex justify-between items-center bg-gray-100 px-3 py-2 rounded border mb-2 gap-2">
+                        <div class="font-bold text-sm text-gray-800 truncate flex-1" title="${a.name}">${a.name}</div>
+                        <select onchange="updateAbxGroupInDB('${a.name.replace(/'/g, "\\'")}', this.value)" class="border border-gray-300 rounded p-1 text-xs focus:ring-blue-500 w-1/3" dir="ltr" title="Change Group">
+                            ${opts}
+                        </select>
                         <button type="button" onclick="removeAbxFromDB('${a.name.replace(/'/g, "\\'")}')" class="text-red-500 font-bold text-xs bg-white px-2 py-1 rounded border hover:bg-red-50 transition">Delete</button>
                     </div>
-                `).join('');
+                    `;
+                }).join('');
 
             let html = `
                 <div class="text-left space-y-4">
@@ -629,7 +637,7 @@
                         <p id="abx_error" class="text-red-500 text-xs font-bold mt-2 hidden"></p>
                     </div>
                     <div>
-                        <h5 class="font-bold text-gray-700 mb-2 border-b pb-1">Custom Antibiotics List</h5>
+                        <h5 class="font-bold text-gray-700 mb-2 border-b pb-1">Custom Antibiotics List (Edit Group or Delete)</h5>
                         <div id="custom_abx_list" class="max-h-48 overflow-y-auto pr-2">
                             ${listHtml}
                         </div>
@@ -674,6 +682,16 @@
         window.removeAbxFromDB = function(name) {
             deleteCustomAntibiotic(name);
             manageAntibioticsDB();
+        };
+
+        window.updateAbxGroupInDB = function(name, newGroup) {
+            let custom = getCustomAntibiotics();
+            let index = custom.findIndex(a => a.name === name);
+            if (index !== -1) {
+                custom[index].group = newGroup;
+                localStorage.setItem('amr_custom_abx_v2', JSON.stringify(custom));
+                renderDefaultAntibiotics(); 
+            }
         };
 
         // --- 6. 100% Exact Ministry File Export using Fetch + XlsxPopulate ---
