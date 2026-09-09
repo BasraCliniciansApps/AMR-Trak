@@ -26,11 +26,11 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- ExcelJS & FileSaver -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- XlsxPopulate & FileSaver -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx-populate/1.21.0/xlsx-populate.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -100,13 +100,11 @@
                         Export Excel
                     </button>
 
-                    <!-- New Button: AMR Data Extractor and Injector -->
                     <button onclick="triggerDataExtractor()" class="bg-violet-600 text-white border border-violet-500 px-4 py-2 rounded-lg shadow-lg font-bold transition-all hover:bg-violet-500 hover:scale-105 flex items-center gap-2 text-sm md:text-base">
                         📥 AMR Data Extractor and Injector
                     </button>
                     <input type="file" id="extractorFileInput" accept=".txt,.csv" class="hidden" onchange="processDataExtraction(event)">
 
-                    <!-- Backup Button -->
                     <button onclick="showBackupModal()" class="bg-slate-700 text-white border border-slate-600 px-4 py-2 rounded-lg shadow-lg font-bold transition-all hover:bg-slate-600 hover:scale-105 flex items-center gap-2 text-sm md:text-base">
                         💾 Backup
                     </button>
@@ -142,8 +140,6 @@
                 </div>
 
                 <div class="flex flex-col gap-4 w-full">
-                    
-                    <!-- Date Row -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="w-full">
                             <label class="block text-xs font-bold text-slate-500 mb-1">From Date</label>
@@ -154,28 +150,20 @@
                             <input type="date" id="ana_end" class="w-full border border-slate-300 rounded-lg px-3 h-[42px] text-sm focus:ring-2 focus:ring-teal-500 outline-none transition-all">
                         </div>
                     </div>
-
-                    <!-- Sample Row -->
                     <div class="w-full">
                         <label class="block text-xs font-bold text-slate-500 mb-1">Sample</label>
                         <select id="ana_sample" class="w-full border rounded text-sm select2-basic">
                             <option value="">All Samples</option>
                         </select>
                     </div>
-
-                    <!-- Organism Row -->
                     <div class="w-full">
                         <label class="block text-xs font-bold text-slate-500 mb-1">Organisms</label>
                         <select id="ana_organism" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Organisms"></select>
                     </div>
-
-                    <!-- Antibiotics Row -->
                     <div class="w-full">
                         <label class="block text-xs font-bold text-slate-500 mb-1">Antibiotics</label>
                         <select id="ana_antibiotic" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Antibiotics"></select>
                     </div>
-
-                    <!-- Buttons Row -->
                     <div class="flex flex-wrap justify-end gap-3 mt-2 border-t border-slate-100 pt-4">
                         <button onclick="clearAnalyticsFilters()" class="bg-rose-500 hover:bg-rose-600 text-white px-6 py-2 rounded-lg shadow transition-all font-bold flex items-center gap-2" title="Clear Filters">
                             🧹 Clear
@@ -198,7 +186,6 @@
                     <p class="text-xs text-teal-600 mt-1 font-medium bg-teal-50 inline-block px-3 py-1 rounded-full">Use the 👁️ icon to hide/show sections before printing.</p>
                 </div>
 
-                <!-- Heatmap -->
                 <div id="print_sect_heatmap" class="mb-8 chart-container border border-slate-200 rounded-xl p-4 bg-white shadow-sm overflow-hidden transition-all">
                     <div class="flex items-center justify-between mb-4">
                         <div>
@@ -219,7 +206,6 @@
                     <div class="w-full overflow-x-auto rounded-lg border border-slate-200" id="heatmapWrapper"></div>
                 </div>
 
-                <!-- AMR Profile Chart & Table -->
                 <div id="print_sect_amr" class="mb-8 chart-container border border-slate-200 rounded-xl p-4 md:p-6 bg-slate-50/50 shadow-sm transition-all hidden">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-slate-200 pb-3 gap-2">
                         <div>
@@ -242,7 +228,6 @@
                         * Gray bars indicate Low Confidence (n &lt; 30) - Interpret with caution per CLSI guidelines.
                     </div>
                     
-                    <!-- Table: 95% CI -->
                     <div class="mt-8 overflow-x-auto">
                         <h4 class="text-sm font-bold text-slate-700 mb-2">Statistical Summary (Wilson Score Interval)</h4>
                         <table class="w-full text-xs text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden border border-slate-200">
@@ -264,7 +249,6 @@
                     </div>
                 </div>
 
-                <!-- Row 3: Distributions -->
                 <div id="print_sect_dist" class="grid grid-cols-1 md:grid-cols-3 gap-6 page-break transition-all">
                     <div class="chart-container border border-slate-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
                         <h3 class="text-sm font-bold text-center text-slate-700 mb-3 border-b border-slate-100 pb-2 flex justify-center items-center gap-2">
@@ -285,11 +269,10 @@
             </div>
             
             <div id="analyticsPlaceholder" class="text-center text-slate-400 py-16 flex flex-col items-center justify-center bg-white border border-slate-200 rounded-xl shadow-sm">
-                <svg class="w-16 h-16 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
+                <svg class="w-16 h-16 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
                 <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view insights.</p>
             </div>
 
-            <!-- ISOLATED: Trend Analysis Section -->
             <div id="print_sect_trend" class="mt-12 pt-8 border-t-2 border-teal-100 chart-container page-break transition-all hidden">
                 <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
                     <div>
@@ -301,7 +284,6 @@
                     </div>
                 </div>
 
-                <!-- Dedicated Trend Controls -->
                 <div class="flex flex-wrap lg:flex-nowrap items-center gap-3 w-full no-print bg-teal-50/50 p-4 rounded-xl border border-teal-100 shadow-sm mb-6">
                     <div class="w-full lg:w-auto">
                         <label class="block text-xs font-bold text-slate-500 mb-1">Trend Type</label>
@@ -310,8 +292,6 @@
                             <option value="yearly">Year-over-Year (YoY)</option>
                         </select>
                     </div>
-                    
-                    <!-- Date Range specifically for Seasonal -->
                     <div id="trend_seasonal_dates" class="w-full lg:w-auto flex gap-2">
                         <div>
                             <label class="block text-xs font-bold text-slate-500 mb-1">Start Date</label>
@@ -322,12 +302,10 @@
                             <input type="date" id="trend_end" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm outline-none bg-white">
                         </div>
                     </div>
-
                     <div id="trend_year_container" class="w-full lg:w-48 hidden flex-col">
                         <label class="block text-xs font-bold text-slate-500 mb-1">Years (Completed)</label>
                          <select id="trend_years" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Years"></select>
                     </div>
-                    
                     <div class="w-full lg:w-48">
                         <label class="block text-xs font-bold text-slate-500 mb-1">Organism</label>
                         <select id="trend_organism" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-teal-500 outline-none bg-white"></select>
@@ -427,7 +405,6 @@
                             <select id="p_sample" dir="ltr" lang="en" class="w-full select2-enable shadow-sm" required></select>
                         </div>
                         
-                        <!-- Selective Organism -->
                         <div class="md:col-span-2 bg-teal-50/50 p-4 rounded-xl border border-teal-100 shadow-sm">
                             <div class="flex justify-between items-center mb-2">
                                 <label class="block text-sm font-bold text-teal-900">Selective Organism (Lab Record)</label>
@@ -438,7 +415,6 @@
                             </select>
                         </div>
 
-                        <!-- Antibiogram Export Organism -->
                         <div class="md:col-span-2 bg-sky-50/50 p-4 rounded-xl border border-sky-100 shadow-sm">
                             <label class="block text-sm font-bold text-sky-900 mb-2">Antibiogram Organism List (Export)</label>
                             <select id="p_antibiogram_org" dir="ltr" lang="en" class="w-full select2-enable">
@@ -493,7 +469,6 @@
 
                     </div>
 
-                    <!-- Antibiotics Panel -->
                     <div class="border border-slate-200 rounded-xl p-4 md:p-6 bg-white mt-6 shadow-sm">
                         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 border-b border-slate-100 pb-3 gap-3">
                             <div class="flex items-center gap-2">
@@ -800,6 +775,52 @@
                 const headers = lines[0].split(',').map(h => h.trim());
                 let records = JSON.parse(localStorage.getItem('amr_records')) || [];
                 let addedCount = 0;
+                let skippedCount = 0;
+
+                // خريطة الردهات المحدثة
+                const wardMap = {
+                    'ped': 'Pediatrics', 'ped in': 'Pediatrics',
+                    'icu': 'ICU', 'ccu': 'Resuscitation / CCU', 'eme': 'Resuscitation / CCU',
+                    'sur': 'General Surgery', 'sur in': 'General Surgery',
+                    'med': 'Internal Medicine', 'med in': 'Internal Medicine',
+                    'neo': 'Neonatal Unit', 'neo in': 'Neonatal Unit',
+                    'out': 'Outpatient',
+                    'obg': 'General Obstetrics & Gynecology', 'obg in': 'General Obstetrics & Gynecology',
+                    'ent': 'ENT'
+                };
+
+                // خريطة العينات
+                const sampleMap = {
+                    'ur': 'Urine', 'bl': 'Blood', 'ps': 'Pus', 'sf': 'CSF',
+                    'wd': 'Wound Swab', 'sp': 'Sputum', 'va': 'Vaginal',
+                    'th': 'Throat Swab', 'as': 'Aspirate', 'fl': 'Fluid',
+                    'ea': 'Ear Swab', 'st': 'Stool', 'ue': 'Urethral Swab',
+                    'np': 'Nasopharyngeal Swab', 'ti': 'Tissue', 'ey': 'Eye Swab',
+                    're': 'Rectal Swab', 'sm': 'Semen', 'kf': 'Knee Fluid',
+                    'ul': 'Ulcer'
+                };
+
+                // خريطة البكتيريا (اختصارات WHONET)
+                const orgMap = { 'eco': 'Escherichia coli (E.coli)', 'kpn': 'Klebsiella pneumoniae', 'sau': 'Staphylococcus aureus', 'pmi': 'Proteus mirabilis', 'pae': 'Pseudomonas aeruginosa', 'aba': 'Acinetobacter baumannii', 'efa': 'Enterococcus faecalis', 'sho': 'Staphylococcus hominis', 'sep': 'Staphylococcus epidermidis', 'shl': 'Staphylococcus haemolyticus', 'ecl': 'Enterobacter cloacae', 'kox': 'Klebsiella oxytoca', 'sma': 'Serratia marcescens', 'cgl': 'Candida glabrata', 'cpa': 'Candida parapsilosis', 'sat': 'Salmonella Typhi', 'eae': 'Enterobacter aerogenes', 'pvu': 'Proteus vulgaris', 'cfr': 'Citrobacter freundii', 'ckr': 'Citrobacter koseri', 'sgc': 'Streptococcus agalactiae (Group B)', 'sca': 'Staphylococcus capitis', 'con': 'Staphylococcus non-aureus (spp) / CoNS' };
+
+                // خريطة المضادات الحيوية الذكية الخاصة بـ WHONET
+                const whonetAbxMap = {
+                    'AMK': 'Amikacin', 'AMX': 'Amoxicillin', 'AMC': 'Amoxicillin/Clavulanic acid',
+                    'AMP': 'Ampicillin', 'SAM': 'Ampicillin/Sulbactam', 'AZM': 'Azithromycin',
+                    'ATM': 'Aztreonam', 'CZO': 'Cefazolin', 'FEP': 'Cefepime', 'CFM': 'Cefixime',
+                    'CTX': 'Cefotaxime', 'FOX': 'Cefoxitine', 'CAZ': 'Ceftazidime', 'CRO': 'Ceftriaxone',
+                    'CXM': 'Cefuroxime', 'CHL': 'Chloramphenicol', 'CIP': 'Ciprofloxacin',
+                    'CLR': 'Clarithromycin', 'CLI': 'Clindamycin', 'COL': 'Colistin',
+                    'DOX': 'Doxycycline', 'ETP': 'Ertapenem', 'ERY': 'Erythromycin',
+                    'FOS': 'Fosfomycin', 'GEN': 'Gentamicin', 'IPM': 'Imipenem',
+                    'LVX': 'Levofloxacin', 'LNZ': 'Linezolid', 'MEM': 'Meropenem',
+                    'MFX': 'Moxifloxacin', 'NAL': 'Nalidixic acid', 'NET': 'Netilmicin',
+                    'NIT': 'Nitrofurantoin', 'NOR': 'Norfloxacin', 'OFX': 'Ofloxacin',
+                    'OXA': 'Oxacillin', 'PEN': 'Penicillin', 'PIP': 'Piperacillin',
+                    'TZP': 'Piperacillin/Tazobactam', 'RIF': 'Rifampicin', 'TEC': 'Teicoplanin',
+                    'TCY': 'Tetracycline', 'TOB': 'Tobramycin', 'SXT': 'Trimethoprim/Sulfamethoxazole',
+                    'VAN': 'Vancomycin', 'TGC': 'Tigecycline', 'FCT': 'Fusidic acid'
+                };
 
                 for(let i = 1; i < lines.length; i++) {
                     if(!lines[i].trim()) continue;
@@ -808,8 +829,12 @@
                     const row = {};
                     headers.forEach((h, idx) => row[h] = cols[idx] ? cols[idx].trim() : "");
 
-                    // تجاهل العينات بدون نمو بكتيري
-                    if(row['ORGANISM'] === 'xxx' || !row['ORGANISM']) continue;
+                    // تجاهل العينات بدون نمو بكتيري أو الملوثة (con)
+                    let rawOrg = (row['ORGANISM'] || "").toLowerCase();
+                    if(rawOrg === 'xxx' || rawOrg === 'con' || !rawOrg) {
+                        skippedCount++;
+                        continue;
+                    }
 
                     // 1. دمج اسم المريض
                     let name = (row['FIRST_NAME'] || '') + " " + (row['LAST_NAME'] || '');
@@ -825,7 +850,7 @@
                     // 3. الجنس
                     let sex = (row['SEX'] && row['SEX'].toLowerCase() === 'f') ? 'Female' : 'Male';
 
-                    // 4. التاريخ (استخراج السنة والشهر)
+                    // 4. التاريخ 
                     let formattedDate = "";
                     if(row['SPEC_DATE']) {
                         let dateParts = row['SPEC_DATE'].split(' ')[0].split('/'); 
@@ -837,18 +862,14 @@
                     }
 
                     // 5. ترجمة الردهات
-                    let wardMap = { 'ped': 'Pediatrics', 'icu': 'ICU', 'sur': 'General Surgery', 'med': 'Internal Medicine', 'neo': 'Neonatal Unit', 'eme': 'Resuscitation / CCU', 'out': 'Outpatient', 'obg': 'General Obstetrics & Gynecology', 'ent': 'ENT' };
                     let rawWard = (row['WARD'] || "").toLowerCase();
                     let ward = wardMap[rawWard] || row['WARD'];
 
                     // 6. ترجمة العينات
-                    let sampleMap = { 'ur': 'Urine', 'bl': 'Blood', 'ps': 'Pus', 'sf': 'CSF', 'wd': 'Wound Swab', 'sp': 'Sputum', 'va': 'Vaginal', 'th': 'Throat Swab', 'as': 'Aspirate', 'fl': 'Fluid', 'ea': 'Ear Swab' };
                     let rawSample = (row['SPEC_TYPE'] || "").toLowerCase();
                     let sample = sampleMap[rawSample] || row['SPEC_TYPE'];
 
-                    // 7. ترجمة البكتيريا لتطابق مكتبة التطبيق
-                    let orgMap = { 'eco': 'Escherichia coli (E.coli)', 'kpn': 'Klebsiella pneumoniae', 'sau': 'Staphylococcus aureus', 'pmi': 'Proteus mirabilis', 'pae': 'Pseudomonas aeruginosa', 'aba': 'Acinetobacter baumannii', 'efa': 'Enterococcus faecalis', 'sho': 'Staphylococcus hominis', 'sep': 'Staphylococcus epidermidis', 'shl': 'Staphylococcus haemolyticus', 'con': 'Staphylococcus non-aureus (spp) / CoNS', 'ecl': 'Enterobacter cloacae', 'kox': 'Klebsiella oxytoca', 'sma': 'Serratia marcescens', 'cgl': 'Candida glabrata', 'cpa': 'Candida parapsilosis', 'sat': 'Salmonella Typhi' };
-                    let rawOrg = (row['ORGANISM'] || "").toLowerCase();
+                    // 7. ترجمة البكتيريا 
                     let organism = orgMap[rawOrg] || row['ORGANISM'];
 
                     let newRecord = {
@@ -863,6 +884,17 @@
                         "Antibiogram organism": organism 
                     };
 
+                    // 8. جلب المضادات الحيوية (فقط إذا كانت القيمة S, I, R)
+                    headers.forEach(h => {
+                        let prefix = h.substring(0, 3).toUpperCase();
+                        if (whonetAbxMap[prefix]) {
+                            let val = row[h].toUpperCase();
+                            if (val === 'S' || val === 'I' || val === 'R') {
+                                newRecord[whonetAbxMap[prefix]] = val;
+                            }
+                        }
+                    });
+
                     records.push(newRecord);
                     addedCount++;
                 }
@@ -873,7 +905,7 @@
                 initDataTable();
                 if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
                 
-                Swal.fire('Success!', `تم استخراج ${addedCount} عزلة بكتيرية موجبة وإضافتها إلى سجلك.`, 'success');
+                Swal.fire('Success!', `تم استخراج ${addedCount} عزلة بكتيرية بنجاح.\nتم تجاهل ${skippedCount} عينة (No Growth / Contamination).`, 'success');
                 
                 event.target.value = ''; // Reset file input
             };
