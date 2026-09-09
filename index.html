@@ -66,14 +66,13 @@
             .heatmap-table th:first-child, .heatmap-table td:first-child { box-shadow: none !important; }
         }
         
-        /* Scrollbar hiding for responsive nav */
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="text-slate-800 antialiased">
 
-    <!-- Top Navigation (Responsive & Modern) -->
+    <!-- Top Navigation -->
     <nav class="bg-gradient-to-r from-slate-900 to-indigo-900 text-white shadow-xl sticky top-0 z-40 no-print border-b border-indigo-500/30">
         <div class="max-w-[98%] mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
             <div class="flex items-center gap-2">
@@ -93,7 +92,6 @@
                     </button>
                     <div class="w-px bg-indigo-500/50 mx-1 h-6"></div>
                     
-                    <!-- Direct Excel Export Button -->
                     <button onclick="showExportModal()" class="bg-gradient-to-r from-emerald-500 to-green-600 text-white border border-green-400/50 px-4 py-2 rounded-lg shadow-lg font-bold transition-all hover:from-emerald-400 hover:to-green-500 hover:scale-105 flex items-center gap-2 text-sm md:text-base">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                         Export Excel
@@ -130,7 +128,6 @@
                 </div>
 
                 <div class="flex flex-wrap gap-3 items-end w-full xl:w-auto">
-                    <!-- Dates -->
                     <div class="flex-1 min-w-[120px]">
                         <label class="block text-xs font-bold text-slate-500 mb-1">From Date</label>
                         <input type="date" id="ana_start" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
@@ -140,7 +137,6 @@
                         <input type="date" id="ana_end" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
                     </div>
                     
-                    <!-- Filters -->
                     <div class="w-full sm:w-48">
                         <label class="block text-xs font-bold text-slate-500 mb-1">Filter by Sample</label>
                         <select id="ana_sample" class="w-full border rounded text-sm select2-basic">
@@ -148,13 +144,13 @@
                         </select>
                     </div>
                     <div class="w-full sm:w-56">
-                        <label class="block text-xs font-bold text-slate-500 mb-1">Filter by Organism</label>
+                        <!-- تم التعديل ليكون Selective Organism بدلاً من Antibiogram Export -->
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Filter by Organism (Lab Record)</label>
                         <select id="ana_organism" class="w-full border rounded text-sm select2-basic">
                             <option value="">All Organisms</option>
                         </select>
                     </div>
 
-                    <!-- Actions -->
                     <div class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                         <button onclick="generateAnalytics()" class="flex-1 sm:flex-none bg-indigo-600 text-white px-6 py-2 rounded-lg shadow hover:bg-indigo-700 hover:shadow-lg transition-all font-bold">
                             Analyze
@@ -168,21 +164,18 @@
 
             <!-- Analytics Content -->
             <div id="analyticsContainer" class="hidden">
-                
-                <!-- Dynamic Title -->
                 <div class="mb-6 text-center no-print">
                     <h2 class="text-2xl font-bold text-slate-800" id="dashTitle">Antibiogram Analysis</h2>
                     <p class="text-sm text-slate-500 mt-1" id="dashSubtitle">Displaying data based on selected filters</p>
                 </div>
 
-                <!-- Row 1: Heatmap (Full Width) -->
+                <!-- Heatmap -->
                 <div class="mb-8 chart-container border border-slate-200 rounded-xl p-4 bg-white shadow-sm overflow-hidden">
                     <div class="flex items-center justify-between mb-4">
                         <div>
                             <h3 class="text-lg font-bold text-slate-800">Antibiogram Heatmap</h3>
                             <p class="text-xs text-slate-500">Color intensity indicates Resistance % (Dark Red = High Resistance). <span class="text-red-500 font-bold">*</span> indicates sample size < 30.</p>
                         </div>
-                        <!-- Legend -->
                         <div class="hidden md:flex items-center gap-2 text-[10px] font-bold text-slate-600 border border-slate-200 rounded p-1.5 bg-slate-50">
                             <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">0-20%</span>
                             <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800">21-40%</span>
@@ -191,12 +184,10 @@
                             <span class="px-2 py-0.5 rounded bg-red-600 text-white">81-100%</span>
                         </div>
                     </div>
-                    <div class="w-full overflow-x-auto rounded-lg border border-slate-200" id="heatmapWrapper">
-                        <!-- Heatmap Table injected here -->
-                    </div>
+                    <div class="w-full overflow-x-auto rounded-lg border border-slate-200" id="heatmapWrapper"></div>
                 </div>
 
-                <!-- Row 2: AMR Profile Chart & 95% CI Table (Visible only if Specific Organism is Selected) -->
+                <!-- AMR Profile Chart & Table -->
                 <div id="amrProfileSection" class="mb-8 chart-container border border-slate-200 rounded-xl p-4 md:p-6 bg-slate-50/50 shadow-sm hidden">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-slate-200 pb-3 gap-2">
                         <div>
@@ -240,17 +231,14 @@
 
                 <!-- Row 3: Distributions -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 page-break">
-                    <!-- Organism Prevalence -->
                     <div class="chart-container border border-slate-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
                         <h3 class="text-sm font-bold text-center text-slate-700 mb-3 border-b border-slate-100 pb-2">Organism Prevalence</h3>
                         <div class="relative h-[250px] w-full flex justify-center"><canvas id="chartOrg"></canvas></div>
                     </div>
-                    <!-- Specimen Distribution -->
                     <div class="chart-container border border-slate-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
                         <h3 class="text-sm font-bold text-center text-slate-700 mb-3 border-b border-slate-100 pb-2">Specimen Distribution</h3>
                         <div class="relative h-[250px] w-full flex justify-center"><canvas id="chartSpecimen"></canvas></div>
                     </div>
-                    <!-- Gender Distribution -->
                     <div class="chart-container border border-slate-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
                         <h3 class="text-sm font-bold text-center text-slate-700 mb-3 border-b border-slate-100 pb-2">Gender Distribution</h3>
                         <div class="relative h-[250px] w-full flex justify-center"><canvas id="chartGender"></canvas></div>
@@ -323,7 +311,6 @@
                             <select id="p_sample" dir="ltr" lang="en" class="w-full select2-enable shadow-sm" required></select>
                         </div>
                         
-                        <!-- Selective Organism -->
                         <div class="md:col-span-2 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 shadow-sm">
                             <label class="block text-sm font-bold text-indigo-900 mb-2">Selective Organism (Lab Record)</label>
                             <select id="p_organism" dir="ltr" lang="en" class="w-full select2-enable" required>
@@ -590,6 +577,15 @@
             localStorage.setItem('amr_custom_abx_v2', JSON.stringify(custom));
         }
 
+        function updateAbxColor(el) {
+            $(el).removeClass('bg-emerald-100 bg-amber-100 bg-rose-100 bg-white');
+            const val = $(el).val();
+            if (val === 'S') $(el).addClass('bg-emerald-100');
+            else if (val === 'I') $(el).addClass('bg-amber-100');
+            else if (val === 'R') $(el).addClass('bg-rose-100');
+            else $(el).addClass('bg-white');
+        }
+
         // --- 3. Initialization ---
         $(document).ready(function() {
             let oldCustom = JSON.parse(localStorage.getItem('amr_custom_abx'));
@@ -602,21 +598,17 @@
             loadBacteriaOptions();
             loadSampleOptions();
             loadWardOptions();
-            loadAnalyticsSampleOptions();
+            loadAnalyticsFilters();
             renderDefaultAntibiotics();
 
-            // Setup Select2
+            $('#default_abx_container').on('change', '.default-abx-select', function() {
+                updateAbxColor(this);
+            });
+
             $('.select2-enable').select2({ width: '100%', dropdownParent: $('#formModal') });
             $('#p_sample').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new sample..." });
             $('#p_ward').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new ward..." });
             $('.select2-basic').select2({ width: '100%' }); 
-
-            // Populate Analytics Organism Dropdown
-            const anaSelect = $('#ana_organism');
-            anaSelect.append(new Option("All Organisms", ""));
-            Object.keys(orgMapExport).forEach(org => {
-                anaSelect.append(new Option(org, org));
-            });
             
             let today = new Date().toISOString().split('T')[0];
             $('#p_date').val(today);
@@ -637,7 +629,7 @@
                 $('#viewRecords').removeClass('hidden');
                 $('#btnTabRecords').removeClass('bg-white/5 text-indigo-100 border-indigo-300/20').addClass('bg-indigo-600 text-white border-indigo-400/50');
             } else if (tabName === 'analytics') {
-                loadAnalyticsSampleOptions();
+                loadAnalyticsFilters();
                 $('#viewAnalytics').removeClass('hidden');
                 $('#btnTabAnalytics').removeClass('bg-white/5 text-indigo-100 border-indigo-300/20').addClass('bg-indigo-600 text-white border-indigo-400/50');
             }
@@ -680,13 +672,6 @@
                 html += `</div></div>`;
             }
             $('#default_abx_container').html(html);
-            
-            $('.default-abx-select').change(function() {
-                $(this).removeClass('bg-emerald-100 bg-amber-100 bg-rose-100');
-                if ($(this).val() === 'S') $(this).addClass('bg-emerald-100');
-                if ($(this).val() === 'I') $(this).addClass('bg-amber-100');
-                if ($(this).val() === 'R') $(this).addClass('bg-rose-100');
-            });
         }
 
         function loadBacteriaOptions() {
@@ -717,12 +702,27 @@
             savedWards.forEach(ward => { wardSelect.append(new Option(ward, ward)); });
         }
         
-        function loadAnalyticsSampleOptions() {
+        function loadAnalyticsFilters() {
+            // 1. Samples Filter
             let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
             const anaSample = $('#ana_sample');
             anaSample.empty();
             anaSample.append(new Option("All Samples", ""));
             savedSamples.forEach(sample => { anaSample.append(new Option(sample, sample)); });
+
+            // 2. Selective Organisms Filter (Combined Library + Any Custom inputs)
+            let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+            let usedOrgs = new Set(records.map(r => r['Selective organism']).filter(Boolean));
+            let allOrgsSet = new Set(bacteriaLibrary.map(b => b.name));
+            usedOrgs.forEach(o => allOrgsSet.add(o)); 
+            let allOrgs = Array.from(allOrgsSet).sort();
+            
+            const anaSelect = $('#ana_organism');
+            let currentVal = anaSelect.val();
+            anaSelect.empty();
+            anaSelect.append(new Option("All Organisms", ""));
+            allOrgs.forEach(org => { anaSelect.append(new Option(org, org)); });
+            if(currentVal) anaSelect.val(currentVal);
         }
 
         function quickSelectOrganism(organismName) { $('#p_organism').val(organismName).trigger('change'); }
@@ -774,12 +774,54 @@
             $('#p_sample').val(null).trigger('change'); 
             $('#p_organism').val(null).trigger('change');
             $('#p_antibiogram_org').val('').trigger('change'); 
-            $('.default-abx-select').val('').removeClass('bg-emerald-100 bg-amber-100 bg-rose-100');
             
-            $('#modalTitle').text('Add New Patient Record'); $('#formModal').removeClass('hidden');
+            $('.default-abx-select').each(function() {
+                $(this).val('').trigger('change');
+                updateAbxColor(this);
+            });
+            $('#active_abx_container').empty();
+            selectedAbxMap = {};
+            
+            $('#modalTitle').text('Add Patient Record'); $('#formModal').removeClass('hidden');
         }
 
         function closeModal() { $('#formModal').addClass('hidden'); }
+
+        function addAntibiotic(abxName = null, result = 'S') {
+            const abx = abxName || $('#abx_selector').val();
+            if(!abx) return;
+
+            let isDefault = false;
+            $(`.default-abx-select[data-abx="${$.escapeSelector(abx)}"]`).each(function() {
+                $(this).val(result).trigger('change');
+                isDefault = true;
+            });
+
+            if (isDefault) { $('#abx_selector').val(null).trigger('change'); return; }
+
+            if (selectedAbxMap[abx]) return; 
+            
+            selectedAbxMap[abx] = result;
+            const safeId = abx.replace(/[^a-zA-Z0-9\s]/g, '_').trim();
+            const html = `
+                <div id="row_${safeId}" class="flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-md p-2 shadow-sm">
+                    <span class="text-[11px] font-bold text-indigo-900 truncate w-3/5" title="${abx}">${abx}</span>
+                    <select class="custom-abx-select border border-indigo-300 rounded-md p-1.5 text-xs font-bold bg-white focus:ring-2 focus:ring-indigo-500 w-1/3 text-center transition-colors" onchange="updateAbxResult('${abx}', this.value); updateAbxColor(this);">
+                        <option value="S" class="text-emerald-600 bg-emerald-50" ${result==='S'?'selected':''}>S</option>
+                        <option value="I" class="text-amber-600 bg-amber-50" ${result==='I'?'selected':''}>I</option>
+                        <option value="R" class="text-rose-600 bg-rose-50" ${result==='R'?'selected':''}>R</option>
+                    </select>
+                    <button type="button" onclick="removeAntibiotic('${abx}', '${safeId}')" class="text-rose-500 font-bold px-2">&times;</button>
+                </div>
+            `;
+            $('#active_abx_container').append(html);
+            $('#abx_selector').val(null).trigger('change');
+            
+            updateAbxColor($(`#row_${safeId} select`)[0]);
+        }
+
+        function updateAbxResult(abx, val) { selectedAbxMap[abx] = val; }
+        function removeAntibiotic(abx, safeId) { delete selectedAbxMap[abx]; $(`#row_${safeId}`).remove(); }
 
         $('#entryForm').submit(function(e) {
             e.preventDefault();
@@ -789,7 +831,7 @@
             if (currentSample && !savedSamples.includes(currentSample)) {
                 savedSamples.push(currentSample); localStorage.setItem('amr_samples', JSON.stringify(savedSamples));
                 $('#p_sample').append(new Option(currentSample, currentSample, true, true)).trigger('change');
-                loadAnalyticsSampleOptions(); // update analytics dropdown
+                loadAnalyticsFilters(); 
             }
 
             let currentWard = $('#p_ward').val();
@@ -813,6 +855,12 @@
 
             if (!record['Selective organism']) { Swal.fire({ icon: 'error', title: 'Oops...', text: 'Please select an organism.' }); return; }
 
+            // Add Custom temp antibiotics
+            Object.keys(selectedAbxMap).forEach(abx => {
+                record[abx] = selectedAbxMap[abx];
+            });
+
+            // Add default grid antibiotics
             $('.default-abx-select').each(function() {
                 const val = $(this).val();
                 if (val && val !== "") { record[$(this).attr('data-abx')] = val; }
@@ -861,11 +909,20 @@
                 $('#p_antibiogram_org').val('').trigger('change');
             }
 
-            let customAbx = getCustomAntibiotics();
-            let allAbxColumns = [...abxList, ...customAbx.map(a=>a.name)];
-
-            allAbxColumns.forEach(abx => {
-                if(record[abx] && record[abx] !== '-') { $(`.default-abx-select[data-abx="${abx}"]`).val(record[abx]).trigger('change'); }
+            const standardProps = ['Name', 'Age', 'Age Unit', 'Sex', 'Ward', 'Sample', 'Date', 'Selective organism', 'Antibiogram organism'];
+            
+            Object.keys(record).forEach(key => {
+                if (!standardProps.includes(key)) {
+                    let val = record[key];
+                    if (val && val !== '-') {
+                        let selectEl = $(`.default-abx-select[data-abx="${$.escapeSelector(key)}"]`);
+                        if (selectEl.length > 0) {
+                            selectEl.val(val).trigger('change');
+                        } else {
+                            addAntibiotic(key, val);
+                        }
+                    }
+                }
             });
         }
 
@@ -898,7 +955,7 @@
         window.deleteCustomSample = function(sample) {
             let s = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
             localStorage.setItem('amr_samples', JSON.stringify(s.filter(x => x !== sample)));
-            loadSampleOptions(); loadAnalyticsSampleOptions(); manageSamples();
+            loadSampleOptions(); loadAnalyticsFilters(); manageSamples();
         };
 
         function manageWards() {
@@ -1018,7 +1075,7 @@
         function wilsonScoreCI(r, n) {
             if (n === 0) return { lower: 0, upper: 0 };
             const p = r / n;
-            const z = 1.96; // 95% confidence
+            const z = 1.96; 
             const z2 = z * z;
             const denominator = 1 + z2 / n;
             const center = p + z2 / (2 * n);
@@ -1055,14 +1112,12 @@
             $('#analyticsPlaceholder').addClass('hidden');
             $('#analyticsContainer').removeClass('hidden');
 
-            // Dynamic Title Setup
             let dashTitle = "Antibiogram Analysis";
             let dashSub = `${startDate} to ${endDate}`;
             if(targetSample) dashSub += ` | Sample: ${targetSample}`;
             $('#dashTitle').text(dashTitle);
             $('#dashSubtitle').text(dashSub);
 
-            // Data Structures
             let orgCounts = {};
             let specCounts = {};
             let genderCounts = { "Male": 0, "Female": 0 };
@@ -1070,21 +1125,18 @@
             let heatmapStats = {};
             let allAbxColumns = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
             
-            // Single Organism Stats (For AMR Profile)
             let amrStats = { total: 0, abx: {} };
             allAbxColumns.forEach(a => { amrStats.abx[a] = { tested: 0, resistant: 0 }; });
 
             records.forEach(r => {
-                // Determine Organism Name (Prefer Export Organism if exists, else Selective)
-                let org = r['Antibiogram organism'] || r['Selective organism'];
+                // EXCLUSIVELY USE SELECTIVE ORGANISM FOR ANALYTICS
+                let org = r['Selective organism'];
                 if(!org) return;
 
-                // For Distributions
                 orgCounts[org] = (orgCounts[org] || 0) + 1;
                 if(r.Sample) specCounts[r.Sample] = (specCounts[r.Sample] || 0) + 1;
                 if(r.Sex && genderCounts[r.Sex] !== undefined) genderCounts[r.Sex] += 1;
 
-                // For Heatmap (All orgs in current filter)
                 if (!heatmapStats[org]) heatmapStats[org] = {};
                 allAbxColumns.forEach(abx => {
                     let res = r[abx];
@@ -1095,7 +1147,6 @@
                     }
                 });
 
-                // For specific AMR Profile (if targetOrg selected)
                 if (targetOrg && org === targetOrg) {
                     amrStats.total += 1;
                     allAbxColumns.forEach(abx => {
@@ -1140,12 +1191,11 @@
                             else { bgClass = 'bg-red-600'; textClass = 'text-white font-bold'; }
 
                             if (isLow) {
-                                // Mute colors slightly for low confidence
                                 if(p > 60) textClass = 'text-red-100';
                                 else textClass += ' opacity-70';
                             }
 
-                            hmHtml += `<td class="${bgClass} ${textClass}">${p}% ${isLow ? '<span class="text-[10px]">*</span>' : ''}</td>`;
+                            hmHtml += `<td class="${bgClass} ${textClass}">${p}% ${isLow ? '<span class="text-[10px] text-red-500 font-bold ml-0.5">*</span>' : ''}</td>`;
                         }
                     });
                     hmHtml += '</tr>';
@@ -1156,7 +1206,7 @@
                 $('#heatmapWrapper').html('<p class="text-center text-slate-400 py-4">No susceptibility data to generate heatmap.</p>');
             }
 
-            // --- Build AMR Profile & Table (If targetOrg selected) ---
+            // --- Build AMR Profile ---
             if (targetOrg && amrStats.total > 0) {
                 $('#amrProfileSection').removeClass('hidden');
                 $('#amrChartTitle').text(`AMR Profile: ${targetOrg} (N = ${amrStats.total})`);
@@ -1181,7 +1231,6 @@
 
                     labels.push(abx);
                     dataR.push(p);
-                    // Dark Red for reliable, Faded Gray for low sample size
                     bgColors.push(isReliable ? 'rgba(185, 28, 28, 0.9)' : 'rgba(203, 213, 225, 0.8)'); 
 
                     tableHtml += `
@@ -1221,8 +1270,7 @@
             }
 
             // --- Build Distributions ---
-            // 1. Organisms (Donut)
-            let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 10); // Top 10
+            let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 10);
             if(chartOrg_instance) chartOrg_instance.destroy();
             chartOrg_instance = new Chart(document.getElementById('chartOrg'), {
                 type: 'doughnut',
@@ -1233,7 +1281,6 @@
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } } }
             });
 
-            // 2. Specimens (Bar)
             let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
             if(chartSpec_instance) chartSpec_instance.destroy();
             chartSpec_instance = new Chart(document.getElementById('chartSpecimen'), {
@@ -1245,7 +1292,6 @@
                 options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: {x: {grid: {color: '#f1f5f9'}}, y: {grid: {display: false}}} }
             });
 
-            // 3. Gender (Pie)
             if(chartGen_instance) chartGen_instance.destroy();
             chartGen_instance = new Chart(document.getElementById('chartGender'), {
                 type: 'pie',
@@ -1310,6 +1356,7 @@
 
                 let stats = {};
                 records.forEach(r => {
+                    // EXPORT STRICTLY USES ANTIBIOGRAM ORGANISM
                     let orgName = r['Antibiogram organism'];
                     if (!orgName) return; 
 
