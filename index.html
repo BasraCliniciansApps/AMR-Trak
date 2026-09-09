@@ -139,8 +139,8 @@
                     <!-- Filters & Buttons Container -->
                     <div class="flex-1 w-full flex flex-col lg:flex-row gap-4 lg:items-end justify-end">
                         
-                        <!-- Filters Grid -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 flex-1 w-full items-end">
+                        <!-- Filters Grid (Adjusted to 5 columns after removing Wards) -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 flex-1 w-full items-end">
                             <div class="w-full">
                                 <label class="block text-xs font-bold text-slate-500 mb-1">From Date</label>
                                 <input type="date" id="ana_start" class="w-full border border-slate-300 rounded-lg px-2 h-[42px] text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
@@ -148,10 +148,6 @@
                             <div class="w-full">
                                 <label class="block text-xs font-bold text-slate-500 mb-1">To Date</label>
                                 <input type="date" id="ana_end" class="w-full border border-slate-300 rounded-lg px-2 h-[42px] text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
-                            </div>
-                            <div class="w-full">
-                                <label class="block text-xs font-bold text-slate-500 mb-1">Wards</label>
-                                <select id="ana_ward" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="All Wards"></select>
                             </div>
                             <div class="w-full">
                                 <label class="block text-xs font-bold text-slate-500 mb-1">Sample</label>
@@ -724,9 +720,9 @@
             // Initialize Analytics Filters
             loadAnalyticsFilters();
 
-            // Smart Cascading Listeners
-            $('#ana_start, #ana_end, #ana_sample, #ana_ward').on('change', function() {
-                loadAnalyticsFilters(); // Updates available Orgs and Abx based on Date/Sample/Ward
+            // Smart Cascading Listeners (Removed #ana_ward here)
+            $('#ana_start, #ana_end, #ana_sample').on('change', function() {
+                loadAnalyticsFilters(); 
             });
 
             initDataTable();
@@ -756,9 +752,12 @@
             // Ensure search field always gets cursor focus instantly
             $(document).on('select2:open', function(e) {
                 setTimeout(function() {
-                    const searchField = document.querySelector('.select2-search__field');
-                    if (searchField) searchField.focus();
-                }, 10);
+                    // Fix: Target only the currently open Select2 search field
+                    const searchField = document.querySelector('.select2-container--open .select2-search__field');
+                    if (searchField) {
+                        searchField.focus();
+                    }
+                }, 50); // Increased timeout slightly to ensure the modal isn't stealing focus
             });
             // ==========================================
         });
@@ -866,7 +865,6 @@
             const startDate = $('#ana_start').val();
             const endDate = $('#ana_end').val();
             const targetSample = $('#ana_sample').val();
-            const targetWards = $('#ana_ward').val() || [];
 
             let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
             
@@ -876,38 +874,9 @@
                 return r.Date >= startDate && r.Date <= endDate;
             });
 
-            // Populate Wards Dropdown dynamically based on registered wards
-            let currentWards = $('#ana_ward').val() || [];
-            $('#ana_ward').empty();
-            
-            let specialOptGroup = $('<optgroup label="Categories"></optgroup>');
-            specialOptGroup.append(new Option("Inpatient (All except Outpatient)", "Inpatient", currentWards.includes("Inpatient"), currentWards.includes("Inpatient")));
-            specialOptGroup.append(new Option("Outpatient", "Outpatient", currentWards.includes("Outpatient"), currentWards.includes("Outpatient")));
-            $('#ana_ward').append(specialOptGroup);
-
-            let wardsOptGroup = $('<optgroup label="Specific Wards"></optgroup>');
-            let allWards = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
-            allWards.forEach(w => {
-                let isSelected = currentWards.includes(w);
-                wardsOptGroup.append(new Option(w, w, isSelected, isSelected));
-            });
-            $('#ana_ward').append(wardsOptGroup);
-
             // Filter by Sample if selected
             if (targetSample) {
                 records = records.filter(r => r.Sample === targetSample);
-            }
-            
-            // Filter by Ward if selected
-            if (targetWards.length > 0) {
-                let inpatientWards = allWards.filter(w => w.toLowerCase() !== 'outpatient');
-                records = records.filter(r => {
-                    let rWard = r.Ward || '';
-                    if (targetWards.includes(rWard)) return true;
-                    if (targetWards.includes('Inpatient') && inpatientWards.includes(rWard)) return true;
-                    if (targetWards.includes('Outpatient') && rWard.toLowerCase() === 'outpatient') return true;
-                    return false;
-                });
             }
 
             // 1. Update Sample Dropdown (Always shows all recorded samples in this date range)
@@ -921,7 +890,7 @@
                 $('#ana_sample').val(currentSample);
             }
 
-            // 2. Update Organisms (Based on Date + Sample + Ward)
+            // 2. Update Organisms
             let orgs = new Set();
             let abxs = new Set();
             let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
@@ -1409,7 +1378,6 @@
             $('#ana_end').val(`${currentYear}-12-31`);
 
             // 2. تفريغ جميع القوائم المنسدلة
-            $('#ana_ward').val(null).trigger('change.select2');
             $('#ana_sample').val(null).trigger('change.select2');
             $('#ana_organism').val(null).trigger('change.select2');
             $('#ana_antibiotic').val(null).trigger('change.select2');
@@ -1440,7 +1408,6 @@
             const trendType = $('#trend_type').val();
             const targetOrg = $('#trend_organism').val();
             const targetAbxs = $('#ana_antibiotic').val() || [];
-            const targetWards = $('#ana_ward').val() || [];
             const targetSample = $('#ana_sample').val();
             
             if (!targetOrg) {
@@ -1451,19 +1418,8 @@
             let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
             let records = allRecords;
 
-            // Apply Sample & Ward filters (same as main analytics)
+            // Apply Sample filters (same as main analytics)
             if (targetSample) records = records.filter(r => r.Sample === targetSample);
-            if (targetWards.length > 0) {
-                let allWards = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
-                let inpatientWards = allWards.filter(w => w.toLowerCase() !== 'outpatient');
-                records = records.filter(r => {
-                    let rWard = r.Ward || '';
-                    if (targetWards.includes(rWard)) return true;
-                    if (targetWards.includes('Inpatient') && inpatientWards.includes(rWard)) return true;
-                    if (targetWards.includes('Outpatient') && rWard.toLowerCase() === 'outpatient') return true;
-                    return false;
-                });
-            }
 
             // Filter by selected Organism
             records = records.filter(r => r['Selective organism'] === targetOrg);
@@ -1658,7 +1614,6 @@
             const startDate = $('#ana_start').val();
             const endDate = $('#ana_end').val();
             const targetSample = $('#ana_sample').val();
-            const targetWards = $('#ana_ward').val() || [];
             const targetOrgs = $('#ana_organism').val() || []; // Array from multi-select
             const targetAbxs = $('#ana_antibiotic').val() || []; // Array from multi-select
 
@@ -1669,20 +1624,6 @@
 
             if (targetSample) { records = records.filter(r => r.Sample === targetSample); }
             
-            // Filter by Ward if selected
-            if (targetWards.length > 0) {
-                let allWards = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
-                let inpatientWards = allWards.filter(w => w.toLowerCase() !== 'outpatient');
-                
-                records = records.filter(r => {
-                    let rWard = r.Ward || '';
-                    if (targetWards.includes(rWard)) return true;
-                    if (targetWards.includes('Inpatient') && inpatientWards.includes(rWard)) return true;
-                    if (targetWards.includes('Outpatient') && rWard.toLowerCase() === 'outpatient') return true;
-                    return false;
-                });
-            }
-
             if (records.length === 0) {
                 $('#analyticsPlaceholder').removeClass('hidden').html(`
                     <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -1698,7 +1639,6 @@
             let dashTitle = "Antibiogram Analysis";
             let dashSub = `${startDate} to ${endDate}`;
             if(targetSample) dashSub += ` | Sample: ${targetSample}`;
-            if(targetWards.length > 0) dashSub += ` | Wards: ${targetWards.join(', ')}`;
             $('#dashTitle').text(dashTitle);
             $('#dashSubtitle').text(dashSub);
 
