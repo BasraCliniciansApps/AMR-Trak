@@ -33,56 +33,73 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <style>
-        body { background-color: #f3f4f6; }
-        .dataTables_wrapper { font-size: 0.85rem; padding: 1.5rem; background: #fff; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .dt-buttons button { background-color: #2563eb !important; color: white !important; border-radius: 0.375rem !important; border: none !important; padding: 0.5rem 1rem !important; margin-bottom: 1rem; font-weight: 600 !important; }
-        .dt-buttons button:hover { background-color: #1d4ed8 !important; }
-        .select2-container .select2-selection--single { height: 42px; border: 1px solid #d1d5db; border-radius: 0.375rem; display: flex; align-items: center; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { background-color: #f8fafc; font-family: 'Inter', sans-serif; }
+        
+        /* Modern DataTables Styling */
+        .dataTables_wrapper { font-size: 0.85rem; padding: 1.5rem; background: #fff; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); }
+        .dataTables_wrapper .dataTables_filter input { border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.3rem 0.75rem; margin-left: 0.5rem; outline: none; transition: ring 0.2s; }
+        .dataTables_wrapper .dataTables_filter input:focus { ring: 2px solid #4f46e5; border-color: #4f46e5; }
+        .dt-buttons button { background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important; color: white !important; border-radius: 0.5rem !important; border: none !important; padding: 0.5rem 1rem !important; margin-bottom: 1rem; font-weight: 600 !important; transition: all 0.3s ease !important; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3) !important; }
+        .dt-buttons button:hover { transform: translateY(-1px) !important; box-shadow: 0 6px 8px -1px rgba(79, 70, 229, 0.4) !important; }
+        
+        .select2-container .select2-selection--single { height: 42px; border: 1px solid #cbd5e1; border-radius: 0.5rem; display: flex; align-items: center; }
         .select2-container { z-index: 9999 !important; }
         select.compact-dropdown { -webkit-appearance: none; -moz-appearance: none; text-align: center; cursor: pointer; }
         
-        #reportTable th { background-color: #1e3a8a; color: white; border: 1px solid #3b82f6; text-align: center; font-size: 0.8rem; padding: 8px;}
-        #reportTable td { border: 1px solid #e5e7eb; text-align: center; padding: 6px; }
-        .report-header-group { background-color: #1e40af !important; font-weight: bold; }
+        /* Heatmap Styles */
+        .heatmap-table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: max-content; }
+        .heatmap-table th, .heatmap-table td { padding: 8px 12px; text-align: center; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; font-size: 0.75rem; }
+        .heatmap-table th { background-color: #f1f5f9; font-weight: 700; color: #334155; position: sticky; top: 0; z-index: 10; }
+        .heatmap-table th:first-child, .heatmap-table td:first-child { position: sticky; left: 0; z-index: 20; background-color: #ffffff; font-weight: bold; color: #1e293b; text-align: left; box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1); border-left: 1px solid #e2e8f0; }
+        .heatmap-table th:first-child { z-index: 30; }
+        .heatmap-table tr:first-child th { border-top: 1px solid #e2e8f0; }
 
         /* Print Styles */
         @media print {
-            body { background-color: white !important; }
+            body { background-color: white !important; font-size: 10pt; }
             .no-print { display: none !important; }
             .print-full { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: none !important; }
             .page-break { page-break-before: always; }
-            .chart-container { page-break-inside: avoid; }
+            .chart-container { page-break-inside: avoid; border: 1px solid #ddd !important; box-shadow: none !important; }
             * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+            .heatmap-table th:first-child, .heatmap-table td:first-child { box-shadow: none !important; }
         }
         
-        /* Custom scrollbar for horizontal nav on mobile */
+        /* Scrollbar hiding for responsive nav */
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="text-gray-800 font-sans antialiased">
+<body class="text-slate-800 antialiased">
 
-    <!-- Top Navigation (Responsive) -->
-    <nav class="bg-blue-900 text-white shadow-lg sticky top-0 z-40 no-print">
+    <!-- Top Navigation (Responsive & Modern) -->
+    <nav class="bg-gradient-to-r from-slate-900 to-indigo-900 text-white shadow-xl sticky top-0 z-40 no-print border-b border-indigo-500/30">
         <div class="max-w-[98%] mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
-            <h1 class="text-2xl font-bold tracking-wide whitespace-nowrap">AMR Tracker</h1>
+            <div class="flex items-center gap-2">
+                <div class="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
+                    <svg class="w-6 h-6 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                </div>
+                <h1 class="text-xl font-bold tracking-wider whitespace-nowrap bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">AMR Tracker</h1>
+            </div>
             
             <div class="w-full md:w-auto overflow-x-auto hide-scroll pb-1">
                 <div class="flex items-center gap-2 min-w-max">
-                    <button onclick="showTab('records')" id="btnTabRecords" class="bg-blue-700 text-white border-2 border-blue-500 px-4 py-2 rounded shadow font-bold transition hover:bg-blue-600 text-sm md:text-base">
+                    <button onclick="showTab('records')" id="btnTabRecords" class="bg-indigo-600 text-white border border-indigo-400/50 px-4 py-2 rounded-lg shadow-md font-semibold transition-all hover:bg-indigo-500 text-sm md:text-base flex items-center gap-2">
                         📋 Records
                     </button>
-                    <button onclick="showTab('report')" id="btnTabReport" class="bg-transparent text-blue-100 border border-blue-600 px-4 py-2 rounded shadow font-bold transition hover:bg-blue-700 text-sm md:text-base">
-                        📑 Report
-                    </button>
-                    <button onclick="showTab('analytics')" id="btnTabAnalytics" class="bg-transparent text-blue-100 border border-blue-600 px-4 py-2 rounded shadow font-bold transition hover:bg-blue-700 text-sm md:text-base flex items-center gap-1">
+                    <button onclick="showTab('analytics')" id="btnTabAnalytics" class="bg-white/5 text-indigo-100 border border-indigo-300/20 px-4 py-2 rounded-lg shadow font-semibold transition-all hover:bg-white/10 hover:border-indigo-300/40 text-sm md:text-base flex items-center gap-2">
                         📊 Analytics
                     </button>
-                    <div class="w-px bg-blue-700 mx-1 h-6"></div>
-                    <button onclick="showExportModal()" class="bg-green-600 text-white border-2 border-green-500 px-4 py-2 rounded shadow font-bold transition hover:bg-green-700 flex items-center gap-1 text-sm md:text-base">
-                        📥 Excel
+                    <div class="w-px bg-indigo-500/50 mx-1 h-6"></div>
+                    
+                    <!-- Direct Excel Export Button -->
+                    <button onclick="showExportModal()" class="bg-gradient-to-r from-emerald-500 to-green-600 text-white border border-green-400/50 px-4 py-2 rounded-lg shadow-lg font-bold transition-all hover:from-emerald-400 hover:to-green-500 hover:scale-105 flex items-center gap-2 text-sm md:text-base">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Export Excel
                     </button>
-                    <button onclick="openModal()" class="bg-blue-500 text-white px-4 py-2 rounded shadow font-bold hover:bg-blue-400 transition text-sm md:text-base">
+                    
+                    <button onclick="openModal()" class="bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg font-bold hover:bg-blue-400 hover:scale-105 transition-all text-sm md:text-base flex items-center gap-1">
                         + New
                     </button>
                 </div>
@@ -92,148 +109,187 @@
 
     <!-- TAB 1: Patients Records Table -->
     <main id="viewRecords" class="w-[98%] mx-auto mt-6 mb-10 block print-full">
-        <div class="bg-white rounded-lg shadow-md p-2 overflow-hidden border-t-4 border-blue-500 print-full">
-            <h2 class="text-xl font-bold text-gray-700 m-4 no-print">📋 Culture & Susceptibility Records</h2>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-2 overflow-hidden print-full">
+            <div class="flex items-center gap-3 m-4 no-print border-b border-slate-100 pb-3">
+                <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600">📋</div>
+                <h2 class="text-xl font-bold text-slate-700">Culture & Susceptibility Database</h2>
+            </div>
             <table id="recordsTable" class="display nowrap w-full" style="width:100%"></table>
         </div>
     </main>
 
-    <!-- TAB 2: Antibiogram Report Dashboard -->
-    <main id="viewReport" class="w-[98%] mx-auto mt-6 mb-10 hidden print-full">
-        <div class="bg-white rounded-lg shadow-md p-4 md:p-6 border-t-4 border-green-500 print-full">
-            <div class="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-4 gap-4 no-print">
-                <h2 class="text-xl font-bold text-gray-700">📑 Internal Antibiogram View</h2>
-                <div class="flex flex-wrap gap-3 items-end w-full md:w-auto">
-                    <div class="flex-1 md:flex-none">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">From Date</label>
-                        <input type="date" id="rep_start" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-blue-500">
-                    </div>
-                    <div class="flex-1 md:flex-none">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">To Date</label>
-                        <input type="date" id="rep_end" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-blue-500">
-                    </div>
-                    <button onclick="generateReport()" class="w-full md:w-auto bg-blue-800 text-white px-6 py-2 rounded shadow font-bold hover:bg-blue-900 transition">
-                        View Report
-                    </button>
-                </div>
-            </div>
-            
-            <div id="reportContainer" class="w-full overflow-x-auto">
-                <div class="text-center text-gray-400 py-10 italic">Select a date range and click 'View Report'.</div>
-            </div>
-        </div>
-    </main>
-
-    <!-- TAB 3: Analytics & Dashboard -->
+    <!-- TAB 2: Analytics & Dashboard -->
     <main id="viewAnalytics" class="w-[98%] mx-auto mt-6 mb-10 hidden print-full">
-        <div class="bg-white rounded-lg shadow-md p-4 md:p-6 border-t-4 border-purple-500 print-full">
-            <!-- Controls -->
-            <div class="flex flex-col lg:flex-row justify-between items-center mb-6 border-b pb-4 gap-4 no-print">
-                <h2 class="text-xl font-bold text-gray-700">📊 Analytics & Dashboard</h2>
-                <div class="flex flex-wrap gap-3 items-end w-full lg:w-auto">
-                    <div class="flex-1 lg:flex-none">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">From Date</label>
-                        <input type="date" id="ana_start" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-purple-500">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 print-full">
+            
+            <!-- Controls Area -->
+            <div class="flex flex-col xl:flex-row justify-between items-start xl:items-end mb-6 border-b border-slate-200 pb-6 gap-4 no-print bg-slate-50 p-4 rounded-lg">
+                <div class="flex items-center gap-3 w-full xl:w-auto border-b xl:border-b-0 pb-3 xl:pb-0">
+                    <div class="bg-purple-100 p-2 rounded-lg text-purple-600">📊</div>
+                    <h2 class="text-xl font-bold text-slate-800 whitespace-nowrap">Dashboard</h2>
+                </div>
+
+                <div class="flex flex-wrap gap-3 items-end w-full xl:w-auto">
+                    <!-- Dates -->
+                    <div class="flex-1 min-w-[120px]">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">From Date</label>
+                        <input type="date" id="ana_start" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
                     </div>
-                    <div class="flex-1 lg:flex-none">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">To Date</label>
-                        <input type="date" id="ana_end" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-purple-500">
+                    <div class="flex-1 min-w-[120px]">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">To Date</label>
+                        <input type="date" id="ana_end" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
                     </div>
-                    <div class="w-full lg:w-64">
-                        <label class="block text-xs font-bold text-gray-500 mb-1">Select Organism (For AMR Profile)</label>
-                        <select id="ana_organism" class="w-full border rounded text-sm select2-basic"></select>
+                    
+                    <!-- Filters -->
+                    <div class="w-full sm:w-48">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Filter by Sample</label>
+                        <select id="ana_sample" class="w-full border rounded text-sm select2-basic">
+                            <option value="">All Samples</option>
+                        </select>
                     </div>
-                    <button onclick="generateAnalytics()" class="flex-1 lg:flex-none bg-purple-700 text-white px-6 py-2 rounded shadow font-bold hover:bg-purple-800 transition">
-                        Analyze
-                    </button>
-                    <button onclick="window.print()" class="flex-1 lg:flex-none bg-gray-700 text-white px-4 py-2 rounded shadow font-bold hover:bg-gray-800 transition flex items-center justify-center gap-2">
-                        🖨️ Print
-                    </button>
+                    <div class="w-full sm:w-56">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Filter by Organism</label>
+                        <select id="ana_organism" class="w-full border rounded text-sm select2-basic">
+                            <option value="">All Organisms</option>
+                        </select>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                        <button onclick="generateAnalytics()" class="flex-1 sm:flex-none bg-indigo-600 text-white px-6 py-2 rounded-lg shadow hover:bg-indigo-700 hover:shadow-lg transition-all font-bold">
+                            Analyze
+                        </button>
+                        <button onclick="window.print()" class="flex-1 sm:flex-none bg-slate-700 text-white px-4 py-2 rounded-lg shadow hover:bg-slate-800 transition-all font-bold flex items-center justify-center gap-2">
+                            🖨️ Print
+                        </button>
+                    </div>
                 </div>
             </div>
 
+            <!-- Analytics Content -->
             <div id="analyticsContainer" class="hidden">
-                <!-- Row 1: AMR Profile -->
-                <div class="mb-8 chart-container border rounded-xl p-4 bg-gray-50 shadow-inner">
-                    <div class="flex flex-col md:flex-row justify-between items-center mb-4">
-                        <h3 class="text-lg font-bold text-gray-800" id="amrChartTitle">AMR Profile</h3>
-                        <span id="amrClsiWarning" class="text-xs font-bold px-3 py-1 rounded hidden bg-red-100 text-red-700 border border-red-300">
-                            ⚠️ CAUTION: Total Isolates < 30. Statistical reliability is low.
+                
+                <!-- Dynamic Title -->
+                <div class="mb-6 text-center no-print">
+                    <h2 class="text-2xl font-bold text-slate-800" id="dashTitle">Antibiogram Analysis</h2>
+                    <p class="text-sm text-slate-500 mt-1" id="dashSubtitle">Displaying data based on selected filters</p>
+                </div>
+
+                <!-- Row 1: Heatmap (Full Width) -->
+                <div class="mb-8 chart-container border border-slate-200 rounded-xl p-4 bg-white shadow-sm overflow-hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-800">Antibiogram Heatmap</h3>
+                            <p class="text-xs text-slate-500">Color intensity indicates Resistance % (Dark Red = High Resistance). <span class="text-red-500 font-bold">*</span> indicates sample size < 30.</p>
+                        </div>
+                        <!-- Legend -->
+                        <div class="hidden md:flex items-center gap-2 text-[10px] font-bold text-slate-600 border border-slate-200 rounded p-1.5 bg-slate-50">
+                            <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">0-20%</span>
+                            <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800">21-40%</span>
+                            <span class="px-2 py-0.5 rounded bg-orange-200 text-orange-900">41-60%</span>
+                            <span class="px-2 py-0.5 rounded bg-red-400 text-white">61-80%</span>
+                            <span class="px-2 py-0.5 rounded bg-red-600 text-white">81-100%</span>
+                        </div>
+                    </div>
+                    <div class="w-full overflow-x-auto rounded-lg border border-slate-200" id="heatmapWrapper">
+                        <!-- Heatmap Table injected here -->
+                    </div>
+                </div>
+
+                <!-- Row 2: AMR Profile Chart & 95% CI Table (Visible only if Specific Organism is Selected) -->
+                <div id="amrProfileSection" class="mb-8 chart-container border border-slate-200 rounded-xl p-4 md:p-6 bg-slate-50/50 shadow-sm hidden">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-slate-200 pb-3 gap-2">
+                        <div>
+                            <h3 class="text-lg font-bold text-indigo-900" id="amrChartTitle">AMR Profile</h3>
+                            <p class="text-xs text-slate-500">Detailed resistance breakdown for the selected organism.</p>
+                        </div>
+                        <span id="amrClsiWarning" class="text-xs font-bold px-3 py-1.5 rounded-md hidden bg-red-100 text-red-700 border border-red-200 shadow-sm flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            Total Isolates < 30 (Low Statistical Reliability)
                         </span>
                     </div>
-                    <div class="relative h-[300px] md:h-[400px] w-full">
+                    
+                    <div class="relative h-[350px] md:h-[450px] w-full">
                         <canvas id="chartAMR"></canvas>
                     </div>
-                    <div class="mt-2 text-[10px] text-gray-500 italic text-center">
-                        * Faded/Grayed bars indicate antibiotics with sample size (n) < 30, which may not be statistically reliable for clinical decision-making.
+                    <div class="mt-3 text-[11px] text-slate-500 text-center font-medium bg-white p-2 rounded border border-slate-100">
+                        <span class="inline-block w-3 h-3 bg-red-700 mr-1 rounded-sm align-middle"></span> Reliable (n ≥ 30) &nbsp;&nbsp;
+                        <span class="inline-block w-3 h-3 bg-slate-300 mr-1 rounded-sm align-middle"></span> Low Confidence (n < 30) - Interpret with caution per CLSI guidelines.
                     </div>
                     
                     <!-- Table: 95% CI -->
-                    <div class="mt-6 overflow-x-auto">
-                        <table class="w-full text-xs text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden">
-                            <thead class="bg-purple-100 text-purple-900 uppercase">
+                    <div class="mt-8 overflow-x-auto">
+                        <h4 class="text-sm font-bold text-slate-700 mb-2">Statistical Summary (Wilson Score Interval)</h4>
+                        <table class="w-full text-xs text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden border border-slate-200">
+                            <thead class="bg-indigo-50 text-indigo-900 uppercase tracking-wider">
                                 <tr>
-                                    <th class="px-4 py-2 border">Antibiotic</th>
-                                    <th class="px-4 py-2 border text-center">Tested (n)</th>
-                                    <th class="px-4 py-2 border text-center">Resistant (R)</th>
-                                    <th class="px-4 py-2 border text-center">% Resistance</th>
-                                    <th class="px-4 py-2 border text-center">95% CI (Wilson Score)</th>
+                                    <th class="px-4 py-3 border-b border-slate-200">Antibiotic</th>
+                                    <th class="px-4 py-3 border-b border-slate-200 text-center">Tested (n)</th>
+                                    <th class="px-4 py-3 border-b border-slate-200 text-center">Resistant (R)</th>
+                                    <th class="px-4 py-3 border-b border-slate-200 text-center">% Resistance</th>
+                                    <th class="px-4 py-3 border-b border-slate-200 text-center">95% CI</th>
                                 </tr>
                             </thead>
-                            <tbody id="ciTableBody"></tbody>
+                            <tbody id="ciTableBody" class="divide-y divide-slate-100"></tbody>
                         </table>
-                        <div class="mt-1 text-[10px] text-red-500 font-semibold">* Asterisk indicates n < 30 (Use caution).</div>
+                        <div class="mt-2 text-[11px] text-red-500 font-semibold flex items-center gap-1">
+                            <span>* Asterisk indicates sample size < 30.</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Row 2: Distributions -->
+                <!-- Row 3: Distributions -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 page-break">
                     <!-- Organism Prevalence -->
-                    <div class="chart-container border rounded-xl p-4 bg-white shadow-sm">
-                        <h3 class="text-sm font-bold text-center text-gray-700 mb-2">Top Organisms Prevalence</h3>
+                    <div class="chart-container border border-slate-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
+                        <h3 class="text-sm font-bold text-center text-slate-700 mb-3 border-b border-slate-100 pb-2">Organism Prevalence</h3>
                         <div class="relative h-[250px] w-full flex justify-center"><canvas id="chartOrg"></canvas></div>
                     </div>
                     <!-- Specimen Distribution -->
-                    <div class="chart-container border rounded-xl p-4 bg-white shadow-sm">
-                        <h3 class="text-sm font-bold text-center text-gray-700 mb-2">Specimen Distribution</h3>
+                    <div class="chart-container border border-slate-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
+                        <h3 class="text-sm font-bold text-center text-slate-700 mb-3 border-b border-slate-100 pb-2">Specimen Distribution</h3>
                         <div class="relative h-[250px] w-full flex justify-center"><canvas id="chartSpecimen"></canvas></div>
                     </div>
                     <!-- Gender Distribution -->
-                    <div class="chart-container border rounded-xl p-4 bg-white shadow-sm">
-                        <h3 class="text-sm font-bold text-center text-gray-700 mb-2">Gender Distribution</h3>
+                    <div class="chart-container border border-slate-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
+                        <h3 class="text-sm font-bold text-center text-slate-700 mb-3 border-b border-slate-100 pb-2">Gender Distribution</h3>
                         <div class="relative h-[250px] w-full flex justify-center"><canvas id="chartGender"></canvas></div>
                     </div>
                 </div>
             </div>
             
-            <div id="analyticsPlaceholder" class="text-center text-gray-400 py-10 italic">
-                Select parameters and click 'Analyze' to view charts.
+            <div id="analyticsPlaceholder" class="text-center text-slate-400 py-16 flex flex-col items-center justify-center">
+                <svg class="w-16 h-16 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view insights.</p>
             </div>
         </div>
     </main>
 
-    <!-- Modal for Data Entry (Same as before, perfectly working) -->
-    <div id="formModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden flex justify-center items-center z-50 no-print">
-        <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-11/12 lg:w-4/5 max-w-6xl max-h-[95vh] overflow-y-auto relative">
-            <div class="px-4 py-3 md:px-6 md:py-4 border-b flex justify-between items-center sticky top-0 bg-white z-10 shadow-sm">
-                <h3 class="text-lg md:text-xl font-bold text-gray-800" id="modalTitle">Add New Patient Record</h3>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-red-500 font-bold text-2xl transition">&times;</button>
+    <!-- Modal for Data Entry -->
+    <div id="formModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex justify-center items-center z-50 no-print">
+        <div class="bg-white rounded-2xl shadow-2xl w-11/12 md:w-11/12 lg:w-4/5 max-w-6xl max-h-[95vh] overflow-y-auto relative transform transition-all">
+            <div class="px-4 py-3 md:px-6 md:py-4 border-b border-slate-200 flex justify-between items-center sticky top-0 bg-white z-20 shadow-sm">
+                <div class="flex items-center gap-2">
+                    <div class="bg-indigo-100 p-1.5 rounded-md text-indigo-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></div>
+                    <h3 class="text-lg md:text-xl font-bold text-slate-800" id="modalTitle">Patient Record</h3>
+                </div>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-red-500 font-bold text-3xl transition-colors focus:outline-none">&times;</button>
             </div>
             
-            <div class="p-4 md:p-6">
+            <div class="p-4 md:p-6 bg-slate-50/30">
                 <form id="entryForm" class="space-y-6">
                     <input type="hidden" id="editIndex" value="-1">
                     
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-5">
                         <div class="md:col-span-1">
-                            <label class="block text-sm font-bold text-gray-700 mb-1">Patient Name (الاسم)</label>
-                            <input type="text" id="p_name" required dir="rtl" lang="ar" placeholder="اكتب الاسم هنا..." class="w-full border-gray-300 border rounded-md p-2 focus:ring-blue-500 text-right font-semibold bg-blue-50">
+                            <label class="block text-sm font-bold text-slate-700 mb-1">Patient Name (الاسم)</label>
+                            <input type="text" id="p_name" required dir="rtl" lang="ar" placeholder="اكتب الاسم هنا..." class="w-full border-slate-300 border rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right font-semibold bg-white shadow-sm transition-all">
                         </div>
                         <div class="md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Age</label>
+                            <label class="block text-sm font-bold text-slate-700 mb-1">Age</label>
                             <div class="flex gap-2">
-                                <input type="number" id="p_age" dir="ltr" lang="en" class="w-1/2 border-gray-300 border rounded-md p-2 focus:ring-blue-500">
-                                <select id="p_age_unit" dir="ltr" lang="en" class="w-1/2 border-gray-300 border rounded-md p-2 h-[42px] focus:ring-blue-500">
+                                <input type="number" id="p_age" dir="ltr" lang="en" class="w-1/2 border-slate-300 border rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm transition-all">
+                                <select id="p_age_unit" dir="ltr" lang="en" class="w-1/2 border-slate-300 border rounded-lg p-2.5 h-[42px] focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm">
                                     <option value="Years">Years</option>
                                     <option value="Months">Months</option>
                                     <option value="Days">Days</option>
@@ -241,50 +297,50 @@
                             </div>
                         </div>
                         <div class="md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Sex</label>
-                            <select id="p_sex" dir="ltr" lang="en" class="w-full border-gray-300 border rounded-md p-2 h-[42px]">
+                            <label class="block text-sm font-bold text-slate-700 mb-1">Sex</label>
+                            <select id="p_sex" dir="ltr" lang="en" class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] bg-white shadow-sm focus:ring-2 focus:ring-indigo-500">
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
                             </select>
                         </div>
                         <div class="md:col-span-1">
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Date</label>
-                            <input type="date" id="p_date" dir="ltr" lang="en" required class="w-full border-gray-300 border rounded-md p-2 h-[42px]">
+                            <label class="block text-sm font-bold text-slate-700 mb-1">Date</label>
+                            <input type="date" id="p_date" dir="ltr" lang="en" required class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] bg-white shadow-sm focus:ring-2 focus:ring-indigo-500">
                         </div>
 
                         <div class="md:col-span-2">
                             <div class="flex justify-between items-center mb-1">
-                                <label class="block text-sm font-medium text-gray-600">Ward</label>
-                                <button type="button" onclick="manageWards()" class="text-xs text-red-500 font-semibold">⚙️ Manage</button>
+                                <label class="block text-sm font-bold text-slate-700">Ward</label>
+                                <button type="button" onclick="manageWards()" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 transition-colors">⚙️ Manage</button>
                             </div>
-                            <select id="p_ward" dir="ltr" lang="en" class="w-full select2-enable"></select>
+                            <select id="p_ward" dir="ltr" lang="en" class="w-full select2-enable shadow-sm"></select>
                         </div>
                         <div class="md:col-span-2">
                             <div class="flex justify-between items-center mb-1">
-                                <label class="block text-sm font-medium text-gray-600">Sample</label>
-                                <button type="button" onclick="manageSamples()" class="text-xs text-red-500 font-semibold">⚙️ Manage</button>
+                                <label class="block text-sm font-bold text-slate-700">Sample</label>
+                                <button type="button" onclick="manageSamples()" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 transition-colors">⚙️ Manage</button>
                             </div>
-                            <select id="p_sample" dir="ltr" lang="en" class="w-full select2-enable" required></select>
+                            <select id="p_sample" dir="ltr" lang="en" class="w-full select2-enable shadow-sm" required></select>
                         </div>
                         
                         <!-- Selective Organism -->
-                        <div class="md:col-span-2 bg-blue-50 p-4 rounded-lg border border-blue-100">
-                            <label class="block text-sm font-bold text-blue-800 mb-2">Selective Organism (Lab Record)</label>
+                        <div class="md:col-span-2 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 shadow-sm">
+                            <label class="block text-sm font-bold text-indigo-900 mb-2">Selective Organism (Lab Record)</label>
                             <select id="p_organism" dir="ltr" lang="en" class="w-full select2-enable" required>
                                 <option value="">Type name or shortcode (e.g., ECO, PAE)...</option>
                             </select>
-                            <div class="mt-3 flex flex-wrap gap-1 items-center">
-                                <span class="text-xs text-gray-500 font-semibold mr-1">Quick:</span>
-                                <button type="button" onclick="quickSelectOrganism('Escherichia coli (E.coli)')" class="text-[10px] bg-white text-blue-700 border border-blue-200 px-2 py-1 rounded-full hover:bg-blue-600 hover:text-white transition">E. coli</button>
-                                <button type="button" onclick="quickSelectOrganism('Klebsiella pneumoniae')" class="text-[10px] bg-white text-blue-700 border border-blue-200 px-2 py-1 rounded-full hover:bg-blue-600 hover:text-white transition">K. pneumoniae</button>
-                                <button type="button" onclick="quickSelectOrganism('Staphylococcus aureus')" class="text-[10px] bg-white text-blue-700 border border-blue-200 px-2 py-1 rounded-full hover:bg-blue-600 hover:text-white transition">S. aureus</button>
-                                <button type="button" onclick="quickSelectOrganism('Pseudomonas aeruginosa')" class="text-[10px] bg-white text-blue-700 border border-blue-200 px-2 py-1 rounded-full hover:bg-blue-600 hover:text-white transition">P. aeruginosa</button>
+                            <div class="mt-3 flex flex-wrap gap-1.5 items-center">
+                                <span class="text-xs text-indigo-400 font-bold mr-1">Quick:</span>
+                                <button type="button" onclick="quickSelectOrganism('Escherichia coli (E.coli)')" class="text-[10px] bg-white text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-full hover:bg-indigo-600 hover:text-white transition-colors font-medium shadow-sm">E. coli</button>
+                                <button type="button" onclick="quickSelectOrganism('Klebsiella pneumoniae')" class="text-[10px] bg-white text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-full hover:bg-indigo-600 hover:text-white transition-colors font-medium shadow-sm">K. pneumoniae</button>
+                                <button type="button" onclick="quickSelectOrganism('Staphylococcus aureus')" class="text-[10px] bg-white text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-full hover:bg-indigo-600 hover:text-white transition-colors font-medium shadow-sm">S. aureus</button>
+                                <button type="button" onclick="quickSelectOrganism('Pseudomonas aeruginosa')" class="text-[10px] bg-white text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-full hover:bg-indigo-600 hover:text-white transition-colors font-medium shadow-sm">P. aeruginosa</button>
                             </div>
                         </div>
 
                         <!-- Antibiogram Export Organism -->
-                        <div class="md:col-span-2 bg-purple-50 p-4 rounded-lg border border-purple-200">
-                            <label class="block text-sm font-bold text-purple-800 mb-2">Antibiogram Organism List (Export)</label>
+                        <div class="md:col-span-2 bg-purple-50/50 p-4 rounded-xl border border-purple-100 shadow-sm">
+                            <label class="block text-sm font-bold text-purple-900 mb-2">Antibiogram Organism List (Export)</label>
                             <select id="p_antibiogram_org" dir="ltr" lang="en" class="w-full select2-enable">
                                 <option value="">Do not include in Antibiogram (Optional)...</option>
                                 <optgroup label="Gram Negative">
@@ -330,33 +386,46 @@
                                     <option value="Enterococcus gallinarum/E. casseliflavus">Enterococcus gallinarum/E. casseliflavus</option>
                                 </optgroup>
                             </select>
+                            <div class="mt-3 text-[11px] text-purple-600 font-medium">
+                                * Select the exact category to calculate isolates in the Excel export.
+                            </div>
                         </div>
+
                     </div>
 
                     <!-- Antibiotics Panel -->
-                    <div class="border border-gray-200 rounded-lg p-4 md:p-5 bg-gray-50 mt-6 shadow-inner">
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b border-gray-300 pb-2 gap-2">
-                            <h4 class="font-bold text-gray-800 text-lg">Antibiotics Susceptibility Panel</h4>
-                            <button type="button" onclick="manageAntibioticsDB()" class="text-xs text-blue-700 font-bold bg-blue-100 hover:bg-blue-200 px-4 py-1.5 rounded shadow-sm transition w-full md:w-auto">⚙️ Manage Database</button>
+                    <div class="border border-slate-200 rounded-xl p-4 md:p-6 bg-white mt-6 shadow-sm">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 border-b border-slate-100 pb-3 gap-3">
+                            <div class="flex items-center gap-2">
+                                <div class="bg-rose-100 p-1.5 rounded-md text-rose-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg></div>
+                                <h4 class="font-bold text-slate-800 text-lg">Susceptibility Panel</h4>
+                            </div>
+                            <button type="button" onclick="manageAntibioticsDB()" class="text-xs text-indigo-700 font-bold bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-4 py-2 rounded-lg shadow-sm transition-all w-full md:w-auto flex items-center justify-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+                                Database Manager
+                            </button>
                         </div>
                         
-                        <div class="flex flex-col md:flex-row gap-2 mb-6 bg-white p-3 rounded border">
+                        <div class="flex flex-col md:flex-row gap-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
                             <div class="flex-1 w-full">
-                                <label class="block text-xs font-bold text-gray-500 mb-1">Add Custom Antibiotic</label>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Add Custom Antibiotic to current entry</label>
                                 <select id="abx_selector" dir="ltr" lang="en" class="w-full">
                                     <option value="">Type custom antibiotic name...</option>
                                 </select>
                             </div>
-                            <button type="button" onclick="addAntibiotic()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-semibold mt-0 md:mt-5 shadow w-full md:w-auto">+ Add</button>
+                            <button type="button" onclick="addAntibiotic()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg font-bold mt-0 md:mt-5 shadow-md w-full md:w-auto transition-colors flex items-center justify-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                Add
+                            </button>
                         </div>
 
-                        <div id="active_abx_container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-6 empty:hidden"></div>
+                        <div id="active_abx_container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-6 empty:hidden"></div>
                         <div id="default_abx_container" class="space-y-6"></div>
                     </div>
 
-                    <div class="flex justify-end gap-3 mt-8 pt-4 border-t sticky bottom-0 bg-white py-4 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-10 px-2 -mx-2">
-                        <button type="button" onclick="closeModal()" class="px-6 py-2 border border-gray-300 rounded-md text-gray-600 font-bold hover:bg-gray-100">Cancel</button>
-                        <button type="submit" class="px-8 py-2 bg-blue-700 text-white rounded-md font-bold text-lg shadow-lg hover:bg-blue-800">Save Record</button>
+                    <div class="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-200 sticky bottom-0 bg-white/90 backdrop-blur py-4 z-10 px-2 -mx-2">
+                        <button type="button" onclick="closeModal()" class="px-6 py-2 border border-slate-300 rounded-lg text-slate-600 font-bold hover:bg-slate-50 transition-colors">Cancel</button>
+                        <button type="submit" class="px-8 py-2 bg-indigo-600 text-white rounded-lg font-bold text-lg shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all">Save Record</button>
                     </div>
                 </form>
             </div>
@@ -533,17 +602,18 @@
             loadBacteriaOptions();
             loadSampleOptions();
             loadWardOptions();
+            loadAnalyticsSampleOptions();
             renderDefaultAntibiotics();
 
             // Setup Select2
             $('.select2-enable').select2({ width: '100%', dropdownParent: $('#formModal') });
             $('#p_sample').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new sample..." });
             $('#p_ward').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new ward..." });
-            $('.select2-basic').select2({ width: '100%' }); // For Analytics
+            $('.select2-basic').select2({ width: '100%' }); 
 
             // Populate Analytics Organism Dropdown
             const anaSelect = $('#ana_organism');
-            anaSelect.append(new Option("Select Organism...", ""));
+            anaSelect.append(new Option("All Organisms", ""));
             Object.keys(orgMapExport).forEach(org => {
                 anaSelect.append(new Option(org, org));
             });
@@ -552,8 +622,8 @@
             $('#p_date').val(today);
             
             let currentYear = new Date().getFullYear();
-            $('#rep_start, #ana_start').val(`${currentYear}-01-01`);
-            $('#rep_end, #ana_end').val(`${currentYear}-12-31`);
+            $('#ana_start').val(`${currentYear}-01-01`);
+            $('#ana_end').val(`${currentYear}-12-31`);
 
             initDataTable();
         });
@@ -561,17 +631,15 @@
         // --- Tabs Logic ---
         function showTab(tabName) {
             $('#viewRecords, #viewReport, #viewAnalytics').addClass('hidden');
-            $('#btnTabRecords, #btnTabReport, #btnTabAnalytics').removeClass('bg-blue-700 text-white border-blue-500').addClass('bg-transparent text-blue-100 border-blue-600');
+            $('#btnTabRecords, #btnTabReport, #btnTabAnalytics').removeClass('bg-indigo-600 text-white border-indigo-400/50').addClass('bg-white/5 text-indigo-100 border-indigo-300/20');
             
             if (tabName === 'records') {
                 $('#viewRecords').removeClass('hidden');
-                $('#btnTabRecords').removeClass('bg-transparent text-blue-100 border-blue-600').addClass('bg-blue-700 text-white border-blue-500');
-            } else if (tabName === 'report') {
-                $('#viewReport').removeClass('hidden');
-                $('#btnTabReport').removeClass('bg-transparent text-blue-100 border-blue-600').addClass('bg-blue-700 text-white border-blue-500');
+                $('#btnTabRecords').removeClass('bg-white/5 text-indigo-100 border-indigo-300/20').addClass('bg-indigo-600 text-white border-indigo-400/50');
             } else if (tabName === 'analytics') {
+                loadAnalyticsSampleOptions();
                 $('#viewAnalytics').removeClass('hidden');
-                $('#btnTabAnalytics').removeClass('bg-transparent text-blue-100 border-blue-600').addClass('bg-blue-700 text-white border-blue-500');
+                $('#btnTabAnalytics').removeClass('bg-white/5 text-indigo-100 border-indigo-300/20').addClass('bg-indigo-600 text-white border-indigo-400/50');
             }
         }
 
@@ -592,19 +660,19 @@
             for (const [group, abxs] of Object.entries(currentGroups)) {
                 if(abxs.length === 0) continue;
                 html += `
-                <div class="bg-white rounded border border-gray-200 shadow-sm overflow-hidden mb-4">
-                    <h5 class="text-sm font-bold bg-blue-100 text-blue-800 px-3 py-1.5 border-b border-blue-200">${group}</h5>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-5">
+                    <h5 class="text-sm font-bold bg-slate-50 text-indigo-900 px-4 py-2 border-b border-slate-200">${group}</h5>
                     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-0">`;
                 abxs.forEach(abx => {
                     const safeId = abx.replace(/[^a-zA-Z0-9]/g, '_');
                     html += `
-                        <div class="flex items-center justify-between border-r border-b border-gray-100 p-2 hover:bg-gray-50 transition">
-                            <span class="text-[11px] font-bold text-gray-700 truncate mr-1 w-2/3" title="${abx}">${abx}</span>
-                            <select data-abx="${abx}" id="default_abx_${safeId}" class="default-abx-select compact-dropdown border border-gray-300 rounded text-xs font-bold bg-white focus:ring-blue-500 w-1/3 py-1">
-                                <option value="" class="text-gray-400">-</option>
-                                <option value="S" class="text-green-600 bg-green-50">S</option>
-                                <option value="I" class="text-yellow-600 bg-yellow-50">I</option>
-                                <option value="R" class="text-red-600 bg-red-50">R</option>
+                        <div class="flex items-center justify-between border-r border-b border-slate-100 p-2.5 hover:bg-indigo-50/30 transition-colors">
+                            <span class="text-[11px] font-bold text-slate-700 truncate mr-2 w-2/3" title="${abx}">${abx}</span>
+                            <select data-abx="${abx}" id="default_abx_${safeId}" class="default-abx-select compact-dropdown border border-slate-300 rounded-md text-xs font-bold bg-white focus:ring-2 focus:ring-indigo-500 w-1/3 py-1.5 shadow-sm transition-colors">
+                                <option value="" class="text-slate-400">-</option>
+                                <option value="S" class="text-emerald-600 bg-emerald-50">S</option>
+                                <option value="I" class="text-amber-600 bg-amber-50">I</option>
+                                <option value="R" class="text-rose-600 bg-rose-50">R</option>
                             </select>
                         </div>
                     `;
@@ -614,10 +682,10 @@
             $('#default_abx_container').html(html);
             
             $('.default-abx-select').change(function() {
-                $(this).removeClass('bg-green-100 bg-yellow-100 bg-red-100');
-                if ($(this).val() === 'S') $(this).addClass('bg-green-100');
-                if ($(this).val() === 'I') $(this).addClass('bg-yellow-100');
-                if ($(this).val() === 'R') $(this).addClass('bg-red-100');
+                $(this).removeClass('bg-emerald-100 bg-amber-100 bg-rose-100');
+                if ($(this).val() === 'S') $(this).addClass('bg-emerald-100');
+                if ($(this).val() === 'I') $(this).addClass('bg-amber-100');
+                if ($(this).val() === 'R') $(this).addClass('bg-rose-100');
             });
         }
 
@@ -648,6 +716,14 @@
             wardSelect.append(new Option("Select Ward (Optional)...", ""));
             savedWards.forEach(ward => { wardSelect.append(new Option(ward, ward)); });
         }
+        
+        function loadAnalyticsSampleOptions() {
+            let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
+            const anaSample = $('#ana_sample');
+            anaSample.empty();
+            anaSample.append(new Option("All Samples", ""));
+            savedSamples.forEach(sample => { anaSample.append(new Option(sample, sample)); });
+        }
 
         function quickSelectOrganism(organismName) { $('#p_organism').val(organismName).trigger('change'); }
 
@@ -657,8 +733,8 @@
                 { data: null, title: 'Action', orderable: false, render: function(data, type, row, meta) {
                     return `
                     <div class="flex gap-2">
-                        <button onclick="editRecord(${meta.row})" class="bg-yellow-400 text-white px-3 py-1 rounded text-xs font-bold shadow-sm">Edit</button>
-                        <button onclick="deleteRecord(${meta.row})" class="bg-red-500 text-white px-3 py-1 rounded text-xs font-bold shadow-sm">Delete</button>
+                        <button onclick="editRecord(${meta.row})" class="bg-amber-400 hover:bg-amber-500 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm transition-colors">Edit</button>
+                        <button onclick="deleteRecord(${meta.row})" class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm transition-colors">Delete</button>
                     </div>`;
                 }},
                 { data: 'Name', title: 'Name' }, 
@@ -680,12 +756,13 @@
 
             dataTable = $('#recordsTable').DataTable({
                 data: records, columns: cols, scrollX: true, 
-                dom: '<"flex justify-between items-center mb-4"Bf>rt<"flex justify-between items-center mt-4"ip>',
+                dom: '<"flex flex-col sm:flex-row justify-between items-center mb-4 gap-3"Bf>rt<"flex flex-col sm:flex-row justify-between items-center mt-4 gap-3"ip>',
                 buttons: [
-                    { extend: 'excelHtml5', text: 'Export Data to Excel', className: 'mr-2 rounded shadow' },
+                    { extend: 'excelHtml5', text: 'Export to Excel', className: 'mr-2 rounded shadow' },
                     { extend: 'print', text: 'Print Records', className: 'rounded shadow' }
                 ],
-                pageLength: 15
+                pageLength: 15,
+                language: { search: "", searchPlaceholder: "Search records..." }
             });
         }
 
@@ -697,7 +774,7 @@
             $('#p_sample').val(null).trigger('change'); 
             $('#p_organism').val(null).trigger('change');
             $('#p_antibiogram_org').val('').trigger('change'); 
-            $('.default-abx-select').val('').removeClass('bg-green-100 bg-yellow-100 bg-red-100');
+            $('.default-abx-select').val('').removeClass('bg-emerald-100 bg-amber-100 bg-rose-100');
             
             $('#modalTitle').text('Add New Patient Record'); $('#formModal').removeClass('hidden');
         }
@@ -712,6 +789,7 @@
             if (currentSample && !savedSamples.includes(currentSample)) {
                 savedSamples.push(currentSample); localStorage.setItem('amr_samples', JSON.stringify(savedSamples));
                 $('#p_sample').append(new Option(currentSample, currentSample, true, true)).trigger('change');
+                loadAnalyticsSampleOptions(); // update analytics dropdown
             }
 
             let currentWard = $('#p_ward').val();
@@ -792,7 +870,7 @@
         }
 
         function deleteRecord(index) {
-            Swal.fire({ title: 'Are you sure?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Yes, delete it!' })
+            Swal.fire({ title: 'Are you sure?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#e11d48', confirmButtonText: 'Yes, delete it!' })
             .then((result) => {
                 if (result.isConfirmed) {
                     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
@@ -809,9 +887,9 @@
             if (customSamples.length === 0) { Swal.fire({ icon: 'info', title: 'No Custom Samples' }); return; }
             let html = '<div class="text-left space-y-2 mt-4">';
             customSamples.forEach(sample => {
-                html += `<div class="flex justify-between items-center bg-gray-100 p-3 rounded border">
-                    <span class="font-medium text-gray-700">${sample}</span>
-                    <button type="button" onclick="deleteCustomSample('${sample.replace(/'/g, "\\'")}')" class="text-red-500 font-bold bg-white px-3 py-1 rounded border">Delete</button></div>`;
+                html += `<div class="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <span class="font-medium text-slate-700">${sample}</span>
+                    <button type="button" onclick="deleteCustomSample('${sample.replace(/'/g, "\\'")}')" class="text-rose-500 font-bold bg-white px-3 py-1 rounded border hover:bg-rose-50 transition-colors">Delete</button></div>`;
             });
             html += '</div>';
             Swal.fire({ title: 'Manage Custom Samples', html: html, confirmButtonText: 'Done' });
@@ -820,7 +898,7 @@
         window.deleteCustomSample = function(sample) {
             let s = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
             localStorage.setItem('amr_samples', JSON.stringify(s.filter(x => x !== sample)));
-            loadSampleOptions(); manageSamples();
+            loadSampleOptions(); loadAnalyticsSampleOptions(); manageSamples();
         };
 
         function manageWards() {
@@ -829,9 +907,9 @@
             if (customWards.length === 0) { Swal.fire({ icon: 'info', title: 'No Custom Wards' }); return; }
             let html = '<div class="text-left space-y-2 mt-4">';
             customWards.forEach(ward => {
-                html += `<div class="flex justify-between items-center bg-gray-100 p-3 rounded border">
-                    <span class="font-medium text-gray-700">${ward}</span>
-                    <button type="button" onclick="deleteCustomWard('${ward.replace(/'/g, "\\'")}')" class="text-red-500 font-bold bg-white px-3 py-1 rounded border">Delete</button></div>`;
+                html += `<div class="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <span class="font-medium text-slate-700">${ward}</span>
+                    <button type="button" onclick="deleteCustomWard('${ward.replace(/'/g, "\\'")}')" class="text-rose-500 font-bold bg-white px-3 py-1 rounded border hover:bg-rose-50 transition-colors">Delete</button></div>`;
             });
             html += '</div>';
             Swal.fire({ title: 'Manage Custom Wards', html: html, confirmButtonText: 'Done' });
@@ -850,34 +928,36 @@
 
             let groupsOptions = groupsArr.map(g => `<option value="${g}">${g}</option>`).join('');
             
-            let listHtml = customAbx.length === 0 ? '<p class="text-xs text-gray-500">No custom antibiotics added yet.</p>' : 
+            let listHtml = customAbx.length === 0 ? '<p class="text-xs text-slate-500 text-center py-4 bg-slate-50 rounded-lg border border-slate-200">No custom antibiotics added yet.</p>' : 
                 customAbx.map(a => {
                     let opts = groupsArr.map(g => `<option value="${g}" ${a.group === g ? 'selected' : ''}>${g}</option>`).join('');
                     return `
-                    <div class="flex justify-between items-center bg-gray-100 px-3 py-2 rounded border mb-2 gap-2">
-                        <div class="font-bold text-sm text-gray-800 truncate flex-1" title="${a.name}">${a.name}</div>
-                        <select onchange="updateAbxGroupInDB('${a.name.replace(/'/g, "\\'")}', this.value)" class="border border-gray-300 rounded p-1 text-xs focus:ring-blue-500 w-1/3" dir="ltr" title="Change Group">
-                            ${opts}
-                        </select>
-                        <button type="button" onclick="removeAbxFromDB('${a.name.replace(/'/g, "\\'")}')" class="text-red-500 font-bold text-xs bg-white px-2 py-1 rounded border hover:bg-red-50 transition">Delete</button>
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-3 rounded-lg border border-slate-200 mb-2 gap-2">
+                        <div class="font-bold text-sm text-slate-800 truncate w-full sm:flex-1" title="${a.name}">${a.name}</div>
+                        <div class="flex w-full sm:w-auto gap-2">
+                            <select onchange="updateAbxGroupInDB('${a.name.replace(/'/g, "\\'")}', this.value)" class="flex-1 sm:w-32 border border-slate-300 rounded p-1.5 text-xs focus:ring-indigo-500" dir="ltr" title="Change Group">
+                                ${opts}
+                            </select>
+                            <button type="button" onclick="removeAbxFromDB('${a.name.replace(/'/g, "\\'")}')" class="text-rose-500 font-bold text-xs bg-white px-3 py-1.5 rounded border border-rose-200 hover:bg-rose-50 transition-colors">Delete</button>
+                        </div>
                     </div>
                     `;
                 }).join('');
 
             let html = `
-                <div class="text-left space-y-4">
-                    <div class="bg-blue-50 p-4 rounded border border-blue-200">
-                        <h5 class="font-bold text-blue-800 mb-2">Add New Antibiotic</h5>
-                        <input type="text" id="new_abx_name" placeholder="Antibiotic Name..." class="w-full border border-gray-300 p-2 rounded mb-2 focus:ring-blue-500" dir="ltr">
-                        <select id="new_abx_group" class="w-full border border-gray-300 p-2 rounded mb-3 focus:ring-blue-500" dir="ltr">
+                <div class="text-left space-y-5">
+                    <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                        <h5 class="font-bold text-indigo-900 mb-3">Add New Antibiotic</h5>
+                        <input type="text" id="new_abx_name" placeholder="Antibiotic Name..." class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 focus:ring-2 focus:ring-indigo-500 outline-none" dir="ltr">
+                        <select id="new_abx_group" class="w-full border border-slate-300 p-2.5 rounded-lg mb-4 focus:ring-2 focus:ring-indigo-500 outline-none" dir="ltr">
                             ${groupsOptions}
                         </select>
-                        <button type="button" onclick="addNewAbxToDB()" class="w-full bg-blue-600 text-white font-bold py-2 rounded shadow hover:bg-blue-700 transition">Add to Database</button>
-                        <p id="abx_error" class="text-red-500 text-xs font-bold mt-2 hidden"></p>
+                        <button type="button" onclick="addNewAbxToDB()" class="w-full bg-indigo-600 text-white font-bold py-2.5 rounded-lg shadow hover:bg-indigo-700 transition-colors">Add to Database</button>
+                        <p id="abx_error" class="text-rose-500 text-xs font-bold mt-2 hidden"></p>
                     </div>
                     <div>
-                        <h5 class="font-bold text-gray-700 mb-2 border-b pb-1">Custom Antibiotics List (Edit Group or Delete)</h5>
-                        <div id="custom_abx_list" class="max-h-48 overflow-y-auto pr-2">
+                        <h5 class="font-bold text-slate-700 mb-3 border-b border-slate-200 pb-2">Custom Antibiotics List</h5>
+                        <div id="custom_abx_list" class="max-h-60 overflow-y-auto pr-2 custom-scroll">
                             ${listHtml}
                         </div>
                     </div>
@@ -889,6 +969,7 @@
                 html: html,
                 showConfirmButton: true,
                 confirmButtonText: 'Done',
+                confirmButtonColor: '#4f46e5',
                 width: '600px'
             }).then(() => {
                 renderDefaultAntibiotics();
@@ -933,75 +1014,7 @@
             }
         };
 
-        // --- 5. Internal Antibiogram View ---
-        function generateReport() {
-            const startDate = $('#rep_start').val();
-            const endDate = $('#rep_end').val();
-
-            if (!startDate || !endDate) { Swal.fire('Required', 'Please select both dates.', 'warning'); return; }
-
-            let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-            let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
-
-            if (records.length === 0) {
-                $('#reportContainer').html(`<div class="text-center text-gray-400 py-10 italic">No records found.</div>`);
-                return;
-            }
-
-            let stats = {};
-            Object.keys(orgMapExport).forEach(org => {
-                stats[org] = { total: 0, abx: {} };
-                Object.keys(abxMapExport).forEach(a => { stats[org].abx[a] = { tested: 0, resistant: 0 }; });
-            });
-
-            records.forEach(r => {
-                let orgName = r['Antibiogram organism'];
-                if (!orgName || !stats[orgName]) return;
-                
-                stats[orgName].total += 1;
-                Object.keys(abxMapExport).forEach(appAbx => {
-                    let result = r[appAbx];
-                    if (result && result !== '-' && result !== '') {
-                        stats[orgName].abx[appAbx].tested += 1;
-                        if (result === 'R') stats[orgName].abx[appAbx].resistant += 1;
-                    }
-                });
-            });
-
-            let html = `
-                <table id="reportTable" class="stripe row-border order-column cell-border w-full text-xs">
-                    <thead><tr><th rowspan="2" class="report-header-group">Organisms Isolated</th><th rowspan="2" class="report-header-group">Total Isolates</th>
-            `;
-            Object.keys(abxMapExport).forEach(a => { html += `<th colspan="2" class="bg-blue-600">${a}</th>`; });
-            html += `</tr><tr>`;
-            Object.keys(abxMapExport).forEach(a => { html += `<th>Tested (n)</th><th>% Resistance</th>`; });
-            html += `</tr></thead><tbody>`;
-
-            Object.keys(orgMapExport).forEach(org => {
-                let s = stats[org];
-                if (s.total === 0) return; // Hide empty rows in this view
-                html += `<tr><td class="font-bold bg-white whitespace-nowrap">${org}</td><td class="font-bold bg-blue-50 text-blue-900">${s.total}</td>`;
-                
-                Object.keys(abxMapExport).forEach(appAbx => {
-                    let abxStats = s.abx[appAbx];
-                    let pct = abxStats.tested > 0 ? Math.round((abxStats.resistant / abxStats.tested) * 100) : '';
-                    let tested = abxStats.tested > 0 ? abxStats.tested : '';
-                    html += `<td>${tested}</td><td class="font-semibold ${pct >= 50 ? 'text-red-600' : ''}">${pct !== '' ? pct + '%' : ''}</td>`;
-                });
-                html += `</tr>`;
-            });
-            html += `</tbody></table>`;
-            
-            $('#reportContainer').html(html);
-
-            if ($.fn.DataTable.isDataTable('#reportTable')) { $('#reportTable').DataTable().destroy(); }
-            reportTable = $('#reportTable').DataTable({
-                scrollX: true, scrollY: "60vh", scrollCollapse: true, paging: false, ordering: false,
-                fixedColumns: { leftColumns: 2 }, dom: 'rt'
-            });
-        }
-
-        // --- 6. Analytics & Dashboard (Charts & Wilson Score) ---
+        // --- 6. Smart Analytics, Heatmap & Wilson CI ---
         function wilsonScoreCI(r, n) {
             if (n === 0) return { lower: 0, upper: 0 };
             const p = r / n;
@@ -1018,6 +1031,7 @@
         function generateAnalytics() {
             const startDate = $('#ana_start').val();
             const endDate = $('#ana_end').val();
+            const targetSample = $('#ana_sample').val();
             const targetOrg = $('#ana_organism').val();
 
             if (!startDate || !endDate) { Swal.fire('Required', 'Please select both dates.', 'warning'); return; }
@@ -1025,8 +1039,15 @@
             let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
             let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
 
+            if (targetSample) {
+                records = records.filter(r => r.Sample === targetSample);
+            }
+
             if (records.length === 0) {
-                $('#analyticsPlaceholder').removeClass('hidden').text('No records found in this date range.');
+                $('#analyticsPlaceholder').removeClass('hidden').html(`
+                    <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <p class="text-lg font-medium text-slate-500">No records found for the selected criteria.</p>
+                `);
                 $('#analyticsContainer').addClass('hidden');
                 return;
             }
@@ -1034,28 +1055,48 @@
             $('#analyticsPlaceholder').addClass('hidden');
             $('#analyticsContainer').removeClass('hidden');
 
-            // Data Structures for Charts
+            // Dynamic Title Setup
+            let dashTitle = "Antibiogram Analysis";
+            let dashSub = `${startDate} to ${endDate}`;
+            if(targetSample) dashSub += ` | Sample: ${targetSample}`;
+            $('#dashTitle').text(dashTitle);
+            $('#dashSubtitle').text(dashSub);
+
+            // Data Structures
             let orgCounts = {};
             let specCounts = {};
             let genderCounts = { "Male": 0, "Female": 0 };
             
-            let amrStats = { total: 0, abx: {} };
+            let heatmapStats = {};
             let allAbxColumns = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
+            
+            // Single Organism Stats (For AMR Profile)
+            let amrStats = { total: 0, abx: {} };
             allAbxColumns.forEach(a => { amrStats.abx[a] = { tested: 0, resistant: 0 }; });
 
             records.forEach(r => {
-                // Organism Prevalence
+                // Determine Organism Name (Prefer Export Organism if exists, else Selective)
                 let org = r['Antibiogram organism'] || r['Selective organism'];
-                if(org) { orgCounts[org] = (orgCounts[org] || 0) + 1; }
-                
-                // Specimen
-                if(r.Sample) { specCounts[r.Sample] = (specCounts[r.Sample] || 0) + 1; }
-                
-                // Gender
-                if(r.Sex) { genderCounts[r.Sex] += 1; }
+                if(!org) return;
 
-                // AMR Profile for specific organism
-                if (targetOrg && r['Antibiogram organism'] === targetOrg) {
+                // For Distributions
+                orgCounts[org] = (orgCounts[org] || 0) + 1;
+                if(r.Sample) specCounts[r.Sample] = (specCounts[r.Sample] || 0) + 1;
+                if(r.Sex && genderCounts[r.Sex] !== undefined) genderCounts[r.Sex] += 1;
+
+                // For Heatmap (All orgs in current filter)
+                if (!heatmapStats[org]) heatmapStats[org] = {};
+                allAbxColumns.forEach(abx => {
+                    let res = r[abx];
+                    if (res && res !== '-' && res !== '') {
+                        if (!heatmapStats[org][abx]) heatmapStats[org][abx] = { t: 0, r: 0 };
+                        heatmapStats[org][abx].t += 1;
+                        if (res === 'R') heatmapStats[org][abx].r += 1;
+                    }
+                });
+
+                // For specific AMR Profile (if targetOrg selected)
+                if (targetOrg && org === targetOrg) {
                     amrStats.total += 1;
                     allAbxColumns.forEach(abx => {
                         let res = r[abx];
@@ -1067,25 +1108,69 @@
                 }
             });
 
-            // 1. Plot AMR Profile & Table
-            if (targetOrg) {
+            // --- Build Heatmap ---
+            let activeOrgs = Object.keys(heatmapStats).filter(o => Object.keys(heatmapStats[o]).length > 0).sort();
+            let activeAbxSet = new Set();
+            activeOrgs.forEach(o => { Object.keys(heatmapStats[o]).forEach(a => activeAbxSet.add(a)); });
+            let activeAbx = Array.from(activeAbxSet).sort();
+
+            if (activeOrgs.length > 0 && activeAbx.length > 0) {
+                let hmHtml = '<table class="heatmap-table"><thead><tr><th>Organism (n)</th>';
+                activeAbx.forEach(a => { hmHtml += `<th><div class="w-20 truncate" title="${a}">${a}</div></th>`; });
+                hmHtml += '</tr></thead><tbody>';
+
+                activeOrgs.forEach(o => {
+                    let orgTotal = orgCounts[o] || 0;
+                    hmHtml += `<tr><th>${o} <span class="text-xs font-normal text-slate-400">(${orgTotal})</span></th>`;
+                    activeAbx.forEach(a => {
+                        let cell = heatmapStats[o][a];
+                        if (!cell || cell.t === 0) {
+                            hmHtml += '<td class="bg-slate-50 text-slate-300">-</td>';
+                        } else {
+                            let p = Math.round((cell.r / cell.t) * 100);
+                            let isLow = cell.t < 30;
+                            
+                            let bgClass = 'bg-white';
+                            let textClass = 'text-slate-700';
+                            
+                            if (p <= 20) { bgClass = 'bg-emerald-100'; textClass = 'text-emerald-800'; }
+                            else if (p <= 40) { bgClass = 'bg-yellow-100'; textClass = 'text-yellow-800'; }
+                            else if (p <= 60) { bgClass = 'bg-orange-200'; textClass = 'text-orange-900'; }
+                            else if (p <= 80) { bgClass = 'bg-red-400'; textClass = 'text-white font-bold'; }
+                            else { bgClass = 'bg-red-600'; textClass = 'text-white font-bold'; }
+
+                            if (isLow) {
+                                // Mute colors slightly for low confidence
+                                if(p > 60) textClass = 'text-red-100';
+                                else textClass += ' opacity-70';
+                            }
+
+                            hmHtml += `<td class="${bgClass} ${textClass}">${p}% ${isLow ? '<span class="text-[10px]">*</span>' : ''}</td>`;
+                        }
+                    });
+                    hmHtml += '</tr>';
+                });
+                hmHtml += '</tbody></table>';
+                $('#heatmapWrapper').html(hmHtml);
+            } else {
+                $('#heatmapWrapper').html('<p class="text-center text-slate-400 py-4">No susceptibility data to generate heatmap.</p>');
+            }
+
+            // --- Build AMR Profile & Table (If targetOrg selected) ---
+            if (targetOrg && amrStats.total > 0) {
+                $('#amrProfileSection').removeClass('hidden');
                 $('#amrChartTitle').text(`AMR Profile: ${targetOrg} (N = ${amrStats.total})`);
-                if (amrStats.total < 30) {
-                    $('#amrClsiWarning').removeClass('hidden');
-                } else {
-                    $('#amrClsiWarning').addClass('hidden');
-                }
+                
+                if (amrStats.total < 30) $('#amrClsiWarning').removeClass('hidden');
+                else $('#amrClsiWarning').addClass('hidden');
 
                 let labels = [];
                 let dataR = [];
                 let bgColors = [];
                 let tableHtml = '';
 
-                // Sort antibiotics by R% descending
                 let sortedAbx = Object.keys(amrStats.abx).filter(a => amrStats.abx[a].tested > 0).sort((a, b) => {
-                    let pctA = amrStats.abx[a].resistant / amrStats.abx[a].tested;
-                    let pctB = amrStats.abx[b].resistant / amrStats.abx[b].tested;
-                    return pctB - pctA;
+                    return (amrStats.abx[b].resistant / amrStats.abx[b].tested) - (amrStats.abx[a].resistant / amrStats.abx[a].tested);
                 });
 
                 sortedAbx.forEach(abx => {
@@ -1096,15 +1181,18 @@
 
                     labels.push(abx);
                     dataR.push(p);
-                    bgColors.push(isReliable ? 'rgba(185, 28, 28, 0.85)' : 'rgba(156, 163, 175, 0.5)'); // Dark Red vs Faded Gray
+                    // Dark Red for reliable, Faded Gray for low sample size
+                    bgColors.push(isReliable ? 'rgba(185, 28, 28, 0.9)' : 'rgba(203, 213, 225, 0.8)'); 
 
                     tableHtml += `
-                        <tr class="border-b hover:bg-gray-50 ${!isReliable ? 'text-gray-500' : 'font-semibold'}">
-                            <td class="px-4 py-2 border">${abx} ${!isReliable ? '<span class="text-red-500 font-bold">*</span>' : ''}</td>
-                            <td class="px-4 py-2 border text-center">${s.tested}</td>
-                            <td class="px-4 py-2 border text-center">${s.resistant}</td>
-                            <td class="px-4 py-2 border text-center">${p}%</td>
-                            <td class="px-4 py-2 border text-center">${ci.lower}% - ${ci.upper}%</td>
+                        <tr class="hover:bg-slate-50 transition-colors ${!isReliable ? 'text-slate-500' : 'font-semibold text-slate-700'}">
+                            <td class="px-4 py-3 border-b border-slate-100">${abx} ${!isReliable ? '<span class="text-red-500 font-bold ml-1">*</span>' : ''}</td>
+                            <td class="px-4 py-3 border-b border-slate-100 text-center">${s.tested}</td>
+                            <td class="px-4 py-3 border-b border-slate-100 text-center">${s.resistant}</td>
+                            <td class="px-4 py-3 border-b border-slate-100 text-center">
+                                <span class="${p >= 50 && isReliable ? 'text-rose-600' : ''}">${p}%</span>
+                            </td>
+                            <td class="px-4 py-3 border-b border-slate-100 text-center">${ci.lower}% - ${ci.upper}%</td>
                         </tr>
                     `;
                 });
@@ -1116,46 +1204,48 @@
                     type: 'bar',
                     data: {
                         labels: labels,
-                        datasets: [{ label: '% Resistance', data: dataR, backgroundColor: bgColors, borderWidth: 1, borderColor: '#fff' }]
+                        datasets: [{ label: '% Resistance', data: dataR, backgroundColor: bgColors, borderRadius: 4 }]
                     },
                     options: {
                         responsive: true, maintainAspectRatio: false,
-                        scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: '% Resistance' } } },
+                        scales: { 
+                            y: { beginAtZero: true, max: 100, title: { display: true, text: '% Resistance', font: {weight: 'bold'} }, grid: {color: '#f1f5f9'} },
+                            x: { grid: {display: false}, ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
+                        },
                         plugins: { legend: { display: false } }
                     }
                 });
             } else {
-                $('#amrChartTitle').text(`AMR Profile: (Please Select an Organism)`);
-                $('#ciTableBody').html('<tr><td colspan="5" class="text-center text-gray-400 py-4">No organism selected</td></tr>');
-                $('#amrClsiWarning').addClass('hidden');
+                $('#amrProfileSection').addClass('hidden');
                 if (chartAMR_instance) chartAMR_instance.destroy();
             }
 
-            // 2. Plot Organism Prevalence (Top 10)
-            let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 10);
+            // --- Build Distributions ---
+            // 1. Organisms (Donut)
+            let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 10); // Top 10
             if(chartOrg_instance) chartOrg_instance.destroy();
             chartOrg_instance = new Chart(document.getElementById('chartOrg'), {
                 type: 'doughnut',
                 data: {
                     labels: sortedOrgs,
-                    datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#1e3a8a','#2563eb','#3b82f6','#60a5fa','#93c5fd','#cbf4f9','#8b5cf6','#a78bfa','#c4b5fd','#ddd6fe'] }]
+                    datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#4f46e5','#3b82f6','#0ea5e9','#06b6d4','#14b8a6','#10b981','#84cc16','#eab308','#f59e0b','#f97316'] }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } } }
             });
 
-            // 3. Specimen Distribution
+            // 2. Specimens (Bar)
             let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
             if(chartSpec_instance) chartSpec_instance.destroy();
             chartSpec_instance = new Chart(document.getElementById('chartSpecimen'), {
                 type: 'bar',
                 data: {
                     labels: sortedSpecs,
-                    datasets: [{ label: 'Count', data: sortedSpecs.map(s=>specCounts[s]), backgroundColor: '#10b981' }]
+                    datasets: [{ label: 'Isolates', data: sortedSpecs.map(s=>specCounts[s]), backgroundColor: '#6366f1', borderRadius: 4 }]
                 },
-                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: {x: {grid: {color: '#f1f5f9'}}, y: {grid: {display: false}}} }
             });
 
-            // 4. Gender Distribution
+            // 3. Gender (Pie)
             if(chartGen_instance) chartGen_instance.destroy();
             chartGen_instance = new Chart(document.getElementById('chartGender'), {
                 type: 'pie',
@@ -1163,7 +1253,7 @@
                     labels: ['Male', 'Female'],
                     datasets: [{ data: [genderCounts['Male'], genderCounts['Female']], backgroundColor: ['#3b82f6', '#ec4899'] }]
                 },
-                options: { responsive: true, maintainAspectRatio: false }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
             });
         }
 
@@ -1174,23 +1264,23 @@
             const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
 
             Swal.fire({
-                title: 'Export to Official Antibiogram',
+                title: 'Export Official Antibiogram',
                 html: `
                     <div class="text-left space-y-4">
-                        <p class="text-sm text-gray-500 bg-blue-50 p-2 rounded">Select the date range. The system will automatically fetch 'Antibiogram_5.xlsx' from the server and populate it.</p>
+                        <p class="text-sm text-slate-500 bg-indigo-50 p-3 rounded-lg border border-indigo-100">Select the date range. The system will automatically fetch <b>Antibiogram_5.xlsx</b> from the server, populate it accurately, and download it.</p>
                         <div class="flex gap-4">
                             <div class="flex-1">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
-                                <input type="date" id="export_start" value="${firstDay}" class="w-full border border-gray-300 p-2 rounded focus:ring-blue-500">
+                                <label class="block text-sm font-bold text-slate-700 mb-1">From Date</label>
+                                <input type="date" id="export_start" value="${firstDay}" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
                             </div>
                             <div class="flex-1">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
-                                <input type="date" id="export_end" value="${lastDay}" class="w-full border border-gray-300 p-2 rounded focus:ring-blue-500">
+                                <label class="block text-sm font-bold text-slate-700 mb-1">To Date</label>
+                                <input type="date" id="export_end" value="${lastDay}" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
                             </div>
                         </div>
                     </div>
                 `,
-                showCancelButton: true, confirmButtonText: '📥 Download Excel', confirmButtonColor: '#16a34a',
+                showCancelButton: true, confirmButtonText: '📥 Download Excel', confirmButtonColor: '#10b981', cancelButtonColor: '#64748b',
                 preConfirm: () => {
                     const start = document.getElementById('export_start').value;
                     const end = document.getElementById('export_end').value;
@@ -1211,11 +1301,11 @@
                 return;
             }
 
-            Swal.fire({ title: 'Generating File...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            Swal.fire({ title: 'Generating Ministry File...', text: 'Fetching template and applying data directly...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
             try {
                 const response = await fetch('Antibiogram_5.xlsx');
-                if (!response.ok) throw new Error("Could not find 'Antibiogram_5.xlsx' near index.html.");
+                if (!response.ok) throw new Error("Could not find 'Antibiogram_5.xlsx' in the repository. Ensure it is uploaded correctly next to the index.html file.");
                 const arrayBuffer = await response.arrayBuffer();
 
                 let stats = {};
@@ -1266,7 +1356,7 @@
 
                 const blob = await workbook.outputAsync();
                 saveAs(blob, `Ministry_Antibiogram_${sDate}_to_${eDate}.xlsx`);
-                Swal.fire('Success!', 'File exported.', 'success');
+                Swal.fire('Success!', 'The official file has been exported successfully.', 'success');
 
             } catch (err) {
                 console.error(err);
