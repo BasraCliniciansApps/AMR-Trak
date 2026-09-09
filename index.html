@@ -99,6 +99,11 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                         Export Excel
                     </button>
+
+                    <!-- Backup Button -->
+                    <button onclick="showBackupModal()" class="bg-slate-700 text-white border border-slate-600 px-4 py-2 rounded-lg shadow-lg font-bold transition-all hover:bg-slate-600 hover:scale-105 flex items-center gap-2 text-sm md:text-base">
+                        💾 Backup
+                    </button>
                     
                     <button onclick="openModal()" class="bg-cyan-600 text-white px-4 py-2 rounded-lg shadow-lg font-bold hover:bg-cyan-500 hover:scale-105 transition-all text-sm md:text-base flex items-center gap-1">
                         + New
@@ -514,7 +519,7 @@
 
                     <div class="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-200 sticky bottom-0 bg-white/90 backdrop-blur py-4 z-10 px-2 -mx-2">
                         <button type="button" onclick="closeModal()" tabindex="-1" class="px-6 py-2 border border-slate-300 rounded-lg text-slate-600 font-bold hover:bg-slate-50 transition-colors">Cancel</button>
-                        <button type="submit" class="px-8 py-2 bg-teal-600 text-white rounded-lg font-bold text-lg shadow-lg hover:bg-teal-700 hover:shadow-xl transition-all">Save Record</button>
+                        <button type="submit" tabindex="-1" class="px-8 py-2 bg-teal-600 text-white rounded-lg font-bold text-lg shadow-lg hover:bg-teal-700 hover:shadow-xl transition-all">Save Record</button>
                     </div>
                 </form>
             </div>
@@ -609,7 +614,6 @@
             { name: "Candida auris", code: "CAU", group: "Fungi" }
         ];
 
-        // تم تنظيف الأسماء وإزالة الاختصارات بالكامل
         const abxGroups = {
             "Penicillins": ["Benzylpenicillin", "Penicillin", "Ampicillin", "Amoxicillin", "Cloxacillin", "Oxacillin", "Amoxicillin/Clavulanic acid", "Ampicillin/Sulbactam", "Piperacillin", "Piperacillin/Tazobactam", "Ticarcillin", "Ticarcillin/Clavulanic acid"],
             "Cephalosporins": ["Cefazolin", "Cefoxitin", "Cefuroxime", "Cefixime", "Ceftriaxone", "Cefotaxime", "Ceftazidime", "Cefepime", "Cefaclor", "Cefpodoxime", "Cefdinir", "Cephalothin", "Cefoxitin screen"],
@@ -624,7 +628,6 @@
         };
         const abxList = Object.values(abxGroups).flat();
 
-        // تم تحديث مفاتيح التصدير لتطابق الأسماء الجديدة بدقة
         const abxMapExport = {
             "Ampicillin": {t:4, r:5}, "Flucloxacillin": {t:7, r:8}, "Penicillin": {t:10, r:11},
             "Ampicillin/Sulbactam": {t:13, r:14}, "Amoxicillin": {t:16, r:17}, "Oxacillin": {t:19, r:20},
@@ -872,6 +875,101 @@
                 $('#btnTabAnalytics').removeClass('bg-white/5 text-teal-100 border-teal-300/20').addClass('bg-teal-600 text-white border-teal-400/50');
             }
         }
+
+        // --- BACKUP AND RESTORE LOGIC ---
+        function showBackupModal() {
+            Swal.fire({
+                title: '💾 Backup & Restore',
+                html: `
+                    <div class="text-left space-y-4 mt-2">
+                        <div class="bg-teal-50 p-4 rounded-xl border border-teal-100">
+                            <h4 class="font-bold text-teal-900 mb-2">1. Backup Data</h4>
+                            <p class="text-xs text-slate-600 mb-3">Download all your patient records, custom antibiotics, and settings to a secure file on your computer.</p>
+                            <button onclick="downloadBackup()" class="w-full bg-teal-600 text-white font-bold py-2 rounded-lg shadow hover:bg-teal-700 transition-colors">📥 Download Backup</button>
+                        </div>
+                        <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                            <h4 class="font-bold text-amber-900 mb-2">2. Restore Data</h4>
+                            <p class="text-xs text-slate-600 mb-3">Upload a previously saved backup file. <b class="text-red-500">Warning:</b> This will replace all current data.</p>
+                            <input type="file" id="backupFileInput" accept=".json" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-100 file:text-amber-700 hover:file:bg-amber-200 mb-3" />
+                            <button onclick="processRestore()" class="w-full bg-amber-600 text-white font-bold py-2 rounded-lg shadow hover:bg-amber-700 transition-colors">📤 Restore Backup</button>
+                        </div>
+                    </div>
+                `,
+                showConfirmButton: false,
+                showCloseButton: true,
+                width: '500px'
+            });
+        }
+
+        window.downloadBackup = function() {
+            const data = {
+                amr_records: JSON.parse(localStorage.getItem('amr_records')) || [],
+                amr_samples: JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples,
+                amr_wards: JSON.parse(localStorage.getItem('amr_wards')) || defaultWards,
+                amr_organisms: JSON.parse(localStorage.getItem('amr_organisms')) || [],
+                amr_custom_abx_v2: JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || []
+            };
+
+            const dataStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const dateStr = new Date().toISOString().split('T')[0];
+            saveAs(blob, `AMR_Tracker_Backup_${dateStr}.json`);
+            
+            Swal.fire('Success!', 'Backup downloaded successfully.', 'success');
+        };
+
+        window.processRestore = function() {
+            const fileInput = document.getElementById('backupFileInput');
+            if (!fileInput.files.length) {
+                Swal.showValidationMessage('Please select a backup file first.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    if (!importedData.amr_records) throw new Error("Invalid backup file structure.");
+
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: "This will overwrite all existing data. Make sure you have backed up your current work!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#e11d48',
+                        cancelButtonColor: '#64748b',
+                        confirmButtonText: 'Yes, Restore it!'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            localStorage.setItem('amr_records', JSON.stringify(importedData.amr_records));
+                            if (importedData.amr_samples) localStorage.setItem('amr_samples', JSON.stringify(importedData.amr_samples));
+                            if (importedData.amr_wards) localStorage.setItem('amr_wards', JSON.stringify(importedData.amr_wards));
+                            if (importedData.amr_organisms) localStorage.setItem('amr_organisms', JSON.stringify(importedData.amr_organisms));
+                            if (importedData.amr_custom_abx_v2) localStorage.setItem('amr_custom_abx_v2', JSON.stringify(importedData.amr_custom_abx_v2));
+
+                            // Refresh UI
+                            loadBacteriaOptions();
+                            loadSampleOptions();
+                            loadWardOptions();
+                            renderDefaultAntibiotics();
+                            initDataTable();
+                            if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
+
+                            Swal.fire('Restored!', 'Your data has been restored successfully.', 'success');
+                        }
+                    });
+
+                } catch (error) {
+                    Swal.fire('Error', 'Invalid or corrupted backup file.', 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        };
+        // --- END BACKUP LOGIC ---
 
         // --- 4. Data Entry UI Functions ---
         function renderDefaultAntibiotics() {
