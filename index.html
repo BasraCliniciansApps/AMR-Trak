@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AMR Tracker | Antibiogram</title>
+    <title>AMR Tracker | Laboratory Information System</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -26,8 +26,9 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
-    <!-- XlsxPopulate -->
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- XlsxPopulate & FileSaver -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx-populate/1.21.0/xlsx-populate.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
@@ -39,47 +40,191 @@
         .select2-container .select2-selection--single { height: 42px; border: 1px solid #d1d5db; border-radius: 0.375rem; display: flex; align-items: center; }
         .select2-container { z-index: 9999 !important; }
         select.compact-dropdown { -webkit-appearance: none; -moz-appearance: none; text-align: center; cursor: pointer; }
+        
+        #reportTable th { background-color: #1e3a8a; color: white; border: 1px solid #3b82f6; text-align: center; font-size: 0.8rem; padding: 8px;}
+        #reportTable td { border: 1px solid #e5e7eb; text-align: center; padding: 6px; }
+        .report-header-group { background-color: #1e40af !important; font-weight: bold; }
+
+        /* Print Styles */
+        @media print {
+            body { background-color: white !important; }
+            .no-print { display: none !important; }
+            .print-full { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: none !important; }
+            .page-break { page-break-before: always; }
+            .chart-container { page-break-inside: avoid; }
+            * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+        }
+        
+        /* Custom scrollbar for horizontal nav on mobile */
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="text-gray-800 font-sans antialiased">
 
-    <!-- Top Navigation -->
-    <nav class="bg-blue-900 text-white shadow-lg sticky top-0 z-40">
-        <div class="max-w-[98%] mx-auto px-4 py-3 flex justify-between items-center">
-            <h1 class="text-2xl font-bold tracking-wide">AMR Tracker</h1>
-            <div class="space-x-3 flex items-center">
-                <button onclick="showExportModal()" class="bg-green-600 text-white border-2 border-green-500 px-5 py-2 rounded shadow-md font-bold transition hover:bg-green-700 flex items-center gap-2">
-                    📥 Export to Antibiogram
-                </button>
-                <div class="w-px bg-blue-700 mx-1 h-8"></div>
-                <button onclick="openModal()" class="bg-blue-600 text-white px-5 py-2 rounded shadow-md font-bold hover:bg-blue-700 transition">
-                    + New Entry
-                </button>
+    <!-- Top Navigation (Responsive) -->
+    <nav class="bg-blue-900 text-white shadow-lg sticky top-0 z-40 no-print">
+        <div class="max-w-[98%] mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
+            <h1 class="text-2xl font-bold tracking-wide whitespace-nowrap">AMR Tracker</h1>
+            
+            <div class="w-full md:w-auto overflow-x-auto hide-scroll pb-1">
+                <div class="flex items-center gap-2 min-w-max">
+                    <button onclick="showTab('records')" id="btnTabRecords" class="bg-blue-700 text-white border-2 border-blue-500 px-4 py-2 rounded shadow font-bold transition hover:bg-blue-600 text-sm md:text-base">
+                        📋 Records
+                    </button>
+                    <button onclick="showTab('report')" id="btnTabReport" class="bg-transparent text-blue-100 border border-blue-600 px-4 py-2 rounded shadow font-bold transition hover:bg-blue-700 text-sm md:text-base">
+                        📑 Report
+                    </button>
+                    <button onclick="showTab('analytics')" id="btnTabAnalytics" class="bg-transparent text-blue-100 border border-blue-600 px-4 py-2 rounded shadow font-bold transition hover:bg-blue-700 text-sm md:text-base flex items-center gap-1">
+                        📊 Analytics
+                    </button>
+                    <div class="w-px bg-blue-700 mx-1 h-6"></div>
+                    <button onclick="showExportModal()" class="bg-green-600 text-white border-2 border-green-500 px-4 py-2 rounded shadow font-bold transition hover:bg-green-700 flex items-center gap-1 text-sm md:text-base">
+                        📥 Excel
+                    </button>
+                    <button onclick="openModal()" class="bg-blue-500 text-white px-4 py-2 rounded shadow font-bold hover:bg-blue-400 transition text-sm md:text-base">
+                        + New
+                    </button>
+                </div>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content: Patients Records Table -->
-    <main class="w-[98%] mx-auto mt-6 mb-10">
-        <div class="bg-white rounded-lg shadow-md p-2 overflow-hidden border-t-4 border-blue-500">
-            <h2 class="text-xl font-bold text-gray-700 m-4">📋 Culture & Susceptibility Records</h2>
+    <!-- TAB 1: Patients Records Table -->
+    <main id="viewRecords" class="w-[98%] mx-auto mt-6 mb-10 block print-full">
+        <div class="bg-white rounded-lg shadow-md p-2 overflow-hidden border-t-4 border-blue-500 print-full">
+            <h2 class="text-xl font-bold text-gray-700 m-4 no-print">📋 Culture & Susceptibility Records</h2>
             <table id="recordsTable" class="display nowrap w-full" style="width:100%"></table>
         </div>
     </main>
 
-    <!-- Modal for Data Entry -->
-    <div id="formModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden flex justify-center items-center z-50">
+    <!-- TAB 2: Antibiogram Report Dashboard -->
+    <main id="viewReport" class="w-[98%] mx-auto mt-6 mb-10 hidden print-full">
+        <div class="bg-white rounded-lg shadow-md p-4 md:p-6 border-t-4 border-green-500 print-full">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-4 gap-4 no-print">
+                <h2 class="text-xl font-bold text-gray-700">📑 Internal Antibiogram View</h2>
+                <div class="flex flex-wrap gap-3 items-end w-full md:w-auto">
+                    <div class="flex-1 md:flex-none">
+                        <label class="block text-xs font-bold text-gray-500 mb-1">From Date</label>
+                        <input type="date" id="rep_start" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-blue-500">
+                    </div>
+                    <div class="flex-1 md:flex-none">
+                        <label class="block text-xs font-bold text-gray-500 mb-1">To Date</label>
+                        <input type="date" id="rep_end" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-blue-500">
+                    </div>
+                    <button onclick="generateReport()" class="w-full md:w-auto bg-blue-800 text-white px-6 py-2 rounded shadow font-bold hover:bg-blue-900 transition">
+                        View Report
+                    </button>
+                </div>
+            </div>
+            
+            <div id="reportContainer" class="w-full overflow-x-auto">
+                <div class="text-center text-gray-400 py-10 italic">Select a date range and click 'View Report'.</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- TAB 3: Analytics & Dashboard -->
+    <main id="viewAnalytics" class="w-[98%] mx-auto mt-6 mb-10 hidden print-full">
+        <div class="bg-white rounded-lg shadow-md p-4 md:p-6 border-t-4 border-purple-500 print-full">
+            <!-- Controls -->
+            <div class="flex flex-col lg:flex-row justify-between items-center mb-6 border-b pb-4 gap-4 no-print">
+                <h2 class="text-xl font-bold text-gray-700">📊 Analytics & Dashboard</h2>
+                <div class="flex flex-wrap gap-3 items-end w-full lg:w-auto">
+                    <div class="flex-1 lg:flex-none">
+                        <label class="block text-xs font-bold text-gray-500 mb-1">From Date</label>
+                        <input type="date" id="ana_start" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-purple-500">
+                    </div>
+                    <div class="flex-1 lg:flex-none">
+                        <label class="block text-xs font-bold text-gray-500 mb-1">To Date</label>
+                        <input type="date" id="ana_end" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-purple-500">
+                    </div>
+                    <div class="w-full lg:w-64">
+                        <label class="block text-xs font-bold text-gray-500 mb-1">Select Organism (For AMR Profile)</label>
+                        <select id="ana_organism" class="w-full border rounded text-sm select2-basic"></select>
+                    </div>
+                    <button onclick="generateAnalytics()" class="flex-1 lg:flex-none bg-purple-700 text-white px-6 py-2 rounded shadow font-bold hover:bg-purple-800 transition">
+                        Analyze
+                    </button>
+                    <button onclick="window.print()" class="flex-1 lg:flex-none bg-gray-700 text-white px-4 py-2 rounded shadow font-bold hover:bg-gray-800 transition flex items-center justify-center gap-2">
+                        🖨️ Print
+                    </button>
+                </div>
+            </div>
+
+            <div id="analyticsContainer" class="hidden">
+                <!-- Row 1: AMR Profile -->
+                <div class="mb-8 chart-container border rounded-xl p-4 bg-gray-50 shadow-inner">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800" id="amrChartTitle">AMR Profile</h3>
+                        <span id="amrClsiWarning" class="text-xs font-bold px-3 py-1 rounded hidden bg-red-100 text-red-700 border border-red-300">
+                            ⚠️ CAUTION: Total Isolates < 30. Statistical reliability is low.
+                        </span>
+                    </div>
+                    <div class="relative h-[300px] md:h-[400px] w-full">
+                        <canvas id="chartAMR"></canvas>
+                    </div>
+                    <div class="mt-2 text-[10px] text-gray-500 italic text-center">
+                        * Faded/Grayed bars indicate antibiotics with sample size (n) < 30, which may not be statistically reliable for clinical decision-making.
+                    </div>
+                    
+                    <!-- Table: 95% CI -->
+                    <div class="mt-6 overflow-x-auto">
+                        <table class="w-full text-xs text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden">
+                            <thead class="bg-purple-100 text-purple-900 uppercase">
+                                <tr>
+                                    <th class="px-4 py-2 border">Antibiotic</th>
+                                    <th class="px-4 py-2 border text-center">Tested (n)</th>
+                                    <th class="px-4 py-2 border text-center">Resistant (R)</th>
+                                    <th class="px-4 py-2 border text-center">% Resistance</th>
+                                    <th class="px-4 py-2 border text-center">95% CI (Wilson Score)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ciTableBody"></tbody>
+                        </table>
+                        <div class="mt-1 text-[10px] text-red-500 font-semibold">* Asterisk indicates n < 30 (Use caution).</div>
+                    </div>
+                </div>
+
+                <!-- Row 2: Distributions -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 page-break">
+                    <!-- Organism Prevalence -->
+                    <div class="chart-container border rounded-xl p-4 bg-white shadow-sm">
+                        <h3 class="text-sm font-bold text-center text-gray-700 mb-2">Top Organisms Prevalence</h3>
+                        <div class="relative h-[250px] w-full flex justify-center"><canvas id="chartOrg"></canvas></div>
+                    </div>
+                    <!-- Specimen Distribution -->
+                    <div class="chart-container border rounded-xl p-4 bg-white shadow-sm">
+                        <h3 class="text-sm font-bold text-center text-gray-700 mb-2">Specimen Distribution</h3>
+                        <div class="relative h-[250px] w-full flex justify-center"><canvas id="chartSpecimen"></canvas></div>
+                    </div>
+                    <!-- Gender Distribution -->
+                    <div class="chart-container border rounded-xl p-4 bg-white shadow-sm">
+                        <h3 class="text-sm font-bold text-center text-gray-700 mb-2">Gender Distribution</h3>
+                        <div class="relative h-[250px] w-full flex justify-center"><canvas id="chartGender"></canvas></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="analyticsPlaceholder" class="text-center text-gray-400 py-10 italic">
+                Select parameters and click 'Analyze' to view charts.
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal for Data Entry (Same as before, perfectly working) -->
+    <div id="formModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden flex justify-center items-center z-50 no-print">
         <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-11/12 lg:w-4/5 max-w-6xl max-h-[95vh] overflow-y-auto relative">
-            <div class="px-6 py-4 border-b flex justify-between items-center sticky top-0 bg-white z-10 shadow-sm">
-                <h3 class="text-xl font-bold text-gray-800" id="modalTitle">Add New Patient Record</h3>
+            <div class="px-4 py-3 md:px-6 md:py-4 border-b flex justify-between items-center sticky top-0 bg-white z-10 shadow-sm">
+                <h3 class="text-lg md:text-xl font-bold text-gray-800" id="modalTitle">Add New Patient Record</h3>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-red-500 font-bold text-2xl transition">&times;</button>
             </div>
             
-            <div class="p-6">
+            <div class="p-4 md:p-6">
                 <form id="entryForm" class="space-y-6">
                     <input type="hidden" id="editIndex" value="-1">
                     
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-5">
                         <div class="md:col-span-1">
                             <label class="block text-sm font-bold text-gray-700 mb-1">Patient Name (الاسم)</label>
                             <input type="text" id="p_name" required dir="rtl" lang="ar" placeholder="اكتب الاسم هنا..." class="w-full border-gray-300 border rounded-md p-2 focus:ring-blue-500 text-right font-semibold bg-blue-50">
@@ -87,8 +232,8 @@
                         <div class="md:col-span-1">
                             <label class="block text-sm font-medium text-gray-600 mb-1">Age</label>
                             <div class="flex gap-2">
-                                <input type="number" id="p_age" dir="ltr" lang="en" class="w-3/5 border-gray-300 border rounded-md p-2 focus:ring-blue-500">
-                                <select id="p_age_unit" dir="ltr" lang="en" class="w-2/5 border-gray-300 border rounded-md p-2 h-[42px] focus:ring-blue-500">
+                                <input type="number" id="p_age" dir="ltr" lang="en" class="w-1/2 border-gray-300 border rounded-md p-2 focus:ring-blue-500">
+                                <select id="p_age_unit" dir="ltr" lang="en" class="w-1/2 border-gray-300 border rounded-md p-2 h-[42px] focus:ring-blue-500">
                                     <option value="Years">Years</option>
                                     <option value="Months">Months</option>
                                     <option value="Days">Days</option>
@@ -107,24 +252,22 @@
                             <input type="date" id="p_date" dir="ltr" lang="en" required class="w-full border-gray-300 border rounded-md p-2 h-[42px]">
                         </div>
 
-                        <!-- Dynamic Ward Field -->
                         <div class="md:col-span-2">
                             <div class="flex justify-between items-center mb-1">
                                 <label class="block text-sm font-medium text-gray-600">Ward</label>
                                 <button type="button" onclick="manageWards()" class="text-xs text-red-500 font-semibold">⚙️ Manage</button>
                             </div>
-                            <select id="p_ward" dir="ltr" lang="en" class="w-full"></select>
+                            <select id="p_ward" dir="ltr" lang="en" class="w-full select2-enable"></select>
                         </div>
-
                         <div class="md:col-span-2">
                             <div class="flex justify-between items-center mb-1">
                                 <label class="block text-sm font-medium text-gray-600">Sample</label>
                                 <button type="button" onclick="manageSamples()" class="text-xs text-red-500 font-semibold">⚙️ Manage</button>
                             </div>
-                            <select id="p_sample" dir="ltr" lang="en" class="w-full" required></select>
+                            <select id="p_sample" dir="ltr" lang="en" class="w-full select2-enable" required></select>
                         </div>
                         
-                        <!-- Selective Organism (Internal Record) -->
+                        <!-- Selective Organism -->
                         <div class="md:col-span-2 bg-blue-50 p-4 rounded-lg border border-blue-100">
                             <label class="block text-sm font-bold text-blue-800 mb-2">Selective Organism (Lab Record)</label>
                             <select id="p_organism" dir="ltr" lang="en" class="w-full select2-enable" required>
@@ -139,7 +282,7 @@
                             </div>
                         </div>
 
-                        <!-- Antibiogram Export Organism (Ministry Template) -->
+                        <!-- Antibiogram Export Organism -->
                         <div class="md:col-span-2 bg-purple-50 p-4 rounded-lg border border-purple-200">
                             <label class="block text-sm font-bold text-purple-800 mb-2">Antibiogram Organism List (Export)</label>
                             <select id="p_antibiogram_org" dir="ltr" lang="en" class="w-full select2-enable">
@@ -187,20 +330,27 @@
                                     <option value="Enterococcus gallinarum/E. casseliflavus">Enterococcus gallinarum/E. casseliflavus</option>
                                 </optgroup>
                             </select>
-                            <div class="mt-3 text-[11px] text-purple-700 font-semibold italic">
-                                * Select the exact category to calculate isolates and resistance in the Antibiogram Excel file.
-                            </div>
                         </div>
-
                     </div>
 
-                    <!-- Antibiotics Master Panel -->
-                    <div class="border border-gray-200 rounded-lg p-5 bg-gray-50 mt-6 shadow-inner">
-                        <div class="flex justify-between items-center mb-4 border-b border-gray-300 pb-2">
+                    <!-- Antibiotics Panel -->
+                    <div class="border border-gray-200 rounded-lg p-4 md:p-5 bg-gray-50 mt-6 shadow-inner">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b border-gray-300 pb-2 gap-2">
                             <h4 class="font-bold text-gray-800 text-lg">Antibiotics Susceptibility Panel</h4>
-                            <button type="button" onclick="manageAntibioticsDB()" class="text-xs text-blue-700 font-bold bg-blue-100 hover:bg-blue-200 px-4 py-1.5 rounded shadow-sm transition">⚙️ Manage Database</button>
+                            <button type="button" onclick="manageAntibioticsDB()" class="text-xs text-blue-700 font-bold bg-blue-100 hover:bg-blue-200 px-4 py-1.5 rounded shadow-sm transition w-full md:w-auto">⚙️ Manage Database</button>
                         </div>
                         
+                        <div class="flex flex-col md:flex-row gap-2 mb-6 bg-white p-3 rounded border">
+                            <div class="flex-1 w-full">
+                                <label class="block text-xs font-bold text-gray-500 mb-1">Add Custom Antibiotic</label>
+                                <select id="abx_selector" dir="ltr" lang="en" class="w-full">
+                                    <option value="">Type custom antibiotic name...</option>
+                                </select>
+                            </div>
+                            <button type="button" onclick="addAntibiotic()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-semibold mt-0 md:mt-5 shadow w-full md:w-auto">+ Add</button>
+                        </div>
+
+                        <div id="active_abx_container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-6 empty:hidden"></div>
                         <div id="default_abx_container" class="space-y-6"></div>
                     </div>
 
@@ -355,19 +505,19 @@
         const defaultWards = ["Pediatrics", "Resuscitation / CCU", "Internal Medicine", "General Surgery", "Private Ward", "Neonatal Unit", "NICU", "ICU", "General Obstetrics & Gynecology", "Private Obstetrics & Gynecology", "Neurology & Neurosurgery", "Delivery Room", "Orthopedics"];
         
         let dataTable;
+        let chartAMR_instance = null;
+        let chartOrg_instance = null;
+        let chartSpec_instance = null;
+        let chartGen_instance = null;
 
         // --- 2. Custom Database Logic ---
-        function getCustomAntibiotics() {
-            return JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [];
-        }
+        function getCustomAntibiotics() { return JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || []; }
         function saveCustomAntibiotic(name, group) {
-            let custom = getCustomAntibiotics();
-            custom.push({name, group});
+            let custom = getCustomAntibiotics(); custom.push({name, group});
             localStorage.setItem('amr_custom_abx_v2', JSON.stringify(custom));
         }
         function deleteCustomAntibiotic(name) {
-            let custom = getCustomAntibiotics();
-            custom = custom.filter(a => a.name !== name);
+            let custom = getCustomAntibiotics(); custom = custom.filter(a => a.name !== name);
             localStorage.setItem('amr_custom_abx_v2', JSON.stringify(custom));
         }
 
@@ -385,15 +535,45 @@
             loadWardOptions();
             renderDefaultAntibiotics();
 
+            // Setup Select2
             $('.select2-enable').select2({ width: '100%', dropdownParent: $('#formModal') });
             $('#p_sample').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new sample..." });
             $('#p_ward').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new ward..." });
+            $('.select2-basic').select2({ width: '100%' }); // For Analytics
+
+            // Populate Analytics Organism Dropdown
+            const anaSelect = $('#ana_organism');
+            anaSelect.append(new Option("Select Organism...", ""));
+            Object.keys(orgMapExport).forEach(org => {
+                anaSelect.append(new Option(org, org));
+            });
             
             let today = new Date().toISOString().split('T')[0];
             $('#p_date').val(today);
+            
+            let currentYear = new Date().getFullYear();
+            $('#rep_start, #ana_start').val(`${currentYear}-01-01`);
+            $('#rep_end, #ana_end').val(`${currentYear}-12-31`);
 
             initDataTable();
         });
+
+        // --- Tabs Logic ---
+        function showTab(tabName) {
+            $('#viewRecords, #viewReport, #viewAnalytics').addClass('hidden');
+            $('#btnTabRecords, #btnTabReport, #btnTabAnalytics').removeClass('bg-blue-700 text-white border-blue-500').addClass('bg-transparent text-blue-100 border-blue-600');
+            
+            if (tabName === 'records') {
+                $('#viewRecords').removeClass('hidden');
+                $('#btnTabRecords').removeClass('bg-transparent text-blue-100 border-blue-600').addClass('bg-blue-700 text-white border-blue-500');
+            } else if (tabName === 'report') {
+                $('#viewReport').removeClass('hidden');
+                $('#btnTabReport').removeClass('bg-transparent text-blue-100 border-blue-600').addClass('bg-blue-700 text-white border-blue-500');
+            } else if (tabName === 'analytics') {
+                $('#viewAnalytics').removeClass('hidden');
+                $('#btnTabAnalytics').removeClass('bg-transparent text-blue-100 border-blue-600').addClass('bg-blue-700 text-white border-blue-500');
+            }
+        }
 
         // --- 4. Data Entry UI Functions ---
         function renderDefaultAntibiotics() {
@@ -622,7 +802,7 @@
             });
         }
 
-        // --- 5. Manage Dictionaries (Samples, Wards, Antibiotics) ---
+        // --- Manage Dictionaries ---
         function manageSamples() {
             let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
             let customSamples = savedSamples.filter(s => !defaultSamples.includes(s));
@@ -753,14 +933,248 @@
             }
         };
 
-        // --- 6. 100% Exact Ministry File Export using Fetch + XlsxPopulate ---
+        // --- 5. Internal Antibiogram View ---
+        function generateReport() {
+            const startDate = $('#rep_start').val();
+            const endDate = $('#rep_end').val();
+
+            if (!startDate || !endDate) { Swal.fire('Required', 'Please select both dates.', 'warning'); return; }
+
+            let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+            let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
+
+            if (records.length === 0) {
+                $('#reportContainer').html(`<div class="text-center text-gray-400 py-10 italic">No records found.</div>`);
+                return;
+            }
+
+            let stats = {};
+            Object.keys(orgMapExport).forEach(org => {
+                stats[org] = { total: 0, abx: {} };
+                Object.keys(abxMapExport).forEach(a => { stats[org].abx[a] = { tested: 0, resistant: 0 }; });
+            });
+
+            records.forEach(r => {
+                let orgName = r['Antibiogram organism'];
+                if (!orgName || !stats[orgName]) return;
+                
+                stats[orgName].total += 1;
+                Object.keys(abxMapExport).forEach(appAbx => {
+                    let result = r[appAbx];
+                    if (result && result !== '-' && result !== '') {
+                        stats[orgName].abx[appAbx].tested += 1;
+                        if (result === 'R') stats[orgName].abx[appAbx].resistant += 1;
+                    }
+                });
+            });
+
+            let html = `
+                <table id="reportTable" class="stripe row-border order-column cell-border w-full text-xs">
+                    <thead><tr><th rowspan="2" class="report-header-group">Organisms Isolated</th><th rowspan="2" class="report-header-group">Total Isolates</th>
+            `;
+            Object.keys(abxMapExport).forEach(a => { html += `<th colspan="2" class="bg-blue-600">${a}</th>`; });
+            html += `</tr><tr>`;
+            Object.keys(abxMapExport).forEach(a => { html += `<th>Tested (n)</th><th>% Resistance</th>`; });
+            html += `</tr></thead><tbody>`;
+
+            Object.keys(orgMapExport).forEach(org => {
+                let s = stats[org];
+                if (s.total === 0) return; // Hide empty rows in this view
+                html += `<tr><td class="font-bold bg-white whitespace-nowrap">${org}</td><td class="font-bold bg-blue-50 text-blue-900">${s.total}</td>`;
+                
+                Object.keys(abxMapExport).forEach(appAbx => {
+                    let abxStats = s.abx[appAbx];
+                    let pct = abxStats.tested > 0 ? Math.round((abxStats.resistant / abxStats.tested) * 100) : '';
+                    let tested = abxStats.tested > 0 ? abxStats.tested : '';
+                    html += `<td>${tested}</td><td class="font-semibold ${pct >= 50 ? 'text-red-600' : ''}">${pct !== '' ? pct + '%' : ''}</td>`;
+                });
+                html += `</tr>`;
+            });
+            html += `</tbody></table>`;
+            
+            $('#reportContainer').html(html);
+
+            if ($.fn.DataTable.isDataTable('#reportTable')) { $('#reportTable').DataTable().destroy(); }
+            reportTable = $('#reportTable').DataTable({
+                scrollX: true, scrollY: "60vh", scrollCollapse: true, paging: false, ordering: false,
+                fixedColumns: { leftColumns: 2 }, dom: 'rt'
+            });
+        }
+
+        // --- 6. Analytics & Dashboard (Charts & Wilson Score) ---
+        function wilsonScoreCI(r, n) {
+            if (n === 0) return { lower: 0, upper: 0 };
+            const p = r / n;
+            const z = 1.96; // 95% confidence
+            const z2 = z * z;
+            const denominator = 1 + z2 / n;
+            const center = p + z2 / (2 * n);
+            const spread = z * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n));
+            const lower = (center - spread) / denominator;
+            const upper = (center + spread) / denominator;
+            return { lower: Math.max(0, Math.round(lower * 100)), upper: Math.min(100, Math.round(upper * 100)) };
+        }
+
+        function generateAnalytics() {
+            const startDate = $('#ana_start').val();
+            const endDate = $('#ana_end').val();
+            const targetOrg = $('#ana_organism').val();
+
+            if (!startDate || !endDate) { Swal.fire('Required', 'Please select both dates.', 'warning'); return; }
+
+            let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+            let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
+
+            if (records.length === 0) {
+                $('#analyticsPlaceholder').removeClass('hidden').text('No records found in this date range.');
+                $('#analyticsContainer').addClass('hidden');
+                return;
+            }
+
+            $('#analyticsPlaceholder').addClass('hidden');
+            $('#analyticsContainer').removeClass('hidden');
+
+            // Data Structures for Charts
+            let orgCounts = {};
+            let specCounts = {};
+            let genderCounts = { "Male": 0, "Female": 0 };
+            
+            let amrStats = { total: 0, abx: {} };
+            let allAbxColumns = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
+            allAbxColumns.forEach(a => { amrStats.abx[a] = { tested: 0, resistant: 0 }; });
+
+            records.forEach(r => {
+                // Organism Prevalence
+                let org = r['Antibiogram organism'] || r['Selective organism'];
+                if(org) { orgCounts[org] = (orgCounts[org] || 0) + 1; }
+                
+                // Specimen
+                if(r.Sample) { specCounts[r.Sample] = (specCounts[r.Sample] || 0) + 1; }
+                
+                // Gender
+                if(r.Sex) { genderCounts[r.Sex] += 1; }
+
+                // AMR Profile for specific organism
+                if (targetOrg && r['Antibiogram organism'] === targetOrg) {
+                    amrStats.total += 1;
+                    allAbxColumns.forEach(abx => {
+                        let res = r[abx];
+                        if (res && res !== '-' && res !== '') {
+                            amrStats.abx[abx].tested += 1;
+                            if (res === 'R') amrStats.abx[abx].resistant += 1;
+                        }
+                    });
+                }
+            });
+
+            // 1. Plot AMR Profile & Table
+            if (targetOrg) {
+                $('#amrChartTitle').text(`AMR Profile: ${targetOrg} (N = ${amrStats.total})`);
+                if (amrStats.total < 30) {
+                    $('#amrClsiWarning').removeClass('hidden');
+                } else {
+                    $('#amrClsiWarning').addClass('hidden');
+                }
+
+                let labels = [];
+                let dataR = [];
+                let bgColors = [];
+                let tableHtml = '';
+
+                // Sort antibiotics by R% descending
+                let sortedAbx = Object.keys(amrStats.abx).filter(a => amrStats.abx[a].tested > 0).sort((a, b) => {
+                    let pctA = amrStats.abx[a].resistant / amrStats.abx[a].tested;
+                    let pctB = amrStats.abx[b].resistant / amrStats.abx[b].tested;
+                    return pctB - pctA;
+                });
+
+                sortedAbx.forEach(abx => {
+                    let s = amrStats.abx[abx];
+                    let p = Math.round((s.resistant / s.tested) * 100);
+                    let ci = wilsonScoreCI(s.resistant, s.tested);
+                    let isReliable = s.tested >= 30;
+
+                    labels.push(abx);
+                    dataR.push(p);
+                    bgColors.push(isReliable ? 'rgba(185, 28, 28, 0.85)' : 'rgba(156, 163, 175, 0.5)'); // Dark Red vs Faded Gray
+
+                    tableHtml += `
+                        <tr class="border-b hover:bg-gray-50 ${!isReliable ? 'text-gray-500' : 'font-semibold'}">
+                            <td class="px-4 py-2 border">${abx} ${!isReliable ? '<span class="text-red-500 font-bold">*</span>' : ''}</td>
+                            <td class="px-4 py-2 border text-center">${s.tested}</td>
+                            <td class="px-4 py-2 border text-center">${s.resistant}</td>
+                            <td class="px-4 py-2 border text-center">${p}%</td>
+                            <td class="px-4 py-2 border text-center">${ci.lower}% - ${ci.upper}%</td>
+                        </tr>
+                    `;
+                });
+
+                $('#ciTableBody').html(tableHtml);
+
+                if (chartAMR_instance) chartAMR_instance.destroy();
+                chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{ label: '% Resistance', data: dataR, backgroundColor: bgColors, borderWidth: 1, borderColor: '#fff' }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: '% Resistance' } } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            } else {
+                $('#amrChartTitle').text(`AMR Profile: (Please Select an Organism)`);
+                $('#ciTableBody').html('<tr><td colspan="5" class="text-center text-gray-400 py-4">No organism selected</td></tr>');
+                $('#amrClsiWarning').addClass('hidden');
+                if (chartAMR_instance) chartAMR_instance.destroy();
+            }
+
+            // 2. Plot Organism Prevalence (Top 10)
+            let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 10);
+            if(chartOrg_instance) chartOrg_instance.destroy();
+            chartOrg_instance = new Chart(document.getElementById('chartOrg'), {
+                type: 'doughnut',
+                data: {
+                    labels: sortedOrgs,
+                    datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#1e3a8a','#2563eb','#3b82f6','#60a5fa','#93c5fd','#cbf4f9','#8b5cf6','#a78bfa','#c4b5fd','#ddd6fe'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } }
+            });
+
+            // 3. Specimen Distribution
+            let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
+            if(chartSpec_instance) chartSpec_instance.destroy();
+            chartSpec_instance = new Chart(document.getElementById('chartSpecimen'), {
+                type: 'bar',
+                data: {
+                    labels: sortedSpecs,
+                    datasets: [{ label: 'Count', data: sortedSpecs.map(s=>specCounts[s]), backgroundColor: '#10b981' }]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            // 4. Gender Distribution
+            if(chartGen_instance) chartGen_instance.destroy();
+            chartGen_instance = new Chart(document.getElementById('chartGender'), {
+                type: 'pie',
+                data: {
+                    labels: ['Male', 'Female'],
+                    datasets: [{ data: [genderCounts['Male'], genderCounts['Female']], backgroundColor: ['#3b82f6', '#ec4899'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        // --- 7. 100% Exact Ministry File Export using Fetch + XlsxPopulate ---
         function showExportModal() {
             const today = new Date();
             const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
             const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
 
             Swal.fire({
-                title: 'Export to Antibiogram',
+                title: 'Export to Official Antibiogram',
                 html: `
                     <div class="text-left space-y-4">
                         <p class="text-sm text-gray-500 bg-blue-50 p-2 rounded">Select the date range. The system will automatically fetch 'Antibiogram_5.xlsx' from the server and populate it.</p>
@@ -797,18 +1211,11 @@
                 return;
             }
 
-            Swal.fire({ 
-                title: 'Generating Ministry File...', 
-                text: 'Fetching template and applying data directly...', 
-                allowOutsideClick: false, 
-                didOpen: () => { Swal.showLoading(); } 
-            });
+            Swal.fire({ title: 'Generating File...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
             try {
                 const response = await fetch('Antibiogram_5.xlsx');
-                if (!response.ok) {
-                    throw new Error("Could not find 'Antibiogram_5.xlsx' in the repository. Please ensure it is uploaded correctly next to the index.html file.");
-                }
+                if (!response.ok) throw new Error("Could not find 'Antibiogram_5.xlsx' near index.html.");
                 const arrayBuffer = await response.arrayBuffer();
 
                 let stats = {};
@@ -820,19 +1227,14 @@
                     if (!rowNum) return; 
 
                     if (!stats[orgName]) stats[orgName] = { total: 0, abx: {} };
-                    
                     stats[orgName].total += 1;
 
                     Object.keys(abxMapExport).forEach(appAbx => {
                         let result = r[appAbx];
                         if (result && result !== '-' && result !== '') {
                             if (!stats[orgName].abx[appAbx]) stats[orgName].abx[appAbx] = { tested: 0, resistant: 0 };
-                            
                             stats[orgName].abx[appAbx].tested += 1; 
-                            
-                            if (result === 'R') {
-                                stats[orgName].abx[appAbx].resistant += 1; 
-                            }
+                            if (result === 'R') stats[orgName].abx[appAbx].resistant += 1; 
                         }
                     });
                 });
@@ -842,17 +1244,13 @@
                 
                 Object.keys(stats).forEach(org => {
                     let rowNum = orgMapExport[org];
-                    if (rowNum) {
-                        
-                        if (stats[org].total > 0) {
-                            sheet.cell(rowNum, 3).value(stats[org].total);
-                        }
+                    if (rowNum && stats[org].total > 0) {
+                        sheet.cell(rowNum, 3).value(stats[org].total);
 
                         Object.keys(stats[org].abx).forEach(abx => {
                             let cols = abxMapExport[abx];
                             if (cols) {
                                 let s = stats[org].abx[abx];
-                                
                                 if (s.tested > 0) {
                                     sheet.cell(rowNum, cols.t).value(s.tested);
                                     sheet.cell(rowNum, cols.r).value(s.resistant);
@@ -868,7 +1266,7 @@
 
                 const blob = await workbook.outputAsync();
                 saveAs(blob, `Ministry_Antibiogram_${sDate}_to_${eDate}.xlsx`);
-                Swal.fire('Success!', 'The official file has been exported successfully.', 'success');
+                Swal.fire('Success!', 'File exported.', 'success');
 
             } catch (err) {
                 console.error(err);
