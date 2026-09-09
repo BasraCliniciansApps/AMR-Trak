@@ -139,6 +139,10 @@
                         <label class="block text-xs font-bold text-slate-500 mb-1">To Date</label>
                         <input type="date" id="ana_end" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
                     </div>
+                    <div class="w-full sm:flex-1 min-w-[200px]">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Wards</label>
+                        <select id="ana_ward" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="All Wards"></select>
+                    </div>
                     <div class="w-full sm:w-40">
                         <label class="block text-xs font-bold text-slate-500 mb-1">Sample</label>
                         <select id="ana_sample" class="w-full border rounded text-sm select2-basic">
@@ -155,6 +159,9 @@
                     </div>
 
                     <div class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                        <button onclick="clearAnalyticsFilters()" class="flex-1 sm:flex-none bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-lg shadow transition-all font-bold flex items-center justify-center gap-2" title="Clear Filters">
+                            🧹 Clear
+                        </button>
                         <button onclick="generateAnalytics()" class="flex-1 sm:flex-none bg-indigo-600 text-white px-6 py-2 rounded-lg shadow hover:bg-indigo-700 hover:shadow-lg transition-all font-bold">
                             Analyze
                         </button>
@@ -325,7 +332,10 @@
                         
                         <!-- Selective Organism -->
                         <div class="md:col-span-2 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 shadow-sm">
-                            <label class="block text-sm font-bold text-indigo-900 mb-2">Selective Organism (Lab Record)</label>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="block text-sm font-bold text-indigo-900">Selective Organism (Lab Record)</label>
+                                <button type="button" onclick="manageOrganisms()" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 transition-colors">⚙️ Manage</button>
+                            </div>
                             <select id="p_organism" dir="ltr" lang="en" class="w-full select2-enable" required>
                                 <option value="">Type name or shortcode (e.g., ECO, PAE)...</option>
                             </select>
@@ -633,6 +643,7 @@
             $('.select2-enable').select2({ width: '100%', dropdownParent: $('#formModal') });
             $('#p_sample').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new sample..." });
             $('#p_ward').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new ward..." });
+            $('#p_organism').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Type name or shortcode (e.g., ECO, PAE)..." });
             
             // Multiple Selects for Analytics
             $('.select2-multiple').select2({ width: '100%' });
@@ -649,8 +660,8 @@
             loadAnalyticsFilters();
 
             // Smart Cascading Listeners
-            $('#ana_start, #ana_end, #ana_sample').on('change', function() {
-                loadAnalyticsFilters(); // Updates available Orgs and Abx based on Date/Sample
+            $('#ana_start, #ana_end, #ana_sample, #ana_ward').on('change', function() {
+                loadAnalyticsFilters(); // Updates available Orgs and Abx based on Date/Sample/Ward
             });
 
             initDataTable();
@@ -712,8 +723,22 @@
 
         function loadBacteriaOptions() {
             const select = $('#p_organism');
-            const groups = { "Gram-Negative": [], "Gram-Positive": [], "Others": [], "Fungi": [] };
-            bacteriaLibrary.forEach(bact => { groups[bact.group].push(new Option(`${bact.name} (${bact.code})`, bact.name)); });
+            select.empty();
+            select.append(new Option("Type name or shortcode (e.g., ECO, PAE)...", ""));
+
+            const groups = { "Gram-Negative": [], "Gram-Positive": [], "Others": [], "Fungi": [], "Custom": [] };
+            
+            bacteriaLibrary.forEach(bact => {
+                const optionText = `${bact.name} (${bact.code})`;
+                groups[bact.group].push(new Option(optionText, bact.name));
+            });
+
+            // Load Custom Organisms
+            let savedOrgs = JSON.parse(localStorage.getItem('amr_organisms')) || [];
+            savedOrgs.forEach(org => {
+                groups["Custom"].push(new Option(org, org));
+            });
+
             for (const [groupName, options] of Object.entries(groups)) {
                 if (options.length > 0) {
                     const optgroup = $(`<optgroup label="${groupName}"></optgroup>`);
@@ -743,6 +768,7 @@
             const startDate = $('#ana_start').val();
             const endDate = $('#ana_end').val();
             const targetSample = $('#ana_sample').val();
+            const targetWards = $('#ana_ward').val() || [];
 
             let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
             
@@ -752,11 +778,40 @@
                 return r.Date >= startDate && r.Date <= endDate;
             });
 
+            // Populate Wards Dropdown dynamically based on registered wards
+            let currentWards = $('#ana_ward').val() || [];
+            $('#ana_ward').empty();
+            
+            let specialOptGroup = $('<optgroup label="Categories"></optgroup>');
+            specialOptGroup.append(new Option("Inpatient (All except Outpatient)", "Inpatient", currentWards.includes("Inpatient"), currentWards.includes("Inpatient")));
+            specialOptGroup.append(new Option("Outpatient", "Outpatient", currentWards.includes("Outpatient"), currentWards.includes("Outpatient")));
+            $('#ana_ward').append(specialOptGroup);
+
+            let wardsOptGroup = $('<optgroup label="Specific Wards"></optgroup>');
+            let allWards = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
+            allWards.forEach(w => {
+                let isSelected = currentWards.includes(w);
+                wardsOptGroup.append(new Option(w, w, isSelected, isSelected));
+            });
+            $('#ana_ward').append(wardsOptGroup);
+
             // Filter by Sample if selected
             if (targetSample) {
                 records = records.filter(r => r.Sample === targetSample);
             }
             
+            // Filter by Ward if selected
+            if (targetWards.length > 0) {
+                let inpatientWards = allWards.filter(w => w.toLowerCase() !== 'outpatient');
+                records = records.filter(r => {
+                    let rWard = r.Ward || '';
+                    if (targetWards.includes(rWard)) return true;
+                    if (targetWards.includes('Inpatient') && inpatientWards.includes(rWard)) return true;
+                    if (targetWards.includes('Outpatient') && rWard.toLowerCase() === 'outpatient') return true;
+                    return false;
+                });
+            }
+
             // 1. Update Sample Dropdown (Always shows all recorded samples in this date range)
             let uniqueSamples = new Set(records.map(r => r.Sample).filter(Boolean));
             let currentSample = $('#ana_sample').val();
@@ -768,7 +823,7 @@
                 $('#ana_sample').val(currentSample);
             }
 
-            // 2. Update Organisms (Based on Date + Sample)
+            // 2. Update Organisms (Based on Date + Sample + Ward)
             let orgs = new Set();
             let abxs = new Set();
             let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
@@ -913,6 +968,16 @@
                 $('#p_ward').append(new Option(currentWard, currentWard, true, true)).trigger('change');
             }
 
+            let currentOrganism = $('#p_organism').val();
+            let savedOrgs = JSON.parse(localStorage.getItem('amr_organisms')) || [];
+            let isDefaultOrg = bacteriaLibrary.some(b => b.name === currentOrganism);
+
+            if (currentOrganism && !isDefaultOrg && !savedOrgs.includes(currentOrganism)) {
+                savedOrgs.push(currentOrganism);
+                localStorage.setItem('amr_organisms', JSON.stringify(savedOrgs));
+                $('#p_organism').append(new Option(currentOrganism, currentOrganism, true, true)).trigger('change');
+            }
+
             let record = {
                 'Name': $('#p_name').val(), 
                 'Age': $('#p_age').val(), 
@@ -921,7 +986,7 @@
                 'Ward': currentWard || "-", 
                 'Sample': currentSample, 
                 'Date': $('#p_date').val(),
-                'Selective organism': $('#p_organism').val(),
+                'Selective organism': currentOrganism,
                 'Antibiogram organism': $('#p_antibiogram_org').val() 
             };
 
@@ -1058,6 +1123,27 @@
             manageWards();
         };
 
+        function manageOrganisms() {
+            let savedOrgs = JSON.parse(localStorage.getItem('amr_organisms')) || [];
+            if (savedOrgs.length === 0) { Swal.fire({ icon: 'info', title: 'No Custom Organisms' }); return; }
+            let html = '<div class="text-left space-y-2 mt-4">';
+            savedOrgs.forEach(org => {
+                html += `<div class="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <span class="font-medium text-slate-700">${org}</span>
+                    <button type="button" onclick="deleteCustomOrganism('${org.replace(/'/g, "\\'")}')" class="text-rose-500 font-bold bg-white px-3 py-1 rounded border hover:bg-rose-50 transition-colors">Delete</button></div>`;
+            });
+            html += '</div>';
+            Swal.fire({ title: 'Manage Custom Organisms', html: html, confirmButtonText: 'Done' });
+        }
+
+        window.deleteCustomOrganism = function(org) {
+            let savedOrgs = JSON.parse(localStorage.getItem('amr_organisms')) || [];
+            localStorage.setItem('amr_organisms', JSON.stringify(savedOrgs.filter(x => x !== org)));
+            loadBacteriaOptions(); 
+            if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters(); 
+            manageOrganisms();
+        };
+
         function manageAntibioticsDB() {
             let customAbx = getCustomAntibiotics();
             let groupsArr = Object.keys(abxGroups);
@@ -1173,6 +1259,29 @@
             { bg: 'rgba(162, 28, 175, 0.9)', lowBg: 'rgba(162, 28, 175, 0.3)' }, // Purple
             { bg: 'rgba(194, 65, 12, 0.9)', lowBg: 'rgba(194, 65, 12, 0.3)' }    // Orange
         ];
+
+        // --- دالة تصفير فلاتر التحليلات (Clear Analytics) ---
+        window.clearAnalyticsFilters = function() {
+            // 1. إعادة التواريخ للوضع الافتراضي
+            let currentYear = new Date().getFullYear();
+            $('#ana_start').val(`${currentYear}-01-01`);
+            $('#ana_end').val(`${currentYear}-12-31`);
+
+            // 2. تفريغ جميع القوائم المنسدلة
+            $('#ana_sample').val(null).trigger('change.select2');
+            $('#ana_organism').val(null).trigger('change.select2');
+            $('#ana_antibiotic').val(null).trigger('change.select2');
+
+            // 3. إعادة تحميل الخيارات (لإعادة ترتيبها حسب التواريخ)
+            loadAnalyticsFilters();
+
+            // 4. إخفاء المخططات وإظهار الواجهة الافتراضية
+            $('#analyticsContainer').addClass('hidden');
+            $('#analyticsPlaceholder').removeClass('hidden').html(`
+                <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
+                <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view insights.</p>
+            `);
+        };
 
         function generateAnalytics() {
             const startDate = $('#ana_start').val();
