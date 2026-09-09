@@ -374,6 +374,7 @@
                                 <select id="p_age_unit" dir="ltr" lang="en" class="w-1/2 border-slate-300 border rounded-lg p-2.5 h-[42px] focus:ring-2 focus:ring-teal-500 bg-white shadow-sm">
                                     <option value="Years">Years</option>
                                     <option value="Months">Months</option>
+                                    <option value="Days">Days</option>
                                 </select>
                             </div>
                         </div>
@@ -665,7 +666,6 @@
         let chartSpec_instance = null;
         let chartGen_instance = null;
         let chartTrend_instance = null;
-        let isUpdatingFilters = false;
 
         // --- Migration Script to update old records to new clean names ---
         function runDatabaseMigration() {
