@@ -38,9 +38,9 @@
         
         .dataTables_wrapper { font-size: 0.85rem; padding: 1.5rem; background: #fff; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); }
         .dataTables_wrapper .dataTables_filter input { border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.3rem 0.75rem; margin-left: 0.5rem; outline: none; transition: ring 0.2s; }
-        .dataTables_wrapper .dataTables_filter input:focus { ring: 2px solid #4f46e5; border-color: #4f46e5; }
-        .dt-buttons button { background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important; color: white !important; border-radius: 0.5rem !important; border: none !important; padding: 0.5rem 1rem !important; margin-bottom: 1rem; font-weight: 600 !important; transition: all 0.3s ease !important; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3) !important; }
-        .dt-buttons button:hover { transform: translateY(-1px) !important; box-shadow: 0 6px 8px -1px rgba(79, 70, 229, 0.4) !important; }
+        .dataTables_wrapper .dataTables_filter input:focus { ring: 2px solid #0d9488; border-color: #0d9488; }
+        .dt-buttons button { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%) !important; color: white !important; border-radius: 0.5rem !important; border: none !important; padding: 0.5rem 1rem !important; margin-bottom: 1rem; font-weight: 600 !important; transition: all 0.3s ease !important; box-shadow: 0 4px 6px -1px rgba(13, 148, 136, 0.3) !important; }
+        .dt-buttons button:hover { transform: translateY(-1px) !important; box-shadow: 0 6px 8px -1px rgba(13, 148, 136, 0.4) !important; }
         
         .select2-container .select2-selection--single { height: 42px; border: 1px solid #cbd5e1; border-radius: 0.5rem; display: flex; align-items: center; }
         .select2-container .select2-selection--multiple { min-height: 42px; border: 1px solid #cbd5e1; border-radius: 0.5rem; display: flex; align-items: center; }
@@ -76,31 +76,31 @@
 <body class="text-slate-800 antialiased">
 
     <!-- Top Navigation -->
-    <nav class="bg-gradient-to-r from-slate-900 to-indigo-900 text-white shadow-xl sticky top-0 z-40 no-print border-b border-indigo-500/30">
+    <nav class="bg-gradient-to-r from-slate-900 to-teal-900 text-white shadow-xl sticky top-0 z-40 no-print border-b border-teal-500/30">
         <div class="max-w-[98%] mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
             <div class="flex items-center gap-2">
                 <div class="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
-                    <svg class="w-6 h-6 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    <svg class="w-6 h-6 text-teal-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                 </div>
-                <h1 class="text-xl font-bold tracking-wider whitespace-nowrap bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">AMR Tracker</h1>
+                <h1 class="text-xl font-bold tracking-wider whitespace-nowrap bg-clip-text text-transparent bg-gradient-to-r from-white to-teal-200">AMR Tracker</h1>
             </div>
             
             <div class="w-full md:w-auto overflow-x-auto hide-scroll pb-1">
                 <div class="flex items-center gap-2 min-w-max">
-                    <button onclick="showTab('records')" id="btnTabRecords" class="bg-indigo-600 text-white border border-indigo-400/50 px-4 py-2 rounded-lg shadow-md font-semibold transition-all hover:bg-indigo-500 text-sm md:text-base flex items-center gap-2">
+                    <button onclick="showTab('records')" id="btnTabRecords" class="bg-teal-600 text-white border border-teal-400/50 px-4 py-2 rounded-lg shadow-md font-semibold transition-all hover:bg-teal-500 text-sm md:text-base flex items-center gap-2">
                         📋 Records
                     </button>
-                    <button onclick="showTab('analytics')" id="btnTabAnalytics" class="bg-white/5 text-indigo-100 border border-indigo-300/20 px-4 py-2 rounded-lg shadow font-semibold transition-all hover:bg-white/10 hover:border-indigo-300/40 text-sm md:text-base flex items-center gap-2">
+                    <button onclick="showTab('analytics')" id="btnTabAnalytics" class="bg-white/5 text-teal-100 border border-teal-300/20 px-4 py-2 rounded-lg shadow font-semibold transition-all hover:bg-white/10 hover:border-teal-300/40 text-sm md:text-base flex items-center gap-2">
                         📊 Analytics
                     </button>
-                    <div class="w-px bg-indigo-500/50 mx-1 h-6"></div>
+                    <div class="w-px bg-teal-500/50 mx-1 h-6"></div>
                     
                     <button onclick="showExportModal()" class="bg-gradient-to-r from-emerald-500 to-green-600 text-white border border-green-400/50 px-4 py-2 rounded-lg shadow-lg font-bold transition-all hover:from-emerald-400 hover:to-green-500 hover:scale-105 flex items-center gap-2 text-sm md:text-base">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                         Export Excel
                     </button>
                     
-                    <button onclick="openModal()" class="bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg font-bold hover:bg-blue-400 hover:scale-105 transition-all text-sm md:text-base flex items-center gap-1">
+                    <button onclick="openModal()" class="bg-cyan-600 text-white px-4 py-2 rounded-lg shadow-lg font-bold hover:bg-cyan-500 hover:scale-105 transition-all text-sm md:text-base flex items-center gap-1">
                         + New
                     </button>
                 </div>
@@ -112,7 +112,7 @@
     <main id="viewRecords" class="w-[98%] mx-auto mt-6 mb-10 block print-full">
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-2 overflow-hidden print-full">
             <div class="flex items-center gap-3 m-4 no-print border-b border-slate-100 pb-3">
-                <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600">📋</div>
+                <div class="bg-teal-100 p-2 rounded-lg text-teal-600">📋</div>
                 <h2 class="text-xl font-bold text-slate-700">Culture & Susceptibility Database</h2>
             </div>
             <table id="recordsTable" class="display nowrap w-full" style="width:100%"></table>
@@ -123,52 +123,58 @@
     <main id="viewAnalytics" class="w-[98%] mx-auto mt-6 mb-10 hidden print-full">
         <div class="bg-transparent print-full">
             
-            <!-- Main Analytics Controls Area -->
+            <!-- Main Analytics Controls Area (Redesigned for Vertical Layout) -->
             <div class="mb-6 border border-slate-200 no-print bg-white p-5 rounded-xl shadow-sm">
-                <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-5">
+                <div class="flex items-center gap-3 border-b border-slate-100 pb-4 mb-5">
+                    <div class="bg-teal-100 p-2.5 rounded-lg text-teal-600 shadow-sm text-xl">📊</div>
+                    <h2 class="text-xl font-bold text-slate-800">Dashboard & Filters</h2>
+                </div>
+
+                <div class="flex flex-col gap-4 w-full">
                     
-                    <div class="flex items-center gap-3 border-b xl:border-b-0 pb-4 xl:pb-0 w-full xl:w-auto shrink-0">
-                        <div class="bg-indigo-100 p-2.5 rounded-lg text-indigo-600 shadow-sm text-xl">📊</div>
-                        <h2 class="text-xl font-bold text-slate-800 whitespace-nowrap">Dashboard</h2>
+                    <!-- Date Row -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="w-full">
+                            <label class="block text-xs font-bold text-slate-500 mb-1">From Date</label>
+                            <input type="date" id="ana_start" class="w-full border border-slate-300 rounded-lg px-3 h-[42px] text-sm focus:ring-2 focus:ring-teal-500 outline-none transition-all">
+                        </div>
+                        <div class="w-full">
+                            <label class="block text-xs font-bold text-slate-500 mb-1">To Date</label>
+                            <input type="date" id="ana_end" class="w-full border border-slate-300 rounded-lg px-3 h-[42px] text-sm focus:ring-2 focus:ring-teal-500 outline-none transition-all">
+                        </div>
                     </div>
 
-                    <div class="flex-1 w-full flex flex-col lg:flex-row gap-4 lg:items-end justify-end">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 flex-1 w-full items-end">
-                            <div class="w-full">
-                                <label class="block text-xs font-bold text-slate-500 mb-1">From Date</label>
-                                <input type="date" id="ana_start" class="w-full border border-slate-300 rounded-lg px-2 h-[42px] text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
-                            </div>
-                            <div class="w-full">
-                                <label class="block text-xs font-bold text-slate-500 mb-1">To Date</label>
-                                <input type="date" id="ana_end" class="w-full border border-slate-300 rounded-lg px-2 h-[42px] text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
-                            </div>
-                            <div class="w-full">
-                                <label class="block text-xs font-bold text-slate-500 mb-1">Sample</label>
-                                <select id="ana_sample" class="w-full border rounded text-sm select2-basic">
-                                    <option value="">All Samples</option>
-                                </select>
-                            </div>
-                            <div class="w-full">
-                                <label class="block text-xs font-bold text-slate-500 mb-1">Organisms</label>
-                                <select id="ana_organism" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Organisms"></select>
-                            </div>
-                            <div class="w-full">
-                                <label class="block text-xs font-bold text-slate-500 mb-1">Antibiotics</label>
-                                <select id="ana_antibiotic" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Antibiotics"></select>
-                            </div>
-                        </div>
+                    <!-- Sample Row -->
+                    <div class="w-full">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Sample</label>
+                        <select id="ana_sample" class="w-full border rounded text-sm select2-basic">
+                            <option value="">All Samples</option>
+                        </select>
+                    </div>
 
-                        <div class="flex gap-2 w-full lg:w-auto shrink-0 mt-3 lg:mt-0">
-                            <button onclick="clearAnalyticsFilters()" class="flex-1 lg:flex-none bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 h-[42px] rounded-lg shadow transition-all font-bold flex items-center justify-center gap-2" title="Clear Filters">
-                                🧹 Clear
-                            </button>
-                            <button onclick="generateAnalytics()" class="flex-1 lg:flex-none bg-indigo-600 text-white px-5 py-2 h-[42px] rounded-lg shadow hover:bg-indigo-700 hover:shadow-lg transition-all font-bold">
-                                Analyze
-                            </button>
-                            <button onclick="window.print()" class="flex-1 lg:flex-none bg-slate-700 text-white px-4 py-2 h-[42px] rounded-lg shadow hover:bg-slate-800 transition-all font-bold flex items-center justify-center gap-2">
-                                🖨️ Print
-                            </button>
-                        </div>
+                    <!-- Organism Row -->
+                    <div class="w-full">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Organisms</label>
+                        <select id="ana_organism" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Organisms"></select>
+                    </div>
+
+                    <!-- Antibiotics Row -->
+                    <div class="w-full">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Antibiotics</label>
+                        <select id="ana_antibiotic" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Antibiotics"></select>
+                    </div>
+
+                    <!-- Buttons Row (Bottom Right) -->
+                    <div class="flex flex-wrap justify-end gap-3 mt-2 border-t border-slate-100 pt-4">
+                        <button onclick="clearAnalyticsFilters()" class="bg-rose-500 hover:bg-rose-600 text-white px-6 py-2 rounded-lg shadow transition-all font-bold flex items-center gap-2" title="Clear Filters">
+                            🧹 Clear
+                        </button>
+                        <button onclick="generateAnalytics()" class="bg-teal-600 text-white px-8 py-2 rounded-lg shadow-md hover:bg-teal-700 hover:shadow-lg transition-all font-bold">
+                            Analyze
+                        </button>
+                        <button onclick="window.print()" class="bg-slate-700 text-white px-6 py-2 rounded-lg shadow hover:bg-slate-800 transition-all font-bold flex items-center gap-2">
+                            🖨️ Print
+                        </button>
                     </div>
                 </div>
             </div>
@@ -178,7 +184,7 @@
                 <div class="mb-6 text-center no-print">
                     <h2 class="text-2xl font-bold text-slate-800" id="dashTitle">Antibiogram Analysis</h2>
                     <p class="text-sm text-slate-500 mt-1" id="dashSubtitle"></p>
-                    <p class="text-xs text-indigo-500 mt-1 font-medium bg-indigo-50 inline-block px-3 py-1 rounded-full">Use the 👁️ icon to hide/show sections before printing.</p>
+                    <p class="text-xs text-teal-600 mt-1 font-medium bg-teal-50 inline-block px-3 py-1 rounded-full">Use the 👁️ icon to hide/show sections before printing.</p>
                 </div>
 
                 <!-- Heatmap -->
@@ -187,7 +193,7 @@
                         <div>
                             <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
                                 Antibiogram Heatmap
-                                <button type="button" onclick="togglePrintSection('print_sect_heatmap')" class="text-slate-400 hover:text-indigo-600 no-print" title="Toggle Print Visibility">👁️</button>
+                                <button type="button" onclick="togglePrintSection('print_sect_heatmap')" class="text-slate-400 hover:text-teal-600 no-print" title="Toggle Print Visibility">👁️</button>
                             </h3>
                             <p class="text-xs text-slate-500">Color intensity indicates Resistance % (Dark Red = High Resistance). <span class="text-red-500 font-bold">*</span> indicates sample size &lt; 30.</p>
                         </div>
@@ -206,9 +212,9 @@
                 <div id="print_sect_amr" class="mb-8 chart-container border border-slate-200 rounded-xl p-4 md:p-6 bg-slate-50/50 shadow-sm transition-all hidden">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-slate-200 pb-3 gap-2">
                         <div>
-                            <h3 class="text-lg font-bold text-indigo-900 flex items-center gap-2">
+                            <h3 class="text-lg font-bold text-teal-900 flex items-center gap-2">
                                 AMR Profile Comparison
-                                <button type="button" onclick="togglePrintSection('print_sect_amr')" class="text-slate-400 hover:text-indigo-600 no-print" title="Toggle Print Visibility">👁️</button>
+                                <button type="button" onclick="togglePrintSection('print_sect_amr')" class="text-slate-400 hover:text-teal-600 no-print" title="Toggle Print Visibility">👁️</button>
                             </h3>
                             <p class="text-xs text-slate-500">Resistance breakdown based on your specific selections.</p>
                         </div>
@@ -229,7 +235,7 @@
                     <div class="mt-8 overflow-x-auto">
                         <h4 class="text-sm font-bold text-slate-700 mb-2">Statistical Summary (Wilson Score Interval)</h4>
                         <table class="w-full text-xs text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden border border-slate-200">
-                            <thead class="bg-indigo-50 text-indigo-900 uppercase tracking-wider">
+                            <thead class="bg-teal-50 text-teal-900 uppercase tracking-wider">
                                 <tr>
                                     <th class="px-4 py-3 border-b border-slate-200">Antibiotic</th>
                                     <th class="px-4 py-3 border-b border-slate-200">Organism</th>
@@ -252,7 +258,7 @@
                     <div class="chart-container border border-slate-200 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
                         <h3 class="text-sm font-bold text-center text-slate-700 mb-3 border-b border-slate-100 pb-2 flex justify-center items-center gap-2">
                             Organism Prevalence
-                            <button type="button" onclick="togglePrintSection('print_sect_dist')" class="text-slate-400 hover:text-indigo-600 no-print" title="Toggle Print Visibility">👁️</button>
+                            <button type="button" onclick="togglePrintSection('print_sect_dist')" class="text-slate-400 hover:text-teal-600 no-print" title="Toggle Print Visibility">👁️</button>
                         </h3>
                         <div class="relative h-[250px] w-full flex justify-center"><canvas id="chartOrg"></canvas></div>
                     </div>
@@ -273,22 +279,22 @@
             </div>
 
             <!-- ISOLATED: Trend Analysis Section -->
-            <div id="print_sect_trend" class="mt-12 pt-8 border-t-2 border-indigo-100 chart-container page-break transition-all">
+            <div id="print_sect_trend" class="mt-12 pt-8 border-t-2 border-teal-100 chart-container page-break transition-all hidden">
                 <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
                     <div>
-                        <h3 class="text-xl font-bold text-indigo-900 flex items-center gap-2">
+                        <h3 class="text-xl font-bold text-teal-900 flex items-center gap-2">
                             📈 Resistance Trends (Time-Series)
-                            <button type="button" onclick="togglePrintSection('print_sect_trend')" class="text-slate-400 hover:text-indigo-600 no-print" title="Toggle Print Visibility">👁️</button>
+                            <button type="button" onclick="togglePrintSection('print_sect_trend')" class="text-slate-400 hover:text-teal-600 no-print" title="Toggle Print Visibility">👁️</button>
                         </h3>
                         <p class="text-sm text-slate-500">Analyze resistance changes over Quarters (Seasonal) or complete Years independently.</p>
                     </div>
                 </div>
 
                 <!-- Dedicated Trend Controls -->
-                <div class="flex flex-wrap lg:flex-nowrap items-center gap-3 w-full no-print bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 shadow-sm mb-6">
+                <div class="flex flex-wrap lg:flex-nowrap items-center gap-3 w-full no-print bg-teal-50/50 p-4 rounded-xl border border-teal-100 shadow-sm mb-6">
                     <div class="w-full lg:w-auto">
                         <label class="block text-xs font-bold text-slate-500 mb-1">Trend Type</label>
-                        <select id="trend_type" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-indigo-500 outline-none bg-white" onchange="toggleTrendType()">
+                        <select id="trend_type" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-teal-500 outline-none bg-white" onchange="toggleTrendType()">
                             <option value="seasonal">Seasonal (Quarters)</option>
                             <option value="yearly">Year-over-Year (YoY)</option>
                         </select>
@@ -313,14 +319,14 @@
                     
                     <div class="w-full lg:w-48">
                         <label class="block text-xs font-bold text-slate-500 mb-1">Organism</label>
-                        <select id="trend_organism" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-indigo-500 outline-none bg-white"></select>
+                        <select id="trend_organism" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-teal-500 outline-none bg-white"></select>
                     </div>
                     <div class="w-full lg:flex-1">
                         <label class="block text-xs font-bold text-slate-500 mb-1">Antibiotics</label>
                         <select id="trend_antibiotic" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Antibiotics for Trend"></select>
                     </div>
                     <div class="w-full lg:w-auto self-end">
-                        <button onclick="renderTrendChart()" class="w-full bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-bold shadow hover:bg-indigo-700 transition-colors">
+                        <button onclick="renderTrendChart()" class="w-full bg-teal-600 text-white px-5 py-2 rounded-lg text-sm font-bold shadow hover:bg-teal-700 transition-colors">
                             Generate Trend
                         </button>
                     </div>
@@ -332,7 +338,7 @@
                 
                 <div class="mt-6 overflow-x-auto">
                     <table class="w-full text-xs text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden border border-slate-200">
-                        <thead class="bg-indigo-50 text-indigo-900 uppercase tracking-wider">
+                        <thead class="bg-teal-50 text-teal-900 uppercase tracking-wider">
                             <tr>
                                 <th class="px-4 py-3 border-b border-slate-200">Time Period</th>
                                 <th class="px-4 py-3 border-b border-slate-200">Antibiotic</th>
@@ -357,7 +363,7 @@
         <div class="bg-white rounded-2xl shadow-2xl w-11/12 md:w-11/12 lg:w-4/5 max-w-6xl max-h-[95vh] overflow-y-auto relative transform transition-all">
             <div class="px-4 py-3 md:px-6 md:py-4 border-b border-slate-200 flex justify-between items-center sticky top-0 bg-white z-20 shadow-sm">
                 <div class="flex items-center gap-2">
-                    <div class="bg-indigo-100 p-1.5 rounded-md text-indigo-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></div>
+                    <div class="bg-teal-100 p-1.5 rounded-md text-teal-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></div>
                     <h3 class="text-lg md:text-xl font-bold text-slate-800" id="modalTitle">Patient Record</h3>
                 </div>
                 <button onclick="closeModal()" class="text-slate-400 hover:text-red-500 font-bold text-3xl transition-colors focus:outline-none">&times;</button>
@@ -370,13 +376,13 @@
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-5">
                         <div class="md:col-span-1">
                             <label class="block text-sm font-bold text-slate-700 mb-1">Patient Name (الاسم)</label>
-                            <input type="text" id="p_name" required dir="rtl" lang="ar" placeholder="اكتب الاسم هنا..." class="w-full border-slate-300 border rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-right font-semibold bg-white shadow-sm transition-all">
+                            <input type="text" id="p_name" required dir="rtl" lang="ar" placeholder="اكتب الاسم هنا..." class="w-full border-slate-300 border rounded-lg p-2.5 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-right font-semibold bg-white shadow-sm transition-all">
                         </div>
                         <div class="md:col-span-1">
                             <label class="block text-sm font-bold text-slate-700 mb-1">Age</label>
                             <div class="flex gap-2">
-                                <input type="number" id="p_age" dir="ltr" lang="en" class="w-1/2 border-slate-300 border rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm transition-all">
-                                <select id="p_age_unit" dir="ltr" lang="en" class="w-1/2 border-slate-300 border rounded-lg p-2.5 h-[42px] focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm">
+                                <input type="number" id="p_age" dir="ltr" lang="en" class="w-1/2 border-slate-300 border rounded-lg p-2.5 focus:ring-2 focus:ring-teal-500 bg-white shadow-sm transition-all">
+                                <select id="p_age_unit" dir="ltr" lang="en" class="w-1/2 border-slate-300 border rounded-lg p-2.5 h-[42px] focus:ring-2 focus:ring-teal-500 bg-white shadow-sm">
                                     <option value="Years">Years</option>
                                     <option value="Months">Months</option>
                                     <option value="Days">Days</option>
@@ -385,36 +391,36 @@
                         </div>
                         <div class="md:col-span-1">
                             <label class="block text-sm font-bold text-slate-700 mb-1">Sex</label>
-                            <select id="p_sex" dir="ltr" lang="en" class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] bg-white shadow-sm focus:ring-2 focus:ring-indigo-500">
+                            <select id="p_sex" dir="ltr" lang="en" class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] bg-white shadow-sm focus:ring-2 focus:ring-teal-500">
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
                             </select>
                         </div>
                         <div class="md:col-span-1">
                             <label class="block text-sm font-bold text-slate-700 mb-1">Month / Year</label>
-                            <input type="month" id="p_date" dir="ltr" lang="en" required class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] bg-white shadow-sm focus:ring-2 focus:ring-indigo-500">
+                            <input type="month" id="p_date" dir="ltr" lang="en" required class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] bg-white shadow-sm focus:ring-2 focus:ring-teal-500">
                         </div>
 
                         <div class="md:col-span-2">
                             <div class="flex justify-between items-center mb-1">
                                 <label class="block text-sm font-bold text-slate-700">Ward</label>
-                                <button type="button" onclick="manageWards()" tabindex="-1" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 transition-colors">⚙️ Manage</button>
+                                <button type="button" onclick="manageWards()" tabindex="-1" class="text-xs text-teal-600 hover:text-teal-800 font-bold bg-teal-50 px-2 py-0.5 rounded border border-teal-100 transition-colors">⚙️ Manage</button>
                             </div>
                             <select id="p_ward" dir="ltr" lang="en" class="w-full select2-enable shadow-sm"></select>
                         </div>
                         <div class="md:col-span-2">
                             <div class="flex justify-between items-center mb-1">
                                 <label class="block text-sm font-bold text-slate-700">Sample</label>
-                                <button type="button" onclick="manageSamples()" tabindex="-1" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 transition-colors">⚙️ Manage</button>
+                                <button type="button" onclick="manageSamples()" tabindex="-1" class="text-xs text-teal-600 hover:text-teal-800 font-bold bg-teal-50 px-2 py-0.5 rounded border border-teal-100 transition-colors">⚙️ Manage</button>
                             </div>
                             <select id="p_sample" dir="ltr" lang="en" class="w-full select2-enable shadow-sm" required></select>
                         </div>
                         
                         <!-- Selective Organism -->
-                        <div class="md:col-span-2 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 shadow-sm">
+                        <div class="md:col-span-2 bg-teal-50/50 p-4 rounded-xl border border-teal-100 shadow-sm">
                             <div class="flex justify-between items-center mb-2">
-                                <label class="block text-sm font-bold text-indigo-900">Selective Organism (Lab Record)</label>
-                                <button type="button" onclick="manageOrganisms()" tabindex="-1" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 transition-colors">⚙️ Manage</button>
+                                <label class="block text-sm font-bold text-teal-900">Selective Organism (Lab Record)</label>
+                                <button type="button" onclick="manageOrganisms()" tabindex="-1" class="text-xs text-teal-600 hover:text-teal-800 font-bold bg-teal-50 px-2 py-0.5 rounded border border-teal-100 transition-colors">⚙️ Manage</button>
                             </div>
                             <select id="p_organism" dir="ltr" lang="en" class="w-full select2-enable" required>
                                 <option value="">Type name or shortcode (e.g., ECO, PAE)...</option>
@@ -422,8 +428,8 @@
                         </div>
 
                         <!-- Antibiogram Export Organism -->
-                        <div class="md:col-span-2 bg-purple-50/50 p-4 rounded-xl border border-purple-100 shadow-sm">
-                            <label class="block text-sm font-bold text-purple-900 mb-2">Antibiogram Organism List (Export)</label>
+                        <div class="md:col-span-2 bg-sky-50/50 p-4 rounded-xl border border-sky-100 shadow-sm">
+                            <label class="block text-sm font-bold text-sky-900 mb-2">Antibiogram Organism List (Export)</label>
                             <select id="p_antibiogram_org" dir="ltr" lang="en" class="w-full select2-enable">
                                 <option value="">Do not include in Antibiogram (Optional)...</option>
                                 <optgroup label="Gram Negative">
@@ -469,7 +475,7 @@
                                     <option value="Enterococcus gallinarum/E. casseliflavus">Enterococcus gallinarum/E. casseliflavus</option>
                                 </optgroup>
                             </select>
-                            <div class="mt-3 text-[11px] text-purple-600 font-medium">
+                            <div class="mt-3 text-[11px] text-sky-700 font-medium">
                                 * Select the exact category to calculate isolates in the Excel export.
                             </div>
                         </div>
@@ -483,7 +489,7 @@
                                 <div class="bg-rose-100 p-1.5 rounded-md text-rose-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg></div>
                                 <h4 class="font-bold text-slate-800 text-lg">Susceptibility Panel</h4>
                             </div>
-                            <button type="button" onclick="manageAntibioticsDB()" tabindex="-1" class="text-xs text-indigo-700 font-bold bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-4 py-2 rounded-lg shadow-sm transition-all w-full md:w-auto flex items-center justify-center gap-1">
+                            <button type="button" onclick="manageAntibioticsDB()" tabindex="-1" class="text-xs text-teal-700 font-bold bg-teal-50 hover:bg-teal-100 border border-teal-200 px-4 py-2 rounded-lg shadow-sm transition-all w-full md:w-auto flex items-center justify-center gap-1">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
                                 Database Manager
                             </button>
@@ -508,7 +514,7 @@
 
                     <div class="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-200 sticky bottom-0 bg-white/90 backdrop-blur py-4 z-10 px-2 -mx-2">
                         <button type="button" onclick="closeModal()" tabindex="-1" class="px-6 py-2 border border-slate-300 rounded-lg text-slate-600 font-bold hover:bg-slate-50 transition-colors">Cancel</button>
-                        <button type="submit" class="px-8 py-2 bg-indigo-600 text-white rounded-lg font-bold text-lg shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all">Save Record</button>
+                        <button type="submit" class="px-8 py-2 bg-teal-600 text-white rounded-lg font-bold text-lg shadow-lg hover:bg-teal-700 hover:shadow-xl transition-all">Save Record</button>
                     </div>
                 </form>
             </div>
@@ -747,7 +753,7 @@
             initDataTable();
 
             // ==========================================
-            // SMART KEYBOARD FIX: Auto-Open Select2 on TAB
+            // SMART KEYBOARD FIX: Auto-Open Select2 on TAB (Fixed for multiple select)[cite: 1]
             // ==========================================
             let isSelect2Closing = false;
             
@@ -761,6 +767,10 @@
             $(document).on('focus', '.select2-selection', function() {
                 if (isSelect2Closing) return;
                 let select = $(this).closest('.select2-container').siblings('select:enabled');
+                
+                // منع الفتح التلقائي لقوائم الاختيار المتعدد حتى لا تختفي فجأة[cite: 1]
+                if (select.prop('multiple')) return; 
+
                 if (select.length > 0 && !select.data('select2').isOpen()) {
                     select.select2('open');
                 }
@@ -780,15 +790,15 @@
         // --- Tabs Logic ---
         function showTab(tabName) {
             $('#viewRecords, #viewAnalytics').addClass('hidden');
-            $('#btnTabRecords, #btnTabAnalytics').removeClass('bg-indigo-600 text-white border-indigo-400/50').addClass('bg-white/5 text-indigo-100 border-indigo-300/20');
+            $('#btnTabRecords, #btnTabAnalytics').removeClass('bg-teal-600 text-white border-teal-400/50').addClass('bg-white/5 text-teal-100 border-teal-300/20');
             
             if (tabName === 'records') {
                 $('#viewRecords').removeClass('hidden');
-                $('#btnTabRecords').removeClass('bg-white/5 text-indigo-100 border-indigo-300/20').addClass('bg-indigo-600 text-white border-indigo-400/50');
+                $('#btnTabRecords').removeClass('bg-white/5 text-teal-100 border-teal-300/20').addClass('bg-teal-600 text-white border-teal-400/50');
             } else if (tabName === 'analytics') {
                 loadAnalyticsFilters();
                 $('#viewAnalytics').removeClass('hidden');
-                $('#btnTabAnalytics').removeClass('bg-white/5 text-indigo-100 border-indigo-300/20').addClass('bg-indigo-600 text-white border-indigo-400/50');
+                $('#btnTabAnalytics').removeClass('bg-white/5 text-teal-100 border-teal-300/20').addClass('bg-teal-600 text-white border-teal-400/50');
             }
         }
 
@@ -810,14 +820,14 @@
                 if(abxs.length === 0) continue;
                 html += `
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-5">
-                    <h5 class="text-sm font-bold bg-slate-50 text-indigo-900 px-4 py-2 border-b border-slate-200">${group}</h5>
+                    <h5 class="text-sm font-bold bg-slate-50 text-teal-900 px-4 py-2 border-b border-slate-200">${group}</h5>
                     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-0">`;
                 abxs.forEach(abx => {
                     const safeId = abx.replace(/[^a-zA-Z0-9]/g, '_');
                     html += `
-                        <div class="flex items-center justify-between border-r border-b border-slate-100 p-2.5 hover:bg-indigo-50/30 transition-colors">
+                        <div class="flex items-center justify-between border-r border-b border-slate-100 p-2.5 hover:bg-teal-50/30 transition-colors">
                             <span class="text-[11px] font-bold text-slate-700 truncate mr-2 w-2/3" title="${abx}">${abx}</span>
-                            <select data-abx="${abx}" id="default_abx_${safeId}" class="default-abx-select compact-dropdown border border-slate-300 rounded-md text-xs font-bold bg-white focus:ring-2 focus:ring-indigo-500 w-1/3 py-1.5 shadow-sm transition-colors">
+                            <select data-abx="${abx}" id="default_abx_${safeId}" class="default-abx-select compact-dropdown border border-slate-300 rounded-md text-xs font-bold bg-white focus:ring-2 focus:ring-teal-500 w-1/3 py-1.5 shadow-sm transition-colors">
                                 <option value="" class="text-slate-400">-</option>
                                 <option value="S" class="text-emerald-600 bg-emerald-50">S</option>
                                 <option value="I" class="text-amber-600 bg-amber-50">I</option>
@@ -1316,7 +1326,7 @@
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-3 rounded-lg border border-slate-200 mb-2 gap-2">
                         <div class="font-bold text-sm text-slate-800 truncate w-full sm:flex-1" title="${a.name}">${a.name}</div>
                         <div class="flex w-full sm:w-auto gap-2">
-                            <select onchange="updateAbxGroupInDB('${a.name.replace(/'/g, "\\'")}', this.value)" class="flex-1 sm:w-32 border border-slate-300 rounded p-1.5 text-xs focus:ring-indigo-500" dir="ltr" title="Change Group">
+                            <select onchange="updateAbxGroupInDB('${a.name.replace(/'/g, "\\'")}', this.value)" class="flex-1 sm:w-32 border border-slate-300 rounded p-1.5 text-xs focus:ring-teal-500" dir="ltr" title="Change Group">
                                 ${opts}
                             </select>
                             <button type="button" onclick="removeAbxFromDB('${a.name.replace(/'/g, "\\'")}')" class="text-rose-500 font-bold text-xs bg-white px-3 py-1.5 rounded border border-rose-200 hover:bg-rose-50 transition-colors">Delete</button>
@@ -1327,13 +1337,13 @@
 
             let html = `
                 <div class="text-left space-y-5">
-                    <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                        <h5 class="font-bold text-indigo-900 mb-3">Add New Antibiotic / Antifungal</h5>
-                        <input type="text" id="new_abx_name" placeholder="Name..." class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 focus:ring-2 focus:ring-indigo-500 outline-none" dir="ltr">
-                        <select id="new_abx_group" class="w-full border border-slate-300 p-2.5 rounded-lg mb-4 focus:ring-2 focus:ring-indigo-500 outline-none" dir="ltr">
+                    <div class="bg-teal-50 p-4 rounded-xl border border-teal-100">
+                        <h5 class="font-bold text-teal-900 mb-3">Add New Antibiotic / Antifungal</h5>
+                        <input type="text" id="new_abx_name" placeholder="Name..." class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 focus:ring-2 focus:ring-teal-500 outline-none" dir="ltr">
+                        <select id="new_abx_group" class="w-full border border-slate-300 p-2.5 rounded-lg mb-4 focus:ring-2 focus:ring-teal-500 outline-none" dir="ltr">
                             ${groupsOptions}
                         </select>
-                        <button type="button" onclick="addNewAbxToDB()" class="w-full bg-indigo-600 text-white font-bold py-2.5 rounded-lg shadow hover:bg-indigo-700 transition-colors">Add to Database</button>
+                        <button type="button" onclick="addNewAbxToDB()" class="w-full bg-teal-600 text-white font-bold py-2.5 rounded-lg shadow hover:bg-teal-700 transition-colors">Add to Database</button>
                         <p id="abx_error" class="text-rose-500 text-xs font-bold mt-2 hidden"></p>
                     </div>
                     <div>
@@ -1350,7 +1360,7 @@
                 html: html,
                 showConfirmButton: true,
                 confirmButtonText: 'Done',
-                confirmButtonColor: '#4f46e5',
+                confirmButtonColor: '#0d9488',
                 width: '600px'
             }).then(() => {
                 renderDefaultAntibiotics();
@@ -1886,7 +1896,7 @@
                 type: 'doughnut',
                 data: {
                     labels: sortedOrgs,
-                    datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#4f46e5','#3b82f6','#0ea5e9','#06b6d4','#14b8a6','#10b981','#84cc16','#eab308','#f59e0b','#f97316'] }]
+                    datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0d9488','#0ea5e9','#3b82f6','#06b6d4','#14b8a6','#10b981','#84cc16','#eab308','#f59e0b','#f97316'] }]
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } } }
             });
@@ -1897,7 +1907,7 @@
                 type: 'bar',
                 data: {
                     labels: sortedSpecs,
-                    datasets: [{ label: 'Isolates', data: sortedSpecs.map(s=>specCounts[s]), backgroundColor: '#6366f1', borderRadius: 4 }]
+                    datasets: [{ label: 'Isolates', data: sortedSpecs.map(s=>specCounts[s]), backgroundColor: '#0ea5e9', borderRadius: 4 }]
                 },
                 options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: {x: {grid: {color: '#f1f5f9'}}, y: {grid: {display: false}}} }
             });
@@ -1907,7 +1917,7 @@
                 type: 'pie',
                 data: {
                     labels: ['Male', 'Female'],
-                    datasets: [{ data: [genderCounts['Male'], genderCounts['Female']], backgroundColor: ['#3b82f6', '#ec4899'] }]
+                    datasets: [{ data: [genderCounts['Male'], genderCounts['Female']], backgroundColor: ['#0ea5e9', '#ec4899'] }]
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
             });
@@ -1926,15 +1936,15 @@
                 title: 'Export Official Antibiogram',
                 html: `
                     <div class="text-left space-y-4">
-                        <p class="text-sm text-slate-500 bg-indigo-50 p-3 rounded-lg border border-indigo-100">Select the date range. The system will automatically fetch <b>Antibiogram_5.xlsx</b> from the server, populate it accurately, and download it.</p>
+                        <p class="text-sm text-slate-500 bg-teal-50 p-3 rounded-lg border border-teal-100">Select the date range. The system will automatically fetch <b>Antibiogram_5.xlsx</b> from the server, populate it accurately, and download it.</p>
                         <div class="flex gap-4">
                             <div class="flex-1">
                                 <label class="block text-sm font-bold text-slate-700 mb-1">From Date</label>
-                                <input type="date" id="export_start" value="${firstDay}" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <input type="date" id="export_start" value="${firstDay}" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none">
                             </div>
                             <div class="flex-1">
                                 <label class="block text-sm font-bold text-slate-700 mb-1">To Date</label>
-                                <input type="date" id="export_end" value="${lastDay}" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                                <input type="date" id="export_end" value="${lastDay}" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none">
                             </div>
                         </div>
                     </div>
