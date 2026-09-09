@@ -107,25 +107,15 @@
                             <input type="date" id="p_date" dir="ltr" lang="en" required class="w-full border-gray-300 border rounded-md p-2 h-[42px]">
                         </div>
 
+                        <!-- Dynamic Ward Field -->
                         <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Ward</label>
-                            <select id="p_ward" dir="ltr" lang="en" class="w-full select2-enable">
-                                <option value="">Select Ward (Optional)...</option>
-                                <option value="Pediatrics">Pediatrics</option>
-                                <option value="Resuscitation / CCU">Resuscitation / CCU</option>
-                                <option value="Internal Medicine">Internal Medicine</option>
-                                <option value="General Surgery">General Surgery</option>
-                                <option value="Private Ward">Private Ward</option>
-                                <option value="Neonatal Unit">Neonatal Unit</option>
-                                <option value="NICU">NICU</option>
-                                <option value="ICU">ICU</option>
-                                <option value="General Obstetrics & Gynecology">General Obstetrics & Gynecology</option>
-                                <option value="Private Obstetrics & Gynecology">Private Obstetrics & Gynecology</option>
-                                <option value="Neurology & Neurosurgery">Neurology & Neurosurgery</option>
-                                <option value="Delivery Room">Delivery Room</option>
-                                <option value="Orthopedics">Orthopedics</option>
-                            </select>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-sm font-medium text-gray-600">Ward</label>
+                                <button type="button" onclick="manageWards()" class="text-xs text-red-500 font-semibold">⚙️ Manage</button>
+                            </div>
+                            <select id="p_ward" dir="ltr" lang="en" class="w-full"></select>
                         </div>
+
                         <div class="md:col-span-2">
                             <div class="flex justify-between items-center mb-1">
                                 <label class="block text-sm font-medium text-gray-600">Sample</label>
@@ -324,7 +314,6 @@
         };
         const abxList = Object.values(abxGroups).flat();
 
-        // 1-based indexing for XlsxPopulate. t = Tested Column (Sample Size), r = Resistant Column
         const abxMapExport = {
             "Ampicillin (AM)": {t:4, r:5}, "Flouxacillin": {t:7, r:8}, "Penicillin (P)": {t:10, r:11},
             "Ampicillin/Salbactam (SAM)": {t:13, r:14}, "Amoxicillin": {t:16, r:17}, "Oxacillin (OX)": {t:19, r:20},
@@ -363,19 +352,19 @@
         };
 
         const defaultSamples = ["Blood", "Urine", "Sputum", "Wound Swab", "CSF", "Pus", "Stool", "Aspirate"];
+        const defaultWards = ["Pediatrics", "Resuscitation / CCU", "Internal Medicine", "General Surgery", "Private Ward", "Neonatal Unit", "NICU", "ICU", "General Obstetrics & Gynecology", "Private Obstetrics & Gynecology", "Neurology & Neurosurgery", "Delivery Room", "Orthopedics"];
+        
         let dataTable;
 
-        // --- 2. Custom Antibiotics Database Logic ---
+        // --- 2. Custom Database Logic ---
         function getCustomAntibiotics() {
             return JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [];
         }
-
         function saveCustomAntibiotic(name, group) {
             let custom = getCustomAntibiotics();
             custom.push({name, group});
             localStorage.setItem('amr_custom_abx_v2', JSON.stringify(custom));
         }
-
         function deleteCustomAntibiotic(name) {
             let custom = getCustomAntibiotics();
             custom = custom.filter(a => a.name !== name);
@@ -393,10 +382,12 @@
 
             loadBacteriaOptions();
             loadSampleOptions();
+            loadWardOptions();
             renderDefaultAntibiotics();
 
             $('.select2-enable').select2({ width: '100%', dropdownParent: $('#formModal') });
             $('#p_sample').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new sample..." });
+            $('#p_ward').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new ward..." });
             
             let today = new Date().toISOString().split('T')[0];
             $('#p_date').val(today);
@@ -470,6 +461,14 @@
             savedSamples.forEach(sample => { sampleSelect.append(new Option(sample, sample)); });
         }
 
+        function loadWardOptions() {
+            let savedWards = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
+            const wardSelect = $('#p_ward');
+            wardSelect.empty(); 
+            wardSelect.append(new Option("Select Ward (Optional)...", ""));
+            savedWards.forEach(ward => { wardSelect.append(new Option(ward, ward)); });
+        }
+
         function quickSelectOrganism(organismName) { $('#p_organism').val(organismName).trigger('change'); }
 
         function initDataTable() {
@@ -527,6 +526,7 @@
 
         $('#entryForm').submit(function(e) {
             e.preventDefault();
+            
             let currentSample = $('#p_sample').val();
             let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
             if (currentSample && !savedSamples.includes(currentSample)) {
@@ -534,12 +534,19 @@
                 $('#p_sample').append(new Option(currentSample, currentSample, true, true)).trigger('change');
             }
 
+            let currentWard = $('#p_ward').val();
+            let savedWards = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
+            if (currentWard && !savedWards.includes(currentWard)) {
+                savedWards.push(currentWard); localStorage.setItem('amr_wards', JSON.stringify(savedWards));
+                $('#p_ward').append(new Option(currentWard, currentWard, true, true)).trigger('change');
+            }
+
             let record = {
                 'Name': $('#p_name').val(), 
                 'Age': $('#p_age').val(), 
                 'Age Unit': $('#p_age_unit').val(),
                 'Sex': $('#p_sex').val(),
-                'Ward': $('#p_ward').val() || "-", 
+                'Ward': currentWard || "-", 
                 'Sample': currentSample, 
                 'Date': $('#p_date').val(),
                 'Selective organism': $('#p_organism').val(),
@@ -571,7 +578,16 @@
             $('#p_age').val(record['Age']); 
             $('#p_age_unit').val(record['Age Unit'] || 'Years');
             $('#p_sex').val(record['Sex']).trigger('change');
-            if (record['Ward'] && record['Ward'] !== "-") { $('#p_ward').val(record['Ward']).trigger('change'); } else { $('#p_ward').val('').trigger('change'); }
+            
+            if (record['Ward'] && record['Ward'] !== "-") { 
+                if ($('#p_ward').find("option[value='" + record['Ward'] + "']").length) {
+                    $('#p_ward').val(record['Ward']).trigger('change'); 
+                } else {
+                    $('#p_ward').append(new Option(record['Ward'], record['Ward'], true, true)).trigger('change');
+                }
+            } else { 
+                $('#p_ward').val('').trigger('change'); 
+            }
             
             if ($('#p_sample').find("option[value='" + record['Sample'] + "']").length) { $('#p_sample').val(record['Sample']).trigger('change'); } 
             else { $('#p_sample').append(new Option(record['Sample'], record['Sample'], true, true)).trigger('change'); }
@@ -606,6 +622,7 @@
             });
         }
 
+        // --- 5. Manage Dictionaries (Samples, Wards, Antibiotics) ---
         function manageSamples() {
             let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
             let customSamples = savedSamples.filter(s => !defaultSamples.includes(s));
@@ -626,7 +643,26 @@
             loadSampleOptions(); manageSamples();
         };
 
-        // --- 5. Antibiotics DB Manager ---
+        function manageWards() {
+            let savedWards = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
+            let customWards = savedWards.filter(w => !defaultWards.includes(w));
+            if (customWards.length === 0) { Swal.fire({ icon: 'info', title: 'No Custom Wards' }); return; }
+            let html = '<div class="text-left space-y-2 mt-4">';
+            customWards.forEach(ward => {
+                html += `<div class="flex justify-between items-center bg-gray-100 p-3 rounded border">
+                    <span class="font-medium text-gray-700">${ward}</span>
+                    <button type="button" onclick="deleteCustomWard('${ward.replace(/'/g, "\\'")}')" class="text-red-500 font-bold bg-white px-3 py-1 rounded border">Delete</button></div>`;
+            });
+            html += '</div>';
+            Swal.fire({ title: 'Manage Custom Wards', html: html, confirmButtonText: 'Done' });
+        }
+
+        window.deleteCustomWard = function(ward) {
+            let w = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
+            localStorage.setItem('amr_wards', JSON.stringify(w.filter(x => x !== ward)));
+            loadWardOptions(); manageWards();
+        };
+
         function manageAntibioticsDB() {
             let customAbx = getCustomAntibiotics();
             let groupsArr = Object.keys(abxGroups);
