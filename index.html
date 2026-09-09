@@ -12,14 +12,11 @@
     <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/4.3.0/css/fixedColumns.dataTables.min.css">
-    
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
-    <script src="https://cdn.datatables.net/fixedcolumns/4.3.0/js/dataTables.fixedColumns.min.js"></script>
 
     <!-- Select2 -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -27,7 +24,7 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
-    <!-- XlsxPopulate (For flawless template manipulation without breaking formulas) -->
+    <!-- XlsxPopulate -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx-populate/1.21.0/xlsx-populate.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
@@ -39,10 +36,6 @@
         .select2-container .select2-selection--single { height: 42px; border: 1px solid #d1d5db; border-radius: 0.375rem; display: flex; align-items: center; }
         .select2-container { z-index: 9999 !important; }
         select.compact-dropdown { -webkit-appearance: none; -moz-appearance: none; text-align: center; cursor: pointer; }
-        
-        #reportTable th { background-color: #1e3a8a; color: white; border: 1px solid #3b82f6; text-align: center; font-size: 0.8rem; padding: 8px;}
-        #reportTable td { border: 1px solid #e5e7eb; text-align: center; padding: 6px; }
-        .report-header-group { background-color: #1e40af !important; font-weight: bold; }
     </style>
 </head>
 <body class="text-gray-800 font-sans antialiased">
@@ -52,6 +45,7 @@
         <div class="max-w-[98%] mx-auto px-4 py-3 flex justify-between items-center">
             <h1 class="text-2xl font-bold tracking-wide">AMR Tracker</h1>
             <div class="space-x-3 flex items-center">
+                <!-- Export Button -->
                 <button onclick="showExportModal()" class="bg-green-600 text-white border-2 border-green-500 px-5 py-2 rounded shadow-md font-bold transition hover:bg-green-700 flex items-center gap-2">
                     📥 Export to Antibiogram
                 </button>
@@ -86,7 +80,6 @@
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
                         <div class="md:col-span-1">
                             <label class="block text-sm font-bold text-gray-700 mb-1">Patient Name (الاسم)</label>
-                            <!-- تم إضافة dir="rtl" و lang="ar" لتهيئة الحقل للغة العربية -->
                             <input type="text" id="p_name" required dir="rtl" lang="ar" placeholder="اكتب الاسم هنا..." class="w-full border-gray-300 border rounded-md p-2 focus:ring-blue-500 text-right font-semibold bg-blue-50">
                         </div>
                         <div class="md:col-span-1">
@@ -199,27 +192,15 @@
                                 * Select the exact category to calculate isolates and resistance in the Antibiogram Excel file.
                             </div>
                         </div>
-
                     </div>
 
                     <!-- Antibiotics Master Panel -->
                     <div class="border border-gray-200 rounded-lg p-5 bg-gray-50 mt-6 shadow-inner">
                         <div class="flex justify-between items-center mb-4 border-b border-gray-300 pb-2">
                             <h4 class="font-bold text-gray-800 text-lg">Antibiotics Susceptibility Panel</h4>
-                            <button type="button" onclick="manageAntibiotics()" class="text-xs text-red-500 font-semibold bg-red-50 px-2 py-1 rounded">⚙️ Manage Custom</button>
+                            <button type="button" onclick="manageAntibioticsDB()" class="text-xs text-blue-700 font-bold bg-blue-100 hover:bg-blue-200 px-4 py-1.5 rounded shadow-sm transition">⚙️ Manage Database</button>
                         </div>
                         
-                        <div class="flex gap-2 mb-6 bg-white p-3 rounded border">
-                            <div class="flex-1">
-                                <label class="block text-xs font-bold text-gray-500 mb-1">Add Custom Antibiotic (if not found below)</label>
-                                <select id="abx_selector" dir="ltr" lang="en" class="w-full">
-                                    <option value="">Type custom antibiotic name...</option>
-                                </select>
-                            </div>
-                            <button type="button" onclick="addAntibiotic()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-semibold mt-5 shadow">+ Add</button>
-                        </div>
-
-                        <div id="active_abx_container" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 mb-6 empty:hidden"></div>
                         <div id="default_abx_container" class="space-y-6"></div>
                     </div>
 
@@ -333,7 +314,6 @@
         };
         const abxList = Object.values(abxGroups).flat();
 
-        // 1-based indexing for XlsxPopulate. t = Tested Column (Sample Size), r = Resistant Column
         const abxMapExport = {
             "Ampicillin (AM)": {t:4, r:5}, "Flouxacillin": {t:7, r:8}, "Penicillin (P)": {t:10, r:11},
             "Ampicillin/Salbactam (SAM)": {t:13, r:14}, "Amoxicillin": {t:16, r:17}, "Oxacillin (OX)": {t:19, r:20},
@@ -372,18 +352,41 @@
         };
 
         const defaultSamples = ["Blood", "Urine", "Sputum", "Wound Swab", "CSF", "Pus", "Stool", "Aspirate"];
-        let dataTable; let selectedAbxMap = {}; 
+        let dataTable;
 
-        // --- 2. Initialization ---
+        // --- 2. Custom Antibiotics Database Logic ---
+        function getCustomAntibiotics() {
+            return JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [];
+        }
+
+        function saveCustomAntibiotic(name, group) {
+            let custom = getCustomAntibiotics();
+            custom.push({name, group});
+            localStorage.setItem('amr_custom_abx_v2', JSON.stringify(custom));
+        }
+
+        function deleteCustomAntibiotic(name) {
+            let custom = getCustomAntibiotics();
+            custom = custom.filter(a => a.name !== name);
+            localStorage.setItem('amr_custom_abx_v2', JSON.stringify(custom));
+        }
+
+        // --- 3. Initialization ---
         $(document).ready(function() {
+            // Migration script for older tags format
+            let oldCustom = JSON.parse(localStorage.getItem('amr_custom_abx'));
+            if (oldCustom && oldCustom.length > 0 && typeof oldCustom[0] === 'string') {
+                let migrated = oldCustom.map(a => ({ name: a, group: 'Others' }));
+                localStorage.setItem('amr_custom_abx_v2', JSON.stringify(migrated));
+                localStorage.removeItem('amr_custom_abx');
+            }
+
             loadBacteriaOptions();
             loadSampleOptions();
-            loadAntibioticOptions();
             renderDefaultAntibiotics();
 
             $('.select2-enable').select2({ width: '100%', dropdownParent: $('#formModal') });
             $('#p_sample').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Select or type new sample..." });
-            $('#abx_selector').select2({ width: '100%', dropdownParent: $('#formModal'), tags: true, placeholder: "Type custom antibiotic name..." });
             
             let today = new Date().toISOString().split('T')[0];
             $('#p_date').val(today);
@@ -391,10 +394,23 @@
             initDataTable();
         });
 
-        // --- 3. Data Entry UI Functions ---
+        // --- 4. Data Entry UI Functions ---
         function renderDefaultAntibiotics() {
+            // Merge defaults with custom DB seamlessly
+            let currentGroups = JSON.parse(JSON.stringify(abxGroups));
+            let customAbx = getCustomAntibiotics();
+            customAbx.forEach(c => {
+                if(currentGroups[c.group]) {
+                    currentGroups[c.group].push(c.name);
+                } else {
+                    if(!currentGroups["Others"]) currentGroups["Others"] = [];
+                    currentGroups["Others"].push(c.name);
+                }
+            });
+
             let html = '';
-            for (const [group, abxs] of Object.entries(abxGroups)) {
+            for (const [group, abxs] of Object.entries(currentGroups)) {
+                if(abxs.length === 0) continue;
                 html += `
                 <div class="bg-white rounded border border-gray-200 shadow-sm overflow-hidden mb-4">
                     <h5 class="text-sm font-bold bg-blue-100 text-blue-800 px-3 py-1.5 border-b border-blue-200">${group}</h5>
@@ -445,14 +461,6 @@
             savedSamples.forEach(sample => { sampleSelect.append(new Option(sample, sample)); });
         }
 
-        function loadAntibioticOptions() {
-            let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
-            const selector = $('#abx_selector');
-            selector.empty();
-            selector.append(new Option("Type custom antibiotic name...", ""));
-            savedCustomAbx.forEach(abx => { selector.append(new Option(abx, abx)); });
-        }
-
         function quickSelectOrganism(organismName) { $('#p_organism').val(organismName).trigger('change'); }
 
         function initDataTable() {
@@ -472,8 +480,8 @@
                 { data: 'Antibiogram organism', title: 'Antibiogram Organism', defaultContent: '-' } 
             ];
 
-            let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
-            let allAbxColumns = [...new Set([...abxList, ...savedCustomAbx])];
+            let customAbx = getCustomAntibiotics();
+            let allAbxColumns = [...abxList, ...customAbx.map(a=>a.name)];
             allAbxColumns.forEach(abx => { cols.push({ data: abx, title: abx, defaultContent: '-' }); });
 
             if ($.fn.DataTable.isDataTable('#recordsTable')) { $('#recordsTable').DataTable().destroy(); }
@@ -491,54 +499,17 @@
 
         function openModal() {
             $('#entryForm')[0].reset(); $('#editIndex').val('-1'); $('#p_date').val(new Date().toISOString().split('T')[0]);
-            $('#active_abx_container').empty(); selectedAbxMap = {};
             
             $('#p_ward').val('').trigger('change'); $('#p_sex').val('Male').trigger('change');
             $('#p_sample').val(null).trigger('change'); 
             $('#p_organism').val(null).trigger('change');
             $('#p_antibiogram_org').val('').trigger('change'); 
-            $('#abx_selector').val(null).trigger('change');
             $('.default-abx-select').val('').removeClass('bg-green-100 bg-yellow-100 bg-red-100');
             
             $('#modalTitle').text('Add New Patient Record'); $('#formModal').removeClass('hidden');
         }
 
         function closeModal() { $('#formModal').addClass('hidden'); }
-
-        function addAntibiotic(abxName = null, result = 'S') {
-            const abx = abxName || $('#abx_selector').val();
-            if(!abx) return;
-
-            let isDefault = false;
-            $('.default-abx-select').each(function() {
-                if ($(this).attr('data-abx').toLowerCase() === abx.toLowerCase()) {
-                    $(this).val(result).trigger('change');
-                    isDefault = true;
-                }
-            });
-
-            if (isDefault) { $('#abx_selector').val(null).trigger('change'); return; }
-
-            if (selectedAbxMap[abx]) return; 
-            selectedAbxMap[abx] = result;
-            const safeId = abx.replace(/[^a-zA-Z0-9\s]/g, '_').trim();
-            const html = `
-                <div id="row_${safeId}" class="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-md p-2 shadow-sm">
-                    <span class="text-xs font-semibold text-blue-900 truncate w-3/5" title="${abx}">${abx}</span>
-                    <select class="border border-blue-300 rounded-md p-1 text-xs font-bold bg-white focus:ring-blue-500 w-1/4 text-center" onchange="updateAbxResult('${abx}', this.value)">
-                        <option value="S" class="text-green-600" ${result==='S'?'selected':''}>S</option>
-                        <option value="I" class="text-yellow-600" ${result==='I'?'selected':''}>I</option>
-                        <option value="R" class="text-red-600" ${result==='R'?'selected':''}>R</option>
-                    </select>
-                    <button type="button" onclick="removeAntibiotic('${abx}', '${safeId}')" class="text-red-500 font-bold px-2">&times;</button>
-                </div>
-            `;
-            $('#active_abx_container').append(html);
-            $('#abx_selector').val(null).trigger('change');
-        }
-
-        function updateAbxResult(abx, val) { selectedAbxMap[abx] = val; }
-        function removeAntibiotic(abx, safeId) { delete selectedAbxMap[abx]; $(`#row_${safeId}`).remove(); }
 
         $('#entryForm').submit(function(e) {
             e.preventDefault();
@@ -549,9 +520,6 @@
                 $('#p_sample').append(new Option(currentSample, currentSample, true, true)).trigger('change');
             }
 
-            let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
-            let newAbxAdded = false;
-
             let record = {
                 'Name': $('#p_name').val(), 'Age': $('#p_age').val(), 'Sex': $('#p_sex').val(),
                 'Ward': $('#p_ward').val() || "-", 'Sample': currentSample, 'Date': $('#p_date').val(),
@@ -561,17 +529,10 @@
 
             if (!record['Selective organism']) { Swal.fire({ icon: 'error', title: 'Oops...', text: 'Please select an organism.' }); return; }
 
-            Object.keys(selectedAbxMap).forEach(abx => {
-                record[abx] = selectedAbxMap[abx];
-                if (!abxList.includes(abx) && !savedCustomAbx.includes(abx)) { savedCustomAbx.push(abx); newAbxAdded = true; }
-            });
-
             $('.default-abx-select').each(function() {
                 const val = $(this).val();
                 if (val && val !== "") { record[$(this).attr('data-abx')] = val; }
             });
-
-            if (newAbxAdded) { localStorage.setItem('amr_custom_abx', JSON.stringify(savedCustomAbx)); loadAntibioticOptions(); }
 
             let records = JSON.parse(localStorage.getItem('amr_records')) || [];
             let editIndex = $('#editIndex').val();
@@ -604,13 +565,11 @@
                 $('#p_antibiogram_org').val('').trigger('change');
             }
 
-            abxList.forEach(abx => {
-                if(record[abx] && record[abx] !== '-') { $(`.default-abx-select[data-abx="${abx}"]`).val(record[abx]).trigger('change'); }
-            });
+            let customAbx = getCustomAntibiotics();
+            let allAbxColumns = [...abxList, ...customAbx.map(a=>a.name)];
 
-            let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
-            savedCustomAbx.forEach(abx => {
-                if(record[abx] && record[abx] !== '-') { addAntibiotic(abx, record[abx]); }
+            allAbxColumns.forEach(abx => {
+                if(record[abx] && record[abx] !== '-') { $(`.default-abx-select[data-abx="${abx}"]`).val(record[abx]).trigger('change'); }
             });
         }
 
@@ -645,26 +604,79 @@
             loadSampleOptions(); manageSamples();
         };
 
-        function manageAntibiotics() {
-            let savedCustomAbx = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
-            if (savedCustomAbx.length === 0) { Swal.fire({ icon: 'info', title: 'No Custom Antibiotics' }); return; }
-            let html = '<div class="text-left space-y-2 mt-4">';
-            savedCustomAbx.forEach(abx => {
-                html += `<div class="flex justify-between items-center bg-gray-100 p-3 rounded border">
-                    <span class="font-medium text-gray-700 truncate w-3/4">${abx}</span>
-                    <button type="button" onclick="deleteCustomAntibiotic('${abx.replace(/'/g, "\\'")}')" class="text-red-500 font-bold bg-white px-3 py-1 rounded border">Delete</button></div>`;
+        // --- 5. Antibiotics DB Manager ---
+        function manageAntibioticsDB() {
+            let customAbx = getCustomAntibiotics();
+            let groupsOptions = Object.keys(abxGroups).map(g => `<option value="${g}">${g}</option>`).join('');
+            
+            let listHtml = customAbx.length === 0 ? '<p class="text-xs text-gray-500">No custom antibiotics added yet.</p>' : 
+                customAbx.map(a => `
+                    <div class="flex justify-between items-center bg-gray-100 px-3 py-2 rounded border mb-2">
+                        <div><span class="font-bold text-sm text-gray-800">${a.name}</span> <span class="text-[10px] text-gray-500">(${a.group})</span></div>
+                        <button type="button" onclick="removeAbxFromDB('${a.name.replace(/'/g, "\\'")}')" class="text-red-500 font-bold text-xs bg-white px-2 py-1 rounded border hover:bg-red-50 transition">Delete</button>
+                    </div>
+                `).join('');
+
+            let html = `
+                <div class="text-left space-y-4">
+                    <div class="bg-blue-50 p-4 rounded border border-blue-200">
+                        <h5 class="font-bold text-blue-800 mb-2">Add New Antibiotic</h5>
+                        <input type="text" id="new_abx_name" placeholder="Antibiotic Name..." class="w-full border border-gray-300 p-2 rounded mb-2 focus:ring-blue-500" dir="ltr">
+                        <select id="new_abx_group" class="w-full border border-gray-300 p-2 rounded mb-3 focus:ring-blue-500" dir="ltr">
+                            ${groupsOptions}
+                        </select>
+                        <button type="button" onclick="addNewAbxToDB()" class="w-full bg-blue-600 text-white font-bold py-2 rounded shadow hover:bg-blue-700 transition">Add to Database</button>
+                        <p id="abx_error" class="text-red-500 text-xs font-bold mt-2 hidden"></p>
+                    </div>
+                    <div>
+                        <h5 class="font-bold text-gray-700 mb-2 border-b pb-1">Custom Antibiotics List</h5>
+                        <div id="custom_abx_list" class="max-h-48 overflow-y-auto pr-2">
+                            ${listHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            Swal.fire({
+                title: 'Antibiotics Database',
+                html: html,
+                showConfirmButton: true,
+                confirmButtonText: 'Done',
+                width: '600px'
+            }).then(() => {
+                renderDefaultAntibiotics();
+                initDataTable();
             });
-            html += '</div>';
-            Swal.fire({ title: 'Manage Custom Antibiotics', html: html, confirmButtonText: 'Done' });
         }
 
-        window.deleteCustomAntibiotic = function(abx) {
-            let s = JSON.parse(localStorage.getItem('amr_custom_abx')) || [];
-            localStorage.setItem('amr_custom_abx', JSON.stringify(s.filter(a => a !== abx)));
-            loadAntibioticOptions(); initDataTable(); manageAntibiotics();
+        window.addNewAbxToDB = function() {
+            let name = document.getElementById('new_abx_name').value.trim();
+            let group = document.getElementById('new_abx_group').value;
+            let errorEl = document.getElementById('abx_error');
+            
+            if(!name) { 
+                errorEl.innerText = 'Name is required!'; 
+                errorEl.classList.remove('hidden');
+                return; 
+            }
+            
+            let allCurrent = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
+            if(allCurrent.map(a=>a.toLowerCase()).includes(name.toLowerCase())) {
+                errorEl.innerText = 'Antibiotic already exists!';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            saveCustomAntibiotic(name, group);
+            manageAntibioticsDB(); 
         };
 
-        // --- 4. 100% Exact Ministry File Export using Fetch + XlsxPopulate ---
+        window.removeAbxFromDB = function(name) {
+            deleteCustomAntibiotic(name);
+            manageAntibioticsDB();
+        };
+
+        // --- 6. 100% Exact Ministry File Export using Fetch + XlsxPopulate ---
         function showExportModal() {
             const today = new Date();
             const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
