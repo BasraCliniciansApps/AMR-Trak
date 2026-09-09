@@ -123,7 +123,7 @@
     <main id="viewAnalytics" class="w-[98%] mx-auto mt-6 mb-10 hidden print-full">
         <div class="bg-transparent print-full">
             
-            <!-- Main Analytics Controls Area (Redesigned for Vertical Layout) -->
+            <!-- Main Analytics Controls Area (Vertical Layout) -->
             <div class="mb-6 border border-slate-200 no-print bg-white p-5 rounded-xl shadow-sm">
                 <div class="flex items-center gap-3 border-b border-slate-100 pb-4 mb-5">
                     <div class="bg-teal-100 p-2.5 rounded-lg text-teal-600 shadow-sm text-xl">📊</div>
@@ -609,39 +609,41 @@
             { name: "Candida auris", code: "CAU", group: "Fungi" }
         ];
 
+        // تم تنظيف الأسماء وإزالة الاختصارات بالكامل
         const abxGroups = {
-            "Penicillins": ["Benzylpenicillin", "Penicillin (P)", "Ampicillin (AM)", "Amoxicillin", "Cloxacillin", "Oxacillin (OX)", "Amoxicillin/ Clavulonic acid (AMC)", "Ampicillin/Salbactam (SAM)", "Amoxicillin/ Salbactam", "Piperacillin (PR)", "Piperacillin / Tazobactam (TPZ)", "Ticarcillin (TIC)", "Ticarcillin/Clavulonic acid (TIM)"],
-            "Cephalosporins": ["Cefazolin", "Cefoxitin", "Cefuroxime (CXM)", "Cefixime (CFM)", "Ceftriaxone (CRO)", "Cefotaxim (CTX)", "Ceftazidime (CAZ)", "Cefepime (FEP)", "Cefaclor", "Cefpodoxime", "Cefdinir", "Cephalothin", "Cefoxitin screen"],
-            "Carbapenems & Monobactams": ["Imipenem (IMP)", "Meropenem (MEM)", "Ertapenem", "Aztreonam (ATM)"],
-            "Aminoglycosides": ["Amikacin (AK)", "Gentamicin (CN)", "Tobramycin (TOB)", "Netlimicin (NET)"],
-            "Fluoroquinolones": ["Nalidixic acid (NA)", "Ciprofloxacin (CIP)", "Levofloxacin (LEV)", "Moxifloxacin", "Ofloxacin (OFX)", "Norfloxacin (ROR)"],
-            "Macrolides & Lincosamides": ["Erythromycin (E)", "Azithromycin (AZM)", "Clarithromycin (CLR)", "Clindamycin (DA)", "Inducible Clindamycin Resistance"],
-            "Glycopeptides": ["Vancomycin (VA)", "Teicoplanin", "Daptomycin"],
-            "Tetracyclines": ["Tetracycline (TE)", "Doxacycline(DO)", "Tigecycline"],
-            "Others": ["Trimethoprim/Sulfamethoxazole (TXS)", "Trimethoprim (TIM)", "Nitrofurantoin (F)", "Fosfomycin (FOS)", "Colistin", "Linezolid (LNZ)", "Rifampicin (RA)", "Fucidin", "Mupirocin"],
+            "Penicillins": ["Benzylpenicillin", "Penicillin", "Ampicillin", "Amoxicillin", "Cloxacillin", "Oxacillin", "Amoxicillin/Clavulanic acid", "Ampicillin/Sulbactam", "Piperacillin", "Piperacillin/Tazobactam", "Ticarcillin", "Ticarcillin/Clavulanic acid"],
+            "Cephalosporins": ["Cefazolin", "Cefoxitin", "Cefuroxime", "Cefixime", "Ceftriaxone", "Cefotaxime", "Ceftazidime", "Cefepime", "Cefaclor", "Cefpodoxime", "Cefdinir", "Cephalothin", "Cefoxitin screen"],
+            "Carbapenems & Monobactams": ["Imipenem", "Meropenem", "Ertapenem", "Aztreonam"],
+            "Aminoglycosides": ["Amikacin", "Gentamicin", "Tobramycin", "Netilmicin"],
+            "Fluoroquinolones": ["Nalidixic acid", "Ciprofloxacin", "Levofloxacin", "Moxifloxacin", "Ofloxacin", "Norfloxacin"],
+            "Macrolides & Lincosamides": ["Erythromycin", "Azithromycin", "Clarithromycin", "Clindamycin", "Inducible Clindamycin Resistance"],
+            "Glycopeptides": ["Vancomycin", "Teicoplanin", "Daptomycin"],
+            "Tetracyclines": ["Tetracycline", "Doxycycline", "Tigecycline"],
+            "Others": ["Trimethoprim/Sulfamethoxazole", "Trimethoprim", "Nitrofurantoin", "Fosfomycin", "Colistin", "Linezolid", "Rifampicin", "Fusidic acid", "Mupirocin"],
             "Antifungals": []
         };
         const abxList = Object.values(abxGroups).flat();
 
+        // تم تحديث مفاتيح التصدير لتطابق الأسماء الجديدة بدقة
         const abxMapExport = {
-            "Ampicillin (AM)": {t:4, r:5}, "Flouxacillin": {t:7, r:8}, "Penicillin (P)": {t:10, r:11},
-            "Ampicillin/Salbactam (SAM)": {t:13, r:14}, "Amoxicillin": {t:16, r:17}, "Oxacillin (OX)": {t:19, r:20},
-            "Amoxicillin/ Clavulonic acid (AMC)": {t:22, r:23}, "Piperacillin (PR)": {t:25, r:26}, "Ticarcillin (TIC)": {t:28, r:29},
-            "Ticarcillin/Clavulonic acid (TIM)": {t:31, r:32}, "Piperacillin / Tazobactam (TPZ)": {t:34, r:35},
-            "Ceftriaxone (CRO)": {t:37, r:38}, "Cefotaxim (CTX)": {t:40, r:41}, "Ceftazidime (CAZ)": {t:43, r:44},
-            "Cefepime (FEP)": {t:46, r:47}, "Cefoxitin": {t:49, r:50}, "Cefazolin": {t:52, r:53}, "Cefixime (CFM)": {t:55, r:56},
+            "Ampicillin": {t:4, r:5}, "Flucloxacillin": {t:7, r:8}, "Penicillin": {t:10, r:11},
+            "Ampicillin/Sulbactam": {t:13, r:14}, "Amoxicillin": {t:16, r:17}, "Oxacillin": {t:19, r:20},
+            "Amoxicillin/Clavulanic acid": {t:22, r:23}, "Piperacillin": {t:25, r:26}, "Ticarcillin": {t:28, r:29},
+            "Ticarcillin/Clavulanic acid": {t:31, r:32}, "Piperacillin/Tazobactam": {t:34, r:35},
+            "Ceftriaxone": {t:37, r:38}, "Cefotaxime": {t:40, r:41}, "Ceftazidime": {t:43, r:44},
+            "Cefepime": {t:46, r:47}, "Cefoxitin": {t:49, r:50}, "Cefazolin": {t:52, r:53}, "Cefixime": {t:55, r:56},
             "Cefaclor": {t:58, r:59}, "Cefpodoxime": {t:61, r:62}, "Cefdinir": {t:64, r:65}, "Cephalothin": {t:67, r:68},
-            "Cefuroxime (CXM)": {t:70, r:71}, "Amikacin (AK)": {t:73, r:74}, "Gentamicin (CN)": {t:76, r:77},
-            "Tobramycin (TOB)": {t:79, r:80}, "Netlimicin (NET)": {t:82, r:83}, "Imipenem (IMP)": {t:85, r:86},
-            "Meropenem (MEM)": {t:88, r:89}, "Ertapenem": {t:91, r:92}, "Aztreonam (ATM)": {t:94, r:95},
-            "Azithromycin (AZM)": {t:97, r:98}, "Clarithromycin (CLR)": {t:100, r:101}, "Erythromycin (E)": {t:103, r:104},
-            "Ciprofloxacin (CIP)": {t:106, r:107}, "Moxifloxacin": {t:109, r:110}, "Levofloxacin (LEV)": {t:112, r:113},
-            "Teicoplanin": {t:115, r:116}, "Vancomycin (VA)": {t:118, r:119}, "Tigecycline": {t:121, r:122},
-            "Tetracycline (TE)": {t:124, r:125}, "Doxacycline(DO)": {t:127, r:128}, "Colistin": {t:130, r:131},
-            "Chloramphenicol": {t:133, r:134}, "Trimethoprim/Sulfamethoxazole (TXS)": {t:136, r:137},
-            "Rifampicin (RA)": {t:139, r:140}, "Nitrofurantoin (F)": {t:142, r:143}, "Trimethoprim (TIM)": {t:145, r:146},
-            "Sulfisoxazole": {t:148, r:149}, "Fosfomycin (FOS)": {t:151, r:152}, "Clindamycin (DA)": {t:154, r:155},
-            "Metronidazole": {t:157, r:158}, "Fucidin": {t:160, r:161}
+            "Cefuroxime": {t:70, r:71}, "Amikacin": {t:73, r:74}, "Gentamicin": {t:76, r:77},
+            "Tobramycin": {t:79, r:80}, "Netilmicin": {t:82, r:83}, "Imipenem": {t:85, r:86},
+            "Meropenem": {t:88, r:89}, "Ertapenem": {t:91, r:92}, "Aztreonam": {t:94, r:95},
+            "Azithromycin": {t:97, r:98}, "Clarithromycin": {t:100, r:101}, "Erythromycin": {t:103, r:104},
+            "Ciprofloxacin": {t:106, r:107}, "Moxifloxacin": {t:109, r:110}, "Levofloxacin": {t:112, r:113},
+            "Teicoplanin": {t:115, r:116}, "Vancomycin": {t:118, r:119}, "Tigecycline": {t:121, r:122},
+            "Tetracycline": {t:124, r:125}, "Doxycycline": {t:127, r:128}, "Colistin": {t:130, r:131},
+            "Chloramphenicol": {t:133, r:134}, "Trimethoprim/Sulfamethoxazole": {t:136, r:137},
+            "Rifampicin": {t:139, r:140}, "Nitrofurantoin": {t:142, r:143}, "Trimethoprim": {t:145, r:146},
+            "Sulfisoxazole": {t:148, r:149}, "Fosfomycin": {t:151, r:152}, "Clindamycin": {t:154, r:155},
+            "Metronidazole": {t:157, r:158}, "Fusidic acid": {t:160, r:161}
         };
 
         const orgMapExport = {
@@ -670,6 +672,72 @@
         let chartGen_instance = null;
         let chartTrend_instance = null;
         let isUpdatingFilters = false;
+
+        // --- Migration Script to update old records to new clean names ---
+        function runDatabaseMigration() {
+            let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+            let migrated = false;
+            
+            const migrationMap = {
+                "Ampicillin (AM)": "Ampicillin",
+                "Flouxacillin": "Flucloxacillin",
+                "Penicillin (P)": "Penicillin",
+                "Ampicillin/Salbactam (SAM)": "Ampicillin/Sulbactam",
+                "Amoxicillin/ Salbactam": "Amoxicillin/Sulbactam",
+                "Oxacillin (OX)": "Oxacillin",
+                "Amoxicillin/ Clavulonic acid (AMC)": "Amoxicillin/Clavulanic acid",
+                "Piperacillin (PR)": "Piperacillin",
+                "Ticarcillin (TIC)": "Ticarcillin",
+                "Ticarcillin/Clavulonic acid (TIM)": "Ticarcillin/Clavulanic acid",
+                "Piperacillin / Tazobactam (TPZ)": "Piperacillin/Tazobactam",
+                "Ceftriaxone (CRO)": "Ceftriaxone",
+                "Cefotaxim (CTX)": "Cefotaxime",
+                "Ceftazidime (CAZ)": "Ceftazidime",
+                "Cefepime (FEP)": "Cefepime",
+                "Cefixime (CFM)": "Cefixime",
+                "Cefuroxime (CXM)": "Cefuroxime",
+                "Amikacin (AK)": "Amikacin",
+                "Gentamicin (CN)": "Gentamicin",
+                "Tobramycin (TOB)": "Tobramycin",
+                "Netlimicin (NET)": "Netilmicin",
+                "Imipenem (IMP)": "Imipenem",
+                "Meropenem (MEM)": "Meropenem",
+                "Aztreonam (ATM)": "Aztreonam",
+                "Azithromycin (AZM)": "Azithromycin",
+                "Clarithromycin (CLR)": "Clarithromycin",
+                "Erythromycin (E)": "Erythromycin",
+                "Ciprofloxacin (CIP)": "Ciprofloxacin",
+                "Levofloxacin (LEV)": "Levofloxacin",
+                "Vancomycin (VA)": "Vancomycin",
+                "Tetracycline (TE)": "Tetracycline",
+                "Doxacycline(DO)": "Doxycycline",
+                "Trimethoprim/Sulfamethoxazole (TXS)": "Trimethoprim/Sulfamethoxazole",
+                "Rifampicin (RA)": "Rifampicin",
+                "Nitrofurantoin (F)": "Nitrofurantoin",
+                "Trimethoprim (TIM)": "Trimethoprim",
+                "Fosfomycin (FOS)": "Fosfomycin",
+                "Clindamycin (DA)": "Clindamycin",
+                "Fucidin": "Fusidic acid",
+                "Doxacycline": "Doxycycline",
+                "Nalidixic acid (NA)": "Nalidixic acid",
+                "Ofloxacin (OFX)": "Ofloxacin",
+                "Norfloxacin (ROR)": "Norfloxacin"
+            };
+
+            records.forEach(r => {
+                Object.keys(migrationMap).forEach(oldKey => {
+                    if (r[oldKey] !== undefined) {
+                        r[migrationMap[oldKey]] = r[oldKey];
+                        delete r[oldKey];
+                        migrated = true;
+                    }
+                });
+            });
+
+            if (migrated) {
+                localStorage.setItem('amr_records', JSON.stringify(records));
+            }
+        }
 
         // --- 2. Custom Database Logic ---
         function getCustomAntibiotics() { return JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || []; }
@@ -705,6 +773,9 @@
 
         // --- 3. Initialization ---
         $(document).ready(function() {
+            // Run Data Migration to correct old names
+            runDatabaseMigration();
+
             let oldCustom = JSON.parse(localStorage.getItem('amr_custom_abx'));
             if (oldCustom && oldCustom.length > 0 && typeof oldCustom[0] === 'string') {
                 let migrated = oldCustom.map(a => ({ name: a, group: 'Others' }));
@@ -753,7 +824,7 @@
             initDataTable();
 
             // ==========================================
-            // SMART KEYBOARD FIX: Auto-Open Select2 on TAB (Fixed for multiple select)[cite: 1]
+            // SMART KEYBOARD FIX: Auto-Open Select2 on TAB
             // ==========================================
             let isSelect2Closing = false;
             
@@ -768,7 +839,7 @@
                 if (isSelect2Closing) return;
                 let select = $(this).closest('.select2-container').siblings('select:enabled');
                 
-                // منع الفتح التلقائي لقوائم الاختيار المتعدد حتى لا تختفي فجأة[cite: 1]
+                // منع الفتح التلقائي لقوائم الاختيار المتعدد حتى لا تختفي فجأة
                 if (select.prop('multiple')) return; 
 
                 if (select.length > 0 && !select.data('select2').isOpen()) {
