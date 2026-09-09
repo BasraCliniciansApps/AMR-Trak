@@ -96,7 +96,7 @@
                     <div class="w-px bg-teal-500/50 mx-1 h-6"></div>
                     
                     <button onclick="showExportModal()" class="bg-gradient-to-r from-emerald-500 to-green-600 text-white border border-green-400/50 px-4 py-2 rounded-lg shadow-lg font-bold transition-all hover:from-emerald-400 hover:to-green-500 hover:scale-105 flex items-center gap-2 text-sm md:text-base">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4"></path></svg>
                         Export Excel
                     </button>
 
@@ -814,14 +814,33 @@
             "bac": "Bacillus spp", "cpe": "Clostridium perfringens", "cdf": "Clostridioides difficile", 
             "cte": "Clostridium tetani", "clo": "Clostridium Spp", "cac": "Cutibacterium acnes",
             "mtb": "Mycobacterium tuberculosis", "mpn": "Mycoplasma pneumoniae", "ana": "Anaerobes (General)", 
-            "cal": "Candida albicans", "cau": "Candida auris", "cgl": "Candida glabrata", "cpa": "Candida parapsilosis"
+            "cal": "Candida albicans", "cau": "Candida auris", "cgl": "Candida glabrata", "cpa": "Candida parapsilosis",
+            "eae": "Enterobacter aerogenes", "pvu": "Proteus vulgaris", "cfr": "Citrobacter freundii", 
+            "ckr": "Citrobacter koseri", "sgc": "Streptococcus agalactiae (Group B)", "sca": "Staphylococcus capitis"
         };
 
-        function processDataExtraction(event) {
+        async function processDataExtraction(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            Swal.fire({ title: 'Processing File...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            Swal.fire({ title: 'Processing File...', text: 'Loading organism dictionary and extracting records...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+            // 1. Fetch the external organisms dictionary JSON file
+            let externalOrgMap = {};
+            try {
+                const response = await fetch('organisms_dictionary.json');
+                if (response.ok) {
+                    const jsonDict = await response.json();
+                    // Convert keys to lowercase to ensure robust and accurate matching
+                    Object.keys(jsonDict).forEach(key => {
+                        externalOrgMap[key.toLowerCase()] = jsonDict[key];
+                    });
+                } else {
+                    console.warn("organisms_dictionary.json not found on server, continuing with internal mapping.");
+                }
+            } catch (error) {
+                console.warn("Could not fetch organisms_dictionary.json. (Ignore if running locally without a server).");
+            }
 
             const reader = new FileReader();
             reader.onload = e => {
@@ -905,7 +924,7 @@
                     const cols = lines[i].split(separator).map(c => c.trim());
 
                     let orgCode = idxOrg > -1 && cols[idxOrg] ? cols[idxOrg].toLowerCase() : "";
-                    if(!orgCode || orgCode === 'xxx' || orgCode === 'no growth') {
+                    if(!orgCode || orgCode === 'xxx' || orgCode === 'con' || orgCode === 'no growth') {
                         skippedCount++;
                         continue;
                     }
@@ -958,8 +977,8 @@
                         if(!isNaN(d)) formattedDate = d.toISOString().slice(0, 7);
                     }
 
-                    // Organism mapping logic
-                    let fullOrgName = whonetOrgMap[orgCode] || (orgCode.charAt(0).toUpperCase() + orgCode.slice(1));
+                    // Organism mapping logic (Prioritize the external JSON Dictionary, fallback to built-in WHONET map)
+                    let fullOrgName = externalOrgMap[orgCode] || whonetOrgMap[orgCode] || (orgCode.charAt(0).toUpperCase() + orgCode.slice(1));
 
                     let record = {
                         'Name': name,
@@ -984,7 +1003,7 @@
                 initDataTable();
                 if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
                 
-                Swal.fire('Success!', `تم استخراج ${addedCount} عزلة بكتيرية بنجاح.\nتم تجاهل ${skippedCount} عينة (No Growth / لا توجد نتائج S, I, R).`, 'success');
+                Swal.fire('Success!', `تم استخراج ${addedCount} عزلة بكتيرية بنجاح.\nتم تجاهل ${skippedCount} عينة (No Growth / Con / No S,I,R data).`, 'success');
                 event.target.value = ''; 
             };
             reader.readAsText(file);
@@ -1821,7 +1840,7 @@
 
             $('#analyticsContainer').addClass('hidden');
             $('#analyticsPlaceholder').removeClass('hidden').html(`
-                <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
+                <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
                 <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view insights.</p>
             `);
         };
