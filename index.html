@@ -45,12 +45,10 @@
         .select2-container .select2-selection--single { height: 42px; border: 1px solid #cbd5e1; border-radius: 0.5rem; display: flex; align-items: center; }
         .select2-container .select2-selection--multiple { min-height: 42px; border: 1px solid #cbd5e1; border-radius: 0.5rem; display: flex; align-items: center; }
         
-        /* Fixed z-index issue: Only apply high z-index to dropdowns, not inline inputs */
         .select2-dropdown, .select2-container--open { z-index: 9999 !important; }
         
         select.compact-dropdown { -webkit-appearance: none; -moz-appearance: none; text-align: center; cursor: pointer; }
         
-        /* Heatmap Styles */
         .heatmap-table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: max-content; }
         .heatmap-table th, .heatmap-table td { padding: 8px 12px; text-align: center; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; font-size: 0.75rem; }
         .heatmap-table th { background-color: #f1f5f9; font-weight: 700; color: #334155; position: sticky; top: 0; z-index: 10; }
@@ -58,7 +56,6 @@
         .heatmap-table th:first-child { z-index: 30; }
         .heatmap-table tr:first-child th { border-top: 1px solid #e2e8f0; }
 
-        /* Print Visibility Classes */
         .print-fade { opacity: 0.3 !important; filter: grayscale(100%); transition: all 0.3s ease; }
         
         @media print {
@@ -126,20 +123,16 @@
     <main id="viewAnalytics" class="w-[98%] mx-auto mt-6 mb-10 hidden print-full">
         <div class="bg-transparent print-full">
             
-            <!-- Controls Area (New Clean Grid Layout) -->
+            <!-- Main Analytics Controls Area -->
             <div class="mb-6 border border-slate-200 no-print bg-white p-5 rounded-xl shadow-sm">
                 <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-5">
                     
-                    <!-- Dashboard Title -->
                     <div class="flex items-center gap-3 border-b xl:border-b-0 pb-4 xl:pb-0 w-full xl:w-auto shrink-0">
                         <div class="bg-indigo-100 p-2.5 rounded-lg text-indigo-600 shadow-sm text-xl">📊</div>
                         <h2 class="text-xl font-bold text-slate-800 whitespace-nowrap">Dashboard</h2>
                     </div>
 
-                    <!-- Filters & Buttons Container -->
                     <div class="flex-1 w-full flex flex-col lg:flex-row gap-4 lg:items-end justify-end">
-                        
-                        <!-- Filters Grid (Adjusted to 5 columns after removing Wards) -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 flex-1 w-full items-end">
                             <div class="w-full">
                                 <label class="block text-xs font-bold text-slate-500 mb-1">From Date</label>
@@ -157,15 +150,14 @@
                             </div>
                             <div class="w-full">
                                 <label class="block text-xs font-bold text-slate-500 mb-1">Organisms</label>
-                                <select id="ana_organism" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="All Organisms"></select>
+                                <select id="ana_organism" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Organisms"></select>
                             </div>
                             <div class="w-full">
                                 <label class="block text-xs font-bold text-slate-500 mb-1">Antibiotics</label>
-                                <select id="ana_antibiotic" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="All Antibiotics"></select>
+                                <select id="ana_antibiotic" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Antibiotics"></select>
                             </div>
                         </div>
 
-                        <!-- Buttons -->
                         <div class="flex gap-2 w-full lg:w-auto shrink-0 mt-3 lg:mt-0">
                             <button onclick="clearAnalyticsFilters()" class="flex-1 lg:flex-none bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 h-[42px] rounded-lg shadow transition-all font-bold flex items-center justify-center gap-2" title="Clear Filters">
                                 🧹 Clear
@@ -197,7 +189,7 @@
                                 Antibiogram Heatmap
                                 <button type="button" onclick="togglePrintSection('print_sect_heatmap')" class="text-slate-400 hover:text-indigo-600 no-print" title="Toggle Print Visibility">👁️</button>
                             </h3>
-                            <p class="text-xs text-slate-500">Color intensity indicates Resistance % (Dark Red = High Resistance). <span class="text-red-500 font-bold">*</span> indicates sample size < 30.</p>
+                            <p class="text-xs text-slate-500">Color intensity indicates Resistance % (Dark Red = High Resistance). <span class="text-red-500 font-bold">*</span> indicates sample size &lt; 30.</p>
                         </div>
                         <div class="hidden md:flex items-center gap-2 text-[10px] font-bold text-slate-600 border border-slate-200 rounded p-1.5 bg-slate-50">
                             <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">0-20%</span>
@@ -211,26 +203,26 @@
                 </div>
 
                 <!-- AMR Profile Chart & Table -->
-                <div id="print_sect_amr" class="mb-8 chart-container border border-slate-200 rounded-xl p-4 md:p-6 bg-slate-50/50 shadow-sm hidden transition-all">
+                <div id="print_sect_amr" class="mb-8 chart-container border border-slate-200 rounded-xl p-4 md:p-6 bg-slate-50/50 shadow-sm transition-all">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-slate-200 pb-3 gap-2">
                         <div>
                             <h3 class="text-lg font-bold text-indigo-900 flex items-center gap-2">
                                 AMR Profile Comparison
                                 <button type="button" onclick="togglePrintSection('print_sect_amr')" class="text-slate-400 hover:text-indigo-600 no-print" title="Toggle Print Visibility">👁️</button>
                             </h3>
-                            <p class="text-xs text-slate-500">Detailed resistance breakdown for selected organisms.</p>
+                            <p class="text-xs text-slate-500">Resistance breakdown based on your specific selections.</p>
                         </div>
                         <span id="amrClsiWarning" class="text-xs font-bold px-3 py-1.5 rounded-md hidden bg-red-100 text-red-700 border border-red-200 shadow-sm flex items-center gap-1">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                            Some data points have N < 30
+                            Some data points have N &lt; 30
                         </span>
                     </div>
                     
-                    <div class="relative h-[350px] md:h-[450px] w-full">
+                    <div class="relative h-[350px] md:h-[450px] w-full" id="amrChartContainer">
                         <canvas id="chartAMR"></canvas>
                     </div>
                     <div class="mt-3 text-[11px] text-slate-500 text-center font-medium bg-white p-2 rounded border border-slate-100">
-                        * Faded bars indicate Low Confidence (n < 30) - Interpret with caution per CLSI guidelines.
+                        * Gray bars indicate Low Confidence (n &lt; 30) - Interpret with caution per CLSI guidelines.
                     </div>
                     
                     <!-- Table: 95% CI -->
@@ -250,56 +242,7 @@
                             <tbody id="ciTableBody" class="divide-y divide-slate-100"></tbody>
                         </table>
                         <div class="mt-2 text-[11px] text-red-500 font-semibold flex items-center gap-1">
-                            <span>* Asterisk indicates sample size < 30.</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Trend Analysis (NEW SECTION) -->
-                <div id="print_sect_trend" class="mb-8 chart-container border border-slate-200 rounded-xl p-4 md:p-6 bg-slate-50/50 shadow-sm hidden transition-all page-break">
-                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 border-b border-slate-200 pb-4 gap-4">
-                        <div>
-                            <h3 class="text-lg font-bold text-indigo-900 flex items-center gap-2">
-                                📈 Resistance Trends (Time-Series)
-                                <button type="button" onclick="togglePrintSection('print_sect_trend')" class="text-slate-400 hover:text-indigo-600 no-print" title="Toggle Print Visibility">👁️</button>
-                            </h3>
-                            <p class="text-xs text-slate-500">Analyze resistance changes over Quarters (Seasonal) or complete Years.</p>
-                        </div>
-                        <!-- Trend Controls -->
-                        <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto no-print bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
-                            <select id="trend_type" class="border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-indigo-500 outline-none" onchange="toggleTrendType()">
-                                <option value="seasonal">Seasonal (Quarters)</option>
-                                <option value="yearly">Year-over-Year (YoY)</option>
-                            </select>
-                            <select id="trend_organism" class="border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-indigo-500 outline-none min-w-[150px]">
-                                <!-- Populated dynamically -->
-                            </select>
-                            <div id="trend_year_container" class="hidden items-center min-w-[150px]">
-                                 <select id="trend_years" class="border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Years"></select>
-                            </div>
-                            <button onclick="renderTrendChart()" class="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm font-bold shadow hover:bg-indigo-700 transition-colors">Generate Trend</button>
-                        </div>
-                    </div>
-
-                    <div class="relative h-[300px] md:h-[400px] w-full">
-                        <canvas id="chartTrend"></canvas>
-                    </div>
-                    
-                    <div class="mt-6 overflow-x-auto">
-                        <table class="w-full text-xs text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden border border-slate-200">
-                            <thead class="bg-indigo-50 text-indigo-900 uppercase tracking-wider">
-                                <tr>
-                                    <th class="px-4 py-3 border-b border-slate-200">Time Period</th>
-                                    <th class="px-4 py-3 border-b border-slate-200">Antibiotic</th>
-                                    <th class="px-4 py-3 border-b border-slate-200 text-center">Tested (n)</th>
-                                    <th class="px-4 py-3 border-b border-slate-200 text-center">Resistant (R)</th>
-                                    <th class="px-4 py-3 border-b border-slate-200 text-center">% Resistance</th>
-                                </tr>
-                            </thead>
-                            <tbody id="trendTableBody" class="divide-y divide-slate-100"></tbody>
-                        </table>
-                        <div class="mt-2 text-[11px] text-red-500 font-semibold flex items-center gap-1">
-                            <span>* Asterisk indicates sample size < 30.</span>
+                            <span>* Asterisk indicates sample size &lt; 30.</span>
                         </div>
                     </div>
                 </div>
@@ -328,6 +271,84 @@
                 <svg class="w-16 h-16 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                 <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view insights.</p>
             </div>
+
+            <!-- ISOLATED: Trend Analysis Section -->
+            <div id="print_sect_trend" class="mt-12 pt-8 border-t-2 border-indigo-100 chart-container page-break transition-all">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-indigo-900 flex items-center gap-2">
+                            📈 Resistance Trends (Time-Series)
+                            <button type="button" onclick="togglePrintSection('print_sect_trend')" class="text-slate-400 hover:text-indigo-600 no-print" title="Toggle Print Visibility">👁️</button>
+                        </h3>
+                        <p class="text-sm text-slate-500">Analyze resistance changes over Quarters (Seasonal) or complete Years independently.</p>
+                    </div>
+                </div>
+
+                <!-- Dedicated Trend Controls -->
+                <div class="flex flex-wrap lg:flex-nowrap items-center gap-3 w-full no-print bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 shadow-sm mb-6">
+                    <div class="w-full lg:w-auto">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Trend Type</label>
+                        <select id="trend_type" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-indigo-500 outline-none bg-white" onchange="toggleTrendType()">
+                            <option value="seasonal">Seasonal (Quarters)</option>
+                            <option value="yearly">Year-over-Year (YoY)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Date Range specifically for Seasonal -->
+                    <div id="trend_seasonal_dates" class="w-full lg:w-auto flex gap-2">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Start Date</label>
+                            <input type="date" id="trend_start" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm outline-none bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">End Date</label>
+                            <input type="date" id="trend_end" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm outline-none bg-white">
+                        </div>
+                    </div>
+
+                    <div id="trend_year_container" class="w-full lg:w-48 hidden flex-col">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Years (Completed)</label>
+                         <select id="trend_years" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Years"></select>
+                    </div>
+                    
+                    <div class="w-full lg:w-48">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Organism</label>
+                        <select id="trend_organism" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-indigo-500 outline-none bg-white"></select>
+                    </div>
+                    <div class="w-full lg:flex-1">
+                        <label class="block text-xs font-bold text-slate-500 mb-1">Antibiotics</label>
+                        <select id="trend_antibiotic" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Antibiotics for Trend"></select>
+                    </div>
+                    <div class="w-full lg:w-auto self-end">
+                        <button onclick="renderTrendChart()" class="w-full bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-bold shadow hover:bg-indigo-700 transition-colors">
+                            Generate Trend
+                        </button>
+                    </div>
+                </div>
+
+                <div class="relative h-[300px] md:h-[400px] w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <canvas id="chartTrend"></canvas>
+                </div>
+                
+                <div class="mt-6 overflow-x-auto">
+                    <table class="w-full text-xs text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden border border-slate-200">
+                        <thead class="bg-indigo-50 text-indigo-900 uppercase tracking-wider">
+                            <tr>
+                                <th class="px-4 py-3 border-b border-slate-200">Time Period</th>
+                                <th class="px-4 py-3 border-b border-slate-200">Antibiotic</th>
+                                <th class="px-4 py-3 border-b border-slate-200 text-center">Tested (n)</th>
+                                <th class="px-4 py-3 border-b border-slate-200 text-center">Resistant (R)</th>
+                                <th class="px-4 py-3 border-b border-slate-200 text-center">% Resistance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trendTableBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                    <div class="mt-2 text-[11px] text-red-500 font-semibold flex items-center gap-1">
+                        <span>* Asterisk indicates sample size &lt; 30.</span>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </main>
 
@@ -358,6 +379,7 @@
                                 <select id="p_age_unit" dir="ltr" lang="en" class="w-1/2 border-slate-300 border rounded-lg p-2.5 h-[42px] focus:ring-2 focus:ring-indigo-500 bg-white shadow-sm">
                                     <option value="Years">Years</option>
                                     <option value="Months">Months</option>
+                                    <option value="Days">Days</option>
                                 </select>
                             </div>
                         </div>
@@ -376,14 +398,14 @@
                         <div class="md:col-span-2">
                             <div class="flex justify-between items-center mb-1">
                                 <label class="block text-sm font-bold text-slate-700">Ward</label>
-                                <button type="button" onclick="manageWards()" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 transition-colors">⚙️ Manage</button>
+                                <button type="button" onclick="manageWards()" tabindex="-1" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 transition-colors">⚙️ Manage</button>
                             </div>
                             <select id="p_ward" dir="ltr" lang="en" class="w-full select2-enable shadow-sm"></select>
                         </div>
                         <div class="md:col-span-2">
                             <div class="flex justify-between items-center mb-1">
                                 <label class="block text-sm font-bold text-slate-700">Sample</label>
-                                <button type="button" onclick="manageSamples()" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 transition-colors">⚙️ Manage</button>
+                                <button type="button" onclick="manageSamples()" tabindex="-1" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 transition-colors">⚙️ Manage</button>
                             </div>
                             <select id="p_sample" dir="ltr" lang="en" class="w-full select2-enable shadow-sm" required></select>
                         </div>
@@ -392,18 +414,11 @@
                         <div class="md:col-span-2 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 shadow-sm">
                             <div class="flex justify-between items-center mb-2">
                                 <label class="block text-sm font-bold text-indigo-900">Selective Organism (Lab Record)</label>
-                                <button type="button" onclick="manageOrganisms()" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 transition-colors">⚙️ Manage</button>
+                                <button type="button" onclick="manageOrganisms()" tabindex="-1" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 transition-colors">⚙️ Manage</button>
                             </div>
                             <select id="p_organism" dir="ltr" lang="en" class="w-full select2-enable" required>
                                 <option value="">Type name or shortcode (e.g., ECO, PAE)...</option>
                             </select>
-                            <div class="mt-3 flex flex-wrap gap-1.5 items-center">
-                                <span class="text-xs text-indigo-400 font-bold mr-1">Quick:</span>
-                                <button type="button" onclick="quickSelectOrganism('Escherichia coli (E.coli)')" class="text-[10px] bg-white text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-full hover:bg-indigo-600 hover:text-white transition-colors font-medium shadow-sm">E. coli</button>
-                                <button type="button" onclick="quickSelectOrganism('Klebsiella pneumoniae')" class="text-[10px] bg-white text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-full hover:bg-indigo-600 hover:text-white transition-colors font-medium shadow-sm">K. pneumoniae</button>
-                                <button type="button" onclick="quickSelectOrganism('Staphylococcus aureus')" class="text-[10px] bg-white text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-full hover:bg-indigo-600 hover:text-white transition-colors font-medium shadow-sm">S. aureus</button>
-                                <button type="button" onclick="quickSelectOrganism('Pseudomonas aeruginosa')" class="text-[10px] bg-white text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-full hover:bg-indigo-600 hover:text-white transition-colors font-medium shadow-sm">P. aeruginosa</button>
-                            </div>
                         </div>
 
                         <!-- Antibiogram Export Organism -->
@@ -468,7 +483,7 @@
                                 <div class="bg-rose-100 p-1.5 rounded-md text-rose-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg></div>
                                 <h4 class="font-bold text-slate-800 text-lg">Susceptibility Panel</h4>
                             </div>
-                            <button type="button" onclick="manageAntibioticsDB()" class="text-xs text-indigo-700 font-bold bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-4 py-2 rounded-lg shadow-sm transition-all w-full md:w-auto flex items-center justify-center gap-1">
+                            <button type="button" onclick="manageAntibioticsDB()" tabindex="-1" class="text-xs text-indigo-700 font-bold bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-4 py-2 rounded-lg shadow-sm transition-all w-full md:w-auto flex items-center justify-center gap-1">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
                                 Database Manager
                             </button>
@@ -717,10 +732,13 @@
             $('#ana_start').val(`${currentYear}-01-01`);
             $('#ana_end').val(`${currentYear}-12-31`);
 
+            $('#trend_start').val(`${currentYear}-01-01`);
+            $('#trend_end').val(`${currentYear}-12-31`);
+
             // Initialize Analytics Filters
             loadAnalyticsFilters();
 
-            // Smart Cascading Listeners (Removed #ana_ward here)
+            // Smart Cascading Listeners (Main)
             $('#ana_start, #ana_end, #ana_sample').on('change', function() {
                 loadAnalyticsFilters(); 
             });
@@ -732,7 +750,6 @@
             // ==========================================
             let isSelect2Closing = false;
             
-            // Prevent immediate re-opening when making a selection
             $(document).on('select2:closing', 'select', function() {
                 isSelect2Closing = true;
             });
@@ -740,7 +757,6 @@
                 setTimeout(function() { isSelect2Closing = false; }, 50);
             });
             
-            // Auto open the dropdown when tabbing into it
             $(document).on('focus', '.select2-selection', function() {
                 if (isSelect2Closing) return;
                 let select = $(this).closest('.select2-container').siblings('select:enabled');
@@ -749,15 +765,13 @@
                 }
             });
 
-            // Ensure search field always gets cursor focus instantly
             $(document).on('select2:open', function(e) {
                 setTimeout(function() {
-                    // Fix: Target only the currently open Select2 search field
                     const searchField = document.querySelector('.select2-container--open .select2-search__field');
                     if (searchField) {
                         searchField.focus();
                     }
-                }, 50); // Increased timeout slightly to ensure the modal isn't stealing focus
+                }, 50);
             });
             // ==========================================
         });
@@ -774,6 +788,11 @@
                 loadAnalyticsFilters();
                 $('#viewAnalytics').removeClass('hidden');
                 $('#btnTabAnalytics').removeClass('bg-white/5 text-indigo-100 border-indigo-300/20').addClass('bg-indigo-600 text-white border-indigo-400/50');
+                
+                // Show trend options clearly initially
+                if($('#trend_organism option').length > 0) {
+                    renderTrendChart();
+                }
             }
         }
 
@@ -828,7 +847,6 @@
                 groups[bact.group].push(new Option(optionText, bact.name));
             });
 
-            // Load Custom Organisms
             let savedOrgs = JSON.parse(localStorage.getItem('amr_organisms')) || [];
             savedOrgs.forEach(org => {
                 groups["Custom"].push(new Option(org, org));
@@ -868,18 +886,15 @@
 
             let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
             
-            // Filter by Date
             let records = allRecords.filter(r => {
                 if(!startDate || !endDate) return true;
                 return r.Date >= startDate && r.Date <= endDate;
             });
 
-            // Filter by Sample if selected
             if (targetSample) {
                 records = records.filter(r => r.Sample === targetSample);
             }
 
-            // 1. Update Sample Dropdown (Always shows all recorded samples in this date range)
             let uniqueSamples = new Set(records.map(r => r.Sample).filter(Boolean));
             let currentSample = $('#ana_sample').val();
             $('#ana_sample').empty().append(new Option("All Samples", ""));
@@ -890,7 +905,6 @@
                 $('#ana_sample').val(currentSample);
             }
 
-            // 2. Update Organisms
             let orgs = new Set();
             let abxs = new Set();
             let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
@@ -916,10 +930,41 @@
                 let isSelected = currentAbxs.includes(a);
                 $('#ana_antibiotic').append(new Option(a, a, isSelected, isSelected));
             });
-        }
+            
+            // Populate Trend Selectors Independently
+            let currentTrendAbxs = $('#trend_antibiotic').val() || [];
+            $('#trend_antibiotic').empty();
+            Array.from(abxs).sort().forEach(a => {
+                let isSelected = currentTrendAbxs.includes(a);
+                $('#trend_antibiotic').append(new Option(a, a, isSelected, isSelected));
+            });
 
-        function quickSelectOrganism(organismName) {
-            $('#p_organism').val(organismName).trigger('change');
+            let trendOrgSelect = $('#trend_organism');
+            let currentTrendOrg = trendOrgSelect.val();
+            trendOrgSelect.empty();
+            Array.from(orgs).sort().forEach(o => {
+                trendOrgSelect.append(new Option(o, o));
+            });
+            if(currentTrendOrg && orgs.has(currentTrendOrg)) {
+                trendOrgSelect.val(currentTrendOrg);
+            }
+
+            let currentYearStr = new Date().getFullYear().toString();
+            let allYears = new Set();
+            allRecords.forEach(r => {
+                if(r.Date) {
+                    let y = r.Date.split('-')[0];
+                    if(y !== currentYearStr) allYears.add(y);
+                }
+            });
+            
+            let trendYearsSelect = $('#trend_years');
+            let currentTrendYears = trendYearsSelect.val() || [];
+            trendYearsSelect.empty();
+            Array.from(allYears).sort((a,b) => b-a).forEach(y => {
+                let isSelected = currentTrendYears.includes(y) || currentTrendYears.length === 0;
+                trendYearsSelect.append(new Option(y, y, isSelected, isSelected));
+            });
         }
 
         function initDataTable() {
@@ -934,7 +979,9 @@
                     </div>`;
                 }},
                 { data: 'Name', title: 'Name' },
-                { data: 'Age', title: 'Age' },
+                { data: null, title: 'Age', render: function(data, type, row) { 
+                    return row['Age'] ? row['Age'] + ' ' + (row['Age Unit'] || '') : '-'; 
+                }},
                 { data: 'Sex', title: 'Sex' },
                 { data: 'Ward', title: 'Ward' },
                 { data: 'Sample', title: 'Sample' },
@@ -1035,7 +1082,6 @@
         $('#entryForm').submit(function(e) {
             e.preventDefault();
             
-            // Handle Custom Samples dynamically
             let currentSample = $('#p_sample').val();
             let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
 
@@ -1083,7 +1129,6 @@
                 record[abx] = selectedAbxMap[abx];
             });
 
-            // Add default grid antibiotics
             $('.default-abx-select').each(function() {
                 const val = $(this).val();
                 if (val && val !== "") { record[$(this).attr('data-abx')] = val; }
@@ -1135,7 +1180,6 @@
                 $('#p_ward').val('').trigger('change'); 
             }
             
-            // Set Sample
             if ($('#p_sample').find("option[value='" + record['Sample'] + "']").length) {
                 $('#p_sample').val(record['Sample']).trigger('change');
             } else {
@@ -1145,7 +1189,6 @@
 
             $('#p_date').val(record['Date'] ? record['Date'].substring(0, 7) : '');
             
-            // Set Organism
             if ($('#p_organism').find("option[value='" + record['Selective organism'] + "']").length) {
                 $('#p_organism').val(record['Selective organism']).trigger('change');
             } else {
@@ -1361,31 +1404,31 @@
 
         // Beautiful Color Palette for Multi-Organism comparison
         const orgColorPalette = [
-            { bg: 'rgba(185, 28, 28, 0.9)', lowBg: 'rgba(185, 28, 28, 0.3)' },   // Red
-            { bg: 'rgba(30, 64, 175, 0.9)', lowBg: 'rgba(30, 64, 175, 0.3)' },   // Blue
-            { bg: 'rgba(21, 128, 61, 0.9)', lowBg: 'rgba(21, 128, 61, 0.3)' },   // Green
-            { bg: 'rgba(162, 28, 175, 0.9)', lowBg: 'rgba(162, 28, 175, 0.3)' }, // Purple
-            { bg: 'rgba(194, 65, 12, 0.9)', lowBg: 'rgba(194, 65, 12, 0.3)' },   // Orange
-            { bg: 'rgba(13, 148, 136, 0.9)', lowBg: 'rgba(13, 148, 136, 0.3)' }, // Teal
-            { bg: 'rgba(217, 70, 239, 0.9)', lowBg: 'rgba(217, 70, 239, 0.3)' }  // Fuchsia
+            { bg: 'rgba(185, 28, 28, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },   // Red - faded is Gray
+            { bg: 'rgba(30, 64, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },   // Blue - faded is Gray
+            { bg: 'rgba(21, 128, 61, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },   // Green - faded is Gray
+            { bg: 'rgba(162, 28, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' }, // Purple - faded is Gray
+            { bg: 'rgba(194, 65, 12, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },   // Orange - faded is Gray
+            { bg: 'rgba(13, 148, 136, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' }, // Teal - faded is Gray
+            { bg: 'rgba(217, 70, 239, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' }  // Fuchsia - faded is Gray
         ];
 
-        // --- دالة تصفير فلاتر التحليلات (Clear Analytics) ---
         window.clearAnalyticsFilters = function() {
-            // 1. إعادة التواريخ للوضع الافتراضي
             let currentYear = new Date().getFullYear();
             $('#ana_start').val(`${currentYear}-01-01`);
             $('#ana_end').val(`${currentYear}-12-31`);
 
-            // 2. تفريغ جميع القوائم المنسدلة
             $('#ana_sample').val(null).trigger('change.select2');
             $('#ana_organism').val(null).trigger('change.select2');
             $('#ana_antibiotic').val(null).trigger('change.select2');
+            
+            // Clear trends as well
+            $('#trend_start').val(`${currentYear}-01-01`);
+            $('#trend_end').val(`${currentYear}-12-31`);
+            $('#trend_antibiotic').val(null).trigger('change.select2');
 
-            // 3. إعادة تحميل الخيارات (لإعادة ترتيبها حسب التواريخ)
             loadAnalyticsFilters();
 
-            // 4. إخفاء المخططات وإظهار الواجهة الافتراضية
             $('#analyticsContainer').addClass('hidden');
             $('#analyticsPlaceholder').removeClass('hidden').html(`
                 <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
@@ -1396,19 +1439,17 @@
         window.toggleTrendType = function() {
             if ($('#trend_type').val() === 'yearly') {
                 $('#trend_year_container').removeClass('hidden').addClass('flex');
+                $('#trend_seasonal_dates').removeClass('flex').addClass('hidden');
             } else {
                 $('#trend_year_container').removeClass('flex').addClass('hidden');
-            }
-            if(!$('#print_sect_trend').hasClass('hidden')) {
-                renderTrendChart();
+                $('#trend_seasonal_dates').removeClass('hidden').addClass('flex');
             }
         };
 
         window.renderTrendChart = function() {
             const trendType = $('#trend_type').val();
             const targetOrg = $('#trend_organism').val();
-            const targetAbxs = $('#ana_antibiotic').val() || [];
-            const targetSample = $('#ana_sample').val();
+            const targetAbxs = $('#trend_antibiotic').val() || [];
             
             if (!targetOrg) {
                 Swal.fire('Notice', 'Please select an organism for the trend analysis.', 'info');
@@ -1418,30 +1459,12 @@
             let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
             let records = allRecords;
 
-            // Apply Sample filters (same as main analytics)
-            if (targetSample) records = records.filter(r => r.Sample === targetSample);
-
-            // Filter by selected Organism
+            // Trend is completely independent, but let's filter by the selected organism
             records = records.filter(r => r['Selective organism'] === targetOrg);
 
-            // Determine Abxs to chart
             let abxsToChart = targetAbxs;
             if (abxsToChart.length === 0) {
-                // Auto-detect top 5
-                let abxCounts = {};
-                let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
-                records.forEach(r => {
-                    allPossibleAbxs.forEach(a => {
-                        if (r[a] && r[a] !== '-' && r[a] !== '') {
-                            abxCounts[a] = (abxCounts[a] || 0) + 1;
-                        }
-                    });
-                });
-                abxsToChart = Object.keys(abxCounts).sort((a,b) => abxCounts[b] - abxCounts[a]).slice(0, 5);
-            }
-            
-            if (abxsToChart.length === 0) {
-                 $('#trendTableBody').html('<tr><td colspan="5" class="text-center py-4 text-slate-500">No antibiotic data available for this organism.</td></tr>');
+                 $('#trendTableBody').html('<tr><td colspan="5" class="text-center py-4 text-slate-500">Please select at least one antibiotic to view trends.</td></tr>');
                  if(chartTrend_instance) chartTrend_instance.destroy();
                  return;
             }
@@ -1451,10 +1474,11 @@
             let tableHtml = '';
 
             if (trendType === 'seasonal') {
-                // Seasonal Logic
-                const startDate = $('#ana_start').val();
-                const endDate = $('#ana_end').val();
-                records = records.filter(r => r.Date >= startDate && r.Date <= endDate);
+                const startDate = $('#trend_start').val();
+                const endDate = $('#trend_end').val();
+                if(startDate && endDate) {
+                    records = records.filter(r => r.Date >= startDate && r.Date <= endDate);
+                }
 
                 chartLabels = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
                 let quartersData = { 'Q1': {}, 'Q2': {}, 'Q3': {}, 'Q4': {} };
@@ -1477,7 +1501,6 @@
                     });
                 });
 
-                // Build Datasets (Line Chart)
                 abxsToChart.forEach((abx, i) => {
                     let dataR = [];
                     let palette = orgColorPalette[i % orgColorPalette.length]; 
@@ -1487,7 +1510,6 @@
                         let p = s.t > 0 ? Math.round((s.r / s.t) * 100) : null;
                         dataR.push(p);
 
-                        // Table
                         if(s.t > 0) {
                             tableHtml += `
                                 <tr class="hover:bg-slate-50 transition-colors ${s.t < 30 ? 'text-slate-500' : 'text-slate-700 font-medium'}">
@@ -1504,8 +1526,8 @@
                     datasets.push({
                         label: abx,
                         data: dataR,
-                        borderColor: palette.bg,
-                        backgroundColor: palette.bg,
+                        borderColor: palette.bg.replace('0.9','1'),
+                        backgroundColor: palette.bg.replace('0.9','1'),
                         tension: 0.3,
                         fill: false,
                         spanGaps: true,
@@ -1515,7 +1537,6 @@
                 });
 
             } else {
-                // Yearly Logic
                 let selectedYears = $('#trend_years').val() || [];
                 if(selectedYears.length === 0) {
                     $('#trendTableBody').html('<tr><td colspan="5" class="text-center py-4 text-slate-500">Please select at least one complete year.</td></tr>');
@@ -1523,7 +1544,6 @@
                     return;
                 }
 
-                // Filter to only selected years
                 records = records.filter(r => {
                     if(!r.Date) return false;
                     return selectedYears.includes(r.Date.split('-')[0]);
@@ -1544,7 +1564,6 @@
                     });
                 });
 
-                // Build Datasets (Grouped Bar)
                 selectedYears.sort().forEach((y, i) => {
                     let dataR = [];
                     let bgColors = [];
@@ -1561,7 +1580,6 @@
                             bgColors.push(isRel ? palette.bg : palette.lowBg);
                         }
 
-                        // Table
                         if(s.t > 0) {
                             tableHtml += `
                                 <tr class="hover:bg-slate-50 transition-colors ${!isRel ? 'text-slate-500' : 'text-slate-700 font-medium'}">
@@ -1614,8 +1632,8 @@
             const startDate = $('#ana_start').val();
             const endDate = $('#ana_end').val();
             const targetSample = $('#ana_sample').val();
-            const targetOrgs = $('#ana_organism').val() || []; // Array from multi-select
-            const targetAbxs = $('#ana_antibiotic').val() || []; // Array from multi-select
+            const targetOrgs = $('#ana_organism').val() || [];
+            const targetAbxs = $('#ana_antibiotic').val() || [];
 
             if (!startDate || !endDate) { Swal.fire('Required', 'Please select both dates.', 'warning'); return; }
 
@@ -1645,18 +1663,9 @@
             let orgCounts = {};
             let specCounts = {};
             let genderCounts = { "Male": 0, "Female": 0 };
-            
             let heatmapStats = {};
             let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
             
-            // Stats for AMR Profile (Grouped by Organism)
-            let amrStats = {};
-            targetOrgs.forEach(org => {
-                amrStats[org] = { total: 0, abx: {} };
-                allPossibleAbxs.forEach(a => { amrStats[org].abx[a] = { tested: 0, resistant: 0 }; });
-            });
-
-            // Extract Organisms for Trend Analysis
             let allPresentOrgs = new Set();
 
             records.forEach(r => {
@@ -1664,13 +1673,10 @@
                 if(!org) return;
                 
                 allPresentOrgs.add(org);
-
-                // Distributions
                 orgCounts[org] = (orgCounts[org] || 0) + 1;
                 if(r.Sample) specCounts[r.Sample] = (specCounts[r.Sample] || 0) + 1;
                 if(r.Sex && genderCounts[r.Sex] !== undefined) genderCounts[r.Sex] += 1;
 
-                // Heatmap Base Data
                 if (!heatmapStats[org]) heatmapStats[org] = {};
                 allPossibleAbxs.forEach(abx => {
                     let res = r[abx];
@@ -1680,32 +1686,149 @@
                         if (res === 'R') heatmapStats[org][abx].r += 1;
                     }
                 });
-
-                // AMR Profile Data
-                if (targetOrgs.includes(org)) {
-                    amrStats[org].total += 1;
-                    allPossibleAbxs.forEach(abx => {
-                        let res = r[abx];
-                        if (res && res !== '-' && res !== '') {
-                            amrStats[org].abx[abx].tested += 1;
-                            if (res === 'R') amrStats[org].abx[abx].resistant += 1;
-                        }
-                    });
-                }
             });
 
-            // --- Build Heatmap ---
-            // 1. Filter Heatmap Rows (Organisms)
+            // ----------------------------------------------------
+            // SMART LOGIC: FULL USER CONTROL (AMR PROFILE CHART)
+            // ----------------------------------------------------
+            let amrStats = {}; // To store data for charting
+            Array.from(allPresentOrgs).forEach(org => {
+                amrStats[org] = { total: orgCounts[org], abx: {} };
+                allPossibleAbxs.forEach(a => { amrStats[org].abx[a] = { tested: 0, resistant: 0 }; });
+            });
+
+            // Populate stats for everything present
+            records.forEach(r => {
+                let org = r['Selective organism'];
+                allPossibleAbxs.forEach(abx => {
+                    let res = r[abx];
+                    if (res && res !== '-' && res !== '') {
+                        amrStats[org].abx[abx].tested += 1;
+                        if (res === 'R') amrStats[org].abx[abx].resistant += 1;
+                    }
+                });
+            });
+
+            let displayOrgs = [];
+            let displayAbxs = [];
+
+            if (targetOrgs.length === 0 && targetAbxs.length === 0) {
+                // User selected nothing: Hide AMR Profile chart
+                $('#print_sect_amr').addClass('hidden');
+                if (chartAMR_instance) chartAMR_instance.destroy();
+            } else {
+                $('#print_sect_amr').removeClass('hidden');
+
+                if (targetOrgs.length > 0 && targetAbxs.length === 0) {
+                    // Bacteria Selected -> Show all antibiotics tested for these bacteria
+                    displayOrgs = targetOrgs;
+                    let foundAbxs = new Set();
+                    displayOrgs.forEach(org => {
+                        if (amrStats[org]) {
+                            Object.keys(amrStats[org].abx).forEach(abx => {
+                                if (amrStats[org].abx[abx].tested > 0) foundAbxs.add(abx);
+                            });
+                        }
+                    });
+                    displayAbxs = Array.from(foundAbxs).sort();
+                } else if (targetOrgs.length === 0 && targetAbxs.length > 0) {
+                    // Antibiotic Selected -> Show all bacteria tested against these antibiotics
+                    displayAbxs = targetAbxs;
+                    let foundOrgs = new Set();
+                    Array.from(allPresentOrgs).forEach(org => {
+                        displayAbxs.forEach(abx => {
+                            if (amrStats[org].abx[abx] && amrStats[org].abx[abx].tested > 0) foundOrgs.add(org);
+                        });
+                    });
+                    displayOrgs = Array.from(foundOrgs).sort();
+                } else {
+                    // Both Selected -> Show intersection (comparison)
+                    displayOrgs = targetOrgs;
+                    displayAbxs = targetAbxs;
+                }
+
+                let anyLowReliability = false;
+                let datasets = [];
+                let tableHtml = '';
+
+                if (displayOrgs.length === 0 || displayAbxs.length === 0) {
+                    tableHtml = '<tr><td colspan="6" class="text-center py-4 text-slate-500">No cross-data found for the selected combinations.</td></tr>';
+                } else {
+                    displayOrgs.forEach((org, orgIndex) => {
+                        let s_org = amrStats[org];
+                        if (!s_org) return;
+
+                        let dataR = [];
+                        let bgColors = [];
+                        let palette = orgColorPalette[orgIndex % orgColorPalette.length];
+
+                        displayAbxs.forEach(abx => {
+                            let s = s_org.abx[abx];
+                            if (!s || s.tested === 0) {
+                                dataR.push(0); 
+                                bgColors.push(palette.lowBg);
+                            } else {
+                                let p = Math.round((s.resistant / s.tested) * 100);
+                                let isReliable = s.tested >= 30; // CLSI Rule!
+                                if (!isReliable) anyLowReliability = true;
+                                
+                                dataR.push(p);
+                                bgColors.push(isReliable ? palette.bg : palette.lowBg); // lowBg is Slate Gray
+
+                                let ci = wilsonScoreCI(s.resistant, s.tested);
+                                tableHtml += `
+                                    <tr class="hover:bg-slate-50 transition-colors ${!isReliable ? 'text-slate-500' : 'font-semibold text-slate-700'}">
+                                        <td class="px-4 py-2 border-b border-slate-100">${abx}</td>
+                                        <td class="px-4 py-2 border-b border-slate-100"><span style="color:${palette.bg.replace('0.9','1')}">${org}</span> ${!isReliable ? '<span class="text-red-500 font-bold">*</span>' : ''}</td>
+                                        <td class="px-4 py-2 border-b border-slate-100 text-center">${s.tested}</td>
+                                        <td class="px-4 py-2 border-b border-slate-100 text-center">${s.resistant}</td>
+                                        <td class="px-4 py-2 border-b border-slate-100 text-center">${p}%</td>
+                                        <td class="px-4 py-2 border-b border-slate-100 text-center">${ci.lower}% - ${ci.upper}%</td>
+                                    </tr>
+                                `;
+                            }
+                        });
+
+                        datasets.push({
+                            label: org,
+                            data: dataR,
+                            backgroundColor: bgColors,
+                            borderRadius: 4
+                        });
+                    });
+                }
+
+                if (anyLowReliability) $('#amrClsiWarning').removeClass('hidden');
+                else $('#amrClsiWarning').addClass('hidden');
+
+                $('#ciTableBody').html(tableHtml);
+
+                if (chartAMR_instance) chartAMR_instance.destroy();
+                chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
+                    type: 'bar',
+                    data: { labels: displayAbxs, datasets: datasets },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: { 
+                            y: { beginAtZero: true, max: 100, title: { display: true, text: '% Resistance', font: {weight: 'bold'} }, grid: {color: '#f1f5f9'} },
+                            x: { grid: {display: false}, ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
+                        },
+                        plugins: { legend: { display: true, position: 'top' } } 
+                    }
+                });
+            }
+            // ----------------------------------------------------
+
+            // Heatmap Building (Remains unchanged - Shows whatever is selected)
             let hmOrgs = Object.keys(heatmapStats);
             if (targetOrgs.length > 0) {
                 hmOrgs = hmOrgs.filter(o => targetOrgs.includes(o));
             }
             
-            // 2. Filter Heatmap Columns (Antibiotics)
             let hmAbxSet = new Set();
             hmOrgs.forEach(o => { 
                 Object.keys(heatmapStats[o]).forEach(a => {
-                    if (heatmapStats[o][a].t > 0) hmAbxSet.add(a); // Only add if tested > 0
+                    if (heatmapStats[o][a].t > 0) hmAbxSet.add(a);
                 }); 
             });
             let hmAbxs = Array.from(hmAbxSet);
@@ -1722,7 +1845,6 @@
                 hmHtml += '</tr></thead><tbody>';
 
                 hmOrgs.forEach(o => {
-                    // Check if this row is completely empty across selected Abxs
                     let rowHasData = hmAbxs.some(a => heatmapStats[o][a] && heatmapStats[o][a].t > 0);
                     if(!rowHasData) return;
 
@@ -1762,141 +1884,7 @@
                 $('#heatmapWrapper').html('<p class="text-center text-slate-400 py-4">No data matches the selected filters.</p>');
             }
 
-            // --- Build AMR Profile (Grouped Bar Chart & Multi-table) ---
-            if (targetOrgs.length > 0) {
-                $('#print_sect_amr').removeClass('hidden');
-                
-                let anyLowReliability = false;
-                let chartLabelsSet = new Set();
-                
-                // Determine which antibiotics to show in the chart
-                targetOrgs.forEach(org => {
-                    Object.keys(amrStats[org].abx).forEach(abx => {
-                        if (amrStats[org].abx[abx].tested > 0) {
-                            if (targetAbxs.length === 0 || targetAbxs.includes(abx)) {
-                                chartLabelsSet.add(abx);
-                            }
-                        }
-                    });
-                });
-                
-                let chartLabels = Array.from(chartLabelsSet).sort();
-                let datasets = [];
-                let tableHtml = '';
-
-                targetOrgs.forEach((org, orgIndex) => {
-                    let s_org = amrStats[org];
-                    let dataR = [];
-                    let bgColors = [];
-                    let palette = orgColorPalette[orgIndex % orgColorPalette.length];
-
-                    chartLabels.forEach(abx => {
-                        let s = s_org.abx[abx];
-                        if (s.tested === 0) {
-                            dataR.push(0); // or null
-                            bgColors.push(palette.lowBg);
-                        } else {
-                            let p = Math.round((s.resistant / s.tested) * 100);
-                            let isReliable = s.tested >= 30;
-                            if (!isReliable) anyLowReliability = true;
-                            
-                            dataR.push(p);
-                            bgColors.push(isReliable ? palette.bg : palette.lowBg);
-
-                            // Build Table Row (Grouped by Organism visually)
-                            let ci = wilsonScoreCI(s.resistant, s.tested);
-                            tableHtml += `
-                                <tr class="hover:bg-slate-50 transition-colors ${!isReliable ? 'text-slate-500' : 'font-semibold text-slate-700'}">
-                                    <td class="px-4 py-2 border-b border-slate-100">${abx}</td>
-                                    <td class="px-4 py-2 border-b border-slate-100"><span style="color:${palette.bg.replace('0.9','1')}">${org}</span> ${!isReliable ? '<span class="text-red-500 font-bold">*</span>' : ''}</td>
-                                    <td class="px-4 py-2 border-b border-slate-100 text-center">${s.tested}</td>
-                                    <td class="px-4 py-2 border-b border-slate-100 text-center">${s.resistant}</td>
-                                    <td class="px-4 py-2 border-b border-slate-100 text-center">${p}%</td>
-                                    <td class="px-4 py-2 border-b border-slate-100 text-center">${ci.lower}% - ${ci.upper}%</td>
-                                </tr>
-                            `;
-                        }
-                    });
-
-                    datasets.push({
-                        label: org,
-                        data: dataR,
-                        backgroundColor: bgColors,
-                        borderRadius: 4
-                    });
-                });
-
-                if (anyLowReliability) $('#amrClsiWarning').removeClass('hidden');
-                else $('#amrClsiWarning').addClass('hidden');
-
-                $('#ciTableBody').html(tableHtml);
-
-                if (chartAMR_instance) chartAMR_instance.destroy();
-                chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
-                    type: 'bar',
-                    data: { labels: chartLabels, datasets: datasets },
-                    options: {
-                        responsive: true, maintainAspectRatio: false,
-                        scales: { 
-                            y: { beginAtZero: true, max: 100, title: { display: true, text: '% Resistance', font: {weight: 'bold'} }, grid: {color: '#f1f5f9'} },
-                            x: { grid: {display: false}, ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
-                        },
-                        plugins: { legend: { display: true, position: 'top' } } // Enable legend to distinguish organisms
-                    }
-                });
-            } else {
-                $('#print_sect_amr').addClass('hidden');
-                if (chartAMR_instance) chartAMR_instance.destroy();
-            }
-
-            // --- Build Trend Analysis Section ---
-            $('#print_sect_trend').removeClass('hidden');
-            
-            // Populate Trend Organism Dropdown (Use filtered orgs)
-            let trendOrgSelect = $('#trend_organism');
-            let currentTrendOrg = trendOrgSelect.val();
-            trendOrgSelect.empty();
-            Array.from(allPresentOrgs).sort().forEach(o => {
-                trendOrgSelect.append(new Option(o, o));
-            });
-            // Try to re-select previous or first available
-            if(currentTrendOrg && allPresentOrgs.has(currentTrendOrg)) {
-                trendOrgSelect.val(currentTrendOrg);
-            } else if(targetOrgs.length > 0 && allPresentOrgs.has(targetOrgs[0])) {
-                trendOrgSelect.val(targetOrgs[0]);
-            } else if (allPresentOrgs.size > 0) {
-                trendOrgSelect.val(Array.from(allPresentOrgs).sort()[0]);
-            }
-
-            // Extract Complete Years (exclude current ongoing year)
-            let currentYearStr = new Date().getFullYear().toString();
-            let allYears = new Set();
-            allRecords.forEach(r => {
-                if(r.Date) {
-                    let y = r.Date.split('-')[0];
-                    if(y !== currentYearStr) allYears.add(y);
-                }
-            });
-            
-            let trendYearsSelect = $('#trend_years');
-            let currentTrendYears = trendYearsSelect.val() || [];
-            trendYearsSelect.empty();
-            Array.from(allYears).sort((a,b) => b-a).forEach(y => {
-                let isSelected = currentTrendYears.includes(y) || currentTrendYears.length === 0;
-                trendYearsSelect.append(new Option(y, y, isSelected, isSelected));
-            });
-            
-            // Re-init select2 for years
-            if (!$('#trend_years').hasClass("select2-hidden-accessible")) {
-                $('#trend_years').select2({ width: '100%' });
-            } else {
-                $('#trend_years').trigger('change.select2');
-            }
-
-            // Draw Trend Chart
-            renderTrendChart();
-
-            // --- Build Distributions ---
+            // Distributions Building
             let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 10);
             if(chartOrg_instance) chartOrg_instance.destroy();
             chartOrg_instance = new Chart(document.getElementById('chartOrg'), {
@@ -1983,7 +1971,6 @@
 
                 let stats = {};
                 records.forEach(r => {
-                    // EXPORT STRICTLY USES ANTIBIOGRAM ORGANISM
                     let orgName = r['Antibiogram organism'];
                     if (!orgName) return; 
 
