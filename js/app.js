@@ -255,10 +255,22 @@ async function processDataExtraction(event) {
             let sample = rawSample.includes('ur') ? 'Urine' : rawSample.includes('bl') ? 'Blood' : rawSample.includes('sp') ? 'Sputum' : rawSample.includes('swab') ? 'Wound Swab' : (rawSample || "-");
 
             let rawDate = idxDate > -1 && cols[idxDate] ? cols[idxDate] : "";
-            let formattedDate = new Date().toISOString().slice(0, 7);
+            let formattedDate = new Date().toISOString().slice(0, 7); 
+            
             if(rawDate) {
-                let d = new Date(rawDate);
-                if(!isNaN(d)) formattedDate = d.toISOString().slice(0, 7);
+                let dateParts = rawDate.split(/[\/\-]/);
+                
+                if(dateParts.length >= 3) {
+                    let month = dateParts[1].padStart(2, '0'); 
+                    let year = dateParts[2].split(' ')[0];     
+                    
+                    if(year.length === 2) year = "20" + year;  
+                    
+                    formattedDate = `${year}-${month}`;
+                } else {
+                    let d = new Date(rawDate);
+                    if(!isNaN(d)) formattedDate = d.toISOString().slice(0, 7);
+                }
             }
 
             // الاعتماد على ملف الـ JSON كأولوية أولى، ثم قاموس whonetOrgMap الداخلي، ثم الاسم كما هو
