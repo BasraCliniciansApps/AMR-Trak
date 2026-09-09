@@ -203,7 +203,7 @@
                 </div>
 
                 <!-- AMR Profile Chart & Table -->
-                <div id="print_sect_amr" class="mb-8 chart-container border border-slate-200 rounded-xl p-4 md:p-6 bg-slate-50/50 shadow-sm transition-all">
+                <div id="print_sect_amr" class="mb-8 chart-container border border-slate-200 rounded-xl p-4 md:p-6 bg-slate-50/50 shadow-sm transition-all hidden">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-slate-200 pb-3 gap-2">
                         <div>
                             <h3 class="text-lg font-bold text-indigo-900 flex items-center gap-2">
@@ -268,7 +268,7 @@
             </div>
             
             <div id="analyticsPlaceholder" class="text-center text-slate-400 py-16 flex flex-col items-center justify-center bg-white border border-slate-200 rounded-xl shadow-sm">
-                <svg class="w-16 h-16 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <svg class="w-16 h-16 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
                 <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view insights.</p>
             </div>
 
@@ -496,7 +496,7 @@
                                     <option value="">Type custom antibiotic name...</option>
                                 </select>
                             </div>
-                            <button type="button" onclick="addAntibiotic()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg font-bold mt-0 md:mt-5 shadow-md w-full md:w-auto transition-colors flex items-center justify-center gap-1">
+                            <button type="button" onclick="addAntibiotic()" tabindex="-1" class="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg font-bold mt-0 md:mt-5 shadow-md w-full md:w-auto transition-colors flex items-center justify-center gap-1">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                                 Add
                             </button>
@@ -507,7 +507,7 @@
                     </div>
 
                     <div class="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-200 sticky bottom-0 bg-white/90 backdrop-blur py-4 z-10 px-2 -mx-2">
-                        <button type="button" onclick="closeModal()" class="px-6 py-2 border border-slate-300 rounded-lg text-slate-600 font-bold hover:bg-slate-50 transition-colors">Cancel</button>
+                        <button type="button" onclick="closeModal()" tabindex="-1" class="px-6 py-2 border border-slate-300 rounded-lg text-slate-600 font-bold hover:bg-slate-50 transition-colors">Cancel</button>
                         <button type="submit" class="px-8 py-2 bg-indigo-600 text-white rounded-lg font-bold text-lg shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all">Save Record</button>
                     </div>
                 </form>
@@ -663,6 +663,7 @@
         let chartSpec_instance = null;
         let chartGen_instance = null;
         let chartTrend_instance = null;
+        let isUpdatingFilters = false;
 
         // --- 2. Custom Database Logic ---
         function getCustomAntibiotics() { return JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || []; }
@@ -788,11 +789,6 @@
                 loadAnalyticsFilters();
                 $('#viewAnalytics').removeClass('hidden');
                 $('#btnTabAnalytics').removeClass('bg-white/5 text-indigo-100 border-indigo-300/20').addClass('bg-indigo-600 text-white border-indigo-400/50');
-                
-                // Show trend options clearly initially
-                if($('#trend_organism option').length > 0) {
-                    renderTrendChart();
-                }
             }
         }
 
@@ -880,6 +876,9 @@
         
         // Smart Cascading Filters for Analytics
         function loadAnalyticsFilters() {
+            if (isUpdatingFilters) return;
+            isUpdatingFilters = true;
+
             const startDate = $('#ana_start').val();
             const endDate = $('#ana_end').val();
             const targetSample = $('#ana_sample').val();
@@ -931,7 +930,6 @@
                 $('#ana_antibiotic').append(new Option(a, a, isSelected, isSelected));
             });
             
-            // Populate Trend Selectors Independently
             let currentTrendAbxs = $('#trend_antibiotic').val() || [];
             $('#trend_antibiotic').empty();
             Array.from(abxs).sort().forEach(a => {
@@ -965,6 +963,15 @@
                 let isSelected = currentTrendYears.includes(y) || currentTrendYears.length === 0;
                 trendYearsSelect.append(new Option(y, y, isSelected, isSelected));
             });
+
+            // Trigger visual updates safely
+            $('#ana_sample').trigger('change.select2');
+            $('#ana_organism').trigger('change.select2');
+            $('#ana_antibiotic').trigger('change.select2');
+            $('#trend_antibiotic').trigger('change.select2');
+            $('#trend_years').trigger('change.select2');
+
+            isUpdatingFilters = false;
         }
 
         function initDataTable() {
@@ -1402,7 +1409,6 @@
             return { lower: Math.max(0, Math.round(lower * 100)), upper: Math.min(100, Math.round(upper * 100)) };
         }
 
-        // Beautiful Color Palette for Multi-Organism comparison
         const orgColorPalette = [
             { bg: 'rgba(185, 28, 28, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },   // Red - faded is Gray
             { bg: 'rgba(30, 64, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },   // Blue - faded is Gray
@@ -1422,7 +1428,6 @@
             $('#ana_organism').val(null).trigger('change.select2');
             $('#ana_antibiotic').val(null).trigger('change.select2');
             
-            // Clear trends as well
             $('#trend_start').val(`${currentYear}-01-01`);
             $('#trend_end').val(`${currentYear}-12-31`);
             $('#trend_antibiotic').val(null).trigger('change.select2');
@@ -1457,13 +1462,9 @@
             }
 
             let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-            let records = allRecords;
+            let records = allRecords.filter(r => r['Selective organism'] === targetOrg);
 
-            // Trend is completely independent, but let's filter by the selected organism
-            records = records.filter(r => r['Selective organism'] === targetOrg);
-
-            let abxsToChart = targetAbxs;
-            if (abxsToChart.length === 0) {
+            if (targetAbxs.length === 0) {
                  $('#trendTableBody').html('<tr><td colspan="5" class="text-center py-4 text-slate-500">Please select at least one antibiotic to view trends.</td></tr>');
                  if(chartTrend_instance) chartTrend_instance.destroy();
                  return;
@@ -1483,7 +1484,7 @@
                 chartLabels = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
                 let quartersData = { 'Q1': {}, 'Q2': {}, 'Q3': {}, 'Q4': {} };
                 
-                abxsToChart.forEach(abx => {
+                targetAbxs.forEach(abx => {
                     ['Q1', 'Q2', 'Q3', 'Q4'].forEach(q => { quartersData[q][abx] = {t:0, r:0}; });
                 });
 
@@ -1492,7 +1493,7 @@
                     let month = parseInt(r.Date.split('-')[1]);
                     let q = month <= 3 ? 'Q1' : month <= 6 ? 'Q2' : month <= 9 ? 'Q3' : 'Q4';
                     
-                    abxsToChart.forEach(abx => {
+                    targetAbxs.forEach(abx => {
                         let res = r[abx];
                         if (res && res !== '-' && res !== '') {
                             quartersData[q][abx].t++;
@@ -1501,7 +1502,7 @@
                     });
                 });
 
-                abxsToChart.forEach((abx, i) => {
+                targetAbxs.forEach((abx, i) => {
                     let dataR = [];
                     let palette = orgColorPalette[i % orgColorPalette.length]; 
                     
@@ -1549,13 +1550,13 @@
                     return selectedYears.includes(r.Date.split('-')[0]);
                 });
 
-                chartLabels = abxsToChart;
+                chartLabels = targetAbxs;
                 let yearsData = {}; 
-                selectedYears.sort().forEach(y => { yearsData[y] = {}; abxsToChart.forEach(a => yearsData[y][a] = {t:0, r:0}); });
+                selectedYears.sort().forEach(y => { yearsData[y] = {}; targetAbxs.forEach(a => yearsData[y][a] = {t:0, r:0}); });
 
                 records.forEach(r => {
                     let y = r.Date.split('-')[0];
-                    abxsToChart.forEach(abx => {
+                    targetAbxs.forEach(abx => {
                         let res = r[abx];
                         if(res && res !== '-' && res !== '') {
                             yearsData[y][abx].t++;
@@ -1569,7 +1570,7 @@
                     let bgColors = [];
                     let palette = orgColorPalette[i % orgColorPalette.length]; 
 
-                    abxsToChart.forEach(abx => {
+                    targetAbxs.forEach(abx => {
                         let s = yearsData[y][abx];
                         let p = s.t > 0 ? Math.round((s.r / s.t) * 100) : 0;
                         let isRel = s.t >= 30;
@@ -1689,15 +1690,14 @@
             });
 
             // ----------------------------------------------------
-            // SMART LOGIC: FULL USER CONTROL (AMR PROFILE CHART)
+            // LOGIC: FULL USER CONTROL (NO AUTO SELECT 5)
             // ----------------------------------------------------
-            let amrStats = {}; // To store data for charting
+            let amrStats = {}; 
             Array.from(allPresentOrgs).forEach(org => {
                 amrStats[org] = { total: orgCounts[org], abx: {} };
                 allPossibleAbxs.forEach(a => { amrStats[org].abx[a] = { tested: 0, resistant: 0 }; });
             });
 
-            // Populate stats for everything present
             records.forEach(r => {
                 let org = r['Selective organism'];
                 allPossibleAbxs.forEach(abx => {
@@ -1713,14 +1713,12 @@
             let displayAbxs = [];
 
             if (targetOrgs.length === 0 && targetAbxs.length === 0) {
-                // User selected nothing: Hide AMR Profile chart
                 $('#print_sect_amr').addClass('hidden');
                 if (chartAMR_instance) chartAMR_instance.destroy();
             } else {
                 $('#print_sect_amr').removeClass('hidden');
 
                 if (targetOrgs.length > 0 && targetAbxs.length === 0) {
-                    // Bacteria Selected -> Show all antibiotics tested for these bacteria
                     displayOrgs = targetOrgs;
                     let foundAbxs = new Set();
                     displayOrgs.forEach(org => {
@@ -1732,7 +1730,6 @@
                     });
                     displayAbxs = Array.from(foundAbxs).sort();
                 } else if (targetOrgs.length === 0 && targetAbxs.length > 0) {
-                    // Antibiotic Selected -> Show all bacteria tested against these antibiotics
                     displayAbxs = targetAbxs;
                     let foundOrgs = new Set();
                     Array.from(allPresentOrgs).forEach(org => {
@@ -1742,7 +1739,6 @@
                     });
                     displayOrgs = Array.from(foundOrgs).sort();
                 } else {
-                    // Both Selected -> Show intersection (comparison)
                     displayOrgs = targetOrgs;
                     displayAbxs = targetAbxs;
                 }
@@ -1769,11 +1765,11 @@
                                 bgColors.push(palette.lowBg);
                             } else {
                                 let p = Math.round((s.resistant / s.tested) * 100);
-                                let isReliable = s.tested >= 30; // CLSI Rule!
+                                let isReliable = s.tested >= 30;
                                 if (!isReliable) anyLowReliability = true;
                                 
                                 dataR.push(p);
-                                bgColors.push(isReliable ? palette.bg : palette.lowBg); // lowBg is Slate Gray
+                                bgColors.push(isReliable ? palette.bg : palette.lowBg);
 
                                 let ci = wilsonScoreCI(s.resistant, s.tested);
                                 tableHtml += `
@@ -1817,9 +1813,8 @@
                     }
                 });
             }
-            // ----------------------------------------------------
 
-            // Heatmap Building (Remains unchanged - Shows whatever is selected)
+            // Heatmap Building 
             let hmOrgs = Object.keys(heatmapStats);
             if (targetOrgs.length > 0) {
                 hmOrgs = hmOrgs.filter(o => targetOrgs.includes(o));
@@ -1916,6 +1911,9 @@
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
             });
+            
+            // Auto Update Trend selectors
+            $('#print_sect_trend').removeClass('hidden');
         }
 
         // --- 7. 100% Exact Ministry File Export using Fetch + XlsxPopulate ---
