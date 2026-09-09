@@ -200,7 +200,6 @@ async function processDataExtraction(event) {
             'sur': 'General Surgery', 'sur in': 'General Surgery',
             'med': 'Internal Medicine', 'med in': 'Internal Medicine',
             'neo': 'Neonatal Unit', 'neo in': 'Neonatal Unit',
-            'neu in': 'Neurology & Neurosurgery',
             'out': 'Outpatient',
             'obg': 'General Obstetrics & Gynecology', 'obg in': 'General Obstetrics & Gynecology',
             'ent': 'ENT'
@@ -254,18 +253,29 @@ async function processDataExtraction(event) {
             let rawSample = idxSample > -1 && cols[idxSample] ? cols[idxSample].toLowerCase() : "";
             let sample = rawSample.includes('ur') ? 'Urine' : rawSample.includes('bl') ? 'Blood' : rawSample.includes('sp') ? 'Sputum' : rawSample.includes('swab') ? 'Wound Swab' : (rawSample || "-");
 
-            let rawDate = idxDate > -1 && cols[idxDate] ? cols[idxDate] : "";
-            let formattedDate = new Date().toISOString().slice(0, 7); 
+            // ------------- خوارزمية التاريخ المُصححة ------------
+            let rawDate = idxDate > -1 && cols[idxDate] ? cols[idxDate].trim() : "";
+            let formattedDate = ""; 
             
             if(rawDate) {
                 let dateParts = rawDate.split(/[\/\-]/);
                 
                 if(dateParts.length >= 3) {
-                    let month = dateParts[1].padStart(2, '0'); 
-                    let year = dateParts[2].split(' ')[0];     
+                    let part1 = dateParts[0];
+                    let part2 = dateParts[1].padStart(2, '0');
+                    let part3 = dateParts[2].split(' ')[0]; // تجاهل الوقت إن وجد
                     
-                    if(year.length === 2) year = "20" + year;  
-                    
+                    let year, month;
+                    if(part1.length === 4) {
+                        // حالة YYYY/MM/DD
+                        year = part1;
+                        month = part2;
+                    } else {
+                        // حالة DD/MM/YYYY
+                        year = part3;
+                        if(year.length === 2) year = "20" + year;
+                        month = part2;
+                    }
                     formattedDate = `${year}-${month}`;
                 } else {
                     let d = new Date(rawDate);
@@ -273,7 +283,13 @@ async function processDataExtraction(event) {
                 }
             }
 
-            // الاعتماد على ملف الـ JSON كأولوية أولى، ثم قاموس whonetOrgMap الداخلي، ثم الاسم كما هو
+            // إذا فشل الحصول على تاريخ، يجب إهمال العينة لمنع تخزينها بتاريخ اليوم الخاطئ
+            if(!formattedDate) {
+                skippedCount++;
+                continue;
+            }
+            // -----------------------------------------------------
+
             let fullOrgName = externalOrgMap[orgCode] || whonetOrgMap[orgCode] || (orgCode.charAt(0).toUpperCase() + orgCode.slice(1));
 
             let record = {
@@ -299,7 +315,7 @@ async function processDataExtraction(event) {
         initDataTable();
         if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
         
-        Swal.fire('Success!', `تم استخراج ${addedCount} عزلة بكتيرية بنجاح.\nتم تجاهل ${skippedCount} عينة (No Growth / Con / No S,I,R data).`, 'success');
+        Swal.fire('Success!', `تم استخراج ${addedCount} عزلة بكتيرية بنجاح.\nتم تجاهل ${skippedCount} عينة إما لعدم وجود نمو بكتيري أو لعدم احتواء العينة على تاريخ صحيح.`, 'success');
         event.target.value = ''; 
     };
     reader.readAsText(file);
@@ -352,7 +368,6 @@ $(document).ready(function() {
 
     initDataTable();
 
-    // Select2 Keyboard Fix
     let isSelect2Closing = false;
     $(document).on('select2:closing', 'select', function() {
         isSelect2Closing = true;
