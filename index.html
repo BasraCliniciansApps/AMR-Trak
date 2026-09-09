@@ -269,7 +269,7 @@
             </div>
             
             <div id="analyticsPlaceholder" class="text-center text-slate-400 py-16 flex flex-col items-center justify-center bg-white border border-slate-200 rounded-xl shadow-sm">
-                <svg class="w-16 h-16 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
+                <svg class="w-16 h-16 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
                 <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view insights.</p>
             </div>
 
@@ -510,6 +510,7 @@
     <script>
         // --- 1. Master Data Definitions ---
         const bacteriaLibrary = [
+            // --- Gram-Negative (Enterobacterales) ---
             { name: "Escherichia coli (E.coli)", code: "ECO", group: "Gram-Negative" },
             { name: "Klebsiella pneumoniae", code: "KPN", group: "Gram-Negative" },
             { name: "Klebsiella oxytoca", code: "KOX", group: "Gram-Negative" },
@@ -538,6 +539,8 @@
             { name: "Shigella (spp)", code: "SHI", group: "Gram-Negative" },
             { name: "Yersinia enterocolitica", code: "YEN", group: "Gram-Negative" },
             { name: "Enterobacteriaceae (other spp)", code: "EBO", group: "Gram-Negative" },
+            
+            // --- Gram-Negative (Non-fermenters & Others) ---
             { name: "Pseudomonas aeruginosa", code: "PAE", group: "Gram-Negative" },
             { name: "Pseudomonas putida", code: "PPU", group: "Gram-Negative" },
             { name: "Acinetobacter baumannii", code: "ABA", group: "Gram-Negative" },
@@ -559,13 +562,17 @@
             { name: "Legionella pneumophila", code: "LPN", group: "Gram-Negative" },
             { name: "Chlamydia trachomatis", code: "CTR", group: "Gram-Negative" },
             { name: "Fusobacterium canifelinum", code: "FCA", group: "Gram-Negative" },
+
+            // --- Gram-Positive (Cocci & Bacilli) ---
             { name: "Staphylococcus aureus", code: "SAU", group: "Gram-Positive" },
             { name: "Staphylococcus epidermidis", code: "SEP", group: "Gram-Positive" },
             { name: "Staphylococcus saprophyticus", code: "SSP", group: "Gram-Positive" },
             { name: "Staphylococcus haemolyticus", code: "SHM", group: "Gram-Positive" },
             { name: "Staphylococcus hominis", code: "SHO", group: "Gram-Positive" },
             { name: "Staphylococcus lugdunensis", code: "SLG", group: "Gram-Positive" },
+            { name: "Staphylococcus capitis", code: "SCA", group: "Gram-Positive" },
             { name: "Staphylococcus non-aureus (spp) / CoNS", code: "CNS", group: "Gram-Positive" },
+            { name: "Staphylococcus spp", code: "STA", group: "Gram-Positive" },
             { name: "Streptococcus pneumoniae", code: "SPN", group: "Gram-Positive" },
             { name: "Streptococcus pyogenes (Group A)", code: "SPY", group: "Gram-Positive" },
             { name: "Streptococcus agalactiae (Group B)", code: "SAG", group: "Gram-Positive" },
@@ -588,11 +595,15 @@
             { name: "Clostridium tetani", code: "CTE", group: "Gram-Positive" },
             { name: "Clostridium Spp", code: "CLO", group: "Gram-Positive" },
             { name: "Cutibacterium acnes", code: "CAC", group: "Gram-Positive" },
+            
+            // --- Others (Atypical / Mycobacteria / Fungi / Anaerobes) ---
             { name: "Mycobacterium tuberculosis", code: "MTB", group: "Others" },
             { name: "Mycoplasma pneumoniae", code: "MPN", group: "Others" },
             { name: "Anaerobes (General)", code: "ANA", group: "Others" },
             { name: "Candida albicans", code: "CAL", group: "Fungi" },
-            { name: "Candida auris", code: "CAU", group: "Fungi" }
+            { name: "Candida auris", code: "CAU", group: "Fungi" },
+            { name: "Candida glabrata", code: "CGL", group: "Fungi" },
+            { name: "Candida parapsilosis", code: "CPA", group: "Fungi" }
         ];
 
         const abxGroups = {
@@ -800,8 +811,8 @@
                     'ul': 'Ulcer'
                 };
 
-                // خريطة البكتيريا (اختصارات WHONET)
-                const orgMap = { 'eco': 'Escherichia coli (E.coli)', 'kpn': 'Klebsiella pneumoniae', 'sau': 'Staphylococcus aureus', 'pmi': 'Proteus mirabilis', 'pae': 'Pseudomonas aeruginosa', 'aba': 'Acinetobacter baumannii', 'efa': 'Enterococcus faecalis', 'sho': 'Staphylococcus hominis', 'sep': 'Staphylococcus epidermidis', 'shl': 'Staphylococcus haemolyticus', 'ecl': 'Enterobacter cloacae', 'kox': 'Klebsiella oxytoca', 'sma': 'Serratia marcescens', 'cgl': 'Candida glabrata', 'cpa': 'Candida parapsilosis', 'sat': 'Salmonella Typhi', 'eae': 'Enterobacter aerogenes', 'pvu': 'Proteus vulgaris', 'cfr': 'Citrobacter freundii', 'ckr': 'Citrobacter koseri', 'sgc': 'Streptococcus agalactiae (Group B)', 'sca': 'Staphylococcus capitis', 'con': 'Staphylococcus non-aureus (spp) / CoNS' };
+                // خريطة البكتيريا (اختصارات WHONET القديمة والجديدة)
+                const orgMap = { 'eco': 'Escherichia coli (E.coli)', 'kpn': 'Klebsiella pneumoniae', 'sau': 'Staphylococcus aureus', 'pmi': 'Proteus mirabilis', 'pae': 'Pseudomonas aeruginosa', 'aba': 'Acinetobacter baumannii', 'efa': 'Enterococcus faecalis', 'sho': 'Staphylococcus hominis', 'sep': 'Staphylococcus epidermidis', 'shl': 'Staphylococcus haemolyticus', 'ecl': 'Enterobacter cloacae', 'kox': 'Klebsiella oxytoca', 'sma': 'Serratia marcescens', 'cgl': 'Candida glabrata', 'cpa': 'Candida parapsilosis', 'sat': 'Salmonella Typhi', 'eae': 'Enterobacter aerogenes', 'pvu': 'Proteus vulgaris', 'cfr': 'Citrobacter freundii', 'ckr': 'Citrobacter koseri', 'sgc': 'Streptococcus agalactiae (Group B)', 'sca': 'Staphylococcus capitis', 'con': 'Staphylococcus non-aureus (spp) / CoNS', 'sta': 'Staphylococcus spp' };
 
                 // خريطة المضادات الحيوية الذكية الخاصة بـ WHONET
                 const whonetAbxMap = {
@@ -829,31 +840,33 @@
                     const row = {};
                     headers.forEach((h, idx) => row[h] = cols[idx] ? cols[idx].trim() : "");
 
-                    // تجاهل العينات بدون نمو بكتيري أو الملوثة (con)
-                    let rawOrg = (row['ORGANISM'] || "").toLowerCase();
+                    // تجاهل العينات بدون نمو بكتيري أو الملوثة (مع مراعاة تغيير حالة الأحرف في رؤوس الأعمدة)
+                    let rawOrg = (row['Organism'] || row['ORGANISM'] || "").toLowerCase();
                     if(rawOrg === 'xxx' || rawOrg === 'con' || !rawOrg) {
                         skippedCount++;
                         continue;
                     }
 
                     // 1. دمج اسم المريض
-                    let name = (row['FIRST_NAME'] || '') + " " + (row['LAST_NAME'] || '');
+                    let name = (row['First name'] || row['FIRST_NAME'] || '') + " " + (row['Last name'] || row['LAST_NAME'] || '');
                     name = name.trim();
                     
                     // 2. معالجة العمر والفئة
-                    let ageStr = row['AGE'] || "";
+                    let ageStr = row['Age'] || row['AGE'] || "";
                     let ageNum = ageStr.replace(/\D/g, '');
                     let ageUnit = "Years";
                     if(ageStr.includes('m')) ageUnit = "Months";
                     if(ageStr.includes('d')) ageUnit = "Days";
 
                     // 3. الجنس
-                    let sex = (row['SEX'] && row['SEX'].toLowerCase() === 'f') ? 'Female' : 'Male';
+                    let sexVal = row['Sex'] || row['SEX'] || "";
+                    let sex = (sexVal.toLowerCase() === 'f') ? 'Female' : 'Male';
 
                     // 4. التاريخ 
                     let formattedDate = "";
-                    if(row['SPEC_DATE']) {
-                        let dateParts = row['SPEC_DATE'].split(' ')[0].split('/'); 
+                    let specDate = row['Specimen date'] || row['SPEC_DATE'] || "";
+                    if(specDate) {
+                        let dateParts = specDate.split(' ')[0].split('/'); 
                         if(dateParts.length >= 3) {
                             let month = dateParts[1].padStart(2, '0');
                             let year = dateParts[2];
@@ -862,15 +875,17 @@
                     }
 
                     // 5. ترجمة الردهات
-                    let rawWard = (row['WARD'] || "").toLowerCase();
-                    let ward = wardMap[rawWard] || row['WARD'];
+                    let rawWardStr = row['Location'] || row['Department'] || row['WARD'] || "";
+                    let rawWard = rawWardStr.toLowerCase();
+                    let ward = wardMap[rawWard] || rawWardStr;
 
                     // 6. ترجمة العينات
-                    let rawSample = (row['SPEC_TYPE'] || "").toLowerCase();
-                    let sample = sampleMap[rawSample] || row['SPEC_TYPE'];
+                    let rawSampleStr = row['Specimen type'] || row['SPEC_TYPE'] || "";
+                    let rawSample = rawSampleStr.toLowerCase();
+                    let sample = sampleMap[rawSample] || rawSampleStr;
 
                     // 7. ترجمة البكتيريا 
-                    let organism = orgMap[rawOrg] || row['ORGANISM'];
+                    let organism = orgMap[rawOrg] || rawOrg; // إذا لم تكن في الخريطة، احتفظ باسمها الأصلي
 
                     let newRecord = {
                         "Name": name,
@@ -1191,6 +1206,9 @@
             savedWards.forEach(ward => { wardSelect.append(new Option(ward, ward)); });
         }
         
+        // مؤشر أمان لمنع التداخل (Infinite Loop)
+        let isUpdatingFilters = false;
+
         // Smart Cascading Filters for Analytics
         function loadAnalyticsFilters() {
             if (isUpdatingFilters) return;
@@ -1247,6 +1265,7 @@
                 $('#ana_antibiotic').append(new Option(a, a, isSelected, isSelected));
             });
             
+            // Populate Trend Selectors Independently
             let currentTrendAbxs = $('#trend_antibiotic').val() || [];
             $('#trend_antibiotic').empty();
             Array.from(abxs).sort().forEach(a => {
@@ -1281,7 +1300,9 @@
                 trendYearsSelect.append(new Option(y, y, isSelected, isSelected));
             });
 
-            // Trigger visual updates safely
+            // -----------------------------------------------------
+            // إرسال أمر لتحديث الواجهة الرسومية للقوائم
+            // -----------------------------------------------------
             $('#ana_sample').trigger('change.select2');
             $('#ana_organism').trigger('change.select2');
             $('#ana_antibiotic').trigger('change.select2');
