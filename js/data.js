@@ -79,7 +79,7 @@ const bacteriaLibrary = [
     { name: "Clostridium tetani", code: "CTE", group: "Gram-Positive" },
     { name: "Clostridium Spp", code: "CLO", group: "Gram-Positive" },
     { name: "Cutibacterium acnes", code: "CAC", group: "Gram-Positive" },
-    { name: "Mycobacterium tuberculosis", code: "MTB", "Others" },
+    { name: "Mycobacterium tuberculosis", code: "MTB", group: "Others" },
     { name: "Mycoplasma pneumoniae", code: "MPN", group: "Others" },
     { name: "Anaerobes (General)", code: "ANA", group: "Others" },
     { name: "Candida albicans", code: "CAL", group: "Fungi" },
