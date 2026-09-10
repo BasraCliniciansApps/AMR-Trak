@@ -86,7 +86,8 @@ select.compact-dropdown {
     font-size: 0.75rem; 
 }
 
-.heatmap-table th { 
+/* 1. صف الانتي بايتك (العلوي) - نثبته فقط من الأعلى */
+.heatmap-table thead th { 
     background-color: #f1f5f9; 
     font-weight: 700; 
     color: #334155; 
@@ -95,10 +96,11 @@ select.compact-dropdown {
     z-index: 10; 
 }
 
-.heatmap-table th:first-child, .heatmap-table td:first-child { 
+/* 2. عمود البكتيريا (الجانبي) - نثبته فقط من اليسار ليمر تحت الصف العلوي */
+.heatmap-table tbody th, .heatmap-table tbody td:first-child { 
     position: sticky; 
     left: 0; 
-    z-index: 20; 
+    z-index: 20; /* يخليه فوق خلايا الأنتي بايتك العادية */
     background-color: #ffffff; 
     font-weight: bold; 
     color: #1e293b; 
@@ -107,8 +109,14 @@ select.compact-dropdown {
     border-left: 1px solid #e2e8f0; 
 }
 
-.heatmap-table th:first-child { 
+/* 3. حقل Organism (الزاوية العلوية) - نثبته من الجهتين ونعطيه أعلى طبقة لتختفي تحته البكتيريا */
+.heatmap-table thead th:first-child { 
+    position: sticky; 
+    left: 0; 
+    top: 0;
     z-index: 30; 
+    background-color: #f1f5f9; 
+    box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1); 
 }
 
 .heatmap-table tr:first-child th { 
