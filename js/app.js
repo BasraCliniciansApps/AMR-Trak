@@ -1651,12 +1651,18 @@ function showExportModal() {
                         </select>
                     </div>
                     <div class="flex-1">
-                        <label class="block text-sm font-bold text-slate-700 mb-1">Quarter (الفصل)</label>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Year</label>
+                        <select id="export_year" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none">
+                            ${yearsOptions}
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Quarter</label>
                         <select id="export_quarter" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none">
-                            <option value="Q1">الفصل الأول (Jan, Feb, Mar)</option>
-                            <option value="Q2">الفصل الثاني (Apr, May, Jun)</option>
-                            <option value="Q3">الفصل الثالث (Jul, Aug, Sep)</option>
-                            <option value="Q4">الفصل الرابع (Oct, Nov, Dec)</option>
+                            <option value="Q1">Quarter 1 (Jan, Feb, Mar)</option>
+                            <option value="Q2">Quarter 2 (Apr, May, Jun)</option>
+                            <option value="Q3">Quarter 3 (Jul, Aug, Sep)</option>
+                            <option value="Q4">Quarter 4 (Oct, Nov, Dec)</option>
                         </select>
                     </div>
                 </div>
