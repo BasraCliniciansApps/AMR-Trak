@@ -329,7 +329,7 @@ async function processDataExtraction(event) {
         initDataTable();
         if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
         
-        Swal.fire('Success!', `تم استخراج ${addedCount} عزلة بكتيرية بنجاح.\nتم تجاهل ${skippedCount} عينة إما لعدم وجود نمو بكتيري أو لعدم احتواء العينة على تاريخ صحيح.`, 'success');
+        Swal.fire('Success!', `Extraction complete: ${addedCount} isolates added.\nIgnored ${skippedCount} samples (No growth or invalid date).`, 'success');
         event.target.value = ''; 
     };
     reader.readAsText(file);
