@@ -11,6 +11,18 @@ function runDatabaseMigration() {
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
     let migrated = false;
     
+    // تحويل الاسم القديم للاي كولاي إلى الاسم الجديد في السجلات السابقة
+    records.forEach(r => {
+        if (r['Selective organism'] === "Escherichia coli (E.coli)") {
+            r['Selective organism'] = "Escherichia coli";
+            migrated = true;
+        }
+        if (r['Antibiogram organism'] === "Escherichia coli (E.coli)") {
+            r['Antibiogram organism'] = "Escherichia coli";
+            migrated = true;
+        }
+    });
+
     const migrationMap = {
         "Ampicillin (AM)": "Ampicillin",
         "Flouxacillin": "Flucloxacillin",
@@ -200,6 +212,7 @@ async function processDataExtraction(event) {
             'sur': 'General Surgery', 'sur in': 'General Surgery',
             'med': 'Internal Medicine', 'med in': 'Internal Medicine',
             'neo': 'Neonatal Unit', 'neo in': 'Neonatal Unit',
+            'neu in': 'Neurology & Neurosurgery',
             'out': 'Outpatient',
             'obg': 'General Obstetrics & Gynecology', 'obg in': 'General Obstetrics & Gynecology',
             'ent': 'ENT'
@@ -263,15 +276,13 @@ async function processDataExtraction(event) {
                 if(dateParts.length >= 3) {
                     let part1 = dateParts[0];
                     let part2 = dateParts[1].padStart(2, '0');
-                    let part3 = dateParts[2].split(' ')[0]; // تجاهل الوقت إن وجد
+                    let part3 = dateParts[2].split(' ')[0]; 
                     
                     let year, month;
                     if(part1.length === 4) {
-                        // حالة YYYY/MM/DD
                         year = part1;
                         month = part2;
                     } else {
-                        // حالة DD/MM/YYYY
                         year = part3;
                         if(year.length === 2) year = "20" + year;
                         month = part2;
@@ -283,7 +294,6 @@ async function processDataExtraction(event) {
                 }
             }
 
-            // إذا فشل الحصول على تاريخ، يجب إهمال العينة لمنع تخزينها بتاريخ اليوم الخاطئ
             if(!formattedDate) {
                 skippedCount++;
                 continue;
@@ -291,6 +301,11 @@ async function processDataExtraction(event) {
             // -----------------------------------------------------
 
             let fullOrgName = externalOrgMap[orgCode] || whonetOrgMap[orgCode] || (orgCode.charAt(0).toUpperCase() + orgCode.slice(1));
+            
+            // التأكيد على استخدام الاسم الجديد للإيكولاي
+            if (fullOrgName === "Escherichia coli (E.coli)") {
+                fullOrgName = "Escherichia coli";
+            }
 
             let record = {
                 'Name': name,
@@ -1136,7 +1151,7 @@ window.clearAnalyticsFilters = function() {
 
     $('#analyticsContainer').addClass('hidden');
     $('#analyticsPlaceholder').removeClass('hidden').html(`
-        <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
+        <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
         <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view insights.</p>
     `);
 };
@@ -1614,45 +1629,74 @@ function generateAnalytics() {
 
 // --- 7. Official File Export using Fetch + XlsxPopulate ---
 function showExportModal() {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let years = new Set();
+    let currentYear = new Date().getFullYear().toString();
+    
+    allRecords.forEach(r => {
+        if(r.Date) years.add(r.Date.split('-')[0]);
+    });
+    if(years.size === 0) years.add(currentYear);
+    
+    let yearsOptions = Array.from(years).sort((a,b) => b-a).map(y => `<option value="${y}">${y}</option>`).join('');
 
     Swal.fire({
         title: 'Export Official Antibiogram',
         html: `
             <div class="text-left space-y-4">
-                <p class="text-sm text-slate-500 bg-teal-50 p-3 rounded-lg border border-teal-100">Select the date range. The system will automatically fetch <b>Antibiogram_5.xlsx</b> from the server, populate it accurately, and download it.</p>
+                <p class="text-sm text-slate-500 bg-teal-50 p-3 rounded-lg border border-teal-100">Select the Year and Quarter. The system will automatically fetch <b>Antibiogram_5.xlsx</b> from the server, populate it accurately, and download it.</p>
                 <div class="flex gap-4">
                     <div class="flex-1">
-                        <label class="block text-sm font-bold text-slate-700 mb-1">From Date</label>
-                        <input type="date" id="export_start" value="${firstDay}" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none">
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Year (السنة)</label>
+                        <select id="export_year" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none">
+                            ${yearsOptions}
+                        </select>
                     </div>
                     <div class="flex-1">
-                        <label class="block text-sm font-bold text-slate-700 mb-1">To Date</label>
-                        <input type="date" id="export_end" value="${lastDay}" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none">
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Quarter (الفصل)</label>
+                        <select id="export_quarter" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none">
+                            <option value="Q1">Quarter 1 (Jan - Mar)</option>
+                            <option value="Q2">Quarter 2 (Apr - Jun)</option>
+                            <option value="Q3">Quarter 3 (Jul - Sep)</option>
+                            <option value="Q4">Quarter 4 (Oct - Dec)</option>
+                        </select>
                     </div>
                 </div>
             </div>
         `,
         showCancelButton: true, confirmButtonText: '📥 Download Excel', confirmButtonColor: '#10b981', cancelButtonColor: '#64748b',
         preConfirm: () => {
-            const start = document.getElementById('export_start').value;
-            const end = document.getElementById('export_end').value;
-            if (!start || !end) { Swal.showValidationMessage('Please select dates'); return false; }
-            return { start, end };
+            const year = document.getElementById('export_year').value;
+            const quarter = document.getElementById('export_quarter').value;
+            if (!year || !quarter) { Swal.showValidationMessage('Please select Year and Quarter'); return false; }
+            return { year, quarter };
         }
     }).then((result) => {
-        if (result.isConfirmed) processAntibiogramExport(result.value.start, result.value.end);
+        if (result.isConfirmed) processAntibiogramExport(result.value.year, result.value.quarter);
     });
 }
 
-async function processAntibiogramExport(startDate, endDate) {
+async function processAntibiogramExport(year, quarter) {
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
+    
+    const quarterMonths = {
+        "Q1": ["01", "02", "03"],
+        "Q2": ["04", "05", "06"],
+        "Q3": ["07", "08", "09"],
+        "Q4": ["10", "11", "12"]
+    };
+    const targetMonths = quarterMonths[quarter];
+
+    let records = allRecords.filter(r => {
+        if (!r.Date) return false;
+        let parts = r.Date.split('-');
+        let rYear = parts[0];
+        let rMonth = parts[1];
+        return rYear === year && targetMonths.includes(rMonth);
+    });
 
     if (records.length === 0) {
-        Swal.fire('No Data', 'No records found in this date range.', 'info');
+        Swal.fire('No Data', 'No records found in this selected quarter.', 'info');
         return;
     }
 
@@ -1705,12 +1749,18 @@ async function processAntibiogramExport(startDate, endDate) {
             }
         });
 
-        const sDate = new Date(startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        const eDate = new Date(endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        sheet.cell("C1").value(`Period: ${sDate} to ${eDate}`);
+        const quarterLabels = {
+            "Q1": "Jan - Mar",
+            "Q2": "Apr - Jun",
+            "Q3": "Jul - Sep",
+            "Q4": "Oct - Dec"
+        };
+        const periodString = `${quarterLabels[quarter]} ${year}`;
+        
+        sheet.cell("C1").value(`Period: ${periodString}`);
 
         const blob = await workbook.outputAsync();
-        saveAs(blob, `Ministry_Antibiogram_${sDate}_to_${eDate}.xlsx`);
+        saveAs(blob, `Ministry_Antibiogram_${periodString}.xlsx`);
         Swal.fire('Success!', 'The official file has been exported successfully.', 'success');
 
     } catch (err) {
