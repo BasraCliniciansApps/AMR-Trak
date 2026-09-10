@@ -300,11 +300,20 @@ async function processDataExtraction(event) {
             }
 
             let fullOrgName = externalOrgMap[orgCode] || whonetOrgMap[orgCode] || (orgCode.charAt(0).toUpperCase() + orgCode.slice(1));
-            
-            // التأكيد على استخدام الاسم الجديد للإيكولاي
-            if (fullOrgName === "Escherichia coli (E.coli)") {
-                fullOrgName = "Escherichia coli";
-            }
+                    
+                    // فلتر تنظيف الأسماء الفرعية (Subspecies) وتوحيدها للأسماء الرئيسية المعتمدة
+                    const orgNameCleanup = {
+                        "Escherichia coli (E.coli)": "Escherichia coli",
+                        "Klebsiella pneumoniae ss. pneumoniae": "Klebsiella pneumoniae",
+                        "Staphylococcus aureus ss. aureus": "Staphylococcus aureus",
+                        "Staphylococcus hominis ss. hominis": "Staphylococcus hominis",
+                        "Staphylococcus capitis ss. capitis": "Staphylococcus capitis",
+                        "Staphylococcus saprophyticus ss. saprophyticus": "Staphylococcus saprophyticus"
+                    };
+
+                    if (orgNameCleanup[fullOrgName]) {
+                        fullOrgName = orgNameCleanup[fullOrgName];
+                    }
 
             let record = {
                 'Name': name,
