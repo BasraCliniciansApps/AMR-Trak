@@ -138,7 +138,7 @@
                         <select id="ana_antibiotic" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Antibiotics"></select>
                     </div>
 
-                    <!-- Metric Display Row (الجديد) -->
+                    <!-- Metric Display Row -->
                     <div class="w-full">
                         <label class="block text-xs font-bold text-slate-500 mb-1">Display Metric</label>
                         <select id="ana_metric" class="w-full border border-slate-300 rounded text-sm h-[42px] px-3 focus:ring-2 focus:ring-teal-500 outline-none bg-white shadow-sm">
@@ -177,14 +177,10 @@
                                 Antibiogram Heatmap
                                 <button type="button" onclick="togglePrintSection('print_sect_heatmap')" class="text-slate-400 hover:text-teal-600 no-print" title="Toggle Print Visibility">👁️</button>
                             </h3>
-                            <p class="text-xs text-slate-500">Color intensity indicates Resistance % (Dark Red = High Resistance). <span class="text-red-500 font-bold">*</span> indicates sample size &lt; 30.</p>
+                            <p class="text-xs text-slate-500" id="heatmapDesc">Color intensity indicates Resistance % (Dark Red = High Resistance). <span class="text-red-500 font-bold">*</span> indicates sample size &lt; 30.</p>
                         </div>
-                        <div class="hidden md:flex items-center gap-2 text-[10px] font-bold text-slate-600 border border-slate-200 rounded p-1.5 bg-slate-50">
-                            <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">0-20%</span>
-                            <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800">21-40%</span>
-                            <span class="px-2 py-0.5 rounded bg-orange-200 text-orange-900">41-60%</span>
-                            <span class="px-2 py-0.5 rounded bg-red-400 text-white">61-80%</span>
-                            <span class="px-2 py-0.5 rounded bg-red-600 text-white">81-100%</span>
+                        <div class="hidden md:flex items-center gap-2 text-[10px] font-bold text-slate-600 border border-slate-200 rounded p-1.5 bg-slate-50" id="heatmapLegend">
+                            <!-- Injected by JS -->
                         </div>
                     </div>
                     <div class="w-full overflow-x-auto overflow-y-auto max-h-[500px] rounded-lg border border-slate-200 custom-scroll" id="heatmapWrapper"></div>
@@ -223,7 +219,7 @@
                                     <th class="px-4 py-3 border-b border-slate-200">Organism</th>
                                     <th class="px-4 py-3 border-b border-slate-200 text-center">Tested (n)</th>
                                     <th class="px-4 py-3 border-b border-slate-200 text-center">Resistant (R)</th>
-                                    <th class="px-4 py-3 border-b border-slate-200 text-center">% Resistance</th>
+                                    <th class="px-4 py-3 border-b border-slate-200 text-center">% Metric</th>
                                     <th class="px-4 py-3 border-b border-slate-200 text-center">95% CI</th>
                                 </tr>
                             </thead>
@@ -259,84 +255,7 @@
                 <svg class="w-16 h-16 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view insights.</p>
             </div>
-
-            <!-- ISOLATED: Trend Analysis Section -->
-            <div id="print_sect_trend" class="mt-12 pt-8 border-t-2 border-teal-100 chart-container page-break transition-all hidden">
-                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
-                    <div>
-                        <h3 class="text-xl font-bold text-teal-900 flex items-center gap-2">
-                            📈 Resistance Trends (Time-Series)
-                            <button type="button" onclick="togglePrintSection('print_sect_trend')" class="text-slate-400 hover:text-teal-600 no-print" title="Toggle Print Visibility">👁️</button>
-                        </h3>
-                        <p class="text-sm text-slate-500">Analyze resistance changes over Quarters (Seasonal) or complete Years independently.</p>
-                    </div>
-                </div>
-
-                <!-- Dedicated Trend Controls -->
-                <div class="flex flex-wrap lg:flex-nowrap items-center gap-3 w-full no-print bg-teal-50/50 p-4 rounded-xl border border-teal-100 shadow-sm mb-6">
-                    <div class="w-full lg:w-auto">
-                        <label class="block text-xs font-bold text-slate-500 mb-1">Trend Type</label>
-                        <select id="trend_type" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-teal-500 outline-none bg-white" onchange="toggleTrendType()">
-                            <option value="seasonal">Seasonal (Quarters)</option>
-                            <option value="yearly">Year-over-Year (YoY)</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Date Range specifically for Seasonal -->
-                    <div id="trend_seasonal_dates" class="w-full lg:w-auto flex gap-2">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-1">Start Date</label>
-                            <input type="date" id="trend_start" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm outline-none bg-white">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-1">End Date</label>
-                            <input type="date" id="trend_end" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm outline-none bg-white">
-                        </div>
-                    </div>
-
-                    <div id="trend_year_container" class="w-full lg:w-48 hidden flex-col">
-                        <label class="block text-xs font-bold text-slate-500 mb-1">Years (Completed)</label>
-                         <select id="trend_years" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Years"></select>
-                    </div>
-                    
-                    <div class="w-full lg:w-48">
-                        <label class="block text-xs font-bold text-slate-500 mb-1">Organism</label>
-                        <select id="trend_organism" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:ring-teal-500 outline-none bg-white"></select>
-                    </div>
-                    <div class="w-full lg:flex-1">
-                        <label class="block text-xs font-bold text-slate-500 mb-1">Antibiotics</label>
-                        <select id="trend_antibiotic" class="w-full border rounded text-sm select2-multiple" multiple="multiple" data-placeholder="Select Antibiotics for Trend"></select>
-                    </div>
-                    <div class="w-full lg:w-auto self-end">
-                        <button onclick="renderTrendChart()" class="w-full bg-teal-600 text-white px-5 py-2 rounded-lg text-sm font-bold shadow hover:bg-teal-700 transition-colors">
-                            Generate Trend
-                        </button>
-                    </div>
-                </div>
-
-                <div class="relative h-[300px] md:h-[400px] w-full bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <canvas id="chartTrend"></canvas>
-                </div>
-                
-                <div class="mt-6 overflow-x-auto">
-                    <table class="w-full text-xs text-left border-collapse bg-white shadow-sm rounded-lg overflow-hidden border border-slate-200">
-                        <thead class="bg-teal-50 text-teal-900 uppercase tracking-wider">
-                            <tr>
-                                <th class="px-4 py-3 border-b border-slate-200">Time Period</th>
-                                <th class="px-4 py-3 border-b border-slate-200">Antibiotic</th>
-                                <th class="px-4 py-3 border-b border-slate-200 text-center">Tested (n)</th>
-                                <th class="px-4 py-3 border-b border-slate-200 text-center">Resistant (R)</th>
-                                <th class="px-4 py-3 border-b border-slate-200 text-center">% Resistance</th>
-                            </tr>
-                        </thead>
-                        <tbody id="trendTableBody" class="divide-y divide-slate-100"></tbody>
-                    </table>
-                    <div class="mt-2 text-[11px] text-red-500 font-semibold flex items-center gap-1">
-                        <span>* Asterisk indicates sample size &lt; 30.</span>
-                    </div>
-                </div>
-            </div>
-
+            
         </div>
     </main>
 
