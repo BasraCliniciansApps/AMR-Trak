@@ -142,7 +142,7 @@ async function processDataExtraction(event) {
         console.warn("Could not fetch organisms_dictionary.json.");
     }
 
-    // 2. Fetch the external specimens dictionary JSON file (New Integration)
+    // 2. Fetch the external specimens dictionary JSON file
     let externalSpecimenMap = {};
     try {
         const response = await fetch('specimens_dictionary.json');
@@ -279,7 +279,7 @@ async function processDataExtraction(event) {
             let rawWard = idxWard > -1 && cols[idxWard] ? cols[idxWard].toLowerCase() : "";
             let ward = wardMap[rawWard] || (rawWard ? rawWard.charAt(0).toUpperCase() + rawWard.slice(1) : "-");
 
-            // قراءة اسم العينة من القاموس المرفوع
+            // استخدام قاموس العينات المرفوع
             let rawSample = idxSample > -1 && cols[idxSample] ? cols[idxSample].toLowerCase() : "";
             let sample = externalSpecimenMap[rawSample] || (rawSample ? rawSample.charAt(0).toUpperCase() + rawSample.slice(1) : "-");
 
@@ -716,6 +716,7 @@ function loadAnalyticsFilters() {
     isUpdatingFilters = false;
 }
 
+// 🌟 تحديث دالة initDataTable لإضافة التصفية المنسدلة وحفظ الحالة 🌟
 function initDataTable() {
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
     
@@ -750,14 +751,40 @@ function initDataTable() {
         data: records,
         columns: cols,
         scrollX: true, 
-        order: [[ 6, "desc" ]], 
+        order: [[ 6, "desc" ]], // الترتيب الافتراضي حسب التاريخ تنازلياً
+        stateSave: true, // حفظ حالة الجدول (الترتيب، الصفحة، والبحث) عند التعديل أو التحديث
         dom: '<"flex flex-col sm:flex-row justify-between items-center mb-4 gap-3"Bf>rt<"flex flex-col sm:flex-row justify-between items-center mt-4 gap-3"ip>',
         buttons: [
             { extend: 'excelHtml5', text: 'Export to Excel', className: 'mr-2 rounded shadow' },
             { extend: 'print', text: 'Print Records', className: 'rounded shadow' }
         ],
         pageLength: 15,
-        language: { search: "", searchPlaceholder: "Search records..." }
+        language: { search: "", searchPlaceholder: "Search records..." },
+        initComplete: function () {
+            // تطبيق فلاتر التصفية المنسدلة على الأعمدة المحددة
+            this.api().columns([3, 4, 5, 6, 7]).every(function () {
+                let column = this;
+                
+                // إنشاء القائمة المنسدلة
+                let select = $('<select class="mt-2 block w-full text-xs border-slate-300 rounded shadow-sm focus:ring-teal-500 font-normal"><option value="">All</option></select>')
+                    .appendTo($(column.header()))
+                    .on('change', function () {
+                        let val = $.fn.dataTable.util.escapeRegex($(this).val());
+                        column.search(val ? '^' + val + '$' : '', true, false).draw();
+                    })
+                    // إيقاف تفاعل ترتيب العمود عند النقر على القائمة المنسدلة
+                    .on('click', function(e) {
+                        e.stopPropagation(); 
+                    });
+
+                // جلب القيم الفريدة للعمود وإضافتها كخيارات
+                column.data().unique().sort().each(function (d, j) {
+                    if(d && d !== '-') {
+                        select.append('<option value="' + d + '">' + d + '</option>');
+                    }
+                });
+            });
+        }
     });
 }
 
