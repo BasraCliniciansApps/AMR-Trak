@@ -5,11 +5,10 @@ let chartSpec_instance = null;
 let chartGen_instance = null;
 let isUpdatingFilters = false;
 
-// Register custom chart plugin for Error Bars (Confidence Interval)
-Chart.register({
+// تعريف إضافة خطوط الثقة كمتغير مستقل لربطه مباشرة بالمخطط
+const errorBarsPlugin = {
     id: 'errorBars',
-    afterDatasetsDraw: function(chart) {
-        if (chart.canvas.id !== 'chartAMR') return;
+    afterDatasetsDraw(chart, args, pluginOptions) {
         const ctx = chart.ctx;
         chart.data.datasets.forEach((dataset, i) => {
             const meta = chart.getDatasetMeta(i);
@@ -24,19 +23,17 @@ Chart.register({
                     
                     ctx.save();
                     ctx.beginPath();
-                    ctx.lineWidth = 1.5;
-                    ctx.strokeStyle = '#0f172a'; // dark slate for high contrast
+                    ctx.lineWidth = 1.5; 
+                    ctx.strokeStyle = '#000000'; // لون أسود واضح جداً للخطوط
                     
-                    // Vertical line exactly through the center
+                    // رسم الخط العمودي
                     ctx.moveTo(x, yLower);
                     ctx.lineTo(x, yUpper);
                     
-                    // Top cap
-                    const capWidth = 4;
+                    // رسم السقف والقاعدة للخط
+                    const capWidth = 5;
                     ctx.moveTo(x - capWidth, yUpper);
                     ctx.lineTo(x + capWidth, yUpper);
-                    
-                    // Bottom cap
                     ctx.moveTo(x - capWidth, yLower);
                     ctx.lineTo(x + capWidth, yLower);
                     
@@ -46,14 +43,13 @@ Chart.register({
             }
         });
     }
-});
+};
 
 // --- Migration Script to update old records to new clean names ---
 function runDatabaseMigration() {
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
     let migrated = false;
     
-    // تحويل الاسم القديم للإيكولاي إلى الاسم الجديد في السجلات السابقة تلقائياً
     records.forEach(r => {
         if (r['Selective organism'] === "Escherichia coli (E.coli)") {
             r['Selective organism'] = "Escherichia coli";
@@ -631,7 +627,7 @@ function loadBacteriaOptions() {
     for (const [groupName, options] of Object.entries(groups)) {
         if (options.length > 0) {
             const optgroup = $(`<optgroup label="${groupName}"></optgroup>`);
-            options.forEach(opt => optgroup.append(opt));
+            options.forEach(opt => optgroup.append(optgroup));
             select.append(optgroup);
         }
     }
@@ -1192,7 +1188,7 @@ window.clearAnalyticsFilters = function() {
 
     $('#analyticsContainer').addClass('hidden');
     $('#analyticsPlaceholder').removeClass('hidden').html(`
-        <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
+        <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
         <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view insights.</p>
     `);
 };
@@ -1377,7 +1373,6 @@ function generateAnalytics() {
                         let ci = wilsonScoreCI(targetVal, s.tested);
                         ciData.push(ci);
 
-                        // Calculate semantic text color for the table based on RAG logic
                         let dangerScore = metric === 'R' ? p : (100 - p);
                         let semColor = '';
                         if (!isReliable) semColor = 'text-slate-500';
@@ -1418,6 +1413,8 @@ function generateAnalytics() {
         $('#ciTableBody').siblings('thead').find('th').eq(4).text(`% ${metricLabel}`);
 
         if (chartAMR_instance) chartAMR_instance.destroy();
+        
+        // بناء المخطط وربطه إضافة خطوط الثقة
         chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
             type: 'bar',
             data: { labels: displayAbxs, datasets: datasets },
@@ -1428,7 +1425,8 @@ function generateAnalytics() {
                     x: { grid: {display: false}, ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
                 },
                 plugins: { legend: { display: true, position: 'top' } } 
-            }
+            },
+            plugins: [errorBarsPlugin] // <-- تم دمج الإضافة هنا بنجاح
         });
     }
 
