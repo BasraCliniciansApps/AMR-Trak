@@ -847,15 +847,22 @@ function initDataTable() {
     dataTable = $('#recordsTable').DataTable({
         data: records,
         columns: cols,
-        scrollX: true, 
+        scrollX: true, // الحفاظ على التمرير الأفقي
         order: [[ 6, "desc" ]],
         stateSave: true,
-        dom: '<"flex flex-col md:flex-row justify-between items-center mb-4 gap-4"fB>rt<"flex flex-col md:flex-row justify-between items-center mt-4 gap-4"ip>',
+        // تم إضافة حرف 'l' هنا لظهور قائمة اختيار عدد السجلات
+        dom: '<"flex flex-col md:flex-row justify-between items-center mb-4 gap-4"l fB>rt<"flex flex-col md:flex-row justify-between items-center mt-4 gap-4"ip>',
         buttons: [
             { extend: 'excelHtml5', text: 'Export Basic List', className: 'dt-custom-btn rounded-lg shadow-sm font-semibold' }
         ],
-        pageLength: 15,
-        language: { search: "", searchPlaceholder: "Search Records..." },
+        // 👇 التعديل الأساسي: تقليل العدد ليلائم الشاشة بدون حركة عمودية
+        pageLength: 8, 
+        lengthMenu: [[5, 8, 10, 15, 25, 50], ["5", "8", "10", "15", "25", "50"]], // قائمة التحكم بالعدد
+        language: { 
+            search: "", 
+            searchPlaceholder: "Search Records...",
+            lengthMenu: "_MENU_ records per page"
+        },
         initComplete: function () {
             this.api().columns([3, 4, 5, 6, 7]).every(function () {
                 let column = this;
@@ -873,6 +880,13 @@ function initDataTable() {
                     }
                 });
             });
+            // تنسيق شريط البحث
+            $('.dataTables_filter input').addClass('w-64 border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm');
+            // تنسيق قائمة التحكم بالعدد الجديدة
+            $('.dataTables_length select').addClass('border-slate-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm mx-2');
+        }
+    });
+}
             // Style the search box correctly with Tailwind
             $('.dataTables_filter input').addClass('w-64 border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm');
         }
