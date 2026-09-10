@@ -11,7 +11,7 @@ function runDatabaseMigration() {
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
     let migrated = false;
     
-    // تحويل الاسم القديم للاي كولاي إلى الاسم الجديد في السجلات السابقة
+    // تحويل الاسم القديم للإيكولاي إلى الاسم الجديد في السجلات السابقة تلقائياً
     records.forEach(r => {
         if (r['Selective organism'] === "Escherichia coli (E.coli)") {
             r['Selective organism'] = "Escherichia coli";
@@ -139,7 +139,7 @@ async function processDataExtraction(event) {
             console.warn("organisms_dictionary.json not found on server, continuing with internal mapping.");
         }
     } catch (error) {
-        console.warn("Could not fetch organisms_dictionary.json. (Ignore if running locally without a server).");
+        console.warn("Could not fetch organisms_dictionary.json.");
     }
 
     const reader = new FileReader();
@@ -266,7 +266,7 @@ async function processDataExtraction(event) {
             let rawSample = idxSample > -1 && cols[idxSample] ? cols[idxSample].toLowerCase() : "";
             let sample = rawSample.includes('ur') ? 'Urine' : rawSample.includes('bl') ? 'Blood' : rawSample.includes('sp') ? 'Sputum' : rawSample.includes('swab') ? 'Wound Swab' : (rawSample || "-");
 
-            // ------------- خوارزمية التاريخ المُصححة ------------
+            // خوارزمية التاريخ المصححة
             let rawDate = idxDate > -1 && cols[idxDate] ? cols[idxDate].trim() : "";
             let formattedDate = ""; 
             
@@ -298,7 +298,6 @@ async function processDataExtraction(event) {
                 skippedCount++;
                 continue;
             }
-            // -----------------------------------------------------
 
             let fullOrgName = externalOrgMap[orgCode] || whonetOrgMap[orgCode] || (orgCode.charAt(0).toUpperCase() + orgCode.slice(1));
             
@@ -1591,7 +1590,6 @@ function generateAnalytics() {
         $('#heatmapWrapper').html('<p class="text-center text-slate-400 py-4">No data matches the selected filters.</p>');
     }
 
-    // Distributions Building
     let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 10);
     if(chartOrg_instance) chartOrg_instance.destroy();
     chartOrg_instance = new Chart(document.getElementById('chartOrg'), {
