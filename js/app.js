@@ -5,7 +5,7 @@ let chartSpec_instance = null;
 let chartGen_instance = null;
 let isUpdatingFilters = false;
 
-// تعريف إضافة خطوط الثقة كمتغير مستقل لربطه مباشرة بالمخطط
+// Register custom chart plugin for Error Bars (Confidence Interval)
 const errorBarsPlugin = {
     id: 'errorBars',
     afterDatasetsDraw(chart, args, pluginOptions) {
@@ -24,13 +24,11 @@ const errorBarsPlugin = {
                     ctx.save();
                     ctx.beginPath();
                     ctx.lineWidth = 1.5; 
-                    ctx.strokeStyle = '#000000'; // لون أسود واضح جداً للخطوط
+                    ctx.strokeStyle = '#000000'; 
                     
-                    // رسم الخط العمودي
                     ctx.moveTo(x, yLower);
                     ctx.lineTo(x, yUpper);
                     
-                    // رسم السقف والقاعدة للخط
                     const capWidth = 5;
                     ctx.moveTo(x - capWidth, yUpper);
                     ctx.lineTo(x + capWidth, yUpper);
@@ -627,7 +625,7 @@ function loadBacteriaOptions() {
     for (const [groupName, options] of Object.entries(groups)) {
         if (options.length > 0) {
             const optgroup = $(`<optgroup label="${groupName}"></optgroup>`);
-            options.forEach(opt => optgroup.append(optgroup));
+            options.forEach(opt => optgroup.append(opt));
             select.append(optgroup);
         }
     }
@@ -1227,11 +1225,9 @@ function generateAnalytics() {
     $('#dashTitle').text(dashTitle);
     $('#dashSubtitle').text(dashSub);
 
-    // Update dynamic text based on S/R metric
     $('#chartAMR').parent().siblings('div').find('h3').html(`AMR Profile Comparison (% ${metricLabel}) <button type="button" onclick="togglePrintSection('print_sect_amr')" class="text-slate-400 hover:text-teal-600 no-print" title="Toggle Print Visibility">👁️</button>`);
     $('#heatmapWrapper').siblings('.flex').find('h3').html(`Antibiogram Heatmap (% ${metricLabel}) <button type="button" onclick="togglePrintSection('print_sect_heatmap')" class="text-slate-400 hover:text-teal-600 no-print" title="Toggle Print Visibility">👁️</button>`);
 
-    // Setup heatmap semantic texts
     let hmDesc = metric === 'R' 
         ? 'Color intensity indicates Resistance % (Dark Red = High Resistance). <span class="text-red-500 font-bold">*</span> indicates sample size &lt; 30.'
         : 'Color intensity indicates Susceptibility % (Dark Green = High Susceptibility). <span class="text-red-500 font-bold">*</span> indicates sample size &lt; 30.';
@@ -1400,7 +1396,7 @@ function generateAnalytics() {
                     data: dataR,
                     backgroundColor: bgColors,
                     borderRadius: 4,
-                    ciData: ciData // Injected for custom plugin
+                    ciData: ciData
                 });
             });
         }
@@ -1413,8 +1409,6 @@ function generateAnalytics() {
         $('#ciTableBody').siblings('thead').find('th').eq(4).text(`% ${metricLabel}`);
 
         if (chartAMR_instance) chartAMR_instance.destroy();
-        
-        // بناء المخطط وربطه إضافة خطوط الثقة
         chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
             type: 'bar',
             data: { labels: displayAbxs, datasets: datasets },
@@ -1426,7 +1420,7 @@ function generateAnalytics() {
                 },
                 plugins: { legend: { display: true, position: 'top' } } 
             },
-            plugins: [errorBarsPlugin] // <-- تم دمج الإضافة هنا بنجاح
+            plugins: [errorBarsPlugin]
         });
     }
 
@@ -1509,15 +1503,39 @@ function generateAnalytics() {
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } } }
     });
 
+    // --- تعديل عرض العينات: إظهار أعلى 7 عينات فقط مع تغيير العنوان ---
     let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
+    const topN = 7;
+    let displaySpecs = sortedSpecs.slice(0, topN);
+    let displaySpecCounts = displaySpecs.map(s => specCounts[s]);
+
+    const specTitleElement = $('#chartSpecimen').closest('.chart-container').find('h3');
+    if (sortedSpecs.length > topN) {
+        specTitleElement.html(`Top ${topN} Specimen Distribution 
+            <button type="button" onclick="togglePrintSection('print_sect_dist')" class="text-slate-400 hover:text-teal-600 no-print ml-2" title="Toggle Print Visibility">👁️</button>
+            <div class="text-[10px] text-slate-400 font-normal mt-0.5 w-full">* Showing highest ${topN} out of ${sortedSpecs.length} sample types</div>`);
+    } else {
+        specTitleElement.html(`Specimen Distribution 
+            <button type="button" onclick="togglePrintSection('print_sect_dist')" class="text-slate-400 hover:text-teal-600 no-print ml-2" title="Toggle Print Visibility">👁️</button>`);
+    }
+
     if(chartSpec_instance) chartSpec_instance.destroy();
     chartSpec_instance = new Chart(document.getElementById('chartSpecimen'), {
         type: 'bar',
         data: {
-            labels: sortedSpecs,
-            datasets: [{ label: 'Isolates', data: sortedSpecs.map(s=>specCounts[s]), backgroundColor: '#0ea5e9', borderRadius: 4 }]
+            labels: displaySpecs,
+            datasets: [{ label: 'Isolates', data: displaySpecCounts, backgroundColor: '#0ea5e9', borderRadius: 4 }]
         },
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: {x: {grid: {color: '#f1f5f9'}}, y: {grid: {display: false}}} }
+        options: { 
+            indexAxis: 'y', 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { legend: { display: false } }, 
+            scales: {
+                x: { grid: {color: '#f1f5f9'} }, 
+                y: { grid: {display: false}, ticks: { autoSkip: false } }
+            } 
+        }
     });
 
     if(chartGen_instance) chartGen_instance.destroy();
