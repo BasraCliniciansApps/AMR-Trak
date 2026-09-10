@@ -1645,12 +1645,6 @@ function showExportModal() {
                 <p class="text-sm text-slate-500 bg-teal-50 p-3 rounded-lg border border-teal-100">Select the Year and Quarter. The system will automatically fetch <b>Antibiogram_5.xlsx</b> from the server, populate it accurately, and download it.</p>
                 <div class="flex gap-4">
                     <div class="flex-1">
-                        <label class="block text-sm font-bold text-slate-700 mb-1">Year (السنة)</label>
-                        <select id="export_year" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none">
-                            ${yearsOptions}
-                        </select>
-                    </div>
-                    <div class="flex-1">
                         <label class="block text-sm font-bold text-slate-700 mb-1">Year</label>
                         <select id="export_year" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none">
                             ${yearsOptions}
@@ -1679,7 +1673,6 @@ function showExportModal() {
         if (result.isConfirmed) processAntibiogramExport(result.value.year, result.value.quarter);
     });
 }
-
 async function processAntibiogramExport(year, quarter) {
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
     
