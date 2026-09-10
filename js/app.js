@@ -263,9 +263,20 @@ async function processDataExtraction(event) {
             let rawWard = idxWard > -1 && cols[idxWard] ? cols[idxWard].toLowerCase() : "";
             let ward = wardMap[rawWard] || (rawWard ? rawWard.charAt(0).toUpperCase() + rawWard.slice(1) : "-");
 
-            let rawSample = idxSample > -1 && cols[idxSample] ? cols[idxSample].toLowerCase() : "";
-            let sample = rawSample.includes('ur') ? 'Urine' : rawSample.includes('bl') ? 'Blood' : rawSample.includes('sp') ? 'Sputum' : rawSample.includes('swab') ? 'Wound Swab' : (rawSample || "-");
+           let rawSample = idxSample > -1 && cols[idxSample] ? cols[idxSample].toLowerCase() : "";
 
+// خريطة لترجمة رموز WHONET إلى أسماء العينات الكاملة
+const sampleMap = {
+    'ur': 'Urine', 'bl': 'Blood', 'ps': 'Pus', 'sf': 'CSF',
+    'wd': 'Wound Swab', 'sp': 'Sputum', 'va': 'Vaginal Swab',
+    'th': 'Throat Swab', 'as': 'Aspirate', 'fl': 'Fluid',
+    'ea': 'Ear Swab', 'st': 'Stool', 'ue': 'Urethral Swab',
+    'np': 'Nasopharyngeal Swab', 'ti': 'Tissue', 'ey': 'Eye Swab',
+    're': 'Rectal Swab', 'sm': 'Semen', 'kf': 'Knee Fluid',
+    'ul': 'Ulcer', 'pf': 'Pleural Fluid', 'sb': 'Swab'
+};
+
+let sample = sampleMap[rawSample] || (rawSample ? rawSample.charAt(0).toUpperCase() + rawSample.slice(1) : "-");
             // خوارزمية التاريخ المصححة
             let rawDate = idxDate > -1 && cols[idxDate] ? cols[idxDate].trim() : "";
             let formattedDate = ""; 
