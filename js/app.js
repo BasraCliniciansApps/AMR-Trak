@@ -1510,11 +1510,6 @@ function generateAnalytics() {
     });
 
     let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
-    
-    // حساب الارتفاع الديناميكي: إعطاء 35 بكسل لكل عينة لضمان راحة الخط والبار، بحد أدنى 250 بكسل
-    let dynamicHeight = Math.max(250, sortedSpecs.length * 35);
-    document.getElementById('chartSpecimen').parentElement.style.height = dynamicHeight + 'px';
-
     if(chartSpec_instance) chartSpec_instance.destroy();
     chartSpec_instance = new Chart(document.getElementById('chartSpecimen'), {
         type: 'bar',
@@ -1522,16 +1517,7 @@ function generateAnalytics() {
             labels: sortedSpecs,
             datasets: [{ label: 'Isolates', data: sortedSpecs.map(s=>specCounts[s]), backgroundColor: '#0ea5e9', borderRadius: 4 }]
         },
-        options: { 
-            indexAxis: 'y', 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            plugins: { legend: { display: false } }, 
-            scales: {
-                x: { grid: {color: '#f1f5f9'} }, 
-                y: { grid: {display: false}, ticks: { autoSkip: false } } 
-            } 
-        }
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: {x: {grid: {color: '#f1f5f9'}}, y: {grid: {display: false}}} }
     });
 
     if(chartGen_instance) chartGen_instance.destroy();
