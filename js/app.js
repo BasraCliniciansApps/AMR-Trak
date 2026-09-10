@@ -160,6 +160,7 @@ async function processDataExtraction(event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    closeSettingsModal();
     Swal.fire({ title: 'Processing File...', text: 'Loading dictionaries and extracting records...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
     let externalOrgMap = {};
@@ -170,8 +171,6 @@ async function processDataExtraction(event) {
             Object.keys(jsonDict).forEach(key => {
                 externalOrgMap[key.toLowerCase()] = jsonDict[key];
             });
-        } else {
-            console.warn("organisms_dictionary.json not found on server, continuing with internal mapping.");
         }
     } catch (error) {
         console.warn("Could not fetch organisms_dictionary.json.");
@@ -185,12 +184,12 @@ async function processDataExtraction(event) {
             Object.keys(jsonDict).forEach(key => {
                 externalSpecimenMap[key.toLowerCase()] = jsonDict[key];
             });
-        } else {
-            console.warn("specimens_dictionary.json not found on server, continuing with internal fallback mapping.");
         }
     } catch (error) {
         console.warn("Could not fetch specimens_dictionary.json.");
     }
+
+    const customAbbreviations = JSON.parse(localStorage.getItem('amr_custom_abbreviations')) || {};
 
     const reader = new FileReader();
     reader.onload = e => {
@@ -321,7 +320,6 @@ async function processDataExtraction(event) {
             
             if(rawDate) {
                 let dateParts = rawDate.split(/[\/\-]/);
-                
                 if(dateParts.length >= 3) {
                     let part1 = dateParts[0];
                     let part2 = dateParts[1].padStart(2, '0');
@@ -348,7 +346,8 @@ async function processDataExtraction(event) {
                 continue;
             }
 
-            let fullOrgName = externalOrgMap[orgCode] || whonetOrgMap[orgCode] || (orgCode.charAt(0).toUpperCase() + orgCode.slice(1));
+            // Priority: User's Custom Mapping -> Internal Organisms Dictionary -> WHONET Fallback -> Title Case
+            let fullOrgName = customAbbreviations[orgCode] || externalOrgMap[orgCode] || whonetOrgMap[orgCode] || (orgCode.charAt(0).toUpperCase() + orgCode.slice(1));
                     
             const orgNameCleanup = {
                 "Escherichia coli (E.coli)": "Escherichia coli",
@@ -464,50 +463,142 @@ $(document).ready(function() {
 // --- Tabs Logic ---
 function showTab(tabName) {
     $('#viewRecords, #viewAnalytics').addClass('hidden');
-    $('#btnTabRecords, #btnTabAnalytics').removeClass('bg-teal-600 text-white border-teal-400/50').addClass('bg-white/5 text-teal-100 border-teal-300/20');
+    $('#btnTabRecords, #btnTabAnalytics').removeClass('bg-blue-600 text-white shadow-md').addClass('text-slate-400 hover:text-white hover:bg-slate-800');
     
     if (tabName === 'records') {
         $('#viewRecords').removeClass('hidden');
-        $('#btnTabRecords').removeClass('bg-white/5 text-teal-100 border-teal-300/20').addClass('bg-teal-600 text-white border-teal-400/50');
+        $('#btnTabRecords').removeClass('text-slate-400 hover:text-white hover:bg-slate-800').addClass('bg-blue-600 text-white shadow-md');
+        $('#pageTitle').text('Isolate Database');
     } else if (tabName === 'analytics') {
         loadAnalyticsFilters();
         $('#viewAnalytics').removeClass('hidden');
-        $('#btnTabAnalytics').removeClass('bg-white/5 text-teal-100 border-teal-300/20').addClass('bg-teal-600 text-white border-teal-400/50');
+        $('#btnTabAnalytics').removeClass('text-slate-400 hover:text-white hover:bg-slate-800').addClass('bg-blue-600 text-white shadow-md');
+        $('#pageTitle').text('Surveillance Analytics');
     }
 }
 
-// --- BACKUP AND RESTORE LOGIC ---
-function showBackupModal() {
+// --- APP MODALS (SETTINGS, ABOUT, INSTALL) ---
+function showSettingsModal() {
+    loadAbbreviations();
+    $('#settingsModal').removeClass('hidden');
+}
+
+function closeSettingsModal() {
+    $('#settingsModal').addClass('hidden');
+}
+
+function showAboutModal() {
     Swal.fire({
-        title: '💾 Backup & Restore',
         html: `
-            <div class="text-left space-y-4 mt-2">
-                <div class="bg-teal-50 p-4 rounded-xl border border-teal-100">
-                    <h4 class="font-bold text-teal-900 mb-2">1. Backup Data</h4>
-                    <p class="text-xs text-slate-600 mb-3">Download all your patient records, custom antibiotics, and settings to a secure file on your computer.</p>
-                    <button onclick="downloadBackup()" class="w-full bg-teal-600 text-white font-bold py-2 rounded-lg shadow hover:bg-teal-700 transition-colors">📥 Download Backup</button>
+            <div class="text-sm text-slate-600 leading-relaxed text-center space-y-4">
+                <div class="mx-auto w-16 h-16 bg-blue-50 text-blue-700 rounded-full flex items-center justify-center mb-4 border border-blue-100 shadow-sm">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                 </div>
-                <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
-                    <h4 class="font-bold text-amber-900 mb-2">2. Restore Data</h4>
-                    <p class="text-xs text-slate-600 mb-3">Upload a previously saved backup file. <b class="text-red-500">Warning:</b> This will replace all current data.</p>
-                    <input type="file" id="backupFileInput" accept=".json" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-100 file:text-amber-700 hover:file:bg-amber-200 mb-3" />
-                    <button onclick="processRestore()" class="w-full bg-amber-600 text-white font-bold py-2 rounded-lg shadow hover:bg-amber-700 transition-colors">📤 Restore Backup</button>
+                <h3 class="text-xl font-bold text-slate-800">AMR Tracker</h3>
+                <p class="font-medium text-blue-700">Antimicrobial Resistance Surveillance System</p>
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-right text-sm leading-loose mt-4" dir="rtl">
+                    تم تصميم وإعداد هذه المنصة البرمجية من قبل عضو لجنة المضادات الحيوية، <b>الصيدلاني السريري سعد نبيل الحمادي</b>، 
+                    بالتعاون مع <b>وحدة الـ AMR</b> وكادر <b>مختبر المايكروبايولوجي</b> في <b>مستشفى الموانئ التعليمي</b>.
                 </div>
+                <p class="text-xs text-slate-500 mt-4">
+                    This clinical system is developed to facilitate professional data entry, robust epidemiology reporting, and precise antibiogram generation. All rights reserved &copy; 2026.
+                </p>
             </div>
         `,
-        showConfirmButton: false,
-        showCloseButton: true,
+        showConfirmButton: true,
+        confirmButtonText: 'Close',
+        confirmButtonColor: '#1d4ed8',
         width: '500px'
     });
 }
 
+function showInstallGuide() {
+    Swal.fire({
+        title: '💻 System Installation Guide',
+        html: `
+            <div class="text-sm text-slate-600 leading-relaxed space-y-4 text-left mt-3">
+                <p>This system operates entirely locally (offline) within your browser to ensure absolute patient data privacy. To install it natively on your computer:</p>
+                <ol class="list-decimal pl-5 space-y-2 font-medium bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <li>Open this application in <b>Google Chrome</b> or <b>Microsoft Edge</b>.</li>
+                    <li>Click on the browser's menu (3 vertical dots in the top right).</li>
+                    <li>Go to <b>Save and share</b> (or Apps) &gt; <b>Install page as app</b>.</li>
+                    <li>Ensure you check the box <b>"Open as window"</b>.</li>
+                    <li>Click <b>Install</b>.</li>
+                </ol>
+                <p class="text-xs text-slate-500 italic mt-2">The application will now have its own icon on your desktop and taskbar, behaving exactly like a standard desktop software.</p>
+            </div>
+        `,
+        showConfirmButton: true,
+        confirmButtonText: 'Got it!',
+        confirmButtonColor: '#0f766e',
+        width: '550px'
+    });
+}
+
+function clearAllDatabase() {
+    Swal.fire({
+        title: 'Are you absolutely sure?',
+        text: "This will delete ALL isolates, custom dictionaries, and settings permanently. You cannot undo this action!",
+        icon: 'error',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Yes, DELETE EVERYTHING'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            localStorage.clear();
+            location.reload();
+        }
+    });
+}
+
+// --- Abbreviations Logic ---
+function loadAbbreviations() {
+    let abbr = JSON.parse(localStorage.getItem('amr_custom_abbreviations')) || {};
+    let html = '';
+    for (const [code, name] of Object.entries(abbr)) {
+        html += `<tr class="hover:bg-slate-50 transition-colors">
+            <td class="p-3 border-b text-slate-700 font-bold uppercase">${code}</td>
+            <td class="p-3 border-b text-slate-600">${name}</td>
+            <td class="p-3 border-b text-center">
+                <button onclick="deleteAbbreviation('${code}')" class="text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded hover:bg-red-50 transition-colors text-xs">Delete</button>
+            </td>
+        </tr>`;
+    }
+    if(html === '') html = '<tr><td colspan="3" class="text-center p-4 text-slate-400">No custom abbreviations added yet.</td></tr>';
+    $('#abbrTableBody').html(html);
+}
+
+function addAbbreviation() {
+    let code = $('#abbrCode').val().trim().toLowerCase();
+    let name = $('#abbrName').val().trim();
+    if (!code || !name) {
+        Swal.fire({icon: 'warning', title: 'Missing Info', text: 'Please provide both the short code and the full scientific name.'});
+        return;
+    }
+    let abbr = JSON.parse(localStorage.getItem('amr_custom_abbreviations')) || {};
+    abbr[code] = name;
+    localStorage.setItem('amr_custom_abbreviations', JSON.stringify(abbr));
+    $('#abbrCode').val(''); $('#abbrName').val('');
+    loadAbbreviations();
+}
+
+function deleteAbbreviation(code) {
+    let abbr = JSON.parse(localStorage.getItem('amr_custom_abbreviations')) || {};
+    delete abbr[code];
+    localStorage.setItem('amr_custom_abbreviations', JSON.stringify(abbr));
+    loadAbbreviations();
+}
+
+// --- BACKUP AND RESTORE LOGIC ---
 window.downloadBackup = function() {
     const data = {
         amr_records: JSON.parse(localStorage.getItem('amr_records')) || [],
         amr_samples: JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples,
         amr_wards: JSON.parse(localStorage.getItem('amr_wards')) || defaultWards,
         amr_organisms: JSON.parse(localStorage.getItem('amr_organisms')) || [],
-        amr_custom_abx_v2: JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || []
+        amr_custom_abx_v2: JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [],
+        amr_custom_abbreviations: JSON.parse(localStorage.getItem('amr_custom_abbreviations')) || {}
     };
 
     const dataStr = JSON.stringify(data, null, 2);
@@ -515,15 +606,13 @@ window.downloadBackup = function() {
     const dateStr = new Date().toISOString().split('T')[0];
     saveAs(blob, `AMR_Tracker_Backup_${dateStr}.json`);
     
-    Swal.fire('Success!', 'Backup downloaded successfully.', 'success');
+    closeSettingsModal();
+    Swal.fire('Success!', 'Database backup downloaded successfully.', 'success');
 };
 
 window.processRestore = function() {
     const fileInput = document.getElementById('backupFileInput');
-    if (!fileInput.files.length) {
-        Swal.showValidationMessage('Please select a backup file first.');
-        return;
-    }
+    if (!fileInput.files.length) return;
 
     const file = fileInput.files[0];
     const reader = new FileReader();
@@ -533,14 +622,15 @@ window.processRestore = function() {
             const importedData = JSON.parse(e.target.result);
             if (!importedData.amr_records) throw new Error("Invalid backup file structure.");
 
+            closeSettingsModal();
             Swal.fire({
                 title: 'Are you sure?',
-                text: "This will overwrite all existing data. Make sure you have backed up your current work!",
+                text: "This will overwrite all existing clinical data on this device. Ensure you have backed up your current work!",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#e11d48',
                 cancelButtonColor: '#64748b',
-                confirmButtonText: 'Yes, Restore it!'
+                confirmButtonText: 'Yes, Restore Database!'
             }).then((result) => {
                 if (result.isConfirmed) {
                     localStorage.setItem('amr_records', JSON.stringify(importedData.amr_records));
@@ -548,6 +638,7 @@ window.processRestore = function() {
                     if (importedData.amr_wards) localStorage.setItem('amr_wards', JSON.stringify(importedData.amr_wards));
                     if (importedData.amr_organisms) localStorage.setItem('amr_organisms', JSON.stringify(importedData.amr_organisms));
                     if (importedData.amr_custom_abx_v2) localStorage.setItem('amr_custom_abx_v2', JSON.stringify(importedData.amr_custom_abx_v2));
+                    if (importedData.amr_custom_abbreviations) localStorage.setItem('amr_custom_abbreviations', JSON.stringify(importedData.amr_custom_abbreviations));
 
                     loadBacteriaOptions();
                     loadSampleOptions();
@@ -556,12 +647,13 @@ window.processRestore = function() {
                     initDataTable();
                     if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
 
-                    Swal.fire('Restored!', 'Your data has been restored successfully.', 'success');
+                    Swal.fire('Restored!', 'Your database has been restored successfully.', 'success');
                 }
             });
         } catch (error) {
             Swal.fire('Error', 'Invalid or corrupted backup file.', 'error');
         }
+        fileInput.value = '';
     };
     reader.readAsText(file);
 };
@@ -584,18 +676,18 @@ function renderDefaultAntibiotics() {
         if(abxs.length === 0) continue;
         html += `
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-5">
-            <h5 class="text-sm font-bold bg-slate-50 text-teal-900 px-4 py-2 border-b border-slate-200">${group}</h5>
+            <h5 class="text-sm font-bold bg-slate-50 text-slate-800 px-4 py-2 border-b border-slate-200 uppercase tracking-wider">${group}</h5>
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-0">`;
         abxs.forEach(abx => {
             const safeId = abx.replace(/[^a-zA-Z0-9]/g, '_');
             html += `
-                <div class="flex items-center justify-between border-r border-b border-slate-100 p-2.5 hover:bg-teal-50/30 transition-colors">
+                <div class="flex items-center justify-between border-r border-b border-slate-100 p-2.5 hover:bg-slate-50 transition-colors">
                     <span class="text-[11px] font-bold text-slate-700 truncate mr-2 w-2/3" title="${abx}">${abx}</span>
-                    <select data-abx="${abx}" id="default_abx_${safeId}" class="default-abx-select compact-dropdown border border-slate-300 rounded-md text-xs font-bold bg-white focus:ring-2 focus:ring-teal-500 w-1/3 py-1.5 shadow-sm transition-colors">
+                    <select data-abx="${abx}" id="default_abx_${safeId}" class="default-abx-select compact-dropdown border border-slate-300 rounded-md text-xs font-bold bg-white focus:ring-2 focus:ring-blue-500 w-1/3 py-1.5 shadow-sm transition-colors outline-none">
                         <option value="" class="text-slate-400">-</option>
-                        <option value="S" class="text-emerald-600 bg-emerald-50">S</option>
-                        <option value="I" class="text-amber-600 bg-amber-50">I</option>
-                        <option value="R" class="text-rose-600 bg-rose-50">R</option>
+                        <option value="S" class="text-emerald-700 bg-emerald-50">S</option>
+                        <option value="I" class="text-amber-700 bg-amber-50">I</option>
+                        <option value="R" class="text-red-700 bg-red-50">R</option>
                     </select>
                 </div>
             `;
@@ -669,7 +761,7 @@ function loadAnalyticsFilters() {
 
     let uniqueSamples = new Set(records.map(r => r.Sample).filter(Boolean));
     let currentSample = $('#ana_sample').val();
-    $('#ana_sample').empty().append(new Option("All Samples", ""));
+    $('#ana_sample').empty().append(new Option("All Specimens", ""));
     Array.from(uniqueSamples).sort().forEach(s => {
         $('#ana_sample').append(new Option(s, s));
     });
@@ -714,27 +806,39 @@ function initDataTable() {
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
     
     let cols = [
-        { data: null, title: 'Action', orderable: false, render: function(data, type, row, meta) {
+        { data: null, title: 'Action', orderable: false, className: 'text-center', render: function(data, type, row, meta) {
             return `
-            <div class="flex gap-2">
-                <button onclick="editRecord(${meta.row})" class="bg-amber-400 hover:bg-amber-500 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm transition-colors">Edit</button>
-                <button onclick="deleteRecord(${meta.row})" class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm transition-colors">Delete</button>
+            <div class="flex justify-center gap-2">
+                <button onclick="editRecord(${meta.row})" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-colors">Edit</button>
+                <button onclick="deleteRecord(${meta.row})" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-colors">Delete</button>
             </div>`;
         }},
-        { data: 'Name', title: 'Name' },
+        { data: 'Name', title: 'Patient Name / ID', className: 'font-semibold text-slate-700' },
         { data: null, title: 'Age', render: function(data, type, row) { 
             return row['Age'] ? row['Age'] + ' ' + (row['Age Unit'] || '') : '-'; 
         }},
-        { data: 'Sex', title: 'Sex' },
-        { data: 'Ward', title: 'Ward' },
-        { data: 'Sample', title: 'Sample' },
-        { data: 'Date', title: 'Date' },
-        { data: 'Selective organism', title: 'Selective organism' }
+        { data: 'Sex', title: 'Gender' },
+        { data: 'Ward', title: 'Ward / Dept' },
+        { data: 'Sample', title: 'Specimen' },
+        { data: 'Date', title: 'Collection Date' },
+        { data: 'Selective organism', title: 'Isolated Organism', className: 'font-semibold text-slate-700' }
     ];
 
     let customAbx = getCustomAntibiotics();
     let allAbxColumns = [...abxList, ...customAbx.map(a=>a.name)];
-    allAbxColumns.forEach(abx => { cols.push({ data: abx, title: abx, defaultContent: '-' }); });
+    allAbxColumns.forEach(abx => { 
+        cols.push({ 
+            data: abx, 
+            title: abx, 
+            defaultContent: '-',
+            render: function(data) {
+                if (data === 'S') return `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800">S</span>`;
+                if (data === 'I') return `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800">I</span>`;
+                if (data === 'R') return `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-red-100 text-red-800">R</span>`;
+                return data;
+            }
+        }); 
+    });
 
     if ($.fn.DataTable.isDataTable('#recordsTable')) {
         $('#recordsTable').DataTable().destroy();
@@ -746,26 +850,22 @@ function initDataTable() {
         scrollX: true, 
         order: [[ 6, "desc" ]],
         stateSave: true,
-        dom: '<"flex flex-col sm:flex-row justify-between items-center mb-4 gap-3"Bf>rt<"flex flex-col sm:flex-row justify-between items-center mt-4 gap-3"ip>',
+        dom: '<"flex flex-col md:flex-row justify-between items-center mb-4 gap-4"fB>rt<"flex flex-col md:flex-row justify-between items-center mt-4 gap-4"ip>',
         buttons: [
-            { extend: 'excelHtml5', text: 'Export to Excel', className: 'mr-2 rounded shadow' },
-            { extend: 'print', text: 'Print Records', className: 'rounded shadow' }
+            { extend: 'excelHtml5', text: 'Export Basic List', className: 'dt-custom-btn rounded-lg shadow-sm font-semibold' }
         ],
         pageLength: 15,
-        language: { search: "", searchPlaceholder: "Search records..." },
+        language: { search: "", searchPlaceholder: "Search Records..." },
         initComplete: function () {
             this.api().columns([3, 4, 5, 6, 7]).every(function () {
                 let column = this;
-                
-                let select = $('<select class="mt-2 block w-full text-xs border-slate-300 rounded shadow-sm focus:ring-teal-500 font-normal"><option value="">All</option></select>')
+                let select = $('<select class="mt-2 block w-full text-xs border-slate-300 rounded shadow-sm focus:ring-blue-500 font-normal outline-none"><option value="">All</option></select>')
                     .appendTo($(column.header()))
                     .on('change', function () {
                         let val = $.fn.dataTable.util.escapeRegex($(this).val());
                         column.search(val ? '^' + val + '$' : '', true, false).draw();
                     })
-                    .on('click', function(e) {
-                        e.stopPropagation(); 
-                    });
+                    .on('click', function(e) { e.stopPropagation(); });
 
                 column.data().unique().sort().each(function (d, j) {
                     if(d && d !== '-') {
@@ -773,6 +873,8 @@ function initDataTable() {
                     }
                 });
             });
+            // Style the search box correctly with Tailwind
+            $('.dataTables_filter input').addClass('w-64 border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm');
         }
     });
 }
@@ -795,7 +897,7 @@ function openModal() {
         updateAbxColor(this);
     });
     
-    $('#modalTitle').text('Add New Patient Record');
+    $('#modalTitle').html('<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Patient Isolate Record');
     $('#formModal').removeClass('hidden');
 }
 
@@ -822,14 +924,14 @@ function addAntibiotic(abxName = null, result = 'S') {
     selectedAbxMap[abx] = result;
     const safeId = abx.replace(/[^a-zA-Z0-9\s]/g, '_').trim();
     const html = `
-        <div id="row_${safeId}" class="flex items-center justify-between bg-white border border-gray-200 rounded-md p-3 shadow-sm hover:shadow transition">
-            <span class="text-sm font-semibold text-gray-700 truncate w-3/5" title="${abx}">${abx}</span>
-            <select class="abx-result-select border border-gray-300 rounded-md p-1.5 text-sm font-bold bg-gray-50 focus:ring-blue-500 w-1/4" onchange="updateAbxResult('${abx}', this.value)">
-                <option value="S" class="text-green-600" ${result==='S'?'selected':''}>S</option>
-                <option value="I" class="text-yellow-600" ${result==='I'?'selected':''}>I</option>
-                <option value="R" class="text-red-600" ${result==='R'?'selected':''}>R</option>
+        <div id="row_${safeId}" class="flex items-center justify-between bg-white border border-slate-200 rounded-lg p-3 shadow-sm hover:shadow transition">
+            <span class="text-sm font-semibold text-slate-700 truncate w-3/5" title="${abx}">${abx}</span>
+            <select class="abx-result-select border border-slate-300 rounded-md p-1.5 text-sm font-bold bg-slate-50 focus:ring-blue-500 w-1/4 outline-none" onchange="updateAbxResult('${abx}', this.value)">
+                <option value="S" class="text-emerald-700" ${result==='S'?'selected':''}>S</option>
+                <option value="I" class="text-amber-700" ${result==='I'?'selected':''}>I</option>
+                <option value="R" class="text-red-700" ${result==='R'?'selected':''}>R</option>
             </select>
-            <button type="button" onclick="removeAntibiotic('${abx}', '${safeId}')" class="text-red-400 hover:text-red-600 font-bold px-2 text-lg transition">&times;</button>
+            <button type="button" onclick="removeAntibiotic('${abx}', '${safeId}')" class="text-slate-400 hover:text-red-600 font-bold px-2 text-lg transition-colors">&times;</button>
         </div>
     `;
     $('#active_abx_container').append(html);
@@ -915,7 +1017,7 @@ $('#entryForm').submit(function(e) {
     
     if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
 
-    Swal.fire({ icon: 'success', title: 'Saved!', timer: 1500, showConfirmButton: false });
+    Swal.fire({ icon: 'success', title: 'Saved successfully', timer: 1500, showConfirmButton: false });
 });
 
 function editRecord(index) {
@@ -923,7 +1025,7 @@ function editRecord(index) {
     let record = records[index];
     
     openModal();
-    $('#modalTitle').text('Edit Patient Record');
+    $('#modalTitle').html('<svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg> Edit Patient Record');
     $('#editIndex').val(index);
     
     $('#p_name').val(record['Name']);
@@ -981,7 +1083,7 @@ function editRecord(index) {
 }
 
 function deleteRecord(index) {
-    Swal.fire({ title: 'Are you sure?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#e11d48', confirmButtonText: 'Yes, delete it!' })
+    Swal.fire({ title: 'Are you sure?', text: 'This isolate record will be deleted.', icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc2626', cancelButtonColor: '#64748b', confirmButtonText: 'Yes, Delete' })
     .then((result) => {
         if (result.isConfirmed) {
             let records = JSON.parse(localStorage.getItem('amr_records')) || [];
@@ -990,188 +1092,6 @@ function deleteRecord(index) {
         }
     });
 }
-
-// --- Manage Dictionaries ---
-function manageSamples() {
-    let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
-    let customSamples = savedSamples.filter(s => !defaultSamples.includes(s));
-    if (customSamples.length === 0) { Swal.fire({ icon: 'info', title: 'No Custom Samples' }); return; }
-    let html = '<div class="text-left space-y-2 mt-4">';
-    customSamples.forEach(sample => {
-        html += `<div class="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
-            <span class="font-medium text-slate-700">${sample}</span>
-            <button type="button" onclick="deleteCustomSample('${sample.replace(/'/g, "\\'")}')" class="text-rose-500 font-bold bg-white px-3 py-1 rounded border hover:bg-rose-50 transition-colors">Delete</button></div>`;
-    });
-    html += '</div>';
-    Swal.fire({ title: 'Manage Custom Samples', html: html, confirmButtonText: 'Done' });
-}
-
-window.deleteCustomSample = function(sample) {
-    let s = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
-    localStorage.setItem('amr_samples', JSON.stringify(s.filter(x => x !== sample)));
-    loadSampleOptions(); 
-    if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters(); 
-    manageSamples();
-};
-
-function manageWards() {
-    let savedWards = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
-    let customWards = savedWards.filter(w => !defaultWards.includes(w));
-    if (customWards.length === 0) { Swal.fire({ icon: 'info', title: 'No Custom Wards' }); return; }
-    let html = '<div class="text-left space-y-2 mt-4">';
-    customWards.forEach(ward => {
-        html += `<div class="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
-            <span class="font-medium text-slate-700">${ward}</span>
-            <button type="button" onclick="deleteCustomWard('${ward.replace(/'/g, "\\'")}')" class="text-rose-500 font-bold bg-white px-3 py-1 rounded border hover:bg-rose-50 transition-colors">Delete</button></div>`;
-    });
-    html += '</div>';
-    Swal.fire({ title: 'Manage Custom Wards', html: html, confirmButtonText: 'Done' });
-}
-
-window.deleteCustomWard = function(ward) {
-    let w = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
-    localStorage.setItem('amr_wards', JSON.stringify(w.filter(x => x !== ward)));
-    loadWardOptions(); 
-    manageWards();
-};
-
-function manageOrganisms() {
-    let savedOrgs = JSON.parse(localStorage.getItem('amr_organisms')) || [];
-    if (savedOrgs.length === 0) { Swal.fire({ icon: 'info', title: 'No Custom Organisms' }); return; }
-    let html = '<div class="text-left space-y-2 mt-4">';
-    savedOrgs.forEach(org => {
-        html += `<div class="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
-            <span class="font-medium text-slate-700">${org}</span>
-            <button type="button" onclick="deleteCustomOrganism('${org.replace(/'/g, "\\'")}')" class="text-rose-500 font-bold bg-white px-3 py-1 rounded border hover:bg-rose-50 transition-colors">Delete</button></div>`;
-    });
-    html += '</div>';
-    Swal.fire({ title: 'Manage Custom Organisms', html: html, confirmButtonText: 'Done' });
-}
-
-window.deleteCustomOrganism = function(org) {
-    let savedOrgs = JSON.parse(localStorage.getItem('amr_organisms')) || [];
-    localStorage.setItem('amr_organisms', JSON.stringify(savedOrgs.filter(x => x !== org)));
-    loadBacteriaOptions(); 
-    if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters(); 
-    manageOrganisms();
-};
-
-function manageAntibioticsDB() {
-    let customAbx = getCustomAntibiotics();
-    let groupsArr = Object.keys(abxGroups);
-    if (!groupsArr.includes("Others")) groupsArr.push("Others");
-
-    let groupsOptions = groupsArr.map(g => `<option value="${g}">${g}</option>`).join('');
-    
-    let listHtml = customAbx.length === 0 ? '<p class="text-xs text-slate-500 text-center py-4 bg-slate-50 rounded-lg border border-slate-200">No custom antibiotics added yet.</p>' : 
-        customAbx.map(a => {
-            let opts = groupsArr.map(g => `<option value="${g}" ${a.group === g ? 'selected' : ''}>${g}</option>`).join('');
-            return `
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-3 rounded-lg border border-slate-200 mb-2 gap-2">
-                <div class="font-bold text-sm text-slate-800 truncate w-full sm:flex-1" title="${a.name}">${a.name}</div>
-                <div class="flex w-full sm:w-auto gap-2">
-                    <select onchange="updateAbxGroupInDB('${a.name.replace(/'/g, "\\'")}', this.value)" class="flex-1 sm:w-32 border border-slate-300 rounded p-1.5 text-xs focus:ring-teal-500" dir="ltr" title="Change Group">
-                        ${opts}
-                    </select>
-                    <button type="button" onclick="removeAbxFromDB('${a.name.replace(/'/g, "\\'")}')" class="text-rose-500 font-bold text-xs bg-white px-3 py-1.5 rounded border border-rose-200 hover:bg-rose-50 transition-colors">Delete</button>
-                </div>
-            </div>
-            `;
-        }).join('');
-
-    let html = `
-        <div class="text-left space-y-5">
-            <div class="bg-teal-50 p-4 rounded-xl border border-teal-100">
-                <h5 class="font-bold text-teal-900 mb-3">Add New Antibiotic / Antifungal</h5>
-                <input type="text" id="new_abx_name" placeholder="Name..." class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 focus:ring-2 focus:ring-teal-500 outline-none" dir="ltr">
-                <select id="new_abx_group" class="w-full border border-slate-300 p-2.5 rounded-lg mb-4 focus:ring-2 focus:ring-teal-500 outline-none" dir="ltr">
-                    ${groupsOptions}
-                </select>
-                <button type="button" onclick="addNewAbxToDB()" class="w-full bg-teal-600 text-white font-bold py-2.5 rounded-lg shadow hover:bg-teal-700 transition-colors">Add to Database</button>
-                <p id="abx_error" class="text-rose-500 text-xs font-bold mt-2 hidden"></p>
-            </div>
-            <div>
-                <h5 class="font-bold text-slate-700 mb-3 border-b border-slate-200 pb-2">Custom Antibiotics List</h5>
-                <div id="custom_abx_list" class="max-h-60 overflow-y-auto pr-2 custom-scroll">
-                    ${listHtml}
-                </div>
-            </div>
-        </div>
-    `;
-
-    Swal.fire({
-        title: 'Database Manager',
-        html: html,
-        showConfirmButton: true,
-        confirmButtonText: 'Done',
-        confirmButtonColor: '#0d9488',
-        width: '600px'
-    }).then(() => {
-        renderDefaultAntibiotics();
-        initDataTable();
-    });
-}
-
-window.addNewAbxToDB = function() {
-    let name = document.getElementById('new_abx_name').value.trim();
-    let group = document.getElementById('new_abx_group').value;
-    let errorEl = document.getElementById('abx_error');
-    
-    if(!name) { 
-        errorEl.innerText = 'Name is required!'; 
-        errorEl.classList.remove('hidden');
-        return; 
-    }
-    
-    let allCurrent = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
-    if(allCurrent.map(a=>a.toLowerCase()).includes(name.toLowerCase())) {
-        errorEl.innerText = 'Item already exists!';
-        errorEl.classList.remove('hidden');
-        return;
-    }
-
-    saveCustomAntibiotic(name, group);
-    manageAntibioticsDB(); 
-};
-
-window.removeAbxFromDB = function(name) {
-    deleteCustomAntibiotic(name);
-    manageAntibioticsDB();
-};
-
-window.updateAbxGroupInDB = function(name, newGroup) {
-    let custom = getCustomAntibiotics();
-    let index = custom.findIndex(a => a.name === name);
-    if (index !== -1) {
-        custom[index].group = newGroup;
-        localStorage.setItem('amr_custom_abx_v2', JSON.stringify(custom));
-        renderDefaultAntibiotics(); 
-    }
-};
-
-// --- 6. Smart Analytics, Heatmap & Wilson CI ---
-function wilsonScoreCI(r, n) {
-    if (n === 0) return { lower: 0, upper: 0 };
-    const p = r / n;
-    const z = 1.96; 
-    const z2 = z * z;
-    const denominator = 1 + z2 / n;
-    const center = p + z2 / (2 * n);
-    const spread = z * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n));
-    const lower = (center - spread) / denominator;
-    const upper = (center + spread) / denominator;
-    return { lower: Math.max(0, Math.round(lower * 100)), upper: Math.min(100, Math.round(upper * 100)) };
-}
-
-const orgColorPalette = [
-    { bg: 'rgba(185, 28, 28, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(30, 64, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(21, 128, 61, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(162, 28, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(194, 65, 12, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(13, 148, 136, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(217, 70, 239, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' }
-];
 
 window.clearAnalyticsFilters = function() {
     let currentYear = new Date().getFullYear();
@@ -1187,7 +1107,7 @@ window.clearAnalyticsFilters = function() {
     $('#analyticsContainer').addClass('hidden');
     $('#analyticsPlaceholder').removeClass('hidden').html(`
         <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
-        <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view insights.</p>
+        <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view clinical insights.</p>
     `);
 };
 
@@ -1219,18 +1139,18 @@ function generateAnalytics() {
     $('#analyticsPlaceholder').addClass('hidden');
     $('#analyticsContainer').removeClass('hidden');
 
-    let dashTitle = "Antibiogram Analysis";
+    let dashTitle = "Surveillance Analysis";
     let dashSub = `${startDate} to ${endDate} | Metric: % ${metricLabel}`;
-    if(targetSample) dashSub += ` | Sample: ${targetSample}`;
+    if(targetSample) dashSub += ` | Specimen: ${targetSample}`;
     $('#dashTitle').text(dashTitle);
     $('#dashSubtitle').text(dashSub);
 
-    $('#chartAMR').parent().siblings('div').find('h3').html(`AMR Profile Comparison (% ${metricLabel}) <button type="button" onclick="togglePrintSection('print_sect_amr')" class="text-slate-400 hover:text-teal-600 no-print" title="Toggle Print Visibility">👁️</button>`);
-    $('#heatmapWrapper').siblings('.flex').find('h3').html(`Antibiogram Heatmap (% ${metricLabel}) <button type="button" onclick="togglePrintSection('print_sect_heatmap')" class="text-slate-400 hover:text-teal-600 no-print" title="Toggle Print Visibility">👁️</button>`);
+    $('#chartAMR').parent().siblings('div').find('h3').html(`AMR Profile Comparison (% ${metricLabel}) <button type="button" onclick="togglePrintSection('print_sect_amr')" class="text-slate-400 hover:text-blue-600 no-print" title="Toggle Print Visibility">👁️</button>`);
+    $('#heatmapWrapper').siblings('.flex').find('h3').html(`Antibiogram Heatmap (% ${metricLabel}) <button type="button" onclick="togglePrintSection('print_sect_heatmap')" class="text-slate-400 hover:text-blue-600 no-print" title="Toggle Print Visibility">👁️</button>`);
 
     let hmDesc = metric === 'R' 
-        ? 'Color intensity indicates Resistance % (Dark Red = High Resistance). <span class="text-red-500 font-bold">*</span> indicates sample size &lt; 30.'
-        : 'Color intensity indicates Susceptibility % (Dark Green = High Susceptibility). <span class="text-red-500 font-bold">*</span> indicates sample size &lt; 30.';
+        ? 'Color intensity indicates Resistance % (Dark Red = High Resistance). <span class="text-red-500 font-bold">*</span> indicates n &lt; 30.'
+        : 'Color intensity indicates Susceptibility % (Dark Green = High Susceptibility). <span class="text-red-500 font-bold">*</span> indicates n &lt; 30.';
     $('#heatmapDesc').html(hmDesc);
 
     let hmLegend = '';
@@ -1380,12 +1300,12 @@ function generateAnalytics() {
 
                         tableHtml += `
                             <tr class="hover:bg-slate-50 transition-colors ${!isReliable ? 'text-slate-500' : 'font-semibold text-slate-700'}">
-                                <td class="px-4 py-2 border-b border-slate-100">${abx}</td>
-                                <td class="px-4 py-2 border-b border-slate-100"><span style="color:${palette.bg.replace('0.9','1')}">${org}</span> ${!isReliable ? '<span class="text-red-500 font-bold">*</span>' : ''}</td>
-                                <td class="px-4 py-2 border-b border-slate-100 text-center">${s.tested}</td>
-                                <td class="px-4 py-2 border-b border-slate-100 text-center">${targetVal}</td>
-                                <td class="px-4 py-2 border-b border-slate-100 text-center ${semColor}">${p}%</td>
-                                <td class="px-4 py-2 border-b border-slate-100 text-center text-slate-500">${ci.lower}% - ${ci.upper}%</td>
+                                <td class="px-4 py-3 border-b border-slate-100">${abx}</td>
+                                <td class="px-4 py-3 border-b border-slate-100"><span style="color:${palette.bg.replace('0.9','1')}">${org}</span> ${!isReliable ? '<span class="text-red-500 font-bold">*</span>' : ''}</td>
+                                <td class="px-4 py-3 border-b border-slate-100 text-center">${s.tested}</td>
+                                <td class="px-4 py-3 border-b border-slate-100 text-center">${targetVal}</td>
+                                <td class="px-4 py-3 border-b border-slate-100 text-center ${semColor}">${p}%</td>
+                                <td class="px-4 py-3 border-b border-slate-100 text-center text-slate-500">${ci.lower}% - ${ci.upper}%</td>
                             </tr>
                         `;
                     }
@@ -1468,7 +1388,7 @@ function generateAnalytics() {
                     let dangerScore = metric === 'R' ? p : (100 - p);
                     
                     let bgClass = 'bg-white';
-                    let textClass = 'text-slate-700';
+                    let textClass = 'text-slate-800';
                     
                     if (dangerScore <= 20) { bgClass = 'bg-emerald-100'; textClass = 'text-emerald-800'; }
                     else if (dangerScore <= 40) { bgClass = 'bg-yellow-100'; textClass = 'text-yellow-800'; }
@@ -1498,12 +1418,11 @@ function generateAnalytics() {
         type: 'doughnut',
         data: {
             labels: sortedOrgs,
-            datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0d9488','#0ea5e9','#3b82f6','#06b6d4','#14b8a6','#10b981','#84cc16','#eab308','#f59e0b','#f97316'] }]
+            datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0f766e','#0ea5e9','#3b82f6','#06b6d4','#14b8a6','#10b981','#84cc16','#eab308','#f59e0b','#f97316'] }]
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } } }
     });
 
-    // --- تعديل عرض العينات: إظهار أعلى 7 عينات فقط مع تغيير العنوان ---
     let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
     const topN = 7;
     let displaySpecs = sortedSpecs.slice(0, topN);
@@ -1512,11 +1431,11 @@ function generateAnalytics() {
     const specTitleElement = $('#chartSpecimen').closest('.chart-container').find('h3');
     if (sortedSpecs.length > topN) {
         specTitleElement.html(`Top ${topN} Specimen Distribution 
-            <button type="button" onclick="togglePrintSection('print_sect_dist')" class="text-slate-400 hover:text-teal-600 no-print ml-2" title="Toggle Print Visibility">👁️</button>
-            <div class="text-[10px] text-slate-400 font-normal mt-0.5 w-full">* Showing highest ${topN} out of ${sortedSpecs.length} sample types</div>`);
+            <button type="button" onclick="togglePrintSection('print_sect_dist')" class="text-slate-400 hover:text-blue-600 no-print ml-2" title="Toggle Print Visibility">👁️</button>
+            <div class="text-[10px] text-slate-400 font-normal mt-0.5 w-full">* Showing highest ${topN} out of ${sortedSpecs.length} types</div>`);
     } else {
         specTitleElement.html(`Specimen Distribution 
-            <button type="button" onclick="togglePrintSection('print_sect_dist')" class="text-slate-400 hover:text-teal-600 no-print ml-2" title="Toggle Print Visibility">👁️</button>`);
+            <button type="button" onclick="togglePrintSection('print_sect_dist')" class="text-slate-400 hover:text-blue-600 no-print ml-2" title="Toggle Print Visibility">👁️</button>`);
     }
 
     if(chartSpec_instance) chartSpec_instance.destroy();
@@ -1531,10 +1450,7 @@ function generateAnalytics() {
             responsive: true, 
             maintainAspectRatio: false, 
             plugins: { legend: { display: false } }, 
-            scales: {
-                x: { grid: {color: '#f1f5f9'} }, 
-                y: { grid: {display: false}, ticks: { autoSkip: false } }
-            } 
+            scales: { x: { grid: {color: '#f1f5f9'} }, y: { grid: {display: false}, ticks: { autoSkip: false } } } 
         }
     });
 
@@ -1549,15 +1465,12 @@ function generateAnalytics() {
     });
 }
 
-// --- 7. Official File Export using Fetch + XlsxPopulate ---
 function showExportModal() {
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
     let years = new Set();
     let currentYear = new Date().getFullYear().toString();
     
-    allRecords.forEach(r => {
-        if(r.Date) years.add(r.Date.split('-')[0]);
-    });
+    allRecords.forEach(r => { if(r.Date) years.add(r.Date.split('-')[0]); });
     if(years.size === 0) years.add(currentYear);
     
     let yearsOptions = Array.from(years).sort((a,b) => b-a).map(y => `<option value="${y}">${y}</option>`).join('');
@@ -1566,17 +1479,17 @@ function showExportModal() {
         title: 'Export Official Antibiogram',
         html: `
             <div class="text-left space-y-4">
-                <p class="text-sm text-slate-500 bg-teal-50 p-3 rounded-lg border border-teal-100">Select the Year and Quarter. The system will automatically fetch <b>Antibiogram_5.xlsx</b> from the server, populate it accurately, and download it.</p>
+                <p class="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200">Select the Year and Quarter. The system will automatically fetch <b>Antibiogram_5.xlsx</b> from the server, populate it accurately, and download it.</p>
                 <div class="flex gap-4">
                     <div class="flex-1">
                         <label class="block text-sm font-bold text-slate-700 mb-1">Year</label>
-                        <select id="export_year" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none">
+                        <select id="export_year" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
                             ${yearsOptions}
                         </select>
                     </div>
                     <div class="flex-1">
                         <label class="block text-sm font-bold text-slate-700 mb-1">Quarter</label>
-                        <select id="export_quarter" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none">
+                        <select id="export_quarter" class="w-full border border-slate-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
                             <option value="Q1">Quarter 1 (Jan, Feb, Mar)</option>
                             <option value="Q2">Quarter 2 (Apr, May, Jun)</option>
                             <option value="Q3">Quarter 3 (Jul, Aug, Sep)</option>
@@ -1586,7 +1499,7 @@ function showExportModal() {
                 </div>
             </div>
         `,
-        showCancelButton: true, confirmButtonText: '📥 Download Excel', confirmButtonColor: '#10b981', cancelButtonColor: '#64748b',
+        showCancelButton: true, confirmButtonText: '📥 Download Excel', confirmButtonColor: '#059669', cancelButtonColor: '#64748b',
         preConfirm: () => {
             const year = document.getElementById('export_year').value;
             const quarter = document.getElementById('export_quarter').value;
@@ -1597,15 +1510,11 @@ function showExportModal() {
         if (result.isConfirmed) processAntibiogramExport(result.value.year, result.value.quarter);
     });
 }
+
 async function processAntibiogramExport(year, quarter) {
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
     
-    const quarterMonths = {
-        "Q1": ["01", "02", "03"],
-        "Q2": ["04", "05", "06"],
-        "Q3": ["07", "08", "09"],
-        "Q4": ["10", "11", "12"]
-    };
+    const quarterMonths = { "Q1": ["01", "02", "03"], "Q2": ["04", "05", "06"], "Q3": ["07", "08", "09"], "Q4": ["10", "11", "12"] };
     const targetMonths = quarterMonths[quarter];
 
     let records = allRecords.filter(r => {
@@ -1616,10 +1525,7 @@ async function processAntibiogramExport(year, quarter) {
         return rYear === year && targetMonths.includes(rMonth);
     });
 
-    if (records.length === 0) {
-        Swal.fire('No Data', 'No records found in this selected quarter.', 'info');
-        return;
-    }
+    if (records.length === 0) { Swal.fire('No Data', 'No records found in this selected quarter.', 'info'); return; }
 
     Swal.fire({ title: 'Generating Ministry File...', text: 'Fetching template and applying data directly...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
@@ -1670,14 +1576,8 @@ async function processAntibiogramExport(year, quarter) {
             }
         });
 
-        const quarterLabels = {
-            "Q1": "Q1 (Jan - Mar)",
-            "Q2": "Q2 (Apr - Jun)",
-            "Q3": "Q3 (Jul - Sep)",
-            "Q4": "Q4 (Oct - Dec)"
-        };
+        const quarterLabels = { "Q1": "Q1 (Jan - Mar)", "Q2": "Q2 (Apr - Jun)", "Q3": "Q3 (Jul - Sep)", "Q4": "Q4 (Oct - Dec)" };
         const periodString = `${quarterLabels[quarter]} ${year}`;
-        
         sheet.cell("C1").value(`Period: ${periodString}`);
 
         const blob = await workbook.outputAsync();
