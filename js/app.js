@@ -124,7 +124,7 @@ async function processDataExtraction(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    Swal.fire({ title: 'Processing File...', text: 'Loading organism dictionary and extracting records...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+    Swal.fire({ title: 'Processing File...', text: 'Loading dictionaries and extracting records...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
     // 1. Fetch the external organisms dictionary JSON file
     let externalOrgMap = {};
@@ -140,6 +140,22 @@ async function processDataExtraction(event) {
         }
     } catch (error) {
         console.warn("Could not fetch organisms_dictionary.json.");
+    }
+
+    // 2. Fetch the external specimens dictionary JSON file (New Integration)
+    let externalSpecimenMap = {};
+    try {
+        const response = await fetch('specimens_dictionary.json');
+        if (response.ok) {
+            const jsonDict = await response.json();
+            Object.keys(jsonDict).forEach(key => {
+                externalSpecimenMap[key.toLowerCase()] = jsonDict[key];
+            });
+        } else {
+            console.warn("specimens_dictionary.json not found on server, continuing with internal fallback mapping.");
+        }
+    } catch (error) {
+        console.warn("Could not fetch specimens_dictionary.json.");
     }
 
     const reader = new FileReader();
@@ -263,21 +279,10 @@ async function processDataExtraction(event) {
             let rawWard = idxWard > -1 && cols[idxWard] ? cols[idxWard].toLowerCase() : "";
             let ward = wardMap[rawWard] || (rawWard ? rawWard.charAt(0).toUpperCase() + rawWard.slice(1) : "-");
 
-           let rawSample = idxSample > -1 && cols[idxSample] ? cols[idxSample].toLowerCase() : "";
+            // قراءة اسم العينة من القاموس المرفوع
+            let rawSample = idxSample > -1 && cols[idxSample] ? cols[idxSample].toLowerCase() : "";
+            let sample = externalSpecimenMap[rawSample] || (rawSample ? rawSample.charAt(0).toUpperCase() + rawSample.slice(1) : "-");
 
-// خريطة لترجمة رموز WHONET إلى أسماء العينات الكاملة
-const sampleMap = {
-    'ur': 'Urine', 'bl': 'Blood', 'ps': 'Pus', 'sf': 'CSF',
-    'wd': 'Wound Swab', 'sp': 'Sputum', 'va': 'Vaginal Swab',
-    'th': 'Throat Swab', 'as': 'Aspirate', 'fl': 'Fluid',
-    'ea': 'Ear Swab', 'st': 'Stool', 'ue': 'Urethral Swab',
-    'np': 'Nasopharyngeal Swab', 'ti': 'Tissue', 'ey': 'Eye Swab',
-    're': 'Rectal Swab', 'sm': 'Semen', 'kf': 'Knee Fluid',
-    'ul': 'Ulcer', 'pf': 'Pleural Fluid', 'sb': 'Swab'
-};
-
-let sample = sampleMap[rawSample] || (rawSample ? rawSample.charAt(0).toUpperCase() + rawSample.slice(1) : "-");
-            // خوارزمية التاريخ المصححة
             let rawDate = idxDate > -1 && cols[idxDate] ? cols[idxDate].trim() : "";
             let formattedDate = ""; 
             
@@ -312,7 +317,6 @@ let sample = sampleMap[rawSample] || (rawSample ? rawSample.charAt(0).toUpperCas
 
             let fullOrgName = externalOrgMap[orgCode] || whonetOrgMap[orgCode] || (orgCode.charAt(0).toUpperCase() + orgCode.slice(1));
                     
-            // فلتر تنظيف الأسماء الفرعية (Subspecies) وتوحيدها للأسماء الرئيسية المعتمدة
             const orgNameCleanup = {
                 "Escherichia coli (E.coli)": "Escherichia coli",
                 "Klebsiella pneumoniae ss. pneumoniae": "Klebsiella pneumoniae",
@@ -591,7 +595,7 @@ function loadBacteriaOptions() {
     for (const [groupName, options] of Object.entries(groups)) {
         if (options.length > 0) {
             const optgroup = $(`<optgroup label="${groupName}"></optgroup>`);
-            options.forEach(opt => optgroup.append(optgroup));
+            options.forEach(opt => optgroup.append(opt));
             select.append(optgroup);
         }
     }
