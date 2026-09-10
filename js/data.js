@@ -1,7 +1,7 @@
 // --- 1. Master Data Definitions ---
 
 const bacteriaLibrary = [
-    { name: "Escherichia coli (E.coli)", code: "ECO", group: "Gram-Negative" },
+    { name: "Escherichia coli", code: "ECO", group: "Gram-Negative" },
     { name: "Klebsiella pneumoniae", code: "KPN", group: "Gram-Negative" },
     { name: "Klebsiella oxytoca", code: "KOX", group: "Gram-Negative" },
     { name: "Klebsiella aerogenes", code: "KAE", group: "Gram-Negative" },
@@ -79,7 +79,7 @@ const bacteriaLibrary = [
     { name: "Clostridium tetani", code: "CTE", group: "Gram-Positive" },
     { name: "Clostridium Spp", code: "CLO", group: "Gram-Positive" },
     { name: "Cutibacterium acnes", code: "CAC", group: "Gram-Positive" },
-    { name: "Mycobacterium tuberculosis", code: "MTB", group: "Others" },
+    { name: "Mycobacterium tuberculosis", code: "MTB", "Others" },
     { name: "Mycoplasma pneumoniae", code: "MPN", group: "Others" },
     { name: "Anaerobes (General)", code: "ANA", group: "Others" },
     { name: "Candida albicans", code: "CAL", group: "Fungi" },
@@ -143,7 +143,7 @@ const defaultWards = ["Pediatrics", "Resuscitation / CCU", "Internal Medicine", 
 
 // WHONET Fallback Mapping
 const whonetOrgMap = {
-    "eco": "Escherichia coli (E.coli)", "kpn": "Klebsiella pneumoniae", "kox": "Klebsiella oxytoca", 
+    "eco": "Escherichia coli", "kpn": "Klebsiella pneumoniae", "kox": "Klebsiella oxytoca", 
     "kae": "Klebsiella aerogenes", "ecl": "Enterobacter cloacae", "ent": "Enterobacter (spp)", 
     "pmi": "Proteus mirabilis", "pvu": "Proteus vulgaris", "pro": "Proteus (other spp)", 
     "mmo": "Morganella morganii", "pst": "Providencia stuartii", "pre": "Providencia rettgeri", 
