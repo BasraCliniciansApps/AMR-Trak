@@ -301,19 +301,19 @@ async function processDataExtraction(event) {
 
             let fullOrgName = externalOrgMap[orgCode] || whonetOrgMap[orgCode] || (orgCode.charAt(0).toUpperCase() + orgCode.slice(1));
                     
-                    // فلتر تنظيف الأسماء الفرعية (Subspecies) وتوحيدها للأسماء الرئيسية المعتمدة
-                    const orgNameCleanup = {
-                        "Escherichia coli (E.coli)": "Escherichia coli",
-                        "Klebsiella pneumoniae ss. pneumoniae": "Klebsiella pneumoniae",
-                        "Staphylococcus aureus ss. aureus": "Staphylococcus aureus",
-                        "Staphylococcus hominis ss. hominis": "Staphylococcus hominis",
-                        "Staphylococcus capitis ss. capitis": "Staphylococcus capitis",
-                        "Staphylococcus saprophyticus ss. saprophyticus": "Staphylococcus saprophyticus"
-                    };
+            // فلتر تنظيف الأسماء الفرعية (Subspecies) وتوحيدها للأسماء الرئيسية المعتمدة
+            const orgNameCleanup = {
+                "Escherichia coli (E.coli)": "Escherichia coli",
+                "Klebsiella pneumoniae ss. pneumoniae": "Klebsiella pneumoniae",
+                "Staphylococcus aureus ss. aureus": "Staphylococcus aureus",
+                "Staphylococcus hominis ss. hominis": "Staphylococcus hominis",
+                "Staphylococcus capitis ss. capitis": "Staphylococcus capitis",
+                "Staphylococcus saprophyticus ss. saprophyticus": "Staphylococcus saprophyticus"
+            };
 
-                    if (orgNameCleanup[fullOrgName]) {
-                        fullOrgName = orgNameCleanup[fullOrgName];
-                    }
+            if (orgNameCleanup[fullOrgName]) {
+                fullOrgName = orgNameCleanup[fullOrgName];
+            }
 
             let record = {
                 'Name': name,
@@ -580,7 +580,7 @@ function loadBacteriaOptions() {
     for (const [groupName, options] of Object.entries(groups)) {
         if (options.length > 0) {
             const optgroup = $(`<optgroup label="${groupName}"></optgroup>`);
-            options.forEach(opt => optgroup.append(opt));
+            options.forEach(opt => optgroup.append(optgroup));
             select.append(optgroup);
         }
     }
@@ -1159,7 +1159,7 @@ window.clearAnalyticsFilters = function() {
 
     $('#analyticsContainer').addClass('hidden');
     $('#analyticsPlaceholder').removeClass('hidden').html(`
-        <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
+        <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
         <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view insights.</p>
     `);
 };
@@ -1358,6 +1358,8 @@ function generateAnalytics() {
     const targetSample = $('#ana_sample').val();
     const targetOrgs = $('#ana_organism').val() || [];
     const targetAbxs = $('#ana_antibiotic').val() || [];
+    const metric = $('#ana_metric').val() || 'R'; // قراءة نوع العرض (R أو S)
+    const metricLabel = metric === 'R' ? 'Resistance' : 'Susceptibility';
 
     if (!startDate || !endDate) { Swal.fire('Required', 'Please select both dates.', 'warning'); return; }
 
@@ -1379,10 +1381,14 @@ function generateAnalytics() {
     $('#analyticsContainer').removeClass('hidden');
 
     let dashTitle = "Antibiogram Analysis";
-    let dashSub = `${startDate} to ${endDate}`;
+    let dashSub = `${startDate} to ${endDate} | Metric: % ${metricLabel}`;
     if(targetSample) dashSub += ` | Sample: ${targetSample}`;
     $('#dashTitle').text(dashTitle);
     $('#dashSubtitle').text(dashSub);
+
+    // تحديث عناوين المخططات بناءً على الاختيار
+    $('#chartAMR').parent().siblings('div').find('h3').html(`AMR Profile Comparison (% ${metricLabel}) <button type="button" onclick="togglePrintSection('print_sect_amr')" class="text-slate-400 hover:text-teal-600 no-print" title="Toggle Print Visibility">👁️</button>`);
+    $('#heatmapWrapper').siblings('.flex').find('h3').html(`Antibiogram Heatmap (% ${metricLabel}) <button type="button" onclick="togglePrintSection('print_sect_heatmap')" class="text-slate-400 hover:text-teal-600 no-print" title="Toggle Print Visibility">👁️</button>`);
 
     let orgCounts = {};
     let specCounts = {};
@@ -1405,9 +1411,10 @@ function generateAnalytics() {
         allPossibleAbxs.forEach(abx => {
             let res = r[abx];
             if (res && res !== '-' && res !== '') {
-                if (!heatmapStats[org][abx]) heatmapStats[org][abx] = { t: 0, r: 0 };
+                if (!heatmapStats[org][abx]) heatmapStats[org][abx] = { t: 0, r: 0, s: 0 };
                 heatmapStats[org][abx].t += 1;
                 if (res === 'R') heatmapStats[org][abx].r += 1;
+                if (res === 'S') heatmapStats[org][abx].s += 1;
             }
         });
     });
@@ -1415,7 +1422,7 @@ function generateAnalytics() {
     let amrStats = {}; 
     Array.from(allPresentOrgs).forEach(org => {
         amrStats[org] = { total: orgCounts[org], abx: {} };
-        allPossibleAbxs.forEach(a => { amrStats[org].abx[a] = { tested: 0, resistant: 0 }; });
+        allPossibleAbxs.forEach(a => { amrStats[org].abx[a] = { tested: 0, r: 0, s: 0 }; });
     });
 
     records.forEach(r => {
@@ -1424,7 +1431,8 @@ function generateAnalytics() {
             let res = r[abx];
             if (res && res !== '-' && res !== '') {
                 amrStats[org].abx[abx].tested += 1;
-                if (res === 'R') amrStats[org].abx[abx].resistant += 1;
+                if (res === 'R') amrStats[org].abx[abx].r += 1;
+                if (res === 'S') amrStats[org].abx[abx].s += 1;
             }
         });
     });
@@ -1484,20 +1492,21 @@ function generateAnalytics() {
                         dataR.push(0); 
                         bgColors.push(palette.lowBg);
                     } else {
-                        let p = Math.round((s.resistant / s.tested) * 100);
+                        let targetVal = metric === 'R' ? s.r : s.s;
+                        let p = Math.round((targetVal / s.tested) * 100);
                         let isReliable = s.tested >= 30;
                         if (!isReliable) anyLowReliability = true;
                         
                         dataR.push(p);
                         bgColors.push(isReliable ? palette.bg : palette.lowBg);
 
-                        let ci = wilsonScoreCI(s.resistant, s.tested);
+                        let ci = wilsonScoreCI(targetVal, s.tested);
                         tableHtml += `
                             <tr class="hover:bg-slate-50 transition-colors ${!isReliable ? 'text-slate-500' : 'font-semibold text-slate-700'}">
                                 <td class="px-4 py-2 border-b border-slate-100">${abx}</td>
                                 <td class="px-4 py-2 border-b border-slate-100"><span style="color:${palette.bg.replace('0.9','1')}">${org}</span> ${!isReliable ? '<span class="text-red-500 font-bold">*</span>' : ''}</td>
                                 <td class="px-4 py-2 border-b border-slate-100 text-center">${s.tested}</td>
-                                <td class="px-4 py-2 border-b border-slate-100 text-center">${s.resistant}</td>
+                                <td class="px-4 py-2 border-b border-slate-100 text-center">${targetVal}</td>
                                 <td class="px-4 py-2 border-b border-slate-100 text-center">${p}%</td>
                                 <td class="px-4 py-2 border-b border-slate-100 text-center">${ci.lower}% - ${ci.upper}%</td>
                             </tr>
@@ -1517,7 +1526,10 @@ function generateAnalytics() {
         if (anyLowReliability) $('#amrClsiWarning').removeClass('hidden');
         else $('#amrClsiWarning').addClass('hidden');
 
+        // تحديث هيدر الجدول
         $('#ciTableBody').html(tableHtml);
+        $('#ciTableBody').siblings('thead').find('th').eq(3).text(`Count (${metric})`);
+        $('#ciTableBody').siblings('thead').find('th').eq(4).text(`% ${metricLabel}`);
 
         if (chartAMR_instance) chartAMR_instance.destroy();
         chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
@@ -1526,7 +1538,7 @@ function generateAnalytics() {
             options: {
                 responsive: true, maintainAspectRatio: false,
                 scales: { 
-                    y: { beginAtZero: true, max: 100, title: { display: true, text: '% Resistance', font: {weight: 'bold'} }, grid: {color: '#f1f5f9'} },
+                    y: { beginAtZero: true, max: 100, title: { display: true, text: `% ${metricLabel}`, font: {weight: 'bold'} }, grid: {color: '#f1f5f9'} },
                     x: { grid: {display: false}, ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
                 },
                 plugins: { legend: { display: true, position: 'top' } } 
@@ -1571,20 +1583,24 @@ function generateAnalytics() {
                 if (!cell || cell.t === 0) {
                     hmHtml += '<td class="bg-slate-50 text-slate-300">-</td>';
                 } else {
-                    let p = Math.round((cell.r / cell.t) * 100);
+                    let targetVal = metric === 'R' ? cell.r : cell.s;
+                    let p = Math.round((targetVal / cell.t) * 100);
                     let isLow = cell.t < 30;
+                    
+                    // منطق الألوان الذكي: إذا كان R فالعالي أحمر (خطر)، وإذا S فالعالي أخضر (جيد)
+                    let dangerScore = metric === 'R' ? p : (100 - p);
                     
                     let bgClass = 'bg-white';
                     let textClass = 'text-slate-700';
                     
-                    if (p <= 20) { bgClass = 'bg-emerald-100'; textClass = 'text-emerald-800'; }
-                    else if (p <= 40) { bgClass = 'bg-yellow-100'; textClass = 'text-yellow-800'; }
-                    else if (p <= 60) { bgClass = 'bg-orange-200'; textClass = 'text-orange-900'; }
-                    else if (p <= 80) { bgClass = 'bg-red-400'; textClass = 'text-white font-bold'; }
+                    if (dangerScore <= 20) { bgClass = 'bg-emerald-100'; textClass = 'text-emerald-800'; }
+                    else if (dangerScore <= 40) { bgClass = 'bg-yellow-100'; textClass = 'text-yellow-800'; }
+                    else if (dangerScore <= 60) { bgClass = 'bg-orange-200'; textClass = 'text-orange-900'; }
+                    else if (dangerScore <= 80) { bgClass = 'bg-red-400'; textClass = 'text-white font-bold'; }
                     else { bgClass = 'bg-red-600'; textClass = 'text-white font-bold'; }
 
                     if (isLow) {
-                        if(p > 60) textClass = 'text-red-100';
+                        if(dangerScore > 60) textClass = 'text-red-100';
                         else textClass += ' opacity-70';
                     }
 
