@@ -3,8 +3,50 @@ let chartAMR_instance = null;
 let chartOrg_instance = null;
 let chartSpec_instance = null;
 let chartGen_instance = null;
-let chartTrend_instance = null;
 let isUpdatingFilters = false;
+
+// Register custom chart plugin for Error Bars (Confidence Interval)
+Chart.register({
+    id: 'errorBars',
+    afterDatasetsDraw: function(chart) {
+        if (chart.canvas.id !== 'chartAMR') return;
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((dataset, i) => {
+            const meta = chart.getDatasetMeta(i);
+            if (!meta.hidden && dataset.ciData) {
+                meta.data.forEach((element, index) => {
+                    const ci = dataset.ciData[index];
+                    if (!ci || (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0)) return;
+                    
+                    const yLower = chart.scales.y.getPixelForValue(ci.lower);
+                    const yUpper = chart.scales.y.getPixelForValue(ci.upper);
+                    const x = element.x;
+                    
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeStyle = '#0f172a'; // dark slate for high contrast
+                    
+                    // Vertical line exactly through the center
+                    ctx.moveTo(x, yLower);
+                    ctx.lineTo(x, yUpper);
+                    
+                    // Top cap
+                    const capWidth = 4;
+                    ctx.moveTo(x - capWidth, yUpper);
+                    ctx.lineTo(x + capWidth, yUpper);
+                    
+                    // Bottom cap
+                    ctx.moveTo(x - capWidth, yLower);
+                    ctx.lineTo(x + capWidth, yLower);
+                    
+                    ctx.stroke();
+                    ctx.restore();
+                });
+            }
+        });
+    }
+});
 
 // --- Migration Script to update old records to new clean names ---
 function runDatabaseMigration() {
@@ -126,7 +168,6 @@ async function processDataExtraction(event) {
 
     Swal.fire({ title: 'Processing File...', text: 'Loading dictionaries and extracting records...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
-    // 1. Fetch the external organisms dictionary JSON file
     let externalOrgMap = {};
     try {
         const response = await fetch('organisms_dictionary.json');
@@ -142,7 +183,6 @@ async function processDataExtraction(event) {
         console.warn("Could not fetch organisms_dictionary.json.");
     }
 
-    // 2. Fetch the external specimens dictionary JSON file
     let externalSpecimenMap = {};
     try {
         const response = await fetch('specimens_dictionary.json');
@@ -279,7 +319,6 @@ async function processDataExtraction(event) {
             let rawWard = idxWard > -1 && cols[idxWard] ? cols[idxWard].toLowerCase() : "";
             let ward = wardMap[rawWard] || (rawWard ? rawWard.charAt(0).toUpperCase() + rawWard.slice(1) : "-");
 
-            // استخدام قاموس العينات المرفوع
             let rawSample = idxSample > -1 && cols[idxSample] ? cols[idxSample].toLowerCase() : "";
             let sample = externalSpecimenMap[rawSample] || (rawSample ? rawSample.charAt(0).toUpperCase() + rawSample.slice(1) : "-");
 
@@ -387,7 +426,6 @@ $(document).ready(function() {
     
     $('.select2-multiple').select2({ width: '100%' });
     $('.select2-basic').select2({ width: '100%' }); 
-    $('#trend_years').select2({ width: '100%', dropdownAutoWidth: true });
     
     let today = new Date().toISOString().slice(0, 7);
     $('#p_date').val(today);
@@ -395,8 +433,6 @@ $(document).ready(function() {
     let currentYear = new Date().getFullYear();
     $('#ana_start').val(`${currentYear}-01-01`);
     $('#ana_end').val(`${currentYear}-12-31`);
-    $('#trend_start').val(`${currentYear}-01-01`);
-    $('#trend_end').val(`${currentYear}-12-31`);
 
     loadAnalyticsFilters();
 
@@ -673,50 +709,13 @@ function loadAnalyticsFilters() {
         $('#ana_antibiotic').append(new Option(a, a, isSelected, isSelected));
     });
     
-    let currentTrendAbxs = $('#trend_antibiotic').val() || [];
-    $('#trend_antibiotic').empty();
-    Array.from(abxs).sort().forEach(a => {
-        let isSelected = currentTrendAbxs.includes(a);
-        $('#trend_antibiotic').append(new Option(a, a, isSelected, isSelected));
-    });
-
-    let trendOrgSelect = $('#trend_organism');
-    let currentTrendOrg = trendOrgSelect.val();
-    trendOrgSelect.empty();
-    Array.from(orgs).sort().forEach(o => {
-        trendOrgSelect.append(new Option(o, o));
-    });
-    if(currentTrendOrg && orgs.has(currentTrendOrg)) {
-        trendOrgSelect.val(currentTrendOrg);
-    }
-
-    let currentYearStr = new Date().getFullYear().toString();
-    let allYears = new Set();
-    allRecords.forEach(r => {
-        if(r.Date) {
-            let y = r.Date.split('-')[0];
-            if(y !== currentYearStr) allYears.add(y);
-        }
-    });
-    
-    let trendYearsSelect = $('#trend_years');
-    let currentTrendYears = trendYearsSelect.val() || [];
-    trendYearsSelect.empty();
-    Array.from(allYears).sort((a,b) => b-a).forEach(y => {
-        let isSelected = currentTrendYears.includes(y) || currentTrendYears.length === 0;
-        trendYearsSelect.append(new Option(y, y, isSelected, isSelected));
-    });
-
     $('#ana_sample').trigger('change.select2');
     $('#ana_organism').trigger('change.select2');
     $('#ana_antibiotic').trigger('change.select2');
-    $('#trend_antibiotic').trigger('change.select2');
-    $('#trend_years').trigger('change.select2');
 
     isUpdatingFilters = false;
 }
 
-// 🌟 تحديث دالة initDataTable لإضافة التصفية المنسدلة وحفظ الحالة 🌟
 function initDataTable() {
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
     
@@ -751,8 +750,8 @@ function initDataTable() {
         data: records,
         columns: cols,
         scrollX: true, 
-        order: [[ 6, "desc" ]], // الترتيب الافتراضي حسب التاريخ تنازلياً
-        stateSave: true, // حفظ حالة الجدول (الترتيب، الصفحة، والبحث) عند التعديل أو التحديث
+        order: [[ 6, "desc" ]],
+        stateSave: true,
         dom: '<"flex flex-col sm:flex-row justify-between items-center mb-4 gap-3"Bf>rt<"flex flex-col sm:flex-row justify-between items-center mt-4 gap-3"ip>',
         buttons: [
             { extend: 'excelHtml5', text: 'Export to Excel', className: 'mr-2 rounded shadow' },
@@ -761,23 +760,19 @@ function initDataTable() {
         pageLength: 15,
         language: { search: "", searchPlaceholder: "Search records..." },
         initComplete: function () {
-            // تطبيق فلاتر التصفية المنسدلة على الأعمدة المحددة
             this.api().columns([3, 4, 5, 6, 7]).every(function () {
                 let column = this;
                 
-                // إنشاء القائمة المنسدلة
                 let select = $('<select class="mt-2 block w-full text-xs border-slate-300 rounded shadow-sm focus:ring-teal-500 font-normal"><option value="">All</option></select>')
                     .appendTo($(column.header()))
                     .on('change', function () {
                         let val = $.fn.dataTable.util.escapeRegex($(this).val());
                         column.search(val ? '^' + val + '$' : '', true, false).draw();
                     })
-                    // إيقاف تفاعل ترتيب العمود عند النقر على القائمة المنسدلة
                     .on('click', function(e) {
                         e.stopPropagation(); 
                     });
 
-                // جلب القيم الفريدة للعمود وإضافتها كخيارات
                 column.data().unique().sort().each(function (d, j) {
                     if(d && d !== '-') {
                         select.append('<option value="' + d + '">' + d + '</option>');
@@ -1193,10 +1188,6 @@ window.clearAnalyticsFilters = function() {
     $('#ana_organism').val(null).trigger('change.select2');
     $('#ana_antibiotic').val(null).trigger('change.select2');
     
-    $('#trend_start').val(`${currentYear}-01-01`);
-    $('#trend_end').val(`${currentYear}-12-31`);
-    $('#trend_antibiotic').val(null).trigger('change.select2');
-
     loadAnalyticsFilters();
 
     $('#analyticsContainer').addClass('hidden');
@@ -1206,201 +1197,13 @@ window.clearAnalyticsFilters = function() {
     `);
 };
 
-window.toggleTrendType = function() {
-    if ($('#trend_type').val() === 'yearly') {
-        $('#trend_year_container').removeClass('hidden').addClass('flex');
-        $('#trend_seasonal_dates').removeClass('flex').addClass('hidden');
-    } else {
-        $('#trend_year_container').removeClass('flex').addClass('hidden');
-        $('#trend_seasonal_dates').removeClass('hidden').addClass('flex');
-    }
-};
-
-window.renderTrendChart = function() {
-    const trendType = $('#trend_type').val();
-    const targetOrg = $('#trend_organism').val();
-    const targetAbxs = $('#trend_antibiotic').val() || [];
-    
-    if (!targetOrg) {
-        Swal.fire('Notice', 'Please select an organism for the trend analysis.', 'info');
-        return;
-    }
-
-    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    let records = allRecords.filter(r => r['Selective organism'] === targetOrg);
-
-    if (targetAbxs.length === 0) {
-         $('#trendTableBody').html('<tr><td colspan="5" class="text-center py-4 text-slate-500">Please select at least one antibiotic to view trends.</td></tr>');
-         if(chartTrend_instance) chartTrend_instance.destroy();
-         return;
-    }
-
-    let chartLabels = [];
-    let datasets = [];
-    let tableHtml = '';
-
-    if (trendType === 'seasonal') {
-        const startDate = $('#trend_start').val();
-        const endDate = $('#trend_end').val();
-        if(startDate && endDate) {
-            records = records.filter(r => r.Date >= startDate && r.Date <= endDate);
-        }
-
-        chartLabels = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
-        let quartersData = { 'Q1': {}, 'Q2': {}, 'Q3': {}, 'Q4': {} };
-        
-        targetAbxs.forEach(abx => {
-            ['Q1', 'Q2', 'Q3', 'Q4'].forEach(q => { quartersData[q][abx] = {t:0, r:0}; });
-        });
-
-        records.forEach(r => {
-            if(!r.Date) return;
-            let month = parseInt(r.Date.split('-')[1]);
-            let q = month <= 3 ? 'Q1' : month <= 6 ? 'Q2' : month <= 9 ? 'Q3' : 'Q4';
-            
-            targetAbxs.forEach(abx => {
-                let res = r[abx];
-                if (res && res !== '-' && res !== '') {
-                    quartersData[q][abx].t++;
-                    if(res === 'R') quartersData[q][abx].r++;
-                }
-            });
-        });
-
-        targetAbxs.forEach((abx, i) => {
-            let dataR = [];
-            let palette = orgColorPalette[i % orgColorPalette.length]; 
-            
-            ['Q1', 'Q2', 'Q3', 'Q4'].forEach((q, qIdx) => {
-                let s = quartersData[q][abx];
-                let p = s.t > 0 ? Math.round((s.r / s.t) * 100) : null;
-                dataR.push(p);
-
-                if(s.t > 0) {
-                    tableHtml += `
-                        <tr class="hover:bg-slate-50 transition-colors ${s.t < 30 ? 'text-slate-500' : 'text-slate-700 font-medium'}">
-                            <td class="px-4 py-2 border-b border-slate-100">${chartLabels[qIdx]}</td>
-                            <td class="px-4 py-2 border-b border-slate-100 font-bold" style="color:${palette.bg.replace('0.9','1')}">${abx}</td>
-                            <td class="px-4 py-2 border-b border-slate-100 text-center">${s.t}</td>
-                            <td class="px-4 py-2 border-b border-slate-100 text-center">${s.r}</td>
-                            <td class="px-4 py-2 border-b border-slate-100 text-center">${p}% ${s.t < 30 ? '<span class="text-red-500 font-bold">*</span>':''}</td>
-                        </tr>
-                    `;
-                }
-            });
-
-            datasets.push({
-                label: abx,
-                data: dataR,
-                borderColor: palette.bg.replace('0.9','1'),
-                backgroundColor: palette.bg.replace('0.9','1'),
-                tension: 0.3,
-                fill: false,
-                spanGaps: true,
-                pointRadius: 5,
-                pointHoverRadius: 7
-            });
-        });
-
-    } else {
-        let selectedYears = $('#trend_years').val() || [];
-        if(selectedYears.length === 0) {
-            $('#trendTableBody').html('<tr><td colspan="5" class="text-center py-4 text-slate-500">Please select at least one complete year.</td></tr>');
-            if(chartTrend_instance) chartTrend_instance.destroy();
-            return;
-        }
-
-        records = records.filter(r => {
-            if(!r.Date) return false;
-            return selectedYears.includes(r.Date.split('-')[0]);
-        });
-
-        chartLabels = targetAbxs;
-        let yearsData = {}; 
-        selectedYears.sort().forEach(y => { yearsData[y] = {}; targetAbxs.forEach(a => yearsData[y][a] = {t:0, r:0}); });
-
-        records.forEach(r => {
-            let y = r.Date.split('-')[0];
-            targetAbxs.forEach(abx => {
-                let res = r[abx];
-                if(res && res !== '-' && res !== '') {
-                    yearsData[y][abx].t++;
-                    if(res === 'R') yearsData[y][abx].r++;
-                }
-            });
-        });
-
-        selectedYears.sort().forEach((y, i) => {
-            let dataR = [];
-            let bgColors = [];
-            let palette = orgColorPalette[i % orgColorPalette.length]; 
-
-            targetAbxs.forEach(abx => {
-                let s = yearsData[y][abx];
-                let p = s.t > 0 ? Math.round((s.r / s.t) * 100) : 0;
-                let isRel = s.t >= 30;
-                
-                if(s.t === 0) { dataR.push(0); bgColors.push(palette.lowBg); }
-                else {
-                    dataR.push(p);
-                    bgColors.push(isRel ? palette.bg : palette.lowBg);
-                }
-
-                if(s.t > 0) {
-                    tableHtml += `
-                        <tr class="hover:bg-slate-50 transition-colors ${!isRel ? 'text-slate-500' : 'text-slate-700 font-medium'}">
-                            <td class="px-4 py-2 border-b border-slate-100 font-bold" style="color:${palette.bg.replace('0.9','1')}">${y}</td>
-                            <td class="px-4 py-2 border-b border-slate-100 font-bold">${abx}</td>
-                            <td class="px-4 py-2 border-b border-slate-100 text-center">${s.t}</td>
-                            <td class="px-4 py-2 border-b border-slate-100 text-center">${s.r}</td>
-                            <td class="px-4 py-2 border-b border-slate-100 text-center">${p}% ${!isRel ? '<span class="text-red-500 font-bold">*</span>':''}</td>
-                        </tr>
-                    `;
-                }
-            });
-
-            datasets.push({
-                label: y,
-                data: dataR,
-                backgroundColor: bgColors,
-                borderRadius: 4
-            });
-        });
-    }
-
-    if(tableHtml === '') tableHtml = '<tr><td colspan="5" class="text-center py-4 text-slate-500">No trend data found for the selected criteria.</td></tr>';
-    $('#trendTableBody').html(tableHtml);
-
-    if (chartTrend_instance) chartTrend_instance.destroy();
-    
-    let chartType = trendType === 'seasonal' ? 'line' : 'bar';
-    
-    chartTrend_instance = new Chart(document.getElementById('chartTrend'), {
-        type: chartType,
-        data: { labels: chartLabels, datasets: datasets },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: { 
-                y: { beginAtZero: true, max: 100, title: { display: true, text: '% Resistance', font: {weight: 'bold'} }, grid: {color: '#f1f5f9'} },
-                x: { grid: {display: false} }
-            },
-            plugins: { 
-                legend: { display: true, position: 'top' },
-                tooltip: {
-                    callbacks: { label: function(context) { return context.dataset.label + ': ' + context.parsed.y + '%'; } }
-                }
-            }
-        }
-    });
-};
-
 function generateAnalytics() {
     const startDate = $('#ana_start').val();
     const endDate = $('#ana_end').val();
     const targetSample = $('#ana_sample').val();
     const targetOrgs = $('#ana_organism').val() || [];
     const targetAbxs = $('#ana_antibiotic').val() || [];
-    const metric = $('#ana_metric').val() || 'R'; // قراءة نوع العرض (R أو S)
+    const metric = $('#ana_metric').val() || 'R'; 
     const metricLabel = metric === 'R' ? 'Resistance' : 'Susceptibility';
 
     if (!startDate || !endDate) { Swal.fire('Required', 'Please select both dates.', 'warning'); return; }
@@ -1428,9 +1231,35 @@ function generateAnalytics() {
     $('#dashTitle').text(dashTitle);
     $('#dashSubtitle').text(dashSub);
 
-    // تحديث عناوين المخططات بناءً على الاختيار
+    // Update dynamic text based on S/R metric
     $('#chartAMR').parent().siblings('div').find('h3').html(`AMR Profile Comparison (% ${metricLabel}) <button type="button" onclick="togglePrintSection('print_sect_amr')" class="text-slate-400 hover:text-teal-600 no-print" title="Toggle Print Visibility">👁️</button>`);
     $('#heatmapWrapper').siblings('.flex').find('h3').html(`Antibiogram Heatmap (% ${metricLabel}) <button type="button" onclick="togglePrintSection('print_sect_heatmap')" class="text-slate-400 hover:text-teal-600 no-print" title="Toggle Print Visibility">👁️</button>`);
+
+    // Setup heatmap semantic texts
+    let hmDesc = metric === 'R' 
+        ? 'Color intensity indicates Resistance % (Dark Red = High Resistance). <span class="text-red-500 font-bold">*</span> indicates sample size &lt; 30.'
+        : 'Color intensity indicates Susceptibility % (Dark Green = High Susceptibility). <span class="text-red-500 font-bold">*</span> indicates sample size &lt; 30.';
+    $('#heatmapDesc').html(hmDesc);
+
+    let hmLegend = '';
+    if (metric === 'R') {
+        hmLegend = `
+            <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">0-20%</span>
+            <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800">21-40%</span>
+            <span class="px-2 py-0.5 rounded bg-orange-200 text-orange-900">41-60%</span>
+            <span class="px-2 py-0.5 rounded bg-red-400 text-white">61-80%</span>
+            <span class="px-2 py-0.5 rounded bg-red-600 text-white">81-100%</span>
+        `;
+    } else {
+        hmLegend = `
+            <span class="px-2 py-0.5 rounded bg-red-600 text-white">0-20%</span>
+            <span class="px-2 py-0.5 rounded bg-red-400 text-white">21-40%</span>
+            <span class="px-2 py-0.5 rounded bg-orange-200 text-orange-900">41-60%</span>
+            <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800">61-80%</span>
+            <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">81-100%</span>
+        `;
+    }
+    $('#heatmapLegend').html(hmLegend);
 
     let orgCounts = {};
     let specCounts = {};
@@ -1526,6 +1355,8 @@ function generateAnalytics() {
 
                 let dataR = [];
                 let bgColors = [];
+                let ciData = [];
+
                 let palette = orgColorPalette[orgIndex % orgColorPalette.length];
 
                 displayAbxs.forEach(abx => {
@@ -1533,6 +1364,7 @@ function generateAnalytics() {
                     if (!s || s.tested === 0) {
                         dataR.push(0); 
                         bgColors.push(palette.lowBg);
+                        ciData.push({lower: 0, upper: 0});
                     } else {
                         let targetVal = metric === 'R' ? s.r : s.s;
                         let p = Math.round((targetVal / s.tested) * 100);
@@ -1543,14 +1375,26 @@ function generateAnalytics() {
                         bgColors.push(isReliable ? palette.bg : palette.lowBg);
 
                         let ci = wilsonScoreCI(targetVal, s.tested);
+                        ciData.push(ci);
+
+                        // Calculate semantic text color for the table based on RAG logic
+                        let dangerScore = metric === 'R' ? p : (100 - p);
+                        let semColor = '';
+                        if (!isReliable) semColor = 'text-slate-500';
+                        else if (dangerScore <= 20) semColor = 'text-emerald-600';
+                        else if (dangerScore <= 40) semColor = 'text-yellow-600';
+                        else if (dangerScore <= 60) semColor = 'text-orange-500';
+                        else if (dangerScore <= 80) semColor = 'text-red-500';
+                        else semColor = 'text-red-700 font-bold';
+
                         tableHtml += `
                             <tr class="hover:bg-slate-50 transition-colors ${!isReliable ? 'text-slate-500' : 'font-semibold text-slate-700'}">
                                 <td class="px-4 py-2 border-b border-slate-100">${abx}</td>
                                 <td class="px-4 py-2 border-b border-slate-100"><span style="color:${palette.bg.replace('0.9','1')}">${org}</span> ${!isReliable ? '<span class="text-red-500 font-bold">*</span>' : ''}</td>
                                 <td class="px-4 py-2 border-b border-slate-100 text-center">${s.tested}</td>
                                 <td class="px-4 py-2 border-b border-slate-100 text-center">${targetVal}</td>
-                                <td class="px-4 py-2 border-b border-slate-100 text-center">${p}%</td>
-                                <td class="px-4 py-2 border-b border-slate-100 text-center">${ci.lower}% - ${ci.upper}%</td>
+                                <td class="px-4 py-2 border-b border-slate-100 text-center ${semColor}">${p}%</td>
+                                <td class="px-4 py-2 border-b border-slate-100 text-center text-slate-500">${ci.lower}% - ${ci.upper}%</td>
                             </tr>
                         `;
                     }
@@ -1560,7 +1404,8 @@ function generateAnalytics() {
                     label: org,
                     data: dataR,
                     backgroundColor: bgColors,
-                    borderRadius: 4
+                    borderRadius: 4,
+                    ciData: ciData // Injected for custom plugin
                 });
             });
         }
@@ -1568,7 +1413,6 @@ function generateAnalytics() {
         if (anyLowReliability) $('#amrClsiWarning').removeClass('hidden');
         else $('#amrClsiWarning').addClass('hidden');
 
-        // تحديث هيدر الجدول
         $('#ciTableBody').html(tableHtml);
         $('#ciTableBody').siblings('thead').find('th').eq(3).text(`Count (${metric})`);
         $('#ciTableBody').siblings('thead').find('th').eq(4).text(`% ${metricLabel}`);
@@ -1629,7 +1473,6 @@ function generateAnalytics() {
                     let p = Math.round((targetVal / cell.t) * 100);
                     let isLow = cell.t < 30;
                     
-                    // منطق الألوان الذكي: إذا كان R فالعالي أحمر (خطر)، وإذا S فالعالي أخضر (جيد)
                     let dangerScore = metric === 'R' ? p : (100 - p);
                     
                     let bgClass = 'bg-white';
@@ -1688,8 +1531,6 @@ function generateAnalytics() {
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
     });
-    
-    $('#print_sect_trend').removeClass('hidden');
 }
 
 // --- 7. Official File Export using Fetch + XlsxPopulate ---
