@@ -160,7 +160,7 @@ async function processDataExtraction(event) {
         const idxAge = actualHeaders.findIndex(h => h === 'age');
         const idxSex = actualHeaders.findIndex(h => h === 'sex' || h === 'gender');
         const idxWard = actualHeaders.findIndex(h => h === 'ward' || h === 'location' || h === 'department');
-        const idxSample = actualHeaders.findIndex(h => h === 'specimen' || h === 'sample' || h === 'spec_type');
+        const idxSample = actualHeaders.findIndex(h => h === 'specimen' || h === 'sample' || h === 'spec_type' || h === 'specimen type');
         const idxDate = actualHeaders.findIndex(h => h === 'spec_date' || h === 'specimen date' || h === 'date');
         const idxOrg = actualHeaders.findIndex(h => h === 'organism' || h === 'org');
 
