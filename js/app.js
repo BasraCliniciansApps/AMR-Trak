@@ -494,11 +494,13 @@ function loadLiveSettings() {
     let s = JSON.parse(localStorage.getItem('amr_live_settings')) || {
         calc_mode: 'auto',
         manual_month: '',
+        cutoff_day: '',
         show_amr: true,
         show_top3: true
     };
     $('#live_calc_mode').val(s.calc_mode);
     $('#live_manual_month').val(s.manual_month);
+    $('#live_cutoff_day').val(s.cutoff_day || '');
     $('#live_toggle_amr').prop('checked', s.show_amr);
     $('#live_toggle_top3').prop('checked', s.show_top3);
     toggleManualMonthInput();
@@ -508,6 +510,7 @@ function saveLiveSettings() {
     let s = {
         calc_mode: $('#live_calc_mode').val(),
         manual_month: $('#live_manual_month').val(),
+        cutoff_day: $('#live_cutoff_day').val(),
         show_amr: $('#live_toggle_amr').is(':checked'),
         show_top3: $('#live_toggle_top3').is(':checked')
     };
@@ -789,7 +792,7 @@ function loadBacteriaOptions() {
     for (const [groupName, options] of Object.entries(groups)) {
         if (options.length > 0) {
             const optgroup = $(`<optgroup label="${groupName}"></optgroup>`);
-            options.forEach(opt => optgroup.append(opt)); // <-- تم تصحيح الخطأ هنا
+            options.forEach(opt => optgroup.append(opt)); 
             select.append(optgroup);
         }
     }
@@ -1842,10 +1845,45 @@ async function processAntibiogramExport(year, quarter) {
     }
 }
 
+// --- Live Settings Logic ---
+function loadLiveSettings() {
+    let s = JSON.parse(localStorage.getItem('amr_live_settings')) || {
+        calc_mode: 'auto',
+        manual_month: '',
+        cutoff_day: '',
+        show_amr: true,
+        show_top3: true
+    };
+    $('#live_calc_mode').val(s.calc_mode);
+    $('#live_manual_month').val(s.manual_month);
+    $('#live_cutoff_day').val(s.cutoff_day || '');
+    $('#live_toggle_amr').prop('checked', s.show_amr);
+    $('#live_toggle_top3').prop('checked', s.show_top3);
+    toggleManualMonthInput();
+}
+
+function saveLiveSettings() {
+    let s = {
+        calc_mode: $('#live_calc_mode').val(),
+        manual_month: $('#live_manual_month').val(),
+        cutoff_day: $('#live_cutoff_day').val(),
+        show_amr: $('#live_toggle_amr').is(':checked'),
+        show_top3: $('#live_toggle_top3').is(':checked')
+    };
+    localStorage.setItem('amr_live_settings', JSON.stringify(s));
+    if(!$('#viewLive').hasClass('hidden')) generateLiveSurveillance();
+    Swal.fire({icon:'success', title:'Saved', timer:1000, showConfirmButton:false});
+}
+
+function toggleManualMonthInput() {
+    if($('#live_calc_mode').val() === 'manual') $('#live_manual_month_container').removeClass('hidden');
+    else $('#live_manual_month_container').addClass('hidden');
+}
+
 // --- 🔴 LIVE SURVEILLANCE LOGIC ---
 function generateLiveSurveillance() {
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    let s = JSON.parse(localStorage.getItem('amr_live_settings')) || { calc_mode: 'auto', manual_month: '', show_amr: true, show_top3: true };
+    let s = JSON.parse(localStorage.getItem('amr_live_settings')) || { calc_mode: 'auto', manual_month: '', cutoff_day: '', show_amr: true, show_top3: true };
     
     // 1. Strict Blacklist Filter
     const blacklist = ["xxx", "con", "no growth", "contaminated", "normal flora", "mixed flora", "no significant growth"];
@@ -1854,17 +1892,45 @@ function generateLiveSurveillance() {
         return org !== "" && !blacklist.some(b => org.includes(b));
     });
 
-    // 2. Logic for Date Calculation (Auto latest vs Manual)
+    // 2. Logic for Date Calculation (Auto latest vs Manual vs Cutoff Day)
     let targetMonthPrefix = "";
     if (s.calc_mode === 'manual' && s.manual_month) {
         targetMonthPrefix = s.manual_month;
     } else {
-        // Auto-detect latest available month with data
-        let allMonths = [...new Set(cleanRecords.map(r => r.Date ? r.Date.substring(0,7) : "").filter(Boolean))].sort().reverse();
-        if(allMonths.length > 0) {
-            targetMonthPrefix = allMonths[0]; // Latest
+        let cutoffDay = parseInt(s.cutoff_day);
+        
+        if (!isNaN(cutoffDay) && cutoffDay > 0 && cutoffDay <= 31) {
+            // منطق اليوم الفاصل الجديد
+            let now = new Date();
+            let currentYear = now.getFullYear();
+            let currentMonth = now.getMonth() + 1;
+            let currentDay = now.getDate();
+            
+            let targetY = currentYear;
+            let targetM = currentMonth;
+            
+            if (currentDay < cutoffDay) {
+                // إذا لم نصل لليوم الفاصل بعد، نعرض بيانات الشهر الأسبق (Month - 2)
+                targetM -= 2;
+            } else {
+                // إذا تجاوزنا اليوم الفاصل، نعرض بيانات الشهر السابق (Month - 1) المكتمل
+                targetM -= 1;
+            }
+            
+            // ضبط التواريخ إذا تراجعنا للخلف وعبرنا للسنة السابقة
+            while (targetM < 1) {
+                targetM += 12;
+                targetY -= 1;
+            }
+            targetMonthPrefix = `${targetY}-${String(targetM).padStart(2, '0')}`;
         } else {
-            targetMonthPrefix = new Date().toISOString().slice(0, 7); // Fallback to current
+            // العمل التلقائي القديم إذا كان الحقل فارغاً (يعتمد على آخر بيانات في قاعدة البيانات)
+            let allMonths = [...new Set(cleanRecords.map(r => r.Date ? r.Date.substring(0,7) : "").filter(Boolean))].sort().reverse();
+            if(allMonths.length > 0) {
+                targetMonthPrefix = allMonths[0]; // Latest
+            } else {
+                targetMonthPrefix = new Date().toISOString().slice(0, 7); // Fallback to current
+            }
         }
     }
 
