@@ -67,7 +67,7 @@
                         Isolate Database
                     </button>
                     <button onclick="showTab('analytics')" id="btnTabAnalytics" class="w-full flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg font-medium transition-all">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
                         Surveillance Analytics
                     </button>
                     <!-- Live Surveillance Button -->
@@ -381,9 +381,9 @@
             <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 sticky top-0 z-20">
                 <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2" id="modalTitle">
                     <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    Patient Isolate Record
+                    Patient Record
                 </h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-red-500 font-bold text-2xl transition-colors focus:outline-none">&times;</button>
+                <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-red-500 font-bold text-2xl transition-colors focus:outline-none">&times;</button>
             </div>
             
             <div class="p-6 bg-white flex-1">
@@ -397,26 +397,29 @@
                         </div>
 
                         <div class="md:col-span-1">
-                            <label class="block text-xs font-bold text-slate-600 mb-1">Patient Name / ID</label>
-                            <input type="text" id="p_name" required dir="ltr" class="w-full border-slate-300 border rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 text-sm font-semibold shadow-sm outline-none">
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Patient Name</label>
+                            <input type="text" id="p_name" required dir="ltr" placeholder="Enter patient name here..." class="w-full border-slate-300 border rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 text-sm font-semibold shadow-sm outline-none transition-all">
                         </div>
                         <div class="md:col-span-1">
                             <label class="block text-xs font-bold text-slate-600 mb-1">Age</label>
                             <div class="flex gap-2">
-                                <input type="number" id="p_age" dir="ltr" class="w-1/2 border-slate-300 border rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 text-sm shadow-sm outline-none">
+                                <input type="number" id="p_age" dir="ltr" class="w-1/2 border-slate-300 border rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 text-sm shadow-sm outline-none transition-all">
                                 <select id="p_age_unit" dir="ltr" class="w-1/2 border-slate-300 border rounded-lg p-2.5 h-[42px] focus:ring-2 focus:ring-blue-500 text-sm shadow-sm outline-none">
-                                    <option value="Years">Years</option><option value="Months">Months</option><option value="Days">Days</option>
+                                    <option value="Years">Years</option>
+                                    <option value="Months">Months</option>
+                                    <option value="Days">Days</option>
                                 </select>
                             </div>
                         </div>
                         <div class="md:col-span-1">
-                            <label class="block text-xs font-bold text-slate-600 mb-1">Gender</label>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Sex</label>
                             <select id="p_sex" dir="ltr" class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                                <option value="Male">Male</option><option value="Female">Female</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
                             </select>
                         </div>
                         <div class="md:col-span-1">
-                            <label class="block text-xs font-bold text-slate-600 mb-1">Collection Date</label>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Month / Year</label>
                             <input type="month" id="p_date" dir="ltr" required class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none">
                         </div>
 
@@ -426,11 +429,17 @@
                         </div>
 
                         <div class="md:col-span-2">
-                            <label class="block text-xs font-bold text-slate-600 mb-1">Hospital Ward / Department</label>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-xs font-bold text-slate-600">Ward</label>
+                                <button type="button" onclick="manageWards()" tabindex="-1" class="text-xs text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 transition-colors">⚙️ Manage</button>
+                            </div>
                             <select id="p_ward" dir="ltr" class="w-full select2-enable shadow-sm"></select>
                         </div>
                         <div class="md:col-span-2">
-                            <label class="block text-xs font-bold text-slate-600 mb-1">Specimen Type</label>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-xs font-bold text-slate-600">Sample</label>
+                                <button type="button" onclick="manageSamples()" tabindex="-1" class="text-xs text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 transition-colors">⚙️ Manage</button>
+                            </div>
                             <select id="p_sample" dir="ltr" class="w-full select2-enable shadow-sm" required></select>
                         </div>
                         
@@ -440,29 +449,62 @@
                         </div>
 
                         <div class="md:col-span-2 bg-blue-50 p-4 rounded-xl border border-blue-100">
-                            <label class="block text-xs font-bold text-blue-900 mb-2">Isolated Organism (Lab Record)</label>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="block text-xs font-bold text-blue-900">Selective Organism (Lab Record)</label>
+                                <button type="button" onclick="manageOrganisms()" tabindex="-1" class="text-xs text-blue-700 hover:text-blue-900 font-bold bg-blue-100 px-2 py-0.5 rounded border border-blue-200 transition-colors">⚙️ Manage</button>
+                            </div>
                             <select id="p_organism" dir="ltr" class="w-full select2-enable" required>
                                 <option value="">Type name or shortcode...</option>
                             </select>
                         </div>
                         <div class="md:col-span-2 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <label class="block text-xs font-bold text-slate-800 mb-2">Antibiogram Category (Export Override)</label>
+                            <label class="block text-xs font-bold text-slate-800 mb-2">Antibiogram Organism List (Export)</label>
                             <select id="p_antibiogram_org" dir="ltr" class="w-full select2-enable">
-                                <option value="">Default (Auto-detect) / Do not override...</option>
+                                <option value="">Do not include in Antibiogram (Optional)...</option>
                                 <optgroup label="Gram Negative">
                                     <option value="E.coli">E.coli</option>
                                     <option value="klebsiella pneumoniae">klebsiella pneumoniae</option>
                                     <option value="proteus mirabillis">proteus mirabillis</option>
+                                    <option value="proteus (other spp)">proteus (other spp)</option>
+                                    <option value="citrobacter (spp)">citrobacter (spp)</option>
+                                    <option value="enterobacter (spp)">enterobacter (spp)</option>
+                                    <option value="providencia spp">providencia spp</option>
+                                    <option value="salmonella spp">salmonella spp</option>
+                                    <option value="shigella (spp)">shigella (spp)</option>
+                                    <option value="serratia">serratia</option>
+                                    <option value="yersinia enterocoliticae">yersinia enterocoliticae</option>
+                                    <option value="enterobacteriaceae (other spp)">enterobacteriaceae (other spp)</option>
                                     <option value="acinetobacter baumannii">acinetobacter baumannii</option>
+                                    <option value="acinetobacter spp.">acinetobacter spp.</option>
+                                    <option value="burkholderia cepacia complex">burkholderia cepacia complex</option>
                                     <option value="pseudomonas aeruginosa">pseudomonas aeruginosa</option>
+                                    <option value="hemophilus influenzae">hemophilus influenzae</option>
+                                    <option value="neisseria gonorrhoeae">neisseria gonorrhoeae</option>
+                                    <option value="neisseria meningitis">neisseria meningitis</option>
+                                    <option value="bacteroides fragilis">bacteroides fragilis</option>
+                                    <option value="chlamydia trachomatis">chlamydia trachomatis</option>
+                                    <option value="helicobacter pylori">helicobacter pylori</option>
+                                    <option value="Fusobacterium canifelinum">Fusobacterium canifelinum</option>
                                 </optgroup>
                                 <optgroup label="Gram Positive">
                                     <option value="staphylococcus aureus">staphylococcus aureus</option>
+                                    <option value="staphylococcus non-aureus (spp)">staphylococcus non-aureus (spp)</option>
                                     <option value="streptococcus pneumoniae">streptococcus pneumoniae</option>
+                                    <option value="streptococcus pyogenes (groupnA)">streptococcus pyogenes (groupnA)</option>
+                                    <option value="listeria">listeria</option>
+                                    <option value="clostridium Spp">clostridium Spp</option>
+                                    <option value="bacillus">bacillus</option>
                                     <option value="enterococcus faecalis">enterococcus faecalis</option>
+                                    <option value="enterococcus spp">enterococcus spp</option>
+                                    <option value="mycobacterium tuberculosis">mycobacterium tuberculosis</option>
+                                    <option value="streptococcus spp (β-hemolytic group)">streptococcus spp (β-hemolytic group)</option>
+                                    <option value="streptococcus viridans">streptococcus viridans</option>
+                                    <option value="anaerobes">anaerobes</option>
+                                    <option value="Enterococcus faecium">Enterococcus faecium</option>
+                                    <option value="Enterococcus gallinarum/E. casseliflavus">Enterococcus gallinarum/E. casseliflavus</option>
                                 </optgroup>
                             </select>
-                            <p class="text-[10px] text-slate-500 mt-2">* Optional: Forces the isolate into a specific column in the Ministry Excel Export.</p>
+                            <p class="text-[10px] text-slate-500 mt-2">* Select the exact category to calculate isolates in the Excel export.</p>
                         </div>
                     </div>
 
@@ -473,17 +515,22 @@
                                 <h4 class="font-bold text-slate-800 text-lg">Antimicrobial Susceptibility Testing (AST)</h4>
                                 <p class="text-xs text-slate-500">Record phenotypic results. Leave untested antibiotics blank.</p>
                             </div>
+                            <button type="button" onclick="manageAntibioticsDB()" tabindex="-1" class="text-xs text-blue-700 font-bold bg-blue-50 hover:bg-blue-100 border border-blue-200 px-4 py-2 rounded-lg shadow-sm transition-all w-full md:w-auto flex items-center justify-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+                                Database Manager
+                            </button>
                         </div>
                         
                         <div class="flex flex-col md:flex-row gap-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
                             <div class="flex-1 w-full">
-                                <label class="block text-xs font-bold text-slate-600 mb-1">Add Custom Antibiotic</label>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Add Custom Antibiotic to current entry</label>
                                 <select id="abx_selector" dir="ltr" class="w-full">
-                                    <option value="">Type antibiotic name...</option>
+                                    <option value="">Type custom antibiotic name...</option>
                                 </select>
                             </div>
-                            <button type="button" onclick="addAntibiotic()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold mt-0 md:mt-5 shadow-sm transition-colors text-sm">
-                                Add to Panel
+                            <button type="button" onclick="addAntibiotic()" tabindex="-1" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold mt-0 md:mt-5 shadow-sm w-full md:w-auto transition-colors flex items-center justify-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                Add
                             </button>
                         </div>
 
@@ -492,8 +539,8 @@
                     </div>
 
                     <div class="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-200 sticky bottom-0 bg-white py-4 z-10 px-2 -mx-2">
-                        <button type="button" onclick="closeModal()" class="px-6 py-2 border border-slate-300 rounded-lg text-slate-700 font-bold hover:bg-slate-50 transition-colors">Cancel</button>
-                        <button type="submit" class="px-8 py-2 bg-blue-700 text-white rounded-lg font-bold shadow-md hover:bg-blue-800 transition-all">Save Isolate</button>
+                        <button type="button" onclick="closeModal()" tabindex="-1" class="px-6 py-2 border border-slate-300 rounded-lg text-slate-700 font-bold hover:bg-slate-50 transition-colors">Cancel</button>
+                        <button type="submit" tabindex="-1" class="px-8 py-2 bg-blue-700 text-white rounded-lg font-bold shadow-md hover:bg-blue-800 transition-all">Save Record</button>
                     </div>
                 </form>
             </div>
