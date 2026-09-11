@@ -489,41 +489,6 @@ function showTab(tabName) {
     }
 }
 
-// --- Live Settings Logic ---
-function loadLiveSettings() {
-    let s = JSON.parse(localStorage.getItem('amr_live_settings')) || {
-        calc_mode: 'auto',
-        manual_month: '',
-        cutoff_day: '',
-        show_amr: true,
-        show_top3: true
-    };
-    $('#live_calc_mode').val(s.calc_mode);
-    $('#live_manual_month').val(s.manual_month);
-    $('#live_cutoff_day').val(s.cutoff_day || '');
-    $('#live_toggle_amr').prop('checked', s.show_amr);
-    $('#live_toggle_top3').prop('checked', s.show_top3);
-    toggleManualMonthInput();
-}
-
-function saveLiveSettings() {
-    let s = {
-        calc_mode: $('#live_calc_mode').val(),
-        manual_month: $('#live_manual_month').val(),
-        cutoff_day: $('#live_cutoff_day').val(),
-        show_amr: $('#live_toggle_amr').is(':checked'),
-        show_top3: $('#live_toggle_top3').is(':checked')
-    };
-    localStorage.setItem('amr_live_settings', JSON.stringify(s));
-    if(!$('#viewLive').hasClass('hidden')) generateLiveSurveillance();
-    Swal.fire({icon:'success', title:'Saved', timer:1000, showConfirmButton:false});
-}
-
-function toggleManualMonthInput() {
-    if($('#live_calc_mode').val() === 'manual') $('#live_manual_month_container').removeClass('hidden');
-    else $('#live_manual_month_container').addClass('hidden');
-}
-
 // --- BACKUP AND RESTORE LOGIC ---
 function showBackupModal() {
     Swal.fire({
@@ -1362,7 +1327,7 @@ window.clearAnalyticsFilters = function() {
 
     $('#analyticsContainer').addClass('hidden');
     $('#analyticsPlaceholder').removeClass('hidden').html(`
-        <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
+        <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
         <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view insights.</p>
     `);
 };
@@ -1852,13 +1817,26 @@ function loadLiveSettings() {
         manual_month: '',
         cutoff_day: '',
         show_amr: true,
-        show_top3: true
+        show_top3: true,
+        profile1_abx: 'Meropenem',
+        profile2_abx: 'Ceftriaxone'
     };
     $('#live_calc_mode').val(s.calc_mode);
     $('#live_manual_month').val(s.manual_month);
     $('#live_cutoff_day').val(s.cutoff_day || '');
     $('#live_toggle_amr').prop('checked', s.show_amr);
     $('#live_toggle_top3').prop('checked', s.show_top3);
+
+    let allAbx = [...abxList, ...getCustomAntibiotics().map(a=>a.name)].sort();
+    let p1Select = $('#live_profile1_abx').empty();
+    let p2Select = $('#live_profile2_abx').empty();
+    allAbx.forEach(a => {
+        p1Select.append(new Option(a, a));
+        p2Select.append(new Option(a, a));
+    });
+    p1Select.val(s.profile1_abx || 'Meropenem');
+    p2Select.val(s.profile2_abx || 'Ceftriaxone');
+
     toggleManualMonthInput();
 }
 
@@ -1868,7 +1846,9 @@ function saveLiveSettings() {
         manual_month: $('#live_manual_month').val(),
         cutoff_day: $('#live_cutoff_day').val(),
         show_amr: $('#live_toggle_amr').is(':checked'),
-        show_top3: $('#live_toggle_top3').is(':checked')
+        show_top3: $('#live_toggle_top3').is(':checked'),
+        profile1_abx: $('#live_profile1_abx').val(),
+        profile2_abx: $('#live_profile2_abx').val()
     };
     localStorage.setItem('amr_live_settings', JSON.stringify(s));
     if(!$('#viewLive').hasClass('hidden')) generateLiveSurveillance();
@@ -1883,7 +1863,7 @@ function toggleManualMonthInput() {
 // --- 🔴 LIVE SURVEILLANCE LOGIC ---
 function generateLiveSurveillance() {
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    let s = JSON.parse(localStorage.getItem('amr_live_settings')) || { calc_mode: 'auto', manual_month: '', cutoff_day: '', show_amr: true, show_top3: true };
+    let s = JSON.parse(localStorage.getItem('amr_live_settings')) || { calc_mode: 'auto', manual_month: '', cutoff_day: '', show_amr: true, show_top3: true, profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
     
     // 1. Strict Blacklist Filter
     const blacklist = ["xxx", "con", "no growth", "contaminated", "normal flora", "mixed flora", "no significant growth"];
@@ -1892,7 +1872,7 @@ function generateLiveSurveillance() {
         return org !== "" && !blacklist.some(b => org.includes(b));
     });
 
-    // 2. Logic for Date Calculation (Auto latest vs Manual vs Cutoff Day)
+    // 2. Logic for Date Calculation
     let targetMonthPrefix = "";
     if (s.calc_mode === 'manual' && s.manual_month) {
         targetMonthPrefix = s.manual_month;
@@ -2110,14 +2090,17 @@ function buildLiveSection(records, prefix, settings) {
         $(`#live_${prefix}_top3_container`).addClass('hidden');
     }
 
-    // 5. Resistance Profile for Meropenem
-    buildAbxProfileChart('Meropenem', `chart_${prefix}_mero`, `live_${prefix}_mero_count`, records, prefix === 'm' ? '#2563eb' : '#059669');
+    // 5 & 6 Dynamic Resistance Profiles
+    let p1 = settings.profile1_abx || 'Meropenem';
+    let p2 = settings.profile2_abx || 'Ceftriaxone';
 
-    // 6. Resistance Profile for Ceftriaxone
-    buildAbxProfileChart('Ceftriaxone', `chart_${prefix}_cro`, `live_${prefix}_cro_count`, records, '#0d9488');
+    $(`#live_${prefix}_profile1_title`).text(`${p1} Resistance Profile (% R)`);
+    $(`#live_${prefix}_profile2_title`).text(`${p2} Resistance Profile (% R)`);
+
+    buildAbxProfileChart(p1, `chart_${prefix}_mero`, `live_${prefix}_mero_count`, records, prefix === 'm' ? '#2563eb' : '#059669');
+    buildAbxProfileChart(p2, `chart_${prefix}_cro`, `live_${prefix}_cro_count`, records, '#0d9488');
 }
 
-// دالة مساعدة عامة لبناء مخطط مقاومة أي مضاد حيوي ضد البكتيريا المفحوصة
 function buildAbxProfileChart(abxName, canvasId, countElId, records, primaryColor) {
     let canvas = document.getElementById(canvasId);
     if (!canvas) return;
@@ -2126,7 +2109,12 @@ function buildAbxProfileChart(abxName, canvasId, countElId, records, primaryColo
     records.forEach(r => {
         let org = r['Selective organism'];
         if (!org || org === '-') return;
-        let val = r[abxName] || (abxName === 'Meropenem' ? r['Meropenem (MEM)'] : r['Ceftriaxone (CRO)']);
+        
+        let val = r[abxName];
+        // Support for old data naming if applicable
+        if (!val && abxName === 'Meropenem') val = r['Meropenem (MEM)'];
+        if (!val && abxName === 'Ceftriaxone') val = r['Ceftriaxone (CRO)'];
+
         if (val && val !== '-' && val !== '') {
             if (!orgMap[org]) orgMap[org] = { tested: 0, resistant: 0 };
             orgMap[org].tested++;
