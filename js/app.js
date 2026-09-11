@@ -19,9 +19,7 @@ const errorBarsPlugin = {
                 if (!meta.hidden && dataset.ciData) {
                     meta.data.forEach((element, index) => {
                         const ci = dataset.ciData[index];
-                        // Ignore null or uncalculated data points
                         if (!ci || typeof ci.lower === 'undefined' || typeof ci.upper === 'undefined') return;
-                        if (dataset.data[index] == null) return;
                         if (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0) return;
                         
                         const yLower = chart.scales.y.getPixelForValue(ci.lower);
@@ -475,20 +473,52 @@ $(document).ready(function() {
 // --- Tabs Logic ---
 function showTab(tabName) {
     $('#viewRecords, #viewAnalytics, #viewLive').addClass('hidden');
-    $('#btnTabRecords, #btnTabAnalytics, #btnTabLive').removeClass('bg-teal-600 text-white border-teal-400/50').addClass('bg-white/10 text-teal-50 border-teal-500/30');
+    $('#btnTabRecords, #btnTabAnalytics, #btnTabLive').removeClass('bg-teal-600 bg-rose-600 text-white border-teal-400 border-rose-400').addClass('bg-white/10 text-teal-50 border-teal-500/30');
     
     if (tabName === 'records') {
         $('#viewRecords').removeClass('hidden');
-        $('#btnTabRecords').removeClass('bg-white/10 text-teal-50 border-teal-500/30').addClass('bg-teal-600 text-white border-teal-400/50');
+        $('#btnTabRecords').removeClass('bg-white/10 text-teal-50 border-teal-500/30').addClass('bg-teal-600 text-white border-teal-400');
     } else if (tabName === 'analytics') {
         if(typeof loadAnalyticsFilters === 'function') loadAnalyticsFilters();
         $('#viewAnalytics').removeClass('hidden');
-        $('#btnTabAnalytics').removeClass('bg-white/10 text-teal-50 border-teal-500/30').addClass('bg-teal-600 text-white border-teal-400/50');
+        $('#btnTabAnalytics').removeClass('bg-white/10 text-teal-50 border-teal-500/30').addClass('bg-teal-600 text-white border-teal-400');
     } else if (tabName === 'live') {
         $('#viewLive').removeClass('hidden');
-        $('#btnTabLive').removeClass('bg-white/10 text-teal-50 border-teal-500/30').addClass('bg-teal-600 text-white border-teal-400/50');
-        generateLiveSurveillance();
+        $('#btnTabLive').removeClass('bg-white/10 text-teal-50 border-teal-500/30').addClass('bg-rose-600 text-white border-rose-400');
+        generateLiveSurveillance(); 
     }
+}
+
+// --- Live Settings Logic ---
+function loadLiveSettings() {
+    let s = JSON.parse(localStorage.getItem('amr_live_settings')) || {
+        calc_mode: 'auto',
+        manual_month: '',
+        show_amr: true,
+        show_top3: true
+    };
+    $('#live_calc_mode').val(s.calc_mode);
+    $('#live_manual_month').val(s.manual_month);
+    $('#live_toggle_amr').prop('checked', s.show_amr);
+    $('#live_toggle_top3').prop('checked', s.show_top3);
+    toggleManualMonthInput();
+}
+
+function saveLiveSettings() {
+    let s = {
+        calc_mode: $('#live_calc_mode').val(),
+        manual_month: $('#live_manual_month').val(),
+        show_amr: $('#live_toggle_amr').is(':checked'),
+        show_top3: $('#live_toggle_top3').is(':checked')
+    };
+    localStorage.setItem('amr_live_settings', JSON.stringify(s));
+    if(!$('#viewLive').hasClass('hidden')) generateLiveSurveillance();
+    Swal.fire({icon:'success', title:'Saved', timer:1000, showConfirmButton:false});
+}
+
+function toggleManualMonthInput() {
+    if($('#live_calc_mode').val() === 'manual') $('#live_manual_month_container').removeClass('hidden');
+    else $('#live_manual_month_container').addClass('hidden');
 }
 
 // --- BACKUP AND RESTORE LOGIC ---
@@ -522,7 +552,8 @@ window.downloadBackup = function() {
         amr_samples: JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples,
         amr_wards: JSON.parse(localStorage.getItem('amr_wards')) || defaultWards,
         amr_organisms: JSON.parse(localStorage.getItem('amr_organisms')) || [],
-        amr_custom_abx_v2: JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || []
+        amr_custom_abx_v2: JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [],
+        amr_live_settings: JSON.parse(localStorage.getItem('amr_live_settings')) || null
     };
 
     const dataStr = JSON.stringify(data, null, 2);
@@ -563,6 +594,7 @@ window.processRestore = function() {
                     if (importedData.amr_wards) localStorage.setItem('amr_wards', JSON.stringify(importedData.amr_wards));
                     if (importedData.amr_organisms) localStorage.setItem('amr_organisms', JSON.stringify(importedData.amr_organisms));
                     if (importedData.amr_custom_abx_v2) localStorage.setItem('amr_custom_abx_v2', JSON.stringify(importedData.amr_custom_abx_v2));
+                    if (importedData.amr_live_settings) localStorage.setItem('amr_live_settings', JSON.stringify(importedData.amr_live_settings));
 
                     loadBacteriaOptions();
                     loadSampleOptions();
@@ -570,6 +602,7 @@ window.processRestore = function() {
                     renderDefaultAntibiotics();
                     initDataTable();
                     if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
+                    if(!$('#viewLive').hasClass('hidden')) generateLiveSurveillance();
 
                     Swal.fire('Restored!', 'Your data has been restored successfully.', 'success');
                 }
@@ -580,6 +613,119 @@ window.processRestore = function() {
     };
     reader.readAsText(file);
 };
+
+// --- APP MODALS ---
+function showSettingsModal() {
+    loadAbbreviations();
+    loadLiveSettings();
+    $('#settingsModal').removeClass('hidden');
+}
+
+function closeSettingsModal() {
+    $('#settingsModal').addClass('hidden');
+}
+
+function showAboutModal() {
+    Swal.fire({
+        html: `
+            <div class="text-sm text-slate-600 leading-relaxed text-center space-y-4">
+                <div class="mx-auto w-16 h-16 bg-blue-50 text-blue-700 rounded-full flex items-center justify-center mb-4 border border-blue-100 shadow-sm">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800">AMR Tracker</h3>
+                <p class="font-medium text-blue-700">Antimicrobial Resistance Surveillance System</p>
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-right text-sm leading-loose mt-4" dir="rtl">
+                    تم تصميم وإعداد هذه المنصة البرمجية من قبل عضو لجنة المضادات الحيوية، <b>الصيدلاني السريري سعد نبيل الحمادي</b>، 
+                    بالتعاون مع <b>وحدة الـ AMR</b> وكادر <b>مختبر المايكروبايولوجي</b> في <b>مستشفى الموانئ التعليمي</b>.
+                </div>
+                <p class="text-xs text-slate-500 mt-4">
+                    This clinical system is developed to facilitate professional data entry, robust epidemiology reporting, and precise antibiogram generation. All rights reserved &copy; 2026.
+                </p>
+            </div>
+        `,
+        showConfirmButton: true,
+        confirmButtonText: 'Close',
+        confirmButtonColor: '#1d4ed8',
+        width: '500px'
+    });
+}
+
+function showInstallGuide() {
+    Swal.fire({
+        title: '💻 System Installation Guide',
+        html: `
+            <div class="text-sm text-slate-600 leading-relaxed space-y-4 text-left mt-3">
+                <p>This system operates entirely locally (offline) within your browser to ensure absolute patient data privacy. To install it natively on your computer:</p>
+                <ol class="list-decimal pl-5 space-y-2 font-medium bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <li>Open this application in <b>Google Chrome</b> or <b>Microsoft Edge</b>.</li>
+                    <li>Click on the browser's menu (3 vertical dots in the top right).</li>
+                    <li>Go to <b>Save and share</b> (or Apps) &gt; <b>Install page as app</b>.</li>
+                    <li>Ensure you check the box <b>"Open as window"</b>.</li>
+                    <li>Click <b>Install</b>.</li>
+                </ol>
+            </div>
+        `,
+        showConfirmButton: true,
+        confirmButtonText: 'Got it!',
+        confirmButtonColor: '#0f766e',
+        width: '550px'
+    });
+}
+
+function clearAllDatabase() {
+    Swal.fire({
+        title: 'Are you absolutely sure?',
+        text: "This will delete ALL isolates, custom dictionaries, and settings permanently. You cannot undo this action!",
+        icon: 'error',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Yes, DELETE EVERYTHING'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            localStorage.clear();
+            location.reload();
+        }
+    });
+}
+
+// --- Abbreviations Logic ---
+function loadAbbreviations() {
+    let abbr = JSON.parse(localStorage.getItem('amr_custom_abbreviations')) || {};
+    let html = '';
+    for (const [code, name] of Object.entries(abbr)) {
+        html += `<tr class="hover:bg-slate-50 transition-colors">
+            <td class="p-3 border-b text-slate-700 font-bold uppercase">${code}</td>
+            <td class="p-3 border-b text-slate-600">${name}</td>
+            <td class="p-3 border-b text-center">
+                <button onclick="deleteAbbreviation('${code}')" class="text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded hover:bg-red-50 transition-colors text-xs">Delete</button>
+            </td>
+        </tr>`;
+    }
+    if(html === '') html = '<tr><td colspan="3" class="text-center p-4 text-slate-400">No custom abbreviations added yet.</td></tr>';
+    $('#abbrTableBody').html(html);
+}
+
+function addAbbreviation() {
+    let code = $('#abbrCode').val().trim().toLowerCase();
+    let name = $('#abbrName').val().trim();
+    if (!code || !name) {
+        Swal.fire({icon: 'warning', title: 'Missing Info', text: 'Please provide both the short code and the full scientific name.'});
+        return;
+    }
+    let abbr = JSON.parse(localStorage.getItem('amr_custom_abbreviations')) || {};
+    abbr[code] = name;
+    localStorage.setItem('amr_custom_abbreviations', JSON.stringify(abbr));
+    $('#abbrCode').val(''); $('#abbrName').val('');
+    loadAbbreviations();
+}
+
+function deleteAbbreviation(code) {
+    let abbr = JSON.parse(localStorage.getItem('amr_custom_abbreviations')) || {};
+    delete abbr[code];
+    localStorage.setItem('amr_custom_abbreviations', JSON.stringify(abbr));
+    loadAbbreviations();
+}
 
 // --- 4. Data Entry UI Functions ---
 function renderDefaultAntibiotics() {
@@ -664,24 +810,28 @@ function loadWardOptions() {
 }
 
 function loadAnalyticsFilters() {
+    // 1. منع التحديث المزدوج
     if (isUpdatingFilters) return;
     isUpdatingFilters = true;
 
+    // 2. جلب القيم الحالية من الفلاتر
     const startDate = $('#ana_start').val();
     const endDate = $('#ana_end').val();
     const targetSample = $('#ana_sample').val();
 
+    // 3. جلب كل السجلات من قاعدة البيانات
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
     
-    let records = allRecords.filter(r => {
+    // المرحلة الأولى: الفلترة حسب التاريخ فقط
+    let dateFilteredRecords = allRecords.filter(r => {
         if(!startDate || !endDate) return true;
         return r.Date >= startDate && r.Date <= endDate;
     });
 
-    let uniqueSamples = new Set(records.map(r => r.Sample).filter(Boolean));
+    let uniqueSamples = new Set(dateFilteredRecords.map(r => r.Sample).filter(Boolean));
     let currentSample = $('#ana_sample').val(); 
     
-    $('#ana_sample').empty().append(new Option("All Samples", ""));
+    $('#ana_sample').empty().append(new Option("All Specimens", ""));
     Array.from(uniqueSamples).sort().forEach(s => {
         $('#ana_sample').append(new Option(s, s));
     });
@@ -690,7 +840,8 @@ function loadAnalyticsFilters() {
         $('#ana_sample').val(currentSample);
     }
 
-    let finalRecords = dateFilteredRecords = records;
+    // المرحلة الثانية: تطبيق فلتر العينة 
+    let finalRecords = dateFilteredRecords;
     if (targetSample) {
         finalRecords = finalRecords.filter(r => r.Sample === targetSample);
     }
@@ -1168,7 +1319,7 @@ window.updateAbxGroupInDB = function(name, newGroup) {
     }
 };
 
-// --- 6. Smart Analytics, Heatmap & Wilson CI ---
+// --- 6. Analytics ---
 function wilsonScoreCI(r, n) {
     if (n === 0) return { lower: 0, upper: 0 };
     const p = r / n;
@@ -1205,7 +1356,7 @@ window.clearAnalyticsFilters = function() {
 
     $('#analyticsContainer').addClass('hidden');
     $('#analyticsPlaceholder').removeClass('hidden').html(`
-        <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
+        <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
         <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view insights.</p>
     `);
 };
@@ -1244,9 +1395,11 @@ function generateAnalytics() {
     $('#dashTitle').text(dashTitle);
     $('#dashSubtitle').text(dashSub);
 
+    // Update dynamic text based on S/R metric
     $('#chartAMR').parent().siblings('div').find('h3').html(`AMR Profile Comparison (% ${metricLabel}) <button type="button" onclick="togglePrintSection('print_sect_amr')" class="text-slate-400 hover:text-teal-600 no-print" title="Toggle Print Visibility">👁️</button>`);
     $('#heatmapWrapper').siblings('.flex').find('h3').html(`Antibiogram Heatmap (% ${metricLabel}) <button type="button" onclick="togglePrintSection('print_sect_heatmap')" class="text-slate-400 hover:text-teal-600 no-print" title="Toggle Print Visibility">👁️</button>`);
 
+    // Setup heatmap semantic texts
     let hmDesc = metric === 'R' 
         ? 'Color intensity indicates Resistance % (Dark Red = High Resistance). <span class="text-red-500 font-bold">*</span> indicates sample size &lt; 30.'
         : 'Color intensity indicates Susceptibility % (Dark Green = High Susceptibility). <span class="text-red-500 font-bold">*</span> indicates sample size &lt; 30.';
@@ -1373,7 +1526,7 @@ function generateAnalytics() {
                 displayAbxs.forEach(abx => {
                     let s = s_org.abx[abx];
                     if (!s || s.tested === 0) {
-                        dataR.push(null); // لا ترسم عموداً إذا كان العدد 0
+                        dataR.push(0); 
                         bgColors.push(palette.lowBg);
                         ciData.push({lower: 0, upper: 0});
                     } else {
@@ -1415,7 +1568,7 @@ function generateAnalytics() {
                     data: dataR,
                     backgroundColor: bgColors,
                     borderRadius: 4,
-                    ciData: ciData
+                    ciData: ciData // Injected for custom plugin
                 });
             });
         }
@@ -1545,7 +1698,7 @@ function generateAnalytics() {
     });
 }
 
-// --- 7. Official File Export using Fetch + XlsxPopulate ---
+// --- 7. Official File Export ---
 function showExportModal() {
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
     let years = new Set();
@@ -1686,39 +1839,40 @@ async function processAntibiogramExport(year, quarter) {
     }
 }
 
-// --- 🔴 LIVE SURVEILLANCE LOGIC (WITH AUTO-LATEST MONTH & ROBUST ESBL) ---
+// --- 🔴 LIVE SURVEILLANCE LOGIC ---
 function generateLiveSurveillance() {
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let s = JSON.parse(localStorage.getItem('amr_live_settings')) || { calc_mode: 'auto', manual_month: '', show_amr: true, show_top3: true };
     
-    // 1. Strict Blacklist Filter (Exclude contamination & no growth)
+    // 1. Strict Blacklist Filter
     const blacklist = ["xxx", "con", "no growth", "contaminated", "normal flora", "mixed flora", "no significant growth"];
     let cleanRecords = allRecords.filter(r => {
         let org = (r['Selective organism'] || "").toLowerCase();
         return org !== "" && !blacklist.some(b => org.includes(b));
     });
 
-    if (cleanRecords.length === 0) {
-        $('#live_month_title').text('Latest Active Month (No Data)');
-        $('#live_q_title').text('Last Completed Quarter (No Data)');
-        liveCharts.forEach(c => c.destroy());
-        liveCharts = [];
-        return;
+    // 2. Logic for Date Calculation (Auto latest vs Manual)
+    let targetMonthPrefix = "";
+    if (s.calc_mode === 'manual' && s.manual_month) {
+        targetMonthPrefix = s.manual_month;
+    } else {
+        // Auto-detect latest available month with data
+        let allMonths = [...new Set(cleanRecords.map(r => r.Date ? r.Date.substring(0,7) : "").filter(Boolean))].sort().reverse();
+        if(allMonths.length > 0) {
+            targetMonthPrefix = allMonths[0]; // Latest
+        } else {
+            targetMonthPrefix = new Date().toISOString().slice(0, 7); // Fallback to current
+        }
     }
 
-    // 2. Determine Latest Month that actually has data in records
-    let allDates = cleanRecords.map(r => r.Date).filter(Boolean).sort();
-    let latestDateStr = allDates[allDates.length - 1]; // e.g., "2025-11" or "2026-08"
-    let targetMonthPrefix = latestDateStr.substring(0, 7);
-
-    // Extract year & month for quarter calculation based on latest available data
-    let [lYear, lMonth] = targetMonthPrefix.split('-').map(Number);
-    let qYear = lYear;
-    let qMonths = [];
-    let qLabel = "";
-
-    if (lMonth <= 3) { qYear -= 1; qMonths = ["10","11","12"]; qLabel = `Q4 ${qYear}`; }
-    else if (lMonth <= 6) { qMonths = ["01","02","03"]; qLabel = `Q1 ${qYear}`; }
-    else if (lMonth <= 9) { qMonths = ["04","05","06"]; qLabel = `Q2 ${qYear}`; }
+    let [qYear, qMonthStr] = targetMonthPrefix.split('-');
+    qYear = parseInt(qYear);
+    let currentMonthNum = parseInt(qMonthStr);
+    let qMonths = []; let qLabel = "";
+    
+    if (currentMonthNum <= 3) { qYear -= 1; qMonths = ["10","11","12"]; qLabel = `Q4 ${qYear}`; }
+    else if (currentMonthNum <= 6) { qMonths = ["01","02","03"]; qLabel = `Q1 ${qYear}`; }
+    else if (currentMonthNum <= 9) { qMonths = ["04","05","06"]; qLabel = `Q2 ${qYear}`; }
     else { qMonths = ["07","08","09"]; qLabel = `Q3 ${qYear}`; }
 
     let monthRecords = cleanRecords.filter(r => r.Date && r.Date.startsWith(targetMonthPrefix));
@@ -1728,51 +1882,36 @@ function generateLiveSurveillance() {
         return parseInt(parts[0]) === qYear && qMonths.includes(parts[1]);
     });
 
-    $('#live_month_title').text(`Latest Active Month (${targetMonthPrefix})`);
+    $('#live_month_title').text(`Target Month (${targetMonthPrefix})`);
     $('#live_q_title').text(`Last Completed Quarter (${qLabel})`);
 
     liveCharts.forEach(c => c.destroy());
     liveCharts = [];
 
-    buildLiveSection(monthRecords, 'm');
-    buildLiveSection(quarterRecords, 'q');
+    buildLiveSection(monthRecords, 'm', s);
+    buildLiveSection(quarterRecords, 'q', s);
 }
 
-function buildLiveSection(records, prefix) {
+function buildLiveSection(records, prefix, settings) {
+    let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
+    
     $(`#live_${prefix}_total`).text(records.length);
     if(records.length === 0) {
         $(`#live_${prefix}_bug`).text("-");
         $(`#live_${prefix}_spec`).text("-");
-        $(`#live_${prefix}_best_abx`).text("-");
+        $(`#live_${prefix}_amr_wrapper`).addClass('hidden');
+        $(`#live_${prefix}_top3_container`).addClass('hidden');
         return;
     }
 
-    let orgCounts = {}; 
-    let specCounts = {};
-    let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
+    let orgCounts = {}; let specCounts = {};
     
-    // Robust Critical Markers (ESBL checks Ceftriaxone, Cefotaxime, or Ceftazidime)
+    // Critical Pairs (With Fallbacks for ESBL)
     const criticalPairs = [
-        { 
-            orgs: ["escherichia coli", "klebsiella pneumoniae"], 
-            abxList: ["Ceftriaxone", "Cefotaxime", "Ceftazidime"], 
-            label: "ESBL Indicator\n(3rd Gen Ceph)" 
-        },
-        { 
-            orgs: ["escherichia coli", "klebsiella pneumoniae"], 
-            abxList: ["Meropenem", "Imipenem"], 
-            label: "CRE Indicator\n(Carbapenem)" 
-        },
-        { 
-            orgs: ["staphylococcus aureus"], 
-            abxList: ["Oxacillin", "Cefoxitin"], 
-            label: "MRSA Indicator\n(OX/FOX)" 
-        },
-        { 
-            orgs: ["enterococcus faecalis", "enterococcus faecium", "enterococcus spp", "staphylococcus aureus"], 
-            abxList: ["Vancomycin"], 
-            label: "VRE/VRSA\n(VA)" 
-        }
+        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abx: ["Ceftriaxone", "Cefotaxime", "Ceftazidime"], label: "ESBL Indicator\n(CRO/CTX/CAZ)" },
+        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abx: ["Meropenem", "Imipenem"], label: "CRE Indicator\n(Carbapenem)" },
+        { orgs: ["staphylococcus aureus"], abx: ["Oxacillin", "Cefoxitin"], label: "MRSA Indicator\n(OX/FOX)" },
+        { orgs: ["enterococcus faecalis", "enterococcus faecium", "enterococcus spp", "staphylococcus aureus"], abx: ["Vancomycin"], label: "VRE/VRSA\n(VA)" }
     ];
 
     let amrStats = criticalPairs.map(p => ({ label: p.label, tested: 0, resistant: 0 }));
@@ -1786,14 +1925,10 @@ function buildLiveSection(records, prefix) {
         let orgLower = org.toLowerCase();
         criticalPairs.forEach((pair, index) => {
             if (pair.orgs.some(o => orgLower.includes(o.toLowerCase()))) {
-                // Find all tested antibiotics from the specific group
-                let testedAbxs = pair.abxList.filter(a => r[a] && r[a] !== '-' && r[a] !== '');
-                if (testedAbxs.length > 0) {
+                let abxFound = pair.abx.find(a => r[a] && r[a] !== '-');
+                if (abxFound) {
                     amrStats[index].tested++;
-                    // If ANY of the 3rd gen cephs is R, consider it Resistant for ESBL indicator
-                    if (testedAbxs.some(a => r[a] === 'R')) {
-                        amrStats[index].resistant++;
-                    }
+                    if (r[abxFound] === 'R') amrStats[index].resistant++;
                 }
             }
         });
@@ -1805,79 +1940,43 @@ function buildLiveSection(records, prefix) {
     $(`#live_${prefix}_bug`).text(topOrg);
     $(`#live_${prefix}_spec`).text(topSpec);
 
-    // Calculate Best Antibiotic for Top Specimen
-    let bestAbxText = "-";
-    if (topSpec !== "-") {
-        let specRecords = records.filter(r => r.Sample === topSpec);
-        let abxS = {};
-        specRecords.forEach(r => {
-            allPossibleAbxs.forEach(abx => {
-                let res = r[abx];
-                if (res === 'S' || res === 'I' || res === 'R') {
-                    if (!abxS[abx]) abxS[abx] = { s: 0, t: 0 };
-                    abxS[abx].t++;
-                    if (res === 'S') abxS[abx].s++;
-                }
-            });
-        });
-        
-        let maxS = -1;
-        let bestAbxName = "";
-        let maxTested = 0;
-        
-        for (let abx in abxS) {
-            if (abxS[abx].t >= 3) { // Require at least 3 isolates tested to suggest it
-                let perc = abxS[abx].s / abxS[abx].t;
-                if (perc > maxS || (perc === maxS && abxS[abx].t > maxTested)) {
-                    maxS = perc;
-                    bestAbxName = abx;
-                    maxTested = abxS[abx].t;
-                }
+    // 1. Bar Chart (Critical AMR)
+    if (settings.show_amr) {
+        $(`#live_${prefix}_amr_wrapper`).removeClass('hidden');
+        let labels = []; let data = []; let bgColors = []; let ciData = [];
+        amrStats.forEach(stat => {
+            labels.push(stat.label.split('\n'));
+            if (stat.tested === 0) {
+                data.push(0); bgColors.push('#e2e8f0'); ciData.push({lower:0, upper:0});
+            } else {
+                let p = Math.round((stat.resistant / stat.tested) * 100);
+                let isReliable = stat.tested >= 30;
+                data.push(p);
+                bgColors.push(isReliable ? 'rgba(220, 38, 38, 0.9)' : 'rgba(148, 163, 184, 0.5)'); 
+                ciData.push(wilsonScoreCI(stat.resistant, stat.tested));
             }
-        }
-        if (bestAbxName) {
-            bestAbxText = `Active: ${bestAbxName} (${Math.round(maxS*100)}% S)`;
-        } else {
-            bestAbxText = "Insufficient Abx Data";
-        }
+        });
+
+        let chartAmr = new Chart(document.getElementById(`chart_${prefix}_amr`), {
+            type: 'bar',
+            data: { labels: labels, datasets: [{ label: '% Resistance', data: data, backgroundColor: bgColors, ciData: ciData, borderRadius: 4 }] },
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                plugins: { legend: { display: false } },
+                scales: { y: { max: 100, beginAtZero: true } }
+            },
+            plugins: [errorBarsPlugin]
+        });
+        liveCharts.push(chartAmr);
+    } else {
+        $(`#live_${prefix}_amr_wrapper`).addClass('hidden');
     }
-    $(`#live_${prefix}_best_abx`).text(bestAbxText);
-
-    // 1. Bar Chart (Critical AMR with Error Bars & N < 30 reliability rule)
-    let labels = []; let data = []; let bgColors = []; let ciData = [];
-    amrStats.forEach(stat => {
-        labels.push(stat.label.split('\n'));
-        if (stat.tested === 0) {
-            // Push null so it remains completely blank/empty instead of falsely showing 0%
-            data.push(null); 
-            bgColors.push('#e2e8f0'); 
-            ciData.push({lower:0, upper:0});
-        } else {
-            let p = Math.round((stat.resistant / stat.tested) * 100);
-            let isReliable = stat.tested >= 30;
-            data.push(p);
-            bgColors.push(isReliable ? 'rgba(225, 29, 72, 0.9)' : 'rgba(148, 163, 184, 0.5)'); // Rose-600 for reliable, Faded gray for n<30
-            ciData.push(wilsonScoreCI(stat.resistant, stat.tested));
-        }
-    });
-
-    let chartAmr = new Chart(document.getElementById(`chart_${prefix}_amr`), {
-        type: 'bar',
-        data: { labels: labels, datasets: [{ label: '% Resistance', data: data, backgroundColor: bgColors, ciData: ciData, borderRadius: 4 }] },
-        options: { 
-            responsive: true, maintainAspectRatio: false, 
-            plugins: { legend: { display: false }, title: {display: false} },
-            scales: { y: { max: 100, beginAtZero: true } }
-        },
-        plugins: [errorBarsPlugin]
-    });
-    liveCharts.push(chartAmr);
 
     // 2. Pie Chart (Top Organisms)
     let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 5);
     let chartPie = new Chart(document.getElementById(`chart_${prefix}_pie`), {
         type: 'doughnut',
-        data: { labels: sortedOrgs, datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0d9488','#0ea5e9','#3b82f6','#8b5cf6','#ec4899'] }] },
+        data: { labels: sortedOrgs, datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0f766e','#0ea5e9','#3b82f6','#8b5cf6','#ec4899'] }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: {boxWidth: 10, font:{size:10}} } } }
     });
     liveCharts.push(chartPie);
@@ -1890,4 +1989,62 @@ function buildLiveSection(records, prefix) {
         options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks:{stepSize: 1} } } }
     });
     liveCharts.push(chartBar);
+
+    // 4. Top 3 Specimens Breakdown
+    if (settings.show_top3) {
+        let top3Specs = sortedSpecs.slice(0, 3);
+        let htmlTop3 = `<h4 class="text-sm font-bold text-slate-700 mt-6 mb-3 border-b border-slate-200 pb-1">Top 3 Specimens Breakdown</h4><div class="space-y-3">`;
+        
+        top3Specs.forEach(spec => {
+            let specRecords = records.filter(r => r.Sample === spec);
+            
+            // Find top bug for this spec
+            let bCounts = {};
+            specRecords.forEach(r => { let o = r['Selective organism']; if(o) bCounts[o] = (bCounts[o]||0)+1; });
+            let topBugSpec = Object.keys(bCounts).sort((a,b)=>bCounts[b]-bCounts[a])[0] || "-";
+
+            // Find best abx (highest %S with reasonable N)
+            let abxS = {}; let abxT = {};
+            specRecords.forEach(r => {
+                allPossibleAbxs.forEach(a => {
+                    if(r[a] && r[a] !== '-') {
+                        abxT[a] = (abxT[a]||0)+1;
+                        if(r[a] === 'S') abxS[a] = (abxS[a]||0)+1;
+                    }
+                });
+            });
+            let bestAbx = "-"; let bestP = -1;
+            // Prefer N >= 5 for significance
+            Object.keys(abxT).forEach(a => {
+                if(abxT[a] >= 5) {
+                    let p = (abxS[a]||0) / abxT[a];
+                    if(p > bestP) { bestP = p; bestAbx = a; }
+                }
+            });
+            // Fallback if none >= 5
+            if(bestP === -1) {
+                Object.keys(abxT).forEach(a => {
+                    let p = (abxS[a]||0) / abxT[a];
+                    if(p > bestP) { bestP = p; bestAbx = a; }
+                });
+            }
+            
+            let bestAbxLabel = bestAbx !== "-" ? `${bestAbx} <span class="text-emerald-600 font-bold ml-1 text-xs">(${Math.round(bestP*100)}% S)</span>` : "N/A";
+
+            htmlTop3 += `
+            <div class="bg-slate-50 border border-slate-100 p-3 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+                <div class="font-bold text-slate-800 text-sm flex items-center gap-2 w-full md:w-1/3"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs truncate">${spec}</span></div>
+                <div class="text-xs text-slate-600 w-full md:w-1/3">Top Bug: <span class="font-bold text-rose-600">${topBugSpec}</span></div>
+                <div class="text-xs text-slate-600 w-full md:w-1/3">Most Susceptible: <span class="font-bold text-slate-800">${bestAbxLabel}</span></div>
+            </div>`;
+        });
+        htmlTop3 += `</div>`;
+        if (top3Specs.length > 0) {
+            $(`#live_${prefix}_top3_container`).html(htmlTop3).removeClass('hidden');
+        } else {
+            $(`#live_${prefix}_top3_container`).addClass('hidden');
+        }
+    } else {
+        $(`#live_${prefix}_top3_container`).addClass('hidden');
+    }
 }
