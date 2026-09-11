@@ -5,41 +5,49 @@ let chartSpec_instance = null;
 let chartGen_instance = null;
 let isUpdatingFilters = false;
 
-// Register custom chart plugin for Error Bars (Confidence Interval)
+// Register custom chart plugin for Error Bars (Confidence Interval) - Bulletproof version
 const errorBarsPlugin = {
     id: 'errorBars',
     afterDatasetsDraw(chart, args, pluginOptions) {
-        const ctx = chart.ctx;
-        chart.data.datasets.forEach((dataset, i) => {
-            const meta = chart.getDatasetMeta(i);
-            if (!meta.hidden && dataset.ciData) {
-                meta.data.forEach((element, index) => {
-                    const ci = dataset.ciData[index];
-                    if (!ci || (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0)) return;
-                    
-                    const yLower = chart.scales.y.getPixelForValue(ci.lower);
-                    const yUpper = chart.scales.y.getPixelForValue(ci.upper);
-                    const x = element.x;
-                    
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.lineWidth = 1.5; 
-                    ctx.strokeStyle = '#000000'; 
-                    
-                    ctx.moveTo(x, yLower);
-                    ctx.lineTo(x, yUpper);
-                    
-                    const capWidth = 5;
-                    ctx.moveTo(x - capWidth, yUpper);
-                    ctx.lineTo(x + capWidth, yUpper);
-                    ctx.moveTo(x - capWidth, yLower);
-                    ctx.lineTo(x + capWidth, yLower);
-                    
-                    ctx.stroke();
-                    ctx.restore();
-                });
-            }
-        });
+        try {
+            const ctx = chart.ctx;
+            if (!chart.scales || !chart.scales.y) return;
+
+            chart.data.datasets.forEach((dataset, i) => {
+                const meta = chart.getDatasetMeta(i);
+                if (!meta.hidden && dataset.ciData) {
+                    meta.data.forEach((element, index) => {
+                        const ci = dataset.ciData[index];
+                        if (!ci || typeof ci.lower === 'undefined' || typeof ci.upper === 'undefined') return;
+                        if (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0) return;
+                        
+                        const yLower = chart.scales.y.getPixelForValue(ci.lower);
+                        const yUpper = chart.scales.y.getPixelForValue(ci.upper);
+                        let x = element.x;
+                        if (x === undefined) return;
+                        
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.lineWidth = 1.5; 
+                        ctx.strokeStyle = '#000000'; 
+                        
+                        ctx.moveTo(x, yLower);
+                        ctx.lineTo(x, yUpper);
+                        
+                        const capWidth = 5;
+                        ctx.moveTo(x - capWidth, yUpper);
+                        ctx.lineTo(x + capWidth, yUpper);
+                        ctx.moveTo(x - capWidth, yLower);
+                        ctx.lineTo(x + capWidth, yLower);
+                        
+                        ctx.stroke();
+                        ctx.restore();
+                    });
+                }
+            });
+        } catch (e) {
+            console.error('Error drawing error bars:', e);
+        }
     }
 };
 
@@ -160,7 +168,7 @@ async function processDataExtraction(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    closeSettingsModal();
+    if (typeof closeSettingsModal === 'function') closeSettingsModal();
     Swal.fire({ title: 'Processing File...', text: 'Loading dictionaries and extracting records...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
     let externalOrgMap = {};
@@ -346,7 +354,6 @@ async function processDataExtraction(event) {
                 continue;
             }
 
-            // Priority: User's Custom Mapping -> Internal Organisms Dictionary -> WHONET Fallback -> Title Case
             let fullOrgName = customAbbreviations[orgCode] || externalOrgMap[orgCode] || whonetOrgMap[orgCode] || (orgCode.charAt(0).toUpperCase() + orgCode.slice(1));
                     
             const orgNameCleanup = {
@@ -477,7 +484,7 @@ function showTab(tabName) {
     }
 }
 
-// --- APP MODALS (SETTINGS, ABOUT, INSTALL) ---
+// --- APP MODALS ---
 function showSettingsModal() {
     loadAbbreviations();
     $('#settingsModal').removeClass('hidden');
@@ -525,7 +532,6 @@ function showInstallGuide() {
                     <li>Ensure you check the box <b>"Open as window"</b>.</li>
                     <li>Click <b>Install</b>.</li>
                 </ol>
-                <p class="text-xs text-slate-500 italic mt-2">The application will now have its own icon on your desktop and taskbar, behaving exactly like a standard desktop software.</p>
             </div>
         `,
         showConfirmButton: true,
@@ -606,7 +612,7 @@ window.downloadBackup = function() {
     const dateStr = new Date().toISOString().split('T')[0];
     saveAs(blob, `AMR_Tracker_Backup_${dateStr}.json`);
     
-    closeSettingsModal();
+    if (typeof closeSettingsModal === 'function') closeSettingsModal();
     Swal.fire('Success!', 'Database backup downloaded successfully.', 'success');
 };
 
@@ -622,7 +628,7 @@ window.processRestore = function() {
             const importedData = JSON.parse(e.target.result);
             if (!importedData.amr_records) throw new Error("Invalid backup file structure.");
 
-            closeSettingsModal();
+            if (typeof closeSettingsModal === 'function') closeSettingsModal();
             Swal.fire({
                 title: 'Are you sure?',
                 text: "This will overwrite all existing clinical data on this device. Ensure you have backed up your current work!",
@@ -850,12 +856,13 @@ function initDataTable() {
         scrollX: true, 
         order: [[ 6, "desc" ]],
         stateSave: true,
-        dom: '<"flex flex-col md:flex-row justify-between items-center mb-4 gap-4"fB>rt<"flex flex-col md:flex-row justify-between items-center mt-4 gap-4"ip>',
+        dom: '<"flex flex-col md:flex-row justify-between items-center mb-4 gap-4"l fB>rt<"flex flex-col md:flex-row justify-between items-center mt-4 gap-4"ip>',
         buttons: [
             { extend: 'excelHtml5', text: 'Export Basic List', className: 'dt-custom-btn rounded-lg shadow-sm font-semibold' }
         ],
-        pageLength: 15,
-        language: { search: "", searchPlaceholder: "Search Records..." },
+        pageLength: 8,
+        lengthMenu: [[5, 8, 10, 15, 25, 50], ["5", "8", "10", "15", "25", "50"]],
+        language: { search: "", searchPlaceholder: "Search Records...", lengthMenu: "_MENU_ records per page" },
         initComplete: function () {
             this.api().columns([3, 4, 5, 6, 7]).every(function () {
                 let column = this;
@@ -873,8 +880,8 @@ function initDataTable() {
                     }
                 });
             });
-            // Style the search box correctly with Tailwind
             $('.dataTables_filter input').addClass('w-64 border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm');
+            $('.dataTables_length select').addClass('border-slate-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm mx-2');
         }
     });
 }
@@ -1112,357 +1119,373 @@ window.clearAnalyticsFilters = function() {
 };
 
 function generateAnalytics() {
-    const startDate = $('#ana_start').val();
-    const endDate = $('#ana_end').val();
-    const targetSample = $('#ana_sample').val();
-    const targetOrgs = $('#ana_organism').val() || [];
-    const targetAbxs = $('#ana_antibiotic').val() || [];
-    const metric = $('#ana_metric').val() || 'R'; 
-    const metricLabel = metric === 'R' ? 'Resistance' : 'Susceptibility';
+    try {
+        const startDate = $('#ana_start').val();
+        const endDate = $('#ana_end').val();
+        const targetSample = $('#ana_sample').val();
+        const targetOrgs = $('#ana_organism').val() || [];
+        const targetAbxs = $('#ana_antibiotic').val() || [];
+        const metric = $('#ana_metric').val() || 'R'; 
+        const metricLabel = metric === 'R' ? 'Resistance' : 'Susceptibility';
 
-    if (!startDate || !endDate) { Swal.fire('Required', 'Please select both dates.', 'warning'); return; }
+        if (!startDate || !endDate) { Swal.fire('Required', 'Please select both dates.', 'warning'); return; }
 
-    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
+        let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+        let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
 
-    if (targetSample) { records = records.filter(r => r.Sample === targetSample); }
-    
-    if (records.length === 0) {
-        $('#analyticsPlaceholder').removeClass('hidden').html(`
-            <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            <p class="text-lg font-medium text-slate-500">No records found for the selected criteria.</p>
-        `);
-        $('#analyticsContainer').addClass('hidden');
-        return;
-    }
-
-    $('#analyticsPlaceholder').addClass('hidden');
-    $('#analyticsContainer').removeClass('hidden');
-
-    let dashTitle = "Surveillance Analysis";
-    let dashSub = `${startDate} to ${endDate} | Metric: % ${metricLabel}`;
-    if(targetSample) dashSub += ` | Specimen: ${targetSample}`;
-    $('#dashTitle').text(dashTitle);
-    $('#dashSubtitle').text(dashSub);
-
-    $('#chartAMR').parent().siblings('div').find('h3').html(`AMR Profile Comparison (% ${metricLabel}) <button type="button" onclick="togglePrintSection('print_sect_amr')" class="text-slate-400 hover:text-blue-600 no-print" title="Toggle Print Visibility">👁️</button>`);
-    $('#heatmapWrapper').siblings('.flex').find('h3').html(`Antibiogram Heatmap (% ${metricLabel}) <button type="button" onclick="togglePrintSection('print_sect_heatmap')" class="text-slate-400 hover:text-blue-600 no-print" title="Toggle Print Visibility">👁️</button>`);
-
-    let hmDesc = metric === 'R' 
-        ? 'Color intensity indicates Resistance % (Dark Red = High Resistance). <span class="text-red-500 font-bold">*</span> indicates n &lt; 30.'
-        : 'Color intensity indicates Susceptibility % (Dark Green = High Susceptibility). <span class="text-red-500 font-bold">*</span> indicates n &lt; 30.';
-    $('#heatmapDesc').html(hmDesc);
-
-    let hmLegend = '';
-    if (metric === 'R') {
-        hmLegend = `
-            <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">0-20%</span>
-            <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800">21-40%</span>
-            <span class="px-2 py-0.5 rounded bg-orange-200 text-orange-900">41-60%</span>
-            <span class="px-2 py-0.5 rounded bg-red-400 text-white">61-80%</span>
-            <span class="px-2 py-0.5 rounded bg-red-600 text-white">81-100%</span>
-        `;
-    } else {
-        hmLegend = `
-            <span class="px-2 py-0.5 rounded bg-red-600 text-white">0-20%</span>
-            <span class="px-2 py-0.5 rounded bg-red-400 text-white">21-40%</span>
-            <span class="px-2 py-0.5 rounded bg-orange-200 text-orange-900">41-60%</span>
-            <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800">61-80%</span>
-            <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">81-100%</span>
-        `;
-    }
-    $('#heatmapLegend').html(hmLegend);
-
-    let orgCounts = {};
-    let specCounts = {};
-    let genderCounts = { "Male": 0, "Female": 0 };
-    let heatmapStats = {};
-    let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
-    
-    let allPresentOrgs = new Set();
-
-    records.forEach(r => {
-        let org = r['Selective organism'];
-        if(!org) return;
+        if (targetSample) { records = records.filter(r => r.Sample === targetSample); }
         
-        allPresentOrgs.add(org);
-        orgCounts[org] = (orgCounts[org] || 0) + 1;
-        if(r.Sample) specCounts[r.Sample] = (specCounts[r.Sample] || 0) + 1;
-        if(r.Sex && genderCounts[r.Sex] !== undefined) genderCounts[r.Sex] += 1;
+        if (records.length === 0) {
+            $('#analyticsPlaceholder').removeClass('hidden').html(`
+                <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <p class="text-lg font-medium text-slate-500">No records found for the selected criteria.</p>
+            `);
+            $('#analyticsContainer').addClass('hidden');
+            return;
+        }
 
-        if (!heatmapStats[org]) heatmapStats[org] = {};
-        allPossibleAbxs.forEach(abx => {
-            let res = r[abx];
-            if (res && res !== '-' && res !== '') {
-                if (!heatmapStats[org][abx]) heatmapStats[org][abx] = { t: 0, r: 0, s: 0 };
-                heatmapStats[org][abx].t += 1;
-                if (res === 'R') heatmapStats[org][abx].r += 1;
-                if (res === 'S') heatmapStats[org][abx].s += 1;
-            }
+        $('#analyticsPlaceholder').addClass('hidden');
+        $('#analyticsContainer').removeClass('hidden');
+
+        let dashTitle = "Surveillance Analysis";
+        let dashSub = `${startDate} to ${endDate} | Metric: % ${metricLabel}`;
+        if(targetSample) dashSub += ` | Specimen: ${targetSample}`;
+        $('#dashTitle').text(dashTitle);
+        $('#dashSubtitle').text(dashSub);
+
+        $('#chartAMR').parent().siblings('div').find('h3').html(`AMR Profile Comparison (% ${metricLabel}) <button type="button" onclick="togglePrintSection('print_sect_amr')" class="text-slate-400 hover:text-blue-600 no-print" title="Toggle Print Visibility">👁️</button>`);
+        $('#heatmapWrapper').siblings('.flex').find('h3').html(`Antibiogram Heatmap (% ${metricLabel}) <button type="button" onclick="togglePrintSection('print_sect_heatmap')" class="text-slate-400 hover:text-blue-600 no-print" title="Toggle Print Visibility">👁️</button>`);
+
+        let hmDesc = metric === 'R' 
+            ? 'Color intensity indicates Resistance % (Dark Red = High Resistance). <span class="text-red-500 font-bold">*</span> indicates n &lt; 30.'
+            : 'Color intensity indicates Susceptibility % (Dark Green = High Susceptibility). <span class="text-red-500 font-bold">*</span> indicates n &lt; 30.';
+        $('#heatmapDesc').html(hmDesc);
+
+        let hmLegend = '';
+        if (metric === 'R') {
+            hmLegend = `
+                <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">0-20%</span>
+                <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800">21-40%</span>
+                <span class="px-2 py-0.5 rounded bg-orange-200 text-orange-900">41-60%</span>
+                <span class="px-2 py-0.5 rounded bg-red-400 text-white">61-80%</span>
+                <span class="px-2 py-0.5 rounded bg-red-600 text-white">81-100%</span>
+            `;
+        } else {
+            hmLegend = `
+                <span class="px-2 py-0.5 rounded bg-red-600 text-white">0-20%</span>
+                <span class="px-2 py-0.5 rounded bg-red-400 text-white">21-40%</span>
+                <span class="px-2 py-0.5 rounded bg-orange-200 text-orange-900">41-60%</span>
+                <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800">61-80%</span>
+                <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">81-100%</span>
+            `;
+        }
+        $('#heatmapLegend').html(hmLegend);
+
+        let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
+        let allPresentOrgs = new Set();
+        let heatmapStats = {};
+        
+        // حسابات المخططات الدائرية (Pie Charts) بناءً على الفلاتر
+        let pieRecords = records;
+        if (targetOrgs.length > 0) {
+            pieRecords = pieRecords.filter(r => targetOrgs.includes(r['Selective organism']));
+        }
+        let orgCounts = {};
+        let specCounts = {};
+        let genderCounts = { "Male": 0, "Female": 0 };
+        
+        pieRecords.forEach(r => {
+            let org = r['Selective organism'];
+            if(!org) return;
+            orgCounts[org] = (orgCounts[org] || 0) + 1;
+            if(r.Sample) specCounts[r.Sample] = (specCounts[r.Sample] || 0) + 1;
+            if(r.Sex && genderCounts[r.Sex] !== undefined) genderCounts[r.Sex] += 1;
         });
-    });
 
-    let amrStats = {}; 
-    Array.from(allPresentOrgs).forEach(org => {
-        amrStats[org] = { total: orgCounts[org], abx: {} };
-        allPossibleAbxs.forEach(a => { amrStats[org].abx[a] = { tested: 0, r: 0, s: 0 }; });
-    });
-
-    records.forEach(r => {
-        let org = r['Selective organism'];
-        allPossibleAbxs.forEach(abx => {
-            let res = r[abx];
-            if (res && res !== '-' && res !== '') {
-                amrStats[org].abx[abx].tested += 1;
-                if (res === 'R') amrStats[org].abx[abx].r += 1;
-                if (res === 'S') amrStats[org].abx[abx].s += 1;
-            }
+        records.forEach(r => {
+            let org = r['Selective organism'];
+            if(!org) return;
+            allPresentOrgs.add(org);
+            if (!heatmapStats[org]) heatmapStats[org] = {};
+            allPossibleAbxs.forEach(abx => {
+                let res = r[abx];
+                if (res && res !== '-' && res !== '') {
+                    if (!heatmapStats[org][abx]) heatmapStats[org][abx] = { t: 0, r: 0, s: 0 };
+                    heatmapStats[org][abx].t += 1;
+                    if (res === 'R') heatmapStats[org][abx].r += 1;
+                    if (res === 'S') heatmapStats[org][abx].s += 1;
+                }
+            });
         });
-    });
 
-    let displayOrgs = [];
-    let displayAbxs = [];
+        let amrStats = {}; 
+        Array.from(allPresentOrgs).forEach(org => {
+            // نأخذ العدد الكلي من الـ records الأساسية للـ AMR Stats
+            let totalRecordsForOrg = records.filter(r => r['Selective organism'] === org).length;
+            amrStats[org] = { total: totalRecordsForOrg, abx: {} };
+            allPossibleAbxs.forEach(a => { amrStats[org].abx[a] = { tested: 0, r: 0, s: 0 }; });
+        });
 
-    if (targetOrgs.length === 0 && targetAbxs.length === 0) {
-        $('#print_sect_amr').addClass('hidden');
-        if (chartAMR_instance) chartAMR_instance.destroy();
-    } else {
-        $('#print_sect_amr').removeClass('hidden');
+        records.forEach(r => {
+            let org = r['Selective organism'];
+            allPossibleAbxs.forEach(abx => {
+                let res = r[abx];
+                if (res && res !== '-' && res !== '') {
+                    amrStats[org].abx[abx].tested += 1;
+                    if (res === 'R') amrStats[org].abx[abx].r += 1;
+                    if (res === 'S') amrStats[org].abx[abx].s += 1;
+                }
+            });
+        });
 
-        if (targetOrgs.length > 0 && targetAbxs.length === 0) {
-            displayOrgs = targetOrgs;
-            let foundAbxs = new Set();
-            displayOrgs.forEach(org => {
-                if (amrStats[org]) {
-                    Object.keys(amrStats[org].abx).forEach(abx => {
-                        if (amrStats[org].abx[abx].tested > 0) foundAbxs.add(abx);
+        let displayOrgs = [];
+        let displayAbxs = [];
+
+        if (targetOrgs.length === 0 && targetAbxs.length === 0) {
+            $('#print_sect_amr').addClass('hidden');
+            if (chartAMR_instance) chartAMR_instance.destroy();
+        } else {
+            $('#print_sect_amr').removeClass('hidden');
+
+            if (targetOrgs.length > 0 && targetAbxs.length === 0) {
+                displayOrgs = targetOrgs;
+                let foundAbxs = new Set();
+                displayOrgs.forEach(org => {
+                    if (amrStats[org]) {
+                        Object.keys(amrStats[org].abx).forEach(abx => {
+                            if (amrStats[org].abx[abx].tested > 0) foundAbxs.add(abx);
+                        });
+                    }
+                });
+                displayAbxs = Array.from(foundAbxs).sort();
+            } else if (targetOrgs.length === 0 && targetAbxs.length > 0) {
+                displayAbxs = targetAbxs;
+                let foundOrgs = new Set();
+                Array.from(allPresentOrgs).forEach(org => {
+                    displayAbxs.forEach(abx => {
+                        if (amrStats[org].abx[abx] && amrStats[org].abx[abx].tested > 0) foundOrgs.add(org);
                     });
-                }
-            });
-            displayAbxs = Array.from(foundAbxs).sort();
-        } else if (targetOrgs.length === 0 && targetAbxs.length > 0) {
-            displayAbxs = targetAbxs;
-            let foundOrgs = new Set();
-            Array.from(allPresentOrgs).forEach(org => {
-                displayAbxs.forEach(abx => {
-                    if (amrStats[org].abx[abx] && amrStats[org].abx[abx].tested > 0) foundOrgs.add(org);
                 });
-            });
-            displayOrgs = Array.from(foundOrgs).sort();
-        } else {
-            displayOrgs = targetOrgs;
-            displayAbxs = targetAbxs;
-        }
+                displayOrgs = Array.from(foundOrgs).sort();
+            } else {
+                displayOrgs = targetOrgs;
+                displayAbxs = targetAbxs;
+            }
 
-        let anyLowReliability = false;
-        let datasets = [];
-        let tableHtml = '';
+            let anyLowReliability = false;
+            let datasets = [];
+            let tableHtml = '';
 
-        if (displayOrgs.length === 0 || displayAbxs.length === 0) {
-            tableHtml = '<tr><td colspan="6" class="text-center py-4 text-slate-500">No cross-data found for the selected combinations.</td></tr>';
-        } else {
-            displayOrgs.forEach((org, orgIndex) => {
-                let s_org = amrStats[org];
-                if (!s_org) return;
+            if (displayOrgs.length === 0 || displayAbxs.length === 0) {
+                tableHtml = '<tr><td colspan="6" class="text-center py-4 text-slate-500">No cross-data found for the selected combinations.</td></tr>';
+            } else {
+                displayOrgs.forEach((org, orgIndex) => {
+                    let s_org = amrStats[org];
+                    if (!s_org) return;
 
-                let dataR = [];
-                let bgColors = [];
-                let ciData = [];
+                    let dataR = [];
+                    let bgColors = [];
+                    let ciData = [];
 
-                let palette = orgColorPalette[orgIndex % orgColorPalette.length];
+                    let palette = orgColorPalette[orgIndex % orgColorPalette.length];
 
-                displayAbxs.forEach(abx => {
-                    let s = s_org.abx[abx];
-                    if (!s || s.tested === 0) {
-                        dataR.push(0); 
-                        bgColors.push(palette.lowBg);
-                        ciData.push({lower: 0, upper: 0});
-                    } else {
-                        let targetVal = metric === 'R' ? s.r : s.s;
-                        let p = Math.round((targetVal / s.tested) * 100);
-                        let isReliable = s.tested >= 30;
-                        if (!isReliable) anyLowReliability = true;
-                        
-                        dataR.push(p);
-                        bgColors.push(isReliable ? palette.bg : palette.lowBg);
+                    displayAbxs.forEach(abx => {
+                        let s = s_org.abx[abx];
+                        if (!s || s.tested === 0) {
+                            dataR.push(0); 
+                            bgColors.push(palette.lowBg);
+                            ciData.push({lower: 0, upper: 0});
+                        } else {
+                            let targetVal = metric === 'R' ? s.r : s.s;
+                            let p = Math.round((targetVal / s.tested) * 100);
+                            let isReliable = s.tested >= 30;
+                            if (!isReliable) anyLowReliability = true;
+                            
+                            dataR.push(p);
+                            bgColors.push(isReliable ? palette.bg : palette.lowBg);
 
-                        let ci = wilsonScoreCI(targetVal, s.tested);
-                        ciData.push(ci);
+                            let ci = wilsonScoreCI(targetVal, s.tested);
+                            ciData.push(ci);
 
-                        let dangerScore = metric === 'R' ? p : (100 - p);
-                        let semColor = '';
-                        if (!isReliable) semColor = 'text-slate-500';
-                        else if (dangerScore <= 20) semColor = 'text-emerald-600';
-                        else if (dangerScore <= 40) semColor = 'text-yellow-600';
-                        else if (dangerScore <= 60) semColor = 'text-orange-500';
-                        else if (dangerScore <= 80) semColor = 'text-red-500';
-                        else semColor = 'text-red-700 font-bold';
+                            let dangerScore = metric === 'R' ? p : (100 - p);
+                            let semColor = '';
+                            if (!isReliable) semColor = 'text-slate-500';
+                            else if (dangerScore <= 20) semColor = 'text-emerald-600';
+                            else if (dangerScore <= 40) semColor = 'text-yellow-600';
+                            else if (dangerScore <= 60) semColor = 'text-orange-500';
+                            else if (dangerScore <= 80) semColor = 'text-red-500';
+                            else semColor = 'text-red-700 font-bold';
 
-                        tableHtml += `
-                            <tr class="hover:bg-slate-50 transition-colors ${!isReliable ? 'text-slate-500' : 'font-semibold text-slate-700'}">
-                                <td class="px-4 py-3 border-b border-slate-100">${abx}</td>
-                                <td class="px-4 py-3 border-b border-slate-100"><span style="color:${palette.bg.replace('0.9','1')}">${org}</span> ${!isReliable ? '<span class="text-red-500 font-bold">*</span>' : ''}</td>
-                                <td class="px-4 py-3 border-b border-slate-100 text-center">${s.tested}</td>
-                                <td class="px-4 py-3 border-b border-slate-100 text-center">${targetVal}</td>
-                                <td class="px-4 py-3 border-b border-slate-100 text-center ${semColor}">${p}%</td>
-                                <td class="px-4 py-3 border-b border-slate-100 text-center text-slate-500">${ci.lower}% - ${ci.upper}%</td>
-                            </tr>
-                        `;
-                    }
+                            tableHtml += `
+                                <tr class="hover:bg-slate-50 transition-colors ${!isReliable ? 'text-slate-500' : 'font-semibold text-slate-700'}">
+                                    <td class="px-4 py-3 border-b border-slate-100">${abx}</td>
+                                    <td class="px-4 py-3 border-b border-slate-100"><span style="color:${palette.bg.replace('0.9','1')}">${org}</span> ${!isReliable ? '<span class="text-red-500 font-bold">*</span>' : ''}</td>
+                                    <td class="px-4 py-3 border-b border-slate-100 text-center">${s.tested}</td>
+                                    <td class="px-4 py-3 border-b border-slate-100 text-center">${targetVal}</td>
+                                    <td class="px-4 py-3 border-b border-slate-100 text-center ${semColor}">${p}%</td>
+                                    <td class="px-4 py-3 border-b border-slate-100 text-center text-slate-500">${ci.lower}% - ${ci.upper}%</td>
+                                </tr>
+                            `;
+                        }
+                    });
+
+                    datasets.push({
+                        label: org,
+                        data: dataR,
+                        backgroundColor: bgColors,
+                        borderRadius: 4,
+                        ciData: ciData
+                    });
                 });
+            }
 
-                datasets.push({
-                    label: org,
-                    data: dataR,
-                    backgroundColor: bgColors,
-                    borderRadius: 4,
-                    ciData: ciData
-                });
-            });
-        }
+            if (anyLowReliability) $('#amrClsiWarning').removeClass('hidden');
+            else $('#amrClsiWarning').addClass('hidden');
 
-        if (anyLowReliability) $('#amrClsiWarning').removeClass('hidden');
-        else $('#amrClsiWarning').addClass('hidden');
+            $('#ciTableBody').html(tableHtml);
+            $('#ciTableBody').siblings('thead').find('th').eq(3).text(`Count (${metric})`);
+            $('#ciTableBody').siblings('thead').find('th').eq(4).text(`% ${metricLabel}`);
 
-        $('#ciTableBody').html(tableHtml);
-        $('#ciTableBody').siblings('thead').find('th').eq(3).text(`Count (${metric})`);
-        $('#ciTableBody').siblings('thead').find('th').eq(4).text(`% ${metricLabel}`);
-
-        if (chartAMR_instance) chartAMR_instance.destroy();
-        chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
-            type: 'bar',
-            data: { labels: displayAbxs, datasets: datasets },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                scales: { 
-                    y: { beginAtZero: true, max: 100, title: { display: true, text: `% ${metricLabel}`, font: {weight: 'bold'} }, grid: {color: '#f1f5f9'} },
-                    x: { grid: {display: false}, ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
+            if (chartAMR_instance) chartAMR_instance.destroy();
+            chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
+                type: 'bar',
+                data: { labels: displayAbxs, datasets: datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { 
+                        y: { beginAtZero: true, max: 100, title: { display: true, text: `% ${metricLabel}`, font: {weight: 'bold'} }, grid: {color: '#f1f5f9'} },
+                        x: { grid: {display: false}, ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
+                    },
+                    plugins: { legend: { display: true, position: 'top' } } 
                 },
-                plugins: { legend: { display: true, position: 'top' } } 
-            },
-            plugins: [errorBarsPlugin]
-        });
-    }
-
-    // Heatmap Building 
-    let hmOrgs = Object.keys(heatmapStats);
-    if (targetOrgs.length > 0) {
-        hmOrgs = hmOrgs.filter(o => targetOrgs.includes(o));
-    }
-    
-    let hmAbxSet = new Set();
-    hmOrgs.forEach(o => { 
-        Object.keys(heatmapStats[o]).forEach(a => {
-            if (heatmapStats[o][a].t > 0) hmAbxSet.add(a);
-        }); 
-    });
-    let hmAbxs = Array.from(hmAbxSet);
-    if (targetAbxs.length > 0) {
-        hmAbxs = hmAbxs.filter(a => targetAbxs.includes(a));
-    }
-    
-    hmOrgs.sort();
-    hmAbxs.sort();
-
-    if (hmOrgs.length > 0 && hmAbxs.length > 0) {
-        let hmHtml = '<table class="heatmap-table"><thead><tr><th>Organism (n)</th>';
-        hmAbxs.forEach(a => { hmHtml += `<th><div class="w-20 truncate" title="${a}">${a}</div></th>`; });
-        hmHtml += '</tr></thead><tbody>';
-
-        hmOrgs.forEach(o => {
-            let rowHasData = hmAbxs.some(a => heatmapStats[o][a] && heatmapStats[o][a].t > 0);
-            if(!rowHasData) return;
-
-            let orgTotal = orgCounts[o] || 0;
-            hmHtml += `<tr><th>${o} <span class="text-xs font-normal text-slate-400">(${orgTotal})</span></th>`;
-            
-            hmAbxs.forEach(a => {
-                let cell = heatmapStats[o][a];
-                if (!cell || cell.t === 0) {
-                    hmHtml += '<td class="bg-slate-50 text-slate-300">-</td>';
-                } else {
-                    let targetVal = metric === 'R' ? cell.r : cell.s;
-                    let p = Math.round((targetVal / cell.t) * 100);
-                    let isLow = cell.t < 30;
-                    
-                    let dangerScore = metric === 'R' ? p : (100 - p);
-                    
-                    let bgClass = 'bg-white';
-                    let textClass = 'text-slate-800';
-                    
-                    if (dangerScore <= 20) { bgClass = 'bg-emerald-100'; textClass = 'text-emerald-800'; }
-                    else if (dangerScore <= 40) { bgClass = 'bg-yellow-100'; textClass = 'text-yellow-800'; }
-                    else if (dangerScore <= 60) { bgClass = 'bg-orange-200'; textClass = 'text-orange-900'; }
-                    else if (dangerScore <= 80) { bgClass = 'bg-red-400'; textClass = 'text-white font-bold'; }
-                    else { bgClass = 'bg-red-600'; textClass = 'text-white font-bold'; }
-
-                    if (isLow) {
-                        if(dangerScore > 60) textClass = 'text-red-100';
-                        else textClass += ' opacity-70';
-                    }
-
-                    hmHtml += `<td class="${bgClass} ${textClass}">${p}% ${isLow ? '<span class="text-[10px] text-red-500 font-bold ml-0.5">*</span>' : ''}</td>`;
-                }
+                plugins: [errorBarsPlugin]
             });
-            hmHtml += '</tr>';
-        });
-        hmHtml += '</tbody></table>';
-        $('#heatmapWrapper').html(hmHtml);
-    } else {
-        $('#heatmapWrapper').html('<p class="text-center text-slate-400 py-4">No data matches the selected filters.</p>');
-    }
-
-    let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 10);
-    if(chartOrg_instance) chartOrg_instance.destroy();
-    chartOrg_instance = new Chart(document.getElementById('chartOrg'), {
-        type: 'doughnut',
-        data: {
-            labels: sortedOrgs,
-            datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0f766e','#0ea5e9','#3b82f6','#06b6d4','#14b8a6','#10b981','#84cc16','#eab308','#f59e0b','#f97316'] }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } } }
-    });
-
-    let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
-    const topN = 7;
-    let displaySpecs = sortedSpecs.slice(0, topN);
-    let displaySpecCounts = displaySpecs.map(s => specCounts[s]);
-
-    const specTitleElement = $('#chartSpecimen').closest('.chart-container').find('h3');
-    if (sortedSpecs.length > topN) {
-        specTitleElement.html(`Top ${topN} Specimen Distribution 
-            <button type="button" onclick="togglePrintSection('print_sect_dist')" class="text-slate-400 hover:text-blue-600 no-print ml-2" title="Toggle Print Visibility">👁️</button>
-            <div class="text-[10px] text-slate-400 font-normal mt-0.5 w-full">* Showing highest ${topN} out of ${sortedSpecs.length} types</div>`);
-    } else {
-        specTitleElement.html(`Specimen Distribution 
-            <button type="button" onclick="togglePrintSection('print_sect_dist')" class="text-slate-400 hover:text-blue-600 no-print ml-2" title="Toggle Print Visibility">👁️</button>`);
-    }
-
-    if(chartSpec_instance) chartSpec_instance.destroy();
-    chartSpec_instance = new Chart(document.getElementById('chartSpecimen'), {
-        type: 'bar',
-        data: {
-            labels: displaySpecs,
-            datasets: [{ label: 'Isolates', data: displaySpecCounts, backgroundColor: '#0ea5e9', borderRadius: 4 }]
-        },
-        options: { 
-            indexAxis: 'y', 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            plugins: { legend: { display: false } }, 
-            scales: { x: { grid: {color: '#f1f5f9'} }, y: { grid: {display: false}, ticks: { autoSkip: false } } } 
         }
-    });
 
-    if(chartGen_instance) chartGen_instance.destroy();
-    chartGen_instance = new Chart(document.getElementById('chartGender'), {
-        type: 'pie',
-        data: {
-            labels: ['Male', 'Female'],
-            datasets: [{ data: [genderCounts['Male'], genderCounts['Female']], backgroundColor: ['#0ea5e9', '#ec4899'] }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
-    });
+        // Heatmap Building 
+        let hmOrgs = Object.keys(heatmapStats);
+        if (targetOrgs.length > 0) {
+            hmOrgs = hmOrgs.filter(o => targetOrgs.includes(o));
+        }
+        
+        let hmAbxSet = new Set();
+        hmOrgs.forEach(o => { 
+            Object.keys(heatmapStats[o]).forEach(a => {
+                if (heatmapStats[o][a].t > 0) hmAbxSet.add(a);
+            }); 
+        });
+        let hmAbxs = Array.from(hmAbxSet);
+        if (targetAbxs.length > 0) {
+            hmAbxs = hmAbxs.filter(a => targetAbxs.includes(a));
+        }
+        
+        hmOrgs.sort();
+        hmAbxs.sort();
+
+        if (hmOrgs.length > 0 && hmAbxs.length > 0) {
+            let hmHtml = '<table class="heatmap-table"><thead><tr><th>Organism (n)</th>';
+            hmAbxs.forEach(a => { hmHtml += `<th><div class="w-20 truncate" title="${a}">${a}</div></th>`; });
+            hmHtml += '</tr></thead><tbody>';
+
+            hmOrgs.forEach(o => {
+                let rowHasData = hmAbxs.some(a => heatmapStats[o][a] && heatmapStats[o][a].t > 0);
+                if(!rowHasData) return;
+
+                let orgTotal = amrStats[o] ? amrStats[o].total : 0;
+                hmHtml += `<tr><th>${o} <span class="text-xs font-normal text-slate-400">(${orgTotal})</span></th>`;
+                
+                hmAbxs.forEach(a => {
+                    let cell = heatmapStats[o][a];
+                    if (!cell || cell.t === 0) {
+                        hmHtml += '<td class="bg-slate-50 text-slate-300">-</td>';
+                    } else {
+                        let targetVal = metric === 'R' ? cell.r : cell.s;
+                        let p = Math.round((targetVal / cell.t) * 100);
+                        let isLow = cell.t < 30;
+                        
+                        let dangerScore = metric === 'R' ? p : (100 - p);
+                        
+                        let bgClass = 'bg-white';
+                        let textClass = 'text-slate-800';
+                        
+                        if (dangerScore <= 20) { bgClass = 'bg-emerald-100'; textClass = 'text-emerald-800'; }
+                        else if (dangerScore <= 40) { bgClass = 'bg-yellow-100'; textClass = 'text-yellow-800'; }
+                        else if (dangerScore <= 60) { bgClass = 'bg-orange-200'; textClass = 'text-orange-900'; }
+                        else if (dangerScore <= 80) { bgClass = 'bg-red-400'; textClass = 'text-white font-bold'; }
+                        else { bgClass = 'bg-red-600'; textClass = 'text-white font-bold'; }
+
+                        if (isLow) {
+                            if(dangerScore > 60) textClass = 'text-red-100';
+                            else textClass += ' opacity-70';
+                        }
+
+                        hmHtml += `<td class="${bgClass} ${textClass}">${p}% ${isLow ? '<span class="text-[10px] text-red-500 font-bold ml-0.5">*</span>' : ''}</td>`;
+                    }
+                });
+                hmHtml += '</tr>';
+            });
+            hmHtml += '</tbody></table>';
+            $('#heatmapWrapper').html(hmHtml);
+        } else {
+            $('#heatmapWrapper').html('<p class="text-center text-slate-400 py-4">No data matches the selected filters.</p>');
+        }
+
+        let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 10);
+        if(chartOrg_instance) chartOrg_instance.destroy();
+        chartOrg_instance = new Chart(document.getElementById('chartOrg'), {
+            type: 'doughnut',
+            data: {
+                labels: sortedOrgs,
+                datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0f766e','#0ea5e9','#3b82f6','#06b6d4','#14b8a6','#10b981','#84cc16','#eab308','#f59e0b','#f97316'] }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } } }
+        });
+
+        let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
+        const topN = 7;
+        let displaySpecs = sortedSpecs.slice(0, topN);
+        let displaySpecCounts = displaySpecs.map(s => specCounts[s]);
+
+        const specTitleElement = $('#chartSpecimen').closest('.chart-container').find('h3');
+        if (sortedSpecs.length > topN) {
+            specTitleElement.html(`Top ${topN} Specimen Distribution 
+                <button type="button" onclick="togglePrintSection('print_sect_dist')" class="text-slate-400 hover:text-blue-600 no-print ml-2" title="Toggle Print Visibility">👁️</button>
+                <div class="text-[10px] text-slate-400 font-normal mt-0.5 w-full">* Showing highest ${topN} out of ${sortedSpecs.length} types</div>`);
+        } else {
+            specTitleElement.html(`Specimen Distribution 
+                <button type="button" onclick="togglePrintSection('print_sect_dist')" class="text-slate-400 hover:text-blue-600 no-print ml-2" title="Toggle Print Visibility">👁️</button>`);
+        }
+
+        if(chartSpec_instance) chartSpec_instance.destroy();
+        chartSpec_instance = new Chart(document.getElementById('chartSpecimen'), {
+            type: 'bar',
+            data: {
+                labels: displaySpecs,
+                datasets: [{ label: 'Isolates', data: displaySpecCounts, backgroundColor: '#0ea5e9', borderRadius: 4 }]
+            },
+            options: { 
+                indexAxis: 'y', 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { legend: { display: false } }, 
+                scales: { x: { grid: {color: '#f1f5f9'} }, y: { grid: {display: false}, ticks: { autoSkip: false } } } 
+            }
+        });
+
+        if(chartGen_instance) chartGen_instance.destroy();
+        chartGen_instance = new Chart(document.getElementById('chartGender'), {
+            type: 'pie',
+            data: {
+                labels: ['Male', 'Female'],
+                datasets: [{ data: [genderCounts['Male'], genderCounts['Female']], backgroundColor: ['#0ea5e9', '#ec4899'] }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+
+    } catch(err) {
+        console.error(err);
+        Swal.fire('Analytics Error', 'An unexpected error occurred: ' + err.message, 'error');
+    }
 }
 
 function showExportModal() {
