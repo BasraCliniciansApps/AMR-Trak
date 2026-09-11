@@ -747,46 +747,64 @@ function loadWardOptions() {
 }
 
 function loadAnalyticsFilters() {
+    // 1. منع التحديث المزدوج (Infinite Loop Prevention)
     if (isUpdatingFilters) return;
     isUpdatingFilters = true;
 
+    // 2. جلب القيم الحالية من الفلاتر
     const startDate = $('#ana_start').val();
     const endDate = $('#ana_end').val();
     const targetSample = $('#ana_sample').val();
 
+    // 3. جلب كل السجلات من قاعدة البيانات
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
     
-    let records = allRecords.filter(r => {
+    // ==========================================
+    // المرحلة الأولى: الفلترة حسب التاريخ فقط (لاستخراج العينات المتوفرة)
+    // ==========================================
+    let dateFilteredRecords = allRecords.filter(r => {
         if(!startDate || !endDate) return true;
         return r.Date >= startDate && r.Date <= endDate;
     });
 
-    if (targetSample) {
-        records = records.filter(r => r.Sample === targetSample);
-    }
-
-    let uniqueSamples = new Set(records.map(r => r.Sample).filter(Boolean));
-    let currentSample = $('#ana_sample').val();
+    // بناء وتحديث قائمة "العينات" من السجلات المفلترة بالتاريخ فقط
+    let uniqueSamples = new Set(dateFilteredRecords.map(r => r.Sample).filter(Boolean));
+    let currentSample = $('#ana_sample').val(); // الاحتفاظ بالاختيار الحالي
+    
     $('#ana_sample').empty().append(new Option("All Specimens", ""));
     Array.from(uniqueSamples).sort().forEach(s => {
         $('#ana_sample').append(new Option(s, s));
     });
+    
+    // إعادة تعيين العينة إذا كانت لا تزال موجودة في الفترة الزمنية
     if (currentSample && uniqueSamples.has(currentSample)) {
         $('#ana_sample').val(currentSample);
     }
 
+    // ==========================================
+    // المرحلة الثانية: تطبيق فلتر العينة (لاستخراج البكتيريا والمضادات)
+    // ==========================================
+    let finalRecords = dateFilteredRecords;
+    if (targetSample) {
+        // إذا كان هناك عينة محددة، احصر السجلات بها فقط
+        finalRecords = finalRecords.filter(r => r.Sample === targetSample);
+    }
+
+    // استخراج البكتيريا والمضادات الحيوية المتوفرة في السجلات النهائية
     let orgs = new Set();
     let abxs = new Set();
     let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
 
-    records.forEach(r => {
+    finalRecords.forEach(r => {
         let org = r['Selective organism'];
         if(org) orgs.add(org);
+        
         allPossibleAbxs.forEach(a => {
             if (r[a] && r[a] !== '-' && r[a] !== '') abxs.add(a);
         });
     });
 
+    // تحديث قائمة "البكتيريا" (مع محو أي اختيار غير موجود)
     let currentOrgs = $('#ana_organism').val() || [];
     $('#ana_organism').empty();
     Array.from(orgs).sort().forEach(o => {
@@ -794,6 +812,7 @@ function loadAnalyticsFilters() {
         $('#ana_organism').append(new Option(o, o, isSelected, isSelected));
     });
 
+    // تحديث قائمة "المضادات الحيوية" (مع محو أي اختيار غير موجود)
     let currentAbxs = $('#ana_antibiotic').val() || [];
     $('#ana_antibiotic').empty();
     Array.from(abxs).sort().forEach(a => {
@@ -801,10 +820,14 @@ function loadAnalyticsFilters() {
         $('#ana_antibiotic').append(new Option(a, a, isSelected, isSelected));
     });
     
+    // ==========================================
+    // تحديث واجهة Select2 الرسومية
+    // ==========================================
     $('#ana_sample').trigger('change.select2');
     $('#ana_organism').trigger('change.select2');
     $('#ana_antibiotic').trigger('change.select2');
 
+    // فتح القفل للسماح بتحديثات جديدة مستقبلاً
     isUpdatingFilters = false;
 }
 
