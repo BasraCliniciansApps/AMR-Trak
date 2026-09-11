@@ -1099,7 +1099,29 @@ function deleteRecord(index) {
         }
     });
 }
+// --- 6. Smart Analytics, Heatmap & Wilson CI ---
+function wilsonScoreCI(r, n) {
+    if (n === 0) return { lower: 0, upper: 0 };
+    const p = r / n;
+    const z = 1.96; 
+    const z2 = z * z;
+    const denominator = 1 + z2 / n;
+    const center = p + z2 / (2 * n);
+    const spread = z * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n));
+    const lower = (center - spread) / denominator;
+    const upper = (center + spread) / denominator;
+    return { lower: Math.max(0, Math.round(lower * 100)), upper: Math.min(100, Math.round(upper * 100)) };
+}
 
+const orgColorPalette = [
+    { bg: 'rgba(185, 28, 28, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
+    { bg: 'rgba(30, 64, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
+    { bg: 'rgba(21, 128, 61, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
+    { bg: 'rgba(162, 28, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
+    { bg: 'rgba(194, 65, 12, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
+    { bg: 'rgba(13, 148, 136, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
+    { bg: 'rgba(217, 70, 239, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' }
+];
 window.clearAnalyticsFilters = function() {
     let currentYear = new Date().getFullYear();
     $('#ana_start').val(`${currentYear}-01-01`);
