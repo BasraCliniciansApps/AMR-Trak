@@ -1900,7 +1900,6 @@ function generateLiveSurveillance() {
         let cutoffDay = parseInt(s.cutoff_day);
         
         if (!isNaN(cutoffDay) && cutoffDay > 0 && cutoffDay <= 31) {
-            // منطق اليوم الفاصل الجديد
             let now = new Date();
             let currentYear = now.getFullYear();
             let currentMonth = now.getMonth() + 1;
@@ -1910,21 +1909,17 @@ function generateLiveSurveillance() {
             let targetM = currentMonth;
             
             if (currentDay < cutoffDay) {
-                // إذا لم نصل لليوم الفاصل بعد، نعرض بيانات الشهر الأسبق (Month - 2)
                 targetM -= 2;
             } else {
-                // إذا تجاوزنا اليوم الفاصل، نعرض بيانات الشهر السابق (Month - 1) المكتمل
                 targetM -= 1;
             }
             
-            // ضبط التواريخ إذا تراجعنا للخلف وعبرنا للسنة السابقة
             while (targetM < 1) {
                 targetM += 12;
                 targetY -= 1;
             }
             targetMonthPrefix = `${targetY}-${String(targetM).padStart(2, '0')}`;
         } else {
-            // العمل التلقائي القديم إذا كان الحقل فارغاً (يعتمد على آخر بيانات في قاعدة البيانات)
             let allMonths = [...new Set(cleanRecords.map(r => r.Date ? r.Date.substring(0,7) : "").filter(Boolean))].sort().reverse();
             if(allMonths.length > 0) {
                 targetMonthPrefix = allMonths[0]; // Latest
@@ -1970,8 +1965,11 @@ function buildLiveSection(records, prefix, settings) {
         $(`#live_${prefix}_spec`).text("-");
         $(`#live_${prefix}_amr_wrapper`).addClass('hidden');
         $(`#live_${prefix}_top3_container`).addClass('hidden');
+        $(`#live_${prefix}_profiles_wrapper`).addClass('hidden');
         return;
     }
+
+    $(`#live_${prefix}_profiles_wrapper`).removeClass('hidden');
 
     let orgCounts = {}; let specCounts = {};
     
@@ -2066,13 +2064,10 @@ function buildLiveSection(records, prefix, settings) {
         
         top3Specs.forEach(spec => {
             let specRecords = records.filter(r => r.Sample === spec);
-            
-            // Find top bug for this spec
             let bCounts = {};
             specRecords.forEach(r => { let o = r['Selective organism']; if(o) bCounts[o] = (bCounts[o]||0)+1; });
             let topBugSpec = Object.keys(bCounts).sort((a,b)=>bCounts[b]-bCounts[a])[0] || "-";
 
-            // Find best abx (highest %S with reasonable N)
             let abxS = {}; let abxT = {};
             specRecords.forEach(r => {
                 allPossibleAbxs.forEach(a => {
@@ -2083,14 +2078,12 @@ function buildLiveSection(records, prefix, settings) {
                 });
             });
             let bestAbx = "-"; let bestP = -1;
-            // Prefer N >= 5 for significance
             Object.keys(abxT).forEach(a => {
                 if(abxT[a] >= 5) {
                     let p = (abxS[a]||0) / abxT[a];
                     if(p > bestP) { bestP = p; bestAbx = a; }
                 }
             });
-            // Fallback if none >= 5
             if(bestP === -1) {
                 Object.keys(abxT).forEach(a => {
                     let p = (abxS[a]||0) / abxT[a];
@@ -2116,4 +2109,98 @@ function buildLiveSection(records, prefix, settings) {
     } else {
         $(`#live_${prefix}_top3_container`).addClass('hidden');
     }
+
+    // 5. Resistance Profile for Meropenem
+    buildAbxProfileChart('Meropenem', `chart_${prefix}_mero`, `live_${prefix}_mero_count`, records, prefix === 'm' ? '#2563eb' : '#059669');
+
+    // 6. Resistance Profile for Ceftriaxone
+    buildAbxProfileChart('Ceftriaxone', `chart_${prefix}_cro`, `live_${prefix}_cro_count`, records, '#0d9488');
+}
+
+// دالة مساعدة عامة لبناء مخطط مقاومة أي مضاد حيوي ضد البكتيريا المفحوصة
+function buildAbxProfileChart(abxName, canvasId, countElId, records, primaryColor) {
+    let canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    let orgMap = {};
+    records.forEach(r => {
+        let org = r['Selective organism'];
+        if (!org || org === '-') return;
+        let val = r[abxName] || (abxName === 'Meropenem' ? r['Meropenem (MEM)'] : r['Ceftriaxone (CRO)']);
+        if (val && val !== '-' && val !== '') {
+            if (!orgMap[org]) orgMap[org] = { tested: 0, resistant: 0 };
+            orgMap[org].tested++;
+            if (val === 'R') orgMap[org].resistant++;
+        }
+    });
+
+    let sortedOrgs = Object.keys(orgMap).sort((a, b) => orgMap[b].tested - orgMap[a].tested).slice(0, 6);
+    let totalTestedAbx = Object.values(orgMap).reduce((sum, item) => sum + item.tested, 0);
+    
+    if (countElId) {
+        $(`#${countElId}`).text(`Tested: ${totalTestedAbx} isolates`);
+    }
+
+    let labels = [];
+    let data = [];
+    let bgColors = [];
+    let ciData = [];
+
+    sortedOrgs.forEach(org => {
+        let item = orgMap[org];
+        let p = Math.round((item.resistant / item.tested) * 100);
+        let isReliable = item.tested >= 30;
+        
+        labels.push(org.length > 20 ? org.slice(0, 18) + '..' : org);
+        data.push(p);
+        bgColors.push(isReliable ? primaryColor : 'rgba(148, 163, 184, 0.55)');
+        ciData.push(wilsonScoreCI(item.resistant, item.tested));
+    });
+
+    if (sortedOrgs.length === 0) {
+        labels = ['No Isolates Tested'];
+        data = [0];
+        bgColors = ['#e2e8f0'];
+        ciData = [{ lower: 0, upper: 0 }];
+    }
+
+    let chart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '% Resistance',
+                data: data,
+                backgroundColor: bgColors,
+                ciData: ciData,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let idx = context.dataIndex;
+                            let orgKey = sortedOrgs[idx];
+                            if (!orgKey) return 'No data';
+                            let item = orgMap[orgKey];
+                            let ci = ciData[idx];
+                            return `${context.raw}% R (${item.resistant}/${item.tested}) [95% CI: ${ci.lower}%-${ci.upper}%]`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, max: 100, title: { display: true, text: '% Resistance', font: { size: 10, weight: 'bold' } } },
+                x: { ticks: { autoSkip: false, maxRotation: 35, minRotation: 20, font: { size: 9 } } }
+            }
+        },
+        plugins: [errorBarsPlugin]
+    });
+
+    liveCharts.push(chart);
 }
