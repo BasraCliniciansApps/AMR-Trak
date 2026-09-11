@@ -3,6 +3,7 @@ let chartAMR_instance = null;
 let chartOrg_instance = null;
 let chartSpec_instance = null;
 let chartGen_instance = null;
+let liveCharts = []; 
 let isUpdatingFilters = false;
 
 // Register custom chart plugin for Error Bars (Confidence Interval) - Bulletproof version
@@ -469,8 +470,8 @@ $(document).ready(function() {
 
 // --- Tabs Logic ---
 function showTab(tabName) {
-    $('#viewRecords, #viewAnalytics').addClass('hidden');
-    $('#btnTabRecords, #btnTabAnalytics').removeClass('bg-blue-600 text-white shadow-md').addClass('text-slate-400 hover:text-white hover:bg-slate-800');
+    $('#viewRecords, #viewAnalytics, #viewLive').addClass('hidden');
+    $('#btnTabRecords, #btnTabAnalytics, #btnTabLive').removeClass('bg-blue-600 text-white shadow-md').addClass('text-slate-400 hover:text-white hover:bg-slate-800');
     
     if (tabName === 'records') {
         $('#viewRecords').removeClass('hidden');
@@ -481,6 +482,11 @@ function showTab(tabName) {
         $('#viewAnalytics').removeClass('hidden');
         $('#btnTabAnalytics').removeClass('text-slate-400 hover:text-white hover:bg-slate-800').addClass('bg-blue-600 text-white shadow-md');
         $('#pageTitle').text('Surveillance Analytics');
+    } else if (tabName === 'live') {
+        $('#viewLive').removeClass('hidden');
+        $('#btnTabLive').removeClass('text-slate-400 hover:text-white hover:bg-slate-800').addClass('bg-blue-600 text-white shadow-md');
+        $('#pageTitle').text('Live Surveillance');
+        generateLiveSurveillance();
     }
 }
 
@@ -747,7 +753,7 @@ function loadWardOptions() {
 }
 
 function loadAnalyticsFilters() {
-    // 1. منع التحديث المزدوج (Infinite Loop Prevention)
+    // 1. منع التحديث المزدوج
     if (isUpdatingFilters) return;
     isUpdatingFilters = true;
 
@@ -767,16 +773,14 @@ function loadAnalyticsFilters() {
         return r.Date >= startDate && r.Date <= endDate;
     });
 
-    // بناء وتحديث قائمة "العينات" من السجلات المفلترة بالتاريخ فقط
     let uniqueSamples = new Set(dateFilteredRecords.map(r => r.Sample).filter(Boolean));
-    let currentSample = $('#ana_sample').val(); // الاحتفاظ بالاختيار الحالي
+    let currentSample = $('#ana_sample').val(); 
     
     $('#ana_sample').empty().append(new Option("All Specimens", ""));
     Array.from(uniqueSamples).sort().forEach(s => {
         $('#ana_sample').append(new Option(s, s));
     });
     
-    // إعادة تعيين العينة إذا كانت لا تزال موجودة في الفترة الزمنية
     if (currentSample && uniqueSamples.has(currentSample)) {
         $('#ana_sample').val(currentSample);
     }
@@ -786,11 +790,9 @@ function loadAnalyticsFilters() {
     // ==========================================
     let finalRecords = dateFilteredRecords;
     if (targetSample) {
-        // إذا كان هناك عينة محددة، احصر السجلات بها فقط
         finalRecords = finalRecords.filter(r => r.Sample === targetSample);
     }
 
-    // استخراج البكتيريا والمضادات الحيوية المتوفرة في السجلات النهائية
     let orgs = new Set();
     let abxs = new Set();
     let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
@@ -804,7 +806,6 @@ function loadAnalyticsFilters() {
         });
     });
 
-    // تحديث قائمة "البكتيريا" (مع محو أي اختيار غير موجود)
     let currentOrgs = $('#ana_organism').val() || [];
     $('#ana_organism').empty();
     Array.from(orgs).sort().forEach(o => {
@@ -812,7 +813,6 @@ function loadAnalyticsFilters() {
         $('#ana_organism').append(new Option(o, o, isSelected, isSelected));
     });
 
-    // تحديث قائمة "المضادات الحيوية" (مع محو أي اختيار غير موجود)
     let currentAbxs = $('#ana_antibiotic').val() || [];
     $('#ana_antibiotic').empty();
     Array.from(abxs).sort().forEach(a => {
@@ -820,14 +820,10 @@ function loadAnalyticsFilters() {
         $('#ana_antibiotic').append(new Option(a, a, isSelected, isSelected));
     });
     
-    // ==========================================
-    // تحديث واجهة Select2 الرسومية
-    // ==========================================
     $('#ana_sample').trigger('change.select2');
     $('#ana_organism').trigger('change.select2');
     $('#ana_antibiotic').trigger('change.select2');
 
-    // فتح القفل للسماح بتحديثات جديدة مستقبلاً
     isUpdatingFilters = false;
 }
 
@@ -1265,7 +1261,6 @@ function generateAnalytics() {
 
         let amrStats = {}; 
         Array.from(allPresentOrgs).forEach(org => {
-            // نأخذ العدد الكلي من الـ records الأساسية للـ AMR Stats
             let totalRecordsForOrg = records.filter(r => r['Selective organism'] === org).length;
             amrStats[org] = { total: totalRecordsForOrg, abx: {} };
             allPossibleAbxs.forEach(a => { amrStats[org].abx[a] = { tested: 0, r: 0, s: 0 }; });
@@ -1656,4 +1651,134 @@ async function processAntibiogramExport(year, quarter) {
         console.error(err);
         Swal.fire('Error', err.message, 'error');
     }
+}
+
+// --- 🔴 LIVE SURVEILLANCE LOGIC ---
+function generateLiveSurveillance() {
+    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+    
+    // 1. استبعاد التلوث وعدم النمو (Strict Blacklist)
+    const blacklist = ["xxx", "con", "no growth", "contaminated", "normal flora", "mixed flora", "no significant growth"];
+    let cleanRecords = allRecords.filter(r => {
+        let org = (r['Selective organism'] || "").toLowerCase();
+        return org !== "" && !blacklist.some(b => org.includes(b));
+    });
+
+    // 2. تقسيم الفترات (الشهر الحالي vs آخر ربع سنة مكتمل)
+    const now = new Date();
+    const currentMonthPrefix = now.toISOString().slice(0, 7);
+    let currentMonthNum = now.getMonth() + 1;
+    let qYear = now.getFullYear();
+    let qMonths = []; let qLabel = "";
+    
+    if (currentMonthNum <= 3) { qYear -= 1; qMonths = ["10","11","12"]; qLabel = `Q4 ${qYear}`; }
+    else if (currentMonthNum <= 6) { qMonths = ["01","02","03"]; qLabel = `Q1 ${qYear}`; }
+    else if (currentMonthNum <= 9) { qMonths = ["04","05","06"]; qLabel = `Q2 ${qYear}`; }
+    else { qMonths = ["07","08","09"]; qLabel = `Q3 ${qYear}`; }
+
+    let monthRecords = cleanRecords.filter(r => r.Date && r.Date.startsWith(currentMonthPrefix));
+    let quarterRecords = cleanRecords.filter(r => {
+        if(!r.Date) return false;
+        let parts = r.Date.split('-');
+        return parseInt(parts[0]) === qYear && qMonths.includes(parts[1]);
+    });
+
+    $('#live_month_title').text(`Current Month (${currentMonthPrefix})`);
+    $('#live_q_title').text(`Last Completed Quarter (${qLabel})`);
+
+    liveCharts.forEach(c => c.destroy());
+    liveCharts = [];
+
+    buildLiveSection(monthRecords, 'm');
+    buildLiveSection(quarterRecords, 'q');
+}
+
+function buildLiveSection(records, prefix) {
+    $(`#live_${prefix}_total`).text(records.length);
+    if(records.length === 0) {
+        $(`#live_${prefix}_bug`).text("-");
+        $(`#live_${prefix}_spec`).text("-");
+        return;
+    }
+
+    let orgCounts = {}; let specCounts = {};
+    
+    // المضادات المستهدفة ومجاميعها
+    const criticalPairs = [
+        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abx: ["Ceftriaxone"], label: "ESBL Indicator\n(CRO)" },
+        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abx: ["Meropenem", "Imipenem"], label: "CRE Indicator\n(Carbapenem)" },
+        { orgs: ["staphylococcus aureus"], abx: ["Oxacillin", "Cefoxitin"], label: "MRSA Indicator\n(OX/FOX)" },
+        { orgs: ["enterococcus faecalis", "enterococcus faecium", "enterococcus spp", "staphylococcus aureus"], abx: ["Vancomycin"], label: "VRE/VRSA\n(VA)" }
+    ];
+
+    let amrStats = criticalPairs.map(p => ({ label: p.label, tested: 0, resistant: 0 }));
+
+    records.forEach(r => {
+        let org = r['Selective organism'] || "";
+        let spec = r['Sample'];
+        orgCounts[org] = (orgCounts[org] || 0) + 1;
+        if(spec && spec !== "-") specCounts[spec] = (specCounts[spec] || 0) + 1;
+
+        let orgLower = org.toLowerCase();
+        criticalPairs.forEach((pair, index) => {
+            if (pair.orgs.some(o => orgLower.includes(o.toLowerCase()))) {
+                let abxFound = pair.abx.find(a => r[a] && r[a] !== '-');
+                if (abxFound) {
+                    amrStats[index].tested++;
+                    if (r[abxFound] === 'R') amrStats[index].resistant++;
+                }
+            }
+        });
+    });
+
+    let topOrg = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a])[0] || "-";
+    let topSpec = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a])[0] || "-";
+    
+    $(`#live_${prefix}_bug`).text(topOrg);
+    $(`#live_${prefix}_spec`).text(topSpec);
+
+    // 1. Bar Chart (Critical AMR)
+    let labels = []; let data = []; let bgColors = []; let ciData = [];
+    amrStats.forEach(stat => {
+        labels.push(stat.label.split('\n'));
+        if (stat.tested === 0) {
+            data.push(0); bgColors.push('#e2e8f0'); ciData.push({lower:0, upper:0});
+        } else {
+            let p = Math.round((stat.resistant / stat.tested) * 100);
+            let isReliable = stat.tested >= 30; // تطبيق قاعدة N < 30
+            data.push(p);
+            bgColors.push(isReliable ? 'rgba(220, 38, 38, 0.9)' : 'rgba(148, 163, 184, 0.5)'); // أحمر للموثوق، رمادي لغير الموثوق
+            ciData.push(wilsonScoreCI(stat.resistant, stat.tested));
+        }
+    });
+
+    let chartAmr = new Chart(document.getElementById(`chart_${prefix}_amr`), {
+        type: 'bar',
+        data: { labels: labels, datasets: [{ label: '% Resistance', data: data, backgroundColor: bgColors, ciData: ciData, borderRadius: 4 }] },
+        options: { 
+            responsive: true, maintainAspectRatio: false, 
+            plugins: { legend: { display: false }, title: {display: true, text: 'Critical Resistance Markers (%R)'} },
+            scales: { y: { max: 100, beginAtZero: true } }
+        },
+        plugins: [errorBarsPlugin]
+    });
+    liveCharts.push(chartAmr);
+
+    // 2. Pie Chart (Top Organisms)
+    let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 5);
+    let chartPie = new Chart(document.getElementById(`chart_${prefix}_pie`), {
+        type: 'doughnut',
+        data: { labels: sortedOrgs, datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0f766e','#0ea5e9','#3b82f6','#8b5cf6','#ec4899'] }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: {boxWidth: 10, font:{size:10}} } } }
+    });
+    liveCharts.push(chartPie);
+
+    // 3. Horizontal Bar Chart (Top Specimens)
+    let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]).slice(0, 5);
+    let chartBar = new Chart(document.getElementById(`chart_${prefix}_bar`), {
+        type: 'bar',
+        data: { labels: sortedSpecs, datasets: [{ label: 'Count', data: sortedSpecs.map(s=>specCounts[s]), backgroundColor: '#14b8a6', borderRadius: 4 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks:{stepSize: 1} } } }
+    });
+    liveCharts.push(chartBar);
 }
