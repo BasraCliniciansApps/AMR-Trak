@@ -1827,15 +1827,18 @@ function loadLiveSettings() {
     $('#live_toggle_amr').prop('checked', s.show_amr);
     $('#live_toggle_top3').prop('checked', s.show_top3);
 
-    let allAbx = [...abxList, ...getCustomAntibiotics().map(a=>a.name)].sort();
-    let p1Select = $('#live_profile1_abx').empty();
-    let p2Select = $('#live_profile2_abx').empty();
+    // 1. جلب قائمة كل المضادات (الأساسية + المضافة يدوياً) وترتيبها أبجدياً
+    let allAbx = [...abxList, ...getCustomAntibiotics().map(a => a.name)].sort();
+    
+    // 2. بناء نص HTML متكامل للخيارات دفعة واحدة (أسرع وأكثر استقراراً)
+    let optionsHtml = '';
     allAbx.forEach(a => {
-        p1Select.append(new Option(a, a));
-        p2Select.append(new Option(a, a));
+        optionsHtml += `<option value="${a}">${a}</option>`;
     });
-    p1Select.val(s.profile1_abx || 'Meropenem');
-    p2Select.val(s.profile2_abx || 'Ceftriaxone');
+
+    // 3. حقن الخيارات داخل القوائم، ثم تحديد القيمة المحفوظة أو القيمة الافتراضية
+    $('#live_profile1_abx').html(optionsHtml).val(s.profile1_abx || 'Meropenem');
+    $('#live_profile2_abx').html(optionsHtml).val(s.profile2_abx || 'Ceftriaxone');
 
     toggleManualMonthInput();
 }
