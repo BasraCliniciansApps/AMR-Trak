@@ -773,20 +773,23 @@ function loadBacteriaOptions() {
 
     const groups = { "Gram-Negative": [], "Gram-Positive": [], "Others": [], "Fungi": [], "Custom": [] };
     
+    // جلب البكتيريا من المكتبة
     bacteriaLibrary.forEach(bact => {
         const optionText = `${bact.name} (${bact.code})`;
         groups[bact.group].push(new Option(optionText, bact.name));
     });
 
+    // جلب البكتيريا المضافة يدوياً (Custom)
     let savedOrgs = JSON.parse(localStorage.getItem('amr_organisms')) || [];
     savedOrgs.forEach(org => {
         groups["Custom"].push(new Option(org, org));
     });
 
+    // إضافة البكتيريا إلى القائمة المنسدلة
     for (const [groupName, options] of Object.entries(groups)) {
         if (options.length > 0) {
             const optgroup = $(`<optgroup label="${groupName}"></optgroup>`);
-            options.forEach(opt => optgroup.append(optgroup));
+            options.forEach(opt => optgroup.append(opt)); // <-- تم تصحيح الخطأ هنا
             select.append(optgroup);
         }
     }
