@@ -67,7 +67,7 @@
                         Isolate Database
                     </button>
                     <button onclick="showTab('analytics')" id="btnTabAnalytics" class="w-full flex items-center gap-3 px-3 py-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg font-medium transition-all">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
                         Surveillance Analytics
                     </button>
                     <!-- Live Surveillance Button -->
@@ -275,7 +275,7 @@
                     </div>
                     
                     <div id="analyticsPlaceholder" class="text-center text-slate-400 py-20 flex flex-col items-center justify-center bg-white border border-slate-200 rounded-xl shadow-sm">
-                        <svg class="w-16 h-16 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <svg class="w-16 h-16 mb-4 text-slate-300 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 002-2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2h-2a2 2 0 01-2-2z"></path></svg>
                         <p class="text-lg font-medium text-slate-500">Select parameters and click 'Analyze' to view clinical insights.</p>
                     </div>
 
@@ -330,6 +330,37 @@
                             </div>
 
                             <div id="live_m_top3_container" class="mt-4 hidden"></div>
+
+                            <!-- Monthly Resistance Profiles (Meropenem & Ceftriaxone) -->
+                            <div class="mt-6 pt-5 border-t border-slate-200 border-dashed space-y-5 hidden" id="live_m_profiles_wrapper">
+                                <!-- Meropenem Profile -->
+                                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <h4 class="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                                            <span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span>
+                                            Meropenem Resistance Profile (% R)
+                                        </h4>
+                                        <span class="text-[10px] text-slate-500 font-semibold" id="live_m_mero_count"></span>
+                                    </div>
+                                    <div class="h-[210px] relative">
+                                        <canvas id="chart_m_mero"></canvas>
+                                    </div>
+                                </div>
+
+                                <!-- Ceftriaxone Profile -->
+                                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <h4 class="text-xs font-bold text-teal-900 flex items-center gap-1.5">
+                                            <span class="w-2.5 h-2.5 rounded-full bg-teal-600 inline-block"></span>
+                                            Ceftriaxone Resistance Profile (% R)
+                                        </h4>
+                                        <span class="text-[10px] text-slate-500 font-semibold" id="live_m_cro_count"></span>
+                                    </div>
+                                    <div class="h-[210px] relative">
+                                        <canvas id="chart_m_cro"></canvas>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Column 2: Target Quarter -->
@@ -366,6 +397,37 @@
                             </div>
 
                             <div id="live_q_top3_container" class="mt-4 hidden"></div>
+
+                            <!-- Quarterly Resistance Profiles (Meropenem & Ceftriaxone) -->
+                            <div class="mt-6 pt-5 border-t border-slate-200 border-dashed space-y-5 hidden" id="live_q_profiles_wrapper">
+                                <!-- Meropenem Profile -->
+                                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <h4 class="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block"></span>
+                                            Meropenem Resistance Profile (% R)
+                                        </h4>
+                                        <span class="text-[10px] text-slate-500 font-semibold" id="live_q_mero_count"></span>
+                                    </div>
+                                    <div class="h-[210px] relative">
+                                        <canvas id="chart_q_mero"></canvas>
+                                    </div>
+                                </div>
+
+                                <!-- Ceftriaxone Profile -->
+                                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm">
+                                    <div class="flex justify-between items-center mb-3">
+                                        <h4 class="text-xs font-bold text-teal-900 flex items-center gap-1.5">
+                                            <span class="w-2.5 h-2.5 rounded-full bg-teal-600 inline-block"></span>
+                                            Ceftriaxone Resistance Profile (% R)
+                                        </h4>
+                                        <span class="text-[10px] text-slate-500 font-semibold" id="live_q_cro_count"></span>
+                                    </div>
+                                    <div class="h-[210px] relative">
+                                        <canvas id="chart_q_cro"></canvas>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                     </div>
@@ -576,7 +638,6 @@
                             <label class="block text-xs font-bold text-slate-700 mb-1">Target Month</label>
                             <input type="month" id="live_manual_month" class="w-full border border-slate-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
                         </div>
-                        <!-- الحقل الجديد ليوم الاحتساب الفاصل -->
                         <div class="mt-2">
                             <label class="block text-xs font-bold text-slate-700 mb-1">Cutoff Day (يوم الاحتساب الفاصل - أرقام فقط مثل 10)</label>
                             <input type="number" id="live_cutoff_day" min="1" max="31" placeholder="مثال: 15" class="w-full border border-slate-300 p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" dir="ltr">
