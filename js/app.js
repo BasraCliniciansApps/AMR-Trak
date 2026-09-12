@@ -2074,14 +2074,13 @@ function buildLiveSection(records, prefix, settings) {
                 });
             }
             
-// نطبق الكسر على اسم المضاد فقط لتجنب تخريب أكواد الـ HTML
             let safeAbxName = bestAbx.replace(/\//g, '/<wbr>');
-            
             let formattedAbxLabel = "N/A";
+
             if (bestAbx !== "-") {
-                let n = abxT[bestAbx]; // العدد الكلي للفحوصات على هذا المضاد
-                let sCount = abxS[bestAbx] || 0; // عدد العينات الحساسة
-                let ci = wilsonScoreCI(sCount, n); // حساب فترة الثقة 95%
+                let n = abxT[bestAbx];
+                let sCount = abxS[bestAbx] || 0;
+                let ci = wilsonScoreCI(sCount, n);
                 
                 formattedAbxLabel = `${safeAbxName} 
                     <span class="text-emerald-600 font-bold ml-1 text-xs">(${Math.round(bestP*100)}% S)</span>
@@ -2097,7 +2096,7 @@ function buildLiveSection(records, prefix, settings) {
                     Top Bug: <span class="font-bold text-rose-600 block mt-0.5 truncate" title="${topBugSpec}">${topBugSpec}</span>
                 </div>
                 <div class="text-xs text-slate-600 w-full md:flex-1 min-w-0">
-                    Most Susceptible: ${bestAbxLabel}
+                    Most Susceptible: ${formattedAbxLabel}
                 </div>
             </div>`;
         });
@@ -2132,7 +2131,6 @@ function buildAbxProfileChart(abxName, canvasId, countElId, records, primaryColo
         if (!org || org === '-') return;
         
         let val = r[abxName];
-        // Support for old data naming if applicable
         if (!val && abxName === 'Meropenem') val = r['Meropenem (MEM)'];
         if (!val && abxName === 'Ceftriaxone') val = r['Ceftriaxone (CRO)'];
 
