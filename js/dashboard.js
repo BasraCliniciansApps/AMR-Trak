@@ -1,3 +1,4 @@
+// Firebase Initialization (Read-Only Cloud Connection)
 const firebaseConfig = {
     apiKey: "AIzaSyCyWcTzvYXwsYQEgs_iNh_Co68H9_2kYU4",
     authDomain: "antibiogramtrak.firebaseapp.com",
@@ -7,10 +8,12 @@ const firebaseConfig = {
     appId: "1:679667156703:web:ca37e1544e3d20e922cb6a"
 };
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+let db = null;
+try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+} catch(e) { console.warn("Firebase offline"); }
 
-let cloudRecords = [];
 let liveCharts = [];
 let chartAMR_instance = null;
 let chartOrg_instance = null;
@@ -18,6 +21,7 @@ let chartSpec_instance = null;
 let chartGen_instance = null;
 let isUpdatingFilters = false;
 
+// Color Palette for Analytics
 const orgColorPalette = [
     { bg: 'rgba(185, 28, 28, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
     { bg: 'rgba(30, 64, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
@@ -26,6 +30,7 @@ const orgColorPalette = [
     { bg: 'rgba(194, 65, 12, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' }
 ];
 
+// Error Bars Plugin
 const errorBarsPlugin = {
     id: 'errorBars',
     afterDatasetsDraw(chart) {
@@ -43,7 +48,7 @@ const errorBarsPlugin = {
                     if (x === undefined) return;
                     ctx.save();
                     ctx.beginPath();
-                    ctx.lineWidth = 1; ctx.strokeStyle = '#334155';
+                    ctx.lineWidth = 1.5; ctx.strokeStyle = '#334155';
                     ctx.moveTo(x, yLower); ctx.lineTo(x, yUpper);
                     ctx.moveTo(x - 3, yUpper); ctx.lineTo(x + 3, yUpper);
                     ctx.moveTo(x - 3, yLower); ctx.lineTo(x + 3, yLower);
@@ -74,23 +79,13 @@ $(document).ready(function() {
     $('#ana_start, #ana_end, #ana_sample').on('change', function() {
         if(!isUpdatingFilters) loadAnalyticsFilters();
     });
+
+    // تحميل البيانات محلياً بشكل فوري لضمان السرعة والتطابق مع نسخة الحاسوب
+    loadAnalyticsFilters();
+    generateLiveSurveillance();
 });
 
-db.collection("amr_sync").doc("hospital_main").onSnapshot((doc) => {
-    if (doc.exists) {
-        cloudRecords = doc.data().records || [];
-        if(cloudRecords.length > 0) {
-            loadAnalyticsFilters();
-            generateLiveSurveillance();
-        } else {
-            $('#live_m_total, #live_q_total').text('0');
-            $('#live_m_bug, #live_q_bug, #live_m_spec, #live_q_spec').text('-');
-        }
-    }
-}, (error) => {
-    $('#connection_status').removeClass('text-emerald-600 bg-emerald-50 border-emerald-100').addClass('text-red-600 bg-red-50 border-red-100').html('Disconnected');
-});
-
+// دالة التنقل بين التبويبات
 window.switchTab = function(tab) {
     $('#viewLive, #viewAnalytics').addClass('hidden');
     $('#btnNavLive, #btnNavAnalytics').removeClass('active');
@@ -103,12 +98,20 @@ window.switchTab = function(tab) {
         $('#viewAnalytics').removeClass('hidden');
         $('#btnNavAnalytics').addClass('active');
         $('#headerTitle').text('Surveillance Analytics');
+        if(!isUpdatingFilters) loadAnalyticsFilters();
     }
 };
 
+// -------------------------------------------------------------
+// LIVE SURVEILLANCE LOGIC 
+// -------------------------------------------------------------
 function generateLiveSurveillance() {
+    // قراءة البيانات محلياً للتطابق التام مع الحاسوب
+    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let settings = JSON.parse(localStorage.getItem('amr_live_settings')) || { profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
+
     const blacklist = ["xxx", "con", "no growth", "contaminated", "normal flora", "mixed flora", "no significant growth"];
-    let cleanRecords = cloudRecords.filter(r => {
+    let cleanRecords = allRecords.filter(r => {
         let org = (r['Selective organism'] || "").toLowerCase();
         return org !== "" && !blacklist.some(b => org.includes(b));
     });
@@ -140,11 +143,11 @@ function generateLiveSurveillance() {
     $('#live_q_title').text(`Last Completed Quarter (${qLabel})`);
 
     liveCharts.forEach(c => c.destroy()); liveCharts = [];
-    buildMobileLiveSection(monthRecords, 'm');
-    buildMobileLiveSection(quarterRecords, 'q');
+    buildMobileLiveSection(monthRecords, 'm', settings);
+    buildMobileLiveSection(quarterRecords, 'q', settings);
 }
 
-function buildMobileLiveSection(records, prefix) {
+function buildMobileLiveSection(records, prefix, settings) {
     $(`#live_${prefix}_total`).text(records.length);
     if(records.length === 0) {
         $(`#live_${prefix}_bug`).text("-");
@@ -212,12 +215,14 @@ function buildMobileLiveSection(records, prefix) {
 
         let abxS = {}, abxT = {};
         specRecords.forEach(r => {
-            abxList.forEach(a => {
-                if(r[a] && r[a] !== '-') {
-                    abxT[a] = (abxT[a]||0)+1;
-                    if(r[a] === 'S') abxS[a] = (abxS[a]||0)+1;
-                }
-            });
+            if(typeof abxList !== 'undefined') {
+                abxList.forEach(a => {
+                    if(r[a] && r[a] !== '-') {
+                        abxT[a] = (abxT[a]||0)+1;
+                        if(r[a] === 'S') abxS[a] = (abxS[a]||0)+1;
+                    }
+                });
+            }
         });
         
         let bestAbx = "-", bestP = -1;
@@ -250,8 +255,15 @@ function buildMobileLiveSection(records, prefix) {
         options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false } } }
     }));
 
-    buildMobileAbxProfileChart('Meropenem', `chart_${prefix}_mero`, `live_${prefix}_mero_count`, records, prefix === 'm' ? '#2563eb' : '#059669');
-    buildMobileAbxProfileChart('Ceftriaxone', `chart_${prefix}_cro`, `live_${prefix}_cro_count`, records, '#0d9488');
+    // تطبيق أسماء المضادات الحقيقية المأخوذة من الإعدادات بدلاً من Profile 1 و Profile 2
+    let p1 = settings.profile1_abx || 'Meropenem';
+    let p2 = settings.profile2_abx || 'Ceftriaxone';
+
+    $(`#live_${prefix}_profile1_title`).text(`${p1}`);
+    $(`#live_${prefix}_profile2_title`).text(`${p2}`);
+
+    buildMobileAbxProfileChart(p1, `chart_${prefix}_mero`, `live_${prefix}_mero_count`, records, prefix === 'm' ? '#2563eb' : '#059669');
+    buildMobileAbxProfileChart(p2, `chart_${prefix}_cro`, `live_${prefix}_cro_count`, records, '#0d9488');
 }
 
 function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, primaryColor) {
@@ -293,12 +305,17 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
     }));
 }
 
+// -------------------------------------------------------------
+// ANALYTICS LOGIC 
+// -------------------------------------------------------------
 function loadAnalyticsFilters() {
     if (isUpdatingFilters) return;
     isUpdatingFilters = true;
 
+    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
     const startDate = $('#ana_start').val(), endDate = $('#ana_end').val();
-    let records = cloudRecords.filter(r => (!startDate || !endDate) ? true : (r.Date >= startDate && r.Date <= endDate));
+    
+    let records = allRecords.filter(r => (!startDate || !endDate) ? true : (r.Date >= startDate && r.Date <= endDate));
 
     const targetSample = $('#ana_sample').val();
     let uniqueSamples = new Set(records.map(r => r.Sample).filter(Boolean));
@@ -311,7 +328,9 @@ function loadAnalyticsFilters() {
     let orgs = new Set(), abxs = new Set();
     records.forEach(r => {
         if(r['Selective organism']) orgs.add(r['Selective organism']);
-        abxList.forEach(a => { if (r[a] && r[a] !== '-' && r[a] !== '') abxs.add(a); });
+        if(typeof abxList !== 'undefined') {
+            abxList.forEach(a => { if (r[a] && r[a] !== '-' && r[a] !== '') abxs.add(a); });
+        }
     });
 
     let currentOrgs = $('#ana_organism').val() || [];
@@ -335,22 +354,25 @@ window.generateAnalytics = function() {
 
     if (!startDate || !endDate) { Swal.fire('Required', 'Please select both dates.', 'warning'); return; }
 
-    let records = cloudRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
+    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
     if (targetSample) records = records.filter(r => r.Sample === targetSample);
 
     if (records.length === 0) {
         $('#analyticsContainer').addClass('hidden');
         $('#analyticsPlaceholder').removeClass('hidden');
-        Swal.fire('No Data', 'No records match the selected dates/sample.', 'info');
+        Swal.fire('No Data', 'No records match selected criteria.', 'info');
         return;
     }
 
-    // السماح بعرض كل شيء إذا تركها المستخدم فارغة (نفس نظام الحاسوب)
+    // الاعتماد على كل البكتيريا والمضادات الموجودة في حال ترك المستخدم الفلاتر فارغة
     let allPresentOrgs = new Set();
     let allPresentAbxs = new Set();
     records.forEach(r => {
         if(r['Selective organism']) allPresentOrgs.add(r['Selective organism']);
-        abxList.forEach(a => { if (r[a] && r[a] !== '-' && r[a] !== '') allPresentAbxs.add(a); });
+        if(typeof abxList !== 'undefined') {
+            abxList.forEach(a => { if (r[a] && r[a] !== '-' && r[a] !== '') allPresentAbxs.add(a); });
+        }
     });
 
     if (targetOrgs.length === 0) targetOrgs = Array.from(allPresentOrgs).sort();
@@ -387,15 +409,18 @@ window.generateAnalytics = function() {
         if(r.Sex && genderCounts[r.Sex] !== undefined) genderCounts[r.Sex] += 1;
 
         if (!heatmapStats[org]) heatmapStats[org] = {};
-        abxList.forEach(abx => {
-            let res = r[abx];
-            if (res && res !== '-' && res !== '') {
-                if (!heatmapStats[org][abx]) heatmapStats[org][abx] = { t: 0, r: 0, s: 0 };
-                heatmapStats[org][abx].t += 1;
-                if (res === 'R') heatmapStats[org][abx].r += 1;
-                if (res === 'S') heatmapStats[org][abx].s += 1;
-            }
-        });
+        
+        if(typeof abxList !== 'undefined') {
+            abxList.forEach(abx => {
+                let res = r[abx];
+                if (res && res !== '-' && res !== '') {
+                    if (!heatmapStats[org][abx]) heatmapStats[org][abx] = { t: 0, r: 0, s: 0 };
+                    heatmapStats[org][abx].t += 1;
+                    if (res === 'R') heatmapStats[org][abx].r += 1;
+                    if (res === 'S') heatmapStats[org][abx].s += 1;
+                }
+            });
+        }
 
         if (targetOrgs.includes(org)) {
             targetAbxs.forEach(abx => {
