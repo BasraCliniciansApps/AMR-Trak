@@ -369,7 +369,7 @@ window.generateAnalytics = function() {
         }
     });
 
-    // للـ Heatmap نعرض كل شيء إذا تركها فارغة
+    // للـ Heatmap وغيرها من الفلاتر الشاملة نعرض كل شيء إذا تركها فارغة
     let targetOrgs = inputOrgs.length > 0 ? inputOrgs : Array.from(allPresentOrgs).sort();
     let targetAbxs = inputAbxs.length > 0 ? inputAbxs : Array.from(allPresentAbxs).sort();
 
@@ -430,7 +430,7 @@ window.generateAnalytics = function() {
     });
 
     // ----------------------------------------------------
-    // AMR Profile Chart Logic (Only if filters selected)
+    // AMR Profile Chart Logic (Only if explicitly selected)
     // ----------------------------------------------------
     if (inputOrgs.length === 0 && inputAbxs.length === 0) {
         $('#print_sect_amr').addClass('hidden');
@@ -482,7 +482,7 @@ window.generateAnalytics = function() {
             displayAbxs.forEach(abx => {
                 let s = s_org.abx[abx];
                 if (!s || s.tested === 0) {
-                    dataR.push(null); // استخدام null بدلاً من صفر لتركه فارغاً
+                    dataR.push(null); // استخدام null لعدم رسم بار فارغ
                     bgColors.push(palette.lowBg); 
                     ciData.push({lower: 0, upper: 0});
                 } else {
@@ -504,7 +504,7 @@ window.generateAnalytics = function() {
                     backgroundColor: bgColors, 
                     borderRadius: 4, 
                     ciData: ciData,
-                    maxBarThickness: 12 // تصغير عرض البار ليناسب الهاتف
+                    maxBarThickness: 10 // تصغير عرض البار ليناسب الهاتف
                 });
             }
         });
@@ -512,7 +512,7 @@ window.generateAnalytics = function() {
         if (chartAMR_instance) chartAMR_instance.destroy();
         
         // إعطاء عرض ديناميكي للمخطط البياني ليسمح بالتمرير الأفقي
-        let chartWidth = displayAbxs.length > 3 ? (displayAbxs.length * datasets.length * 20) + 80 + 'px' : '100%';
+        let chartWidth = displayAbxs.length > 3 ? (displayAbxs.length * datasets.length * 15) + 60 + 'px' : '100%';
         $('#amrChartContainer').css('width', chartWidth);
 
         chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
