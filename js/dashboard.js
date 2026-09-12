@@ -21,7 +21,6 @@ let chartSpec_instance = null;
 let chartGen_instance = null;
 let isUpdatingFilters = false;
 
-// Color Palette for Analytics
 const orgColorPalette = [
     { bg: 'rgba(185, 28, 28, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
     { bg: 'rgba(30, 64, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
@@ -30,7 +29,6 @@ const orgColorPalette = [
     { bg: 'rgba(194, 65, 12, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' }
 ];
 
-// Error Bars Plugin
 const errorBarsPlugin = {
     id: 'errorBars',
     afterDatasetsDraw(chart) {
@@ -80,12 +78,10 @@ $(document).ready(function() {
         if(!isUpdatingFilters) loadAnalyticsFilters();
     });
 
-    // تحميل البيانات محلياً بشكل فوري لضمان السرعة والتطابق مع نسخة الحاسوب
     loadAnalyticsFilters();
     generateLiveSurveillance();
 });
 
-// دالة التنقل بين التبويبات
 window.switchTab = function(tab) {
     $('#viewLive, #viewAnalytics').addClass('hidden');
     $('#btnNavLive, #btnNavAnalytics').removeClass('active');
@@ -103,10 +99,9 @@ window.switchTab = function(tab) {
 };
 
 // -------------------------------------------------------------
-// LIVE SURVEILLANCE LOGIC 
+// LIVE SURVEILLANCE LOGIC
 // -------------------------------------------------------------
 function generateLiveSurveillance() {
-    // قراءة البيانات محلياً للتطابق التام مع الحاسوب
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
     let settings = JSON.parse(localStorage.getItem('amr_live_settings')) || { profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
 
@@ -255,7 +250,6 @@ function buildMobileLiveSection(records, prefix, settings) {
         options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false } } }
     }));
 
-    // تطبيق أسماء المضادات الحقيقية المأخوذة من الإعدادات بدلاً من Profile 1 و Profile 2
     let p1 = settings.profile1_abx || 'Meropenem';
     let p2 = settings.profile2_abx || 'Ceftriaxone';
 
@@ -365,7 +359,6 @@ window.generateAnalytics = function() {
         return;
     }
 
-    // الاعتماد على كل البكتيريا والمضادات الموجودة في حال ترك المستخدم الفلاتر فارغة
     let allPresentOrgs = new Set();
     let allPresentAbxs = new Set();
     records.forEach(r => {
@@ -435,7 +428,6 @@ window.generateAnalytics = function() {
     });
 
     let datasets = [];
-    let tableHtml = '';
 
     targetOrgs.forEach((org, orgIndex) => {
         let s_org = amrStats[org];
@@ -455,29 +447,18 @@ window.generateAnalytics = function() {
                 
                 dataR.push(p);
                 bgColors.push(isReliable ? palette.bg : palette.lowBg);
-                let ci = wilsonScoreCI(targetVal, s.tested);
-                ciData.push(ci);
-
-                let dangerScore = metric === 'R' ? p : (100 - p);
-                let semColor = !isReliable ? 'text-slate-500' : (dangerScore <= 20 ? 'text-emerald-600' : dangerScore <= 40 ? 'text-yellow-600' : dangerScore <= 60 ? 'text-orange-500' : dangerScore <= 80 ? 'text-red-500' : 'text-red-700 font-bold');
-
-                tableHtml += `
-                    <tr>
-                        <td class="px-2 py-1.5 border-b truncate max-w-[80px]" title="${abx}">${abx}</td>
-                        <td class="px-2 py-1.5 border-b truncate max-w-[80px]" style="color:${palette.bg.replace('0.9','1')}">${org} ${!isReliable ? '<span class="text-red-500">*</span>' : ''}</td>
-                        <td class="px-2 py-1.5 border-b text-center">${s.tested}</td>
-                        <td class="px-2 py-1.5 border-b text-center">${targetVal}</td>
-                        <td class="px-2 py-1.5 border-b text-center ${semColor}">${p}%</td>
-                        <td class="px-2 py-1.5 border-b text-center text-slate-500">${ci.lower}%-${ci.upper}%</td>
-                    </tr>`;
+                ciData.push(wilsonScoreCI(targetVal, s.tested));
             }
         });
         datasets.push({ label: org, data: dataR, backgroundColor: bgColors, borderRadius: 4, ciData: ciData });
     });
 
-    $('#ciTableBody').html(tableHtml);
-
     if (chartAMR_instance) chartAMR_instance.destroy();
+    
+    // إعطاء عرض ديناميكي للمخطط البياني ليسمح بالتمرير الأفقي
+    let chartWidth = targetAbxs.length > 4 ? (targetAbxs.length * 60) + 'px' : '100%';
+    $('#amrChartContainer').css('width', chartWidth);
+
     chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
         type: 'bar',
         data: { labels: targetAbxs, datasets: datasets },
@@ -496,7 +477,7 @@ window.generateAnalytics = function() {
         let rowHasData = hmAbxs.some(a => heatmapStats[o][a] && heatmapStats[o][a].t > 0);
         if(!rowHasData) return;
 
-        hmHtml += `<tr><th>${o.slice(0, 10)}.. <span class="text-[9px] font-normal text-slate-400">(${orgCounts[o]||0})</span></th>`;
+        hmHtml += `<tr><th class="text-[10px] text-left leading-tight min-w-[120px] max-w-[140px] whitespace-normal break-words">${o} <br><span class="text-[9px] font-normal text-slate-400">(${orgCounts[o]||0})</span></th>`;
         hmAbxs.forEach(a => {
             let cell = heatmapStats[o][a];
             if (!cell || cell.t === 0) { hmHtml += '<td class="bg-slate-50 text-slate-300">-</td>'; } 
