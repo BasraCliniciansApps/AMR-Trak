@@ -28,11 +28,15 @@
         .nav-btn.active { color: #0d9488; }
         .nav-btn svg { width: 24px; height: 24px; margin-bottom: 4px; }
         .select2-container .select2-selection--single, .select2-container .select2-selection--multiple { min-height: 42px; border-radius: 8px; border-color: #cbd5e1; }
+        
+        /* Heatmap Styles */
         .heatmap-table { border-collapse: separate; border-spacing: 0; min-width: max-content; width: 100%; }
         .heatmap-table th, .heatmap-table td { padding: 8px 12px; text-align: center; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; font-size: 0.75rem; }
         .heatmap-table thead th { background-color: #f1f5f9; position: sticky; top: 0; z-index: 10; border-top: 1px solid #e2e8f0; }
         .heatmap-table tbody th { position: sticky; left: 0; z-index: 20; background-color: #ffffff; text-align: left; border-left: 1px solid #e2e8f0; }
         .heatmap-table thead th:first-child { position: sticky; left: 0; top: 0; z-index: 30; background-color: #f1f5f9; border-left: 1px solid #e2e8f0; }
+        .heatmap-table th:first-child, .heatmap-table td:first-child { min-width: 120px; max-width: 140px; white-space: normal; word-wrap: break-word; line-height: 1.2; }
+        
         .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
@@ -68,8 +72,12 @@
                         <div class="text-xs font-bold text-teal-600 truncate" id="live_m_spec">-</div>
                     </div>
                 </div>
-                <div class="h-[220px] relative mb-2"><canvas id="chart_m_amr"></canvas></div>
+                
+                <div class="w-full overflow-x-auto custom-scroll mb-2">
+                    <div class="h-[220px] relative" style="min-width: 400px;"><canvas id="chart_m_amr"></canvas></div>
+                </div>
                 <p class="text-[9px] text-slate-400 text-center mb-4">* Gray bars = n &lt; 30 (Low Confidence)</p>
+                
                 <div class="grid grid-cols-2 gap-2 mb-4">
                     <div class="h-32 relative"><canvas id="chart_m_pie"></canvas></div>
                     <div class="h-32 relative"><canvas id="chart_m_bar"></canvas></div>
@@ -78,11 +86,11 @@
                 <div id="live_m_profiles_wrapper" class="space-y-3 mt-4 pt-4 border-t border-slate-100 hidden">
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
                         <h4 class="text-xs font-bold text-blue-900 mb-2 flex justify-between"><span id="live_m_profile1_title">Profile 1</span><span class="text-[9px] text-slate-500" id="live_m_mero_count"></span></h4>
-                        <div class="h-40 relative"><canvas id="chart_m_mero"></canvas></div>
+                        <div class="w-full overflow-x-auto custom-scroll"><div class="h-40 relative" style="min-width: 300px;"><canvas id="chart_m_mero"></canvas></div></div>
                     </div>
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
                         <h4 class="text-xs font-bold text-teal-900 mb-2 flex justify-between"><span id="live_m_profile2_title">Profile 2</span><span class="text-[9px] text-slate-500" id="live_m_cro_count"></span></h4>
-                        <div class="h-40 relative"><canvas id="chart_m_cro"></canvas></div>
+                        <div class="w-full overflow-x-auto custom-scroll"><div class="h-40 relative" style="min-width: 300px;"><canvas id="chart_m_cro"></canvas></div></div>
                     </div>
                 </div>
             </div>
@@ -103,8 +111,12 @@
                         <div class="text-xs font-bold text-teal-600 truncate" id="live_q_spec">-</div>
                     </div>
                 </div>
-                <div class="h-[220px] relative mb-2"><canvas id="chart_q_amr"></canvas></div>
+                
+                <div class="w-full overflow-x-auto custom-scroll mb-2">
+                    <div class="h-[220px] relative" style="min-width: 400px;"><canvas id="chart_q_amr"></canvas></div>
+                </div>
                 <p class="text-[9px] text-slate-400 text-center mb-4">* Gray bars = n &lt; 30 (Low Confidence)</p>
+                
                 <div class="grid grid-cols-2 gap-2 mb-4">
                     <div class="h-32 relative"><canvas id="chart_q_pie"></canvas></div>
                     <div class="h-32 relative"><canvas id="chart_q_bar"></canvas></div>
@@ -113,11 +125,11 @@
                 <div id="live_q_profiles_wrapper" class="space-y-3 mt-4 pt-4 border-t border-slate-100 hidden">
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
                         <h4 class="text-xs font-bold text-emerald-900 mb-2 flex justify-between"><span id="live_q_profile1_title">Profile 1</span><span class="text-[9px] text-slate-500" id="live_q_mero_count"></span></h4>
-                        <div class="h-40 relative"><canvas id="chart_q_mero"></canvas></div>
+                        <div class="w-full overflow-x-auto custom-scroll"><div class="h-40 relative" style="min-width: 300px;"><canvas id="chart_q_mero"></canvas></div></div>
                     </div>
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
                         <h4 class="text-xs font-bold text-teal-900 mb-2 flex justify-between"><span id="live_q_profile2_title">Profile 2</span><span class="text-[9px] text-slate-500" id="live_q_cro_count"></span></h4>
-                        <div class="h-40 relative"><canvas id="chart_q_cro"></canvas></div>
+                        <div class="w-full overflow-x-auto custom-scroll"><div class="h-40 relative" style="min-width: 300px;"><canvas id="chart_q_cro"></canvas></div></div>
                     </div>
                 </div>
             </div>
@@ -177,9 +189,15 @@
 
                 <div class="mobile-card" id="print_sect_amr">
                     <h3 class="text-sm font-bold text-slate-800 mb-1">AMR Profile Comparison</h3>
-                    <div class="h-[280px] relative mt-3"><canvas id="chartAMR"></canvas></div>
+                    <!-- Horizontal scroll wrapper for the chart -->
+                    <div class="w-full overflow-x-auto custom-scroll mt-3">
+                        <div class="h-[280px] relative" id="amrChartContainer">
+                            <canvas id="chartAMR"></canvas>
+                        </div>
+                    </div>
                     
-                    <div class="mt-4 overflow-x-auto custom-scroll">
+                    <!-- CI Table hidden completely on mobile -->
+                    <div class="mt-4 overflow-x-auto custom-scroll hidden">
                         <table class="w-full text-[10px] text-left border-collapse border border-slate-200 rounded-lg">
                             <thead class="bg-slate-100 text-slate-600">
                                 <tr>
