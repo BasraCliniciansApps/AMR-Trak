@@ -1,3 +1,16 @@
+// --- Firebase Initialization ---
+const firebaseConfig = {
+    apiKey: "AIzaSyCyWcTzvYXwsYQEgs_iNh_Co68H9_2kYU4",
+    authDomain: "antibiogramtrak.firebaseapp.com",
+    projectId: "antibiogramtrak",
+    storageBucket: "antibiogramtrak.firebasestorage.app",
+    messagingSenderId: "679667156703",
+    appId: "1:679667156703:web:ca37e1544e3d20e922cb6a"
+};
+
+// تهيئة الاتصال بقاعدة البيانات
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 let dataTable;
 let chartAMR_instance = null;
 let chartOrg_instance = null;
@@ -5,6 +18,7 @@ let chartSpec_instance = null;
 let chartGen_instance = null;
 let liveCharts = []; 
 let isUpdatingFilters = false;
+
 
 // Register custom chart plugin for Error Bars (Confidence Interval) - Bulletproof version
 const errorBarsPlugin = {
