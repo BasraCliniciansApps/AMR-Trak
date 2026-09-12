@@ -2,63 +2,151 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AMR Dashboard | Read-Only</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AMR Mobile Dashboard</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        body { background-color: #f8fafc; padding-bottom: 70px; font-family: system-ui, -apple-system, sans-serif; }
+        .mobile-card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid #e2e8f0; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 10px 0; z-index: 50; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+        .nav-btn { display: flex; flex-direction: column; align-items: center; font-size: 11px; font-weight: 600; color: #64748b; transition: color 0.2s; }
+        .nav-btn.active { color: #0d9488; }
+        .nav-btn svg { width: 24px; height: 24px; margin-bottom: 4px; }
+        .select2-container .select2-selection--single, .select2-container .select2-selection--multiple { min-height: 42px; border-radius: 8px; border-color: #cbd5e1; }
+    </style>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased p-4 md:p-8">
+<body>
 
-    <div class="max-w-4xl mx-auto space-y-6">
-        <header class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 text-center">
-            <h1 class="text-2xl font-bold text-blue-800">Live AMR Surveillance</h1>
-            <p class="text-sm text-slate-500 mt-1">Real-time Clinical Microbiology Dashboard</p>
-            <div id="connection_status" class="mt-3 inline-flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-                <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
-                Connected to Cloud
-            </div>
-        </header>
+    <!-- Header -->
+    <header class="bg-white px-4 py-3 sticky top-0 z-40 border-b border-slate-200 shadow-sm flex justify-between items-center">
+        <div>
+            <h1 class="text-lg font-bold text-teal-800 leading-tight" id="headerTitle">Live Surveillance</h1>
+            <p class="text-[10px] text-slate-500 font-medium">Read-Only Clinical Dashboard</p>
+        </div>
+        <div id="connection_status" class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+            <span class="relative flex h-2 w-2"><span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span> Cloud
+        </div>
+    </header>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 text-center">
-                <div class="text-xs text-slate-500 font-bold">Total Isolates</div>
-                <div class="text-2xl font-black text-slate-800 mt-1" id="dash_total">-</div>
+    <div class="px-4 mt-4 max-w-md mx-auto">
+        
+        <!-- VIEW: LIVE SURVEILLANCE -->
+        <div id="viewLive">
+            <!-- Monthly Stats -->
+            <div class="mobile-card border-t-4 border-t-blue-500">
+                <h3 class="text-sm font-bold text-blue-800 mb-3" id="live_m_title">Current Month</h3>
+                <div class="grid grid-cols-3 gap-2 text-center mb-4">
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <div class="text-[10px] text-slate-500 font-bold mb-1">Isolates</div>
+                        <div class="text-lg font-black text-slate-800" id="live_m_total">-</div>
+                    </div>
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <div class="text-[10px] text-slate-500 font-bold mb-1">Top Bug</div>
+                        <div class="text-xs font-bold text-rose-600 truncate" id="live_m_bug">-</div>
+                    </div>
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <div class="text-[10px] text-slate-500 font-bold mb-1">Top Spec</div>
+                        <div class="text-xs font-bold text-teal-600 truncate" id="live_m_spec">-</div>
+                    </div>
+                </div>
+                <h4 class="text-xs font-bold text-slate-700 text-center mb-2">Critical Resistance Markers</h4>
+                <div class="h-48 relative"><canvas id="chart_m_amr"></canvas></div>
+                
+                <h4 class="text-xs font-bold text-slate-700 text-center mt-5 mb-2">Top Wards & Pathogens</h4>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="h-32 relative"><canvas id="chart_m_pie"></canvas></div>
+                    <div class="h-32 relative"><canvas id="chart_m_bar"></canvas></div>
+                </div>
+                <div id="live_m_top3" class="mt-4 space-y-2"></div>
             </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 text-center col-span-2 md:col-span-1">
-                <div class="text-xs text-slate-500 font-bold">Top Pathogen</div>
-                <div class="text-sm font-bold text-rose-600 truncate mt-2" id="dash_bug">-</div>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 text-center col-span-2 md:col-span-2">
-                <div class="text-xs text-slate-500 font-bold">Top Specimen</div>
-                <div class="text-sm font-bold text-teal-600 truncate mt-2" id="dash_spec">-</div>
+
+            <!-- Quarterly Stats -->
+            <div class="mobile-card border-t-4 border-t-emerald-500">
+                <h3 class="text-sm font-bold text-emerald-800 mb-3" id="live_q_title">Last Quarter</h3>
+                <div class="grid grid-cols-3 gap-2 text-center mb-4">
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <div class="text-[10px] text-slate-500 font-bold mb-1">Isolates</div>
+                        <div class="text-lg font-black text-slate-800" id="live_q_total">-</div>
+                    </div>
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <div class="text-[10px] text-slate-500 font-bold mb-1">Top Bug</div>
+                        <div class="text-xs font-bold text-rose-600 truncate" id="live_q_bug">-</div>
+                    </div>
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <div class="text-[10px] text-slate-500 font-bold mb-1">Top Spec</div>
+                        <div class="text-xs font-bold text-teal-600 truncate" id="live_q_spec">-</div>
+                    </div>
+                </div>
+                <h4 class="text-xs font-bold text-slate-700 text-center mb-2">Critical Resistance Markers</h4>
+                <div class="h-48 relative"><canvas id="chart_q_amr"></canvas></div>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-            <h3 class="text-sm font-bold text-slate-700 mb-4 text-center">Critical Resistance Markers (% R)</h3>
-            <div class="h-[300px] relative"><canvas id="dash_chart_amr"></canvas></div>
+        <!-- VIEW: ANALYTICS -->
+        <div id="viewAnalytics" class="hidden">
+            <div class="mobile-card bg-slate-50">
+                <h3 class="text-sm font-bold text-slate-800 mb-3 border-b pb-2">Custom Search Filters</h3>
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 mb-1">From</label>
+                            <input type="date" id="ana_start" class="w-full border rounded-lg p-2 text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 mb-1">To</label>
+                            <input type="date" id="ana_end" class="w-full border rounded-lg p-2 text-xs">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 mb-1">Specimen</label>
+                        <select id="ana_sample" class="w-full text-sm select2-mobile"><option value="">All Specimens</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 mb-1">Organism</label>
+                        <select id="ana_organism" class="w-full text-sm select2-multiple" multiple="multiple" data-placeholder="Select Organisms"></select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 mb-1">Antibiotic</label>
+                        <select id="ana_antibiotic" class="w-full text-sm select2-multiple" multiple="multiple" data-placeholder="Select Antibiotics"></select>
+                    </div>
+                    <button onclick="runAnalytics()" class="w-full bg-teal-600 text-white font-bold py-2.5 rounded-lg shadow-sm mt-2 text-sm">Analyze Data</button>
+                </div>
+            </div>
+
+            <!-- Analytics Results -->
+            <div id="analyticsResults" class="hidden space-y-4">
+                <div class="mobile-card">
+                    <h3 class="text-sm font-bold text-slate-800 text-center mb-1">Resistance Profile (% R)</h3>
+                    <p class="text-[10px] text-slate-500 text-center mb-3" id="ana_subtitle"></p>
+                    <div class="h-64 relative"><canvas id="chartAna"></canvas></div>
+                </div>
+            </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                <h3 class="text-sm font-bold text-slate-700 mb-4 text-center">Top Organisms</h3>
-                <div class="h-[250px] relative"><canvas id="dash_chart_pie"></canvas></div>
-            </div>
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-                <h3 class="text-sm font-bold text-slate-700 mb-4 text-center">Top Specimens</h3>
-                <div class="h-[250px] relative"><canvas id="dash_chart_bar"></canvas></div>
-            </div>
-        </div>
     </div>
 
-    <!-- استدعاء ملف لوحة الأطباء من مجلد js -->
-    <script src="js/dashboard.js"></script>
-</body>
-</html>
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <button onclick="switchTab('live')" id="btnNavLive" class="nav-btn active">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
+            Live
+        </button>
+        <button onclick="switchTab('analytics')" id="btnNavAnalytics" class="nav-btn">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" /></svg>
+            Analytics
+        </button>
+    </nav>
+
+    <script src="dashboard.js"></script>
 </body>
 </html>
