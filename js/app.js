@@ -2075,12 +2075,15 @@ function buildLiveSection(records, prefix, settings) {
             }
             
             let bestAbxLabel = bestAbx !== "-" ? `${bestAbx} <span class="text-emerald-600 font-bold ml-1 text-xs">(${Math.round(bestP*100)}% S)</span>` : "N/A";
+            
+            // [الحل العام]: استخدام Regex للبحث عن أي علامة / في أي مضاد وإضافة فاصل للسطر بعدها
+            let formattedAbxLabel = bestAbxLabel.replace(/\//g, '/<wbr>');
 
             htmlTop3 += `
             <div class="bg-slate-50 border border-slate-100 p-3 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
-                <div class="font-bold text-slate-800 text-sm flex items-center gap-2 w-full md:w-1/3"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs truncate">${spec}</span></div>
-                <div class="text-xs text-slate-600 w-full md:w-1/3">Top Bug: <span class="font-bold text-rose-600">${topBugSpec}</span></div>
-                <div class="text-xs text-slate-600 w-full md:w-1/3">Most Susceptible: <span class="font-bold text-slate-800">${bestAbxLabel}</span></div>
+                <div class="font-bold text-slate-800 text-sm flex items-center gap-2 w-full md:w-1/4"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs truncate">${spec}</span></div>
+                <div class="text-xs text-slate-600 w-full md:w-2/5 break-words min-w-0">Top Bug: <span class="font-bold text-rose-600">${topBugSpec}</span></div>
+                <div class="text-xs text-slate-600 w-full md:w-1/3 break-words min-w-0">Most Susceptible: <span class="font-bold text-slate-800">${formattedAbxLabel}</span></div>
             </div>`;
         });
         htmlTop3 += `</div>`;
