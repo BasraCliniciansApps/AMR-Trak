@@ -12,7 +12,22 @@ const db = firebase.firestore();
 
 let cloudRecords = [];
 let liveCharts = [];
-let chartAna = null;
+let chartAMR_instance = null;
+let chartOrg_instance = null;
+let chartSpec_instance = null;
+let chartGen_instance = null;
+let isUpdatingFilters = false;
+
+// Helpers
+function getCustomAntibiotics() { return []; } 
+
+const orgColorPalette = [
+    { bg: 'rgba(185, 28, 28, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
+    { bg: 'rgba(30, 64, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
+    { bg: 'rgba(21, 128, 61, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
+    { bg: 'rgba(162, 28, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
+    { bg: 'rgba(194, 65, 12, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' }
+];
 
 const errorBarsPlugin = {
     id: 'errorBars',
@@ -31,7 +46,7 @@ const errorBarsPlugin = {
                     if (x === undefined) return;
                     ctx.save();
                     ctx.beginPath();
-                    ctx.lineWidth = 1.5; ctx.strokeStyle = '#334155';
+                    ctx.lineWidth = 1; ctx.strokeStyle = '#334155';
                     ctx.moveTo(x, yLower); ctx.lineTo(x, yUpper);
                     ctx.moveTo(x - 3, yUpper); ctx.lineTo(x + 3, yUpper);
                     ctx.moveTo(x - 3, yLower); ctx.lineTo(x + 3, yLower);
@@ -58,14 +73,17 @@ $(document).ready(function() {
     let currentYear = new Date().getFullYear();
     $('#ana_start').val(`${currentYear}-01-01`);
     $('#ana_end').val(`${currentYear}-12-31`);
+
+    $('#ana_start, #ana_end, #ana_sample, #ana_ward').on('change', function() {
+        if(!isUpdatingFilters) loadAnalyticsFilters();
+    });
 });
 
-// الاتصال المباشر بقاعدة البيانات
 db.collection("amr_sync").doc("hospital_main").onSnapshot((doc) => {
     if (doc.exists) {
         cloudRecords = doc.data().records || [];
         if(cloudRecords.length > 0) {
-            populateFilters(cloudRecords);
+            loadAnalyticsFilters();
             generateLiveSurveillance();
         } else {
             $('#live_m_total, #live_q_total').text('0');
@@ -73,11 +91,9 @@ db.collection("amr_sync").doc("hospital_main").onSnapshot((doc) => {
         }
     }
 }, (error) => {
-    console.error("Firebase Error:", error);
     $('#connection_status').removeClass('text-emerald-600 bg-emerald-50 border-emerald-100').addClass('text-red-600 bg-red-50 border-red-100').html('Disconnected');
 });
 
-// تعريف وظيفة التبديل لتعمل كـ Global Function
 window.switchTab = function(tab) {
     $('#viewLive, #viewAnalytics').addClass('hidden');
     $('#btnNavLive, #btnNavAnalytics').removeClass('active');
@@ -93,8 +109,11 @@ window.switchTab = function(tab) {
     }
 };
 
+// -------------------------------------------------------------
+// LIVE SURVEILLANCE LOGIC (Matching app_2.js)
+// -------------------------------------------------------------
 function generateLiveSurveillance() {
-    const blacklist = ["xxx", "con", "no growth", "contaminated", "normal flora", "mixed flora"];
+    const blacklist = ["xxx", "con", "no growth", "contaminated", "normal flora", "mixed flora", "no significant growth"];
     let cleanRecords = cloudRecords.filter(r => {
         let org = (r['Selective organism'] || "").toLowerCase();
         return org !== "" && !blacklist.some(b => org.includes(b));
@@ -103,7 +122,7 @@ function generateLiveSurveillance() {
     if (cleanRecords.length === 0) return;
 
     let allDates = cleanRecords.map(r => r.Date).filter(Boolean).sort();
-    if(allDates.length === 0) return; // حماية ضد الأخطاء إذا لم يوجد تواريخ
+    if(allDates.length === 0) return; 
 
     let latestDateStr = allDates[allDates.length - 1]; 
     let targetMonthPrefix = latestDateStr.substring(0, 7);
@@ -117,10 +136,14 @@ function generateLiveSurveillance() {
     else { qMonths = ["07","08","09"]; qLabel = `Q3 ${qYear}`; }
 
     let monthRecords = cleanRecords.filter(r => r.Date && r.Date.startsWith(targetMonthPrefix));
-    let quarterRecords = cleanRecords.filter(r => r.Date && r.Date.split('-')[0] == qYear && qMonths.includes(r.Date.split('-')[1]));
+    let quarterRecords = cleanRecords.filter(r => {
+        if(!r.Date) return false;
+        let parts = r.Date.split('-');
+        return parseInt(parts[0]) === qYear && qMonths.includes(parts[1]);
+    });
 
-    $('#live_m_title').text(`Month (${targetMonthPrefix})`);
-    $('#live_q_title').text(`Quarter (${qLabel})`);
+    $('#live_month_title').text(`Latest Active Month (${targetMonthPrefix})`);
+    $('#live_q_title').text(`Last Completed Quarter (${qLabel})`);
 
     liveCharts.forEach(c => c.destroy()); liveCharts = [];
     buildMobileLiveSection(monthRecords, 'm');
@@ -129,24 +152,34 @@ function generateLiveSurveillance() {
 
 function buildMobileLiveSection(records, prefix) {
     $(`#live_${prefix}_total`).text(records.length);
-    if(records.length === 0) return;
+    if(records.length === 0) {
+        $(`#live_${prefix}_bug`).text("-");
+        $(`#live_${prefix}_spec`).text("-");
+        $(`#live_${prefix}_top3_container, #live_${prefix}_profiles_wrapper`).addClass('hidden');
+        return;
+    }
+
+    $(`#live_${prefix}_profiles_wrapper`).removeClass('hidden');
 
     let orgCounts = {}, specCounts = {};
     const criticalPairs = [
-        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abxList: ["Ceftriaxone", "Cefotaxime", "Ceftazidime"], label: "ESBL" },
-        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abxList: ["Meropenem", "Imipenem"], label: "CRE" },
-        { orgs: ["staphylococcus aureus"], abxList: ["Oxacillin", "Cefoxitin"], label: "MRSA" }
+        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abxList: ["Ceftriaxone", "Cefotaxime", "Ceftazidime"], label: "ESBL\n(3rd Gen Ceph)" },
+        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abxList: ["Meropenem", "Imipenem"], label: "CRE\n(Carbapenem)" },
+        { orgs: ["staphylococcus aureus"], abxList: ["Oxacillin", "Cefoxitin"], label: "MRSA\n(OX/FOX)" },
+        { orgs: ["enterococcus faecalis", "enterococcus faecium", "enterococcus spp", "staphylococcus aureus"], abxList: ["Vancomycin"], label: "VRE/VRSA\n(VA)" }
     ];
 
     let amrStats = criticalPairs.map(p => ({ label: p.label, tested: 0, resistant: 0 }));
+    let allPossibleAbxs = abxList;
 
     records.forEach(r => {
         let org = r['Selective organism'] || "", spec = r['Sample'];
         orgCounts[org] = (orgCounts[org] || 0) + 1;
         if(spec && spec !== "-") specCounts[spec] = (specCounts[spec] || 0) + 1;
 
+        let orgLower = org.toLowerCase();
         criticalPairs.forEach((pair, index) => {
-            if (pair.orgs.some(o => org.toLowerCase().includes(o.toLowerCase()))) {
+            if (pair.orgs.some(o => orgLower.includes(o.toLowerCase()))) {
                 let abxFound = pair.abxList.find(a => r[a] && r[a] !== '-' && r[a] !== '');
                 if (abxFound) { amrStats[index].tested++; if (r[abxFound] === 'R') amrStats[index].resistant++; }
             }
@@ -158,7 +191,7 @@ function buildMobileLiveSection(records, prefix) {
 
     let labels = [], data = [], bgColors = [], ciData = [];
     amrStats.forEach(stat => {
-        labels.push(stat.label);
+        labels.push(stat.label.split('\n'));
         if (stat.tested === 0) { data.push(0); bgColors.push('#e2e8f0'); ciData.push({lower:0, upper:0}); } 
         else {
             data.push(Math.round((stat.resistant / stat.tested) * 100));
@@ -174,80 +207,354 @@ function buildMobileLiveSection(records, prefix) {
         plugins: [errorBarsPlugin]
     }));
 
-    if(prefix === 'm') {
-        let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 4);
-        liveCharts.push(new Chart(document.getElementById(`chart_m_pie`), {
-            type: 'doughnut', data: { labels: sortedOrgs, datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0d9488','#0ea5e9','#8b5cf6','#ec4899'] }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: {size: 9} } } } }
-        }));
-
-        let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]).slice(0, 4);
-        liveCharts.push(new Chart(document.getElementById(`chart_m_bar`), {
-            type: 'bar', data: { labels: sortedSpecs, datasets: [{ data: sortedSpecs.map(s=>specCounts[s]), backgroundColor: '#14b8a6', borderRadius: 4 }] },
-            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false } } }
-        }));
-    }
-}
-
-function populateFilters(records) {
-    let orgs = new Set(), abxs = new Set(), specs = new Set();
-    records.forEach(r => {
-        if(r.Sample && r.Sample !== '-') specs.add(r.Sample);
-        if(r['Selective organism'] && r['Selective organism'] !== '-') orgs.add(r['Selective organism']);
-        Object.keys(r).forEach(k => {
-            if(!['Name','Age','Age Unit','Sex','Ward','Sample','Date','Selective organism','Antibiogram organism'].includes(k)) {
-                if(r[k] && r[k] !== '-') abxs.add(k);
-            }
-        });
-    });
-
-    $('#ana_sample').empty().append(new Option("All Specimens", ""));
-    $('#ana_organism, #ana_antibiotic').empty();
-
-    Array.from(specs).sort().forEach(s => $('#ana_sample').append(new Option(s, s)));
-    Array.from(orgs).sort().forEach(o => $('#ana_organism').append(new Option(o, o)));
-    Array.from(abxs).sort().forEach(a => $('#ana_antibiotic').append(new Option(a, a)));
-}
-
-// تعريف الدالة كـ Global لتعمل من زر الـ HTML
-window.runAnalytics = function() {
-    const start = $('#ana_start').val(), end = $('#ana_end').val(), spec = $('#ana_sample').val();
-    const targetOrgs = $('#ana_organism').val() || [], targetAbxs = $('#ana_antibiotic').val() || [];
-
-    let filtered = cloudRecords.filter(r => r.Date >= start && r.Date <= end);
-    if(spec) filtered = filtered.filter(r => r.Sample === spec);
-
-    if (filtered.length === 0 || targetOrgs.length === 0 || targetAbxs.length === 0) {
-        alert("Please select at least one Organism and one Antibiotic."); return;
-    }
-
-    $('#analyticsResults').removeClass('hidden');
-    let datasets = [];
+    // Top 3 Specs Breakdown
+    let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
+    let top3Specs = sortedSpecs.slice(0, 3);
+    let htmlTop3 = `<h4 class="text-xs font-bold text-slate-700 mt-2 mb-2 border-b pb-1">Top 3 Specimens Breakdown</h4>`;
     
-    targetOrgs.forEach((org, i) => {
-        let orgData = filtered.filter(r => r['Selective organism'] === org);
-        let dataR = [], bgColors = [], ciData = [];
-        
-        targetAbxs.forEach(abx => {
-            let tested = 0, resistant = 0;
-            orgData.forEach(r => { if(r[abx] && r[abx] !== '-') { tested++; if(r[abx]==='R') resistant++; } });
-            
-            if(tested === 0) { dataR.push(0); bgColors.push('#e2e8f0'); ciData.push({lower:0,upper:0}); }
-            else {
-                dataR.push(Math.round((resistant/tested)*100));
-                let rel = tested >= 30;
-                bgColors.push(rel ? ['#0ea5e9', '#ec4899', '#8b5cf6', '#14b8a6'][i % 4] : '#cbd5e1');
-                ciData.push(wilsonScoreCI(resistant, tested));
-            }
+    top3Specs.forEach(spec => {
+        let specRecords = records.filter(r => r.Sample === spec);
+        let bCounts = {};
+        specRecords.forEach(r => { let o = r['Selective organism']; if(o) bCounts[o] = (bCounts[o]||0)+1; });
+        let topBugSpec = Object.keys(bCounts).sort((a,b)=>bCounts[b]-bCounts[a])[0] || "-";
+
+        let abxS = {}, abxT = {};
+        specRecords.forEach(r => {
+            allPossibleAbxs.forEach(a => {
+                if(r[a] && r[a] !== '-') {
+                    abxT[a] = (abxT[a]||0)+1;
+                    if(r[a] === 'S') abxS[a] = (abxS[a]||0)+1;
+                }
+            });
         });
-        datasets.push({ label: org, data: dataR, backgroundColor: bgColors, ciData, borderRadius: 4 });
+        
+        let bestAbx = "-", bestP = -1;
+        Object.keys(abxT).forEach(a => { if(abxT[a] >= 5) { let p = (abxS[a]||0)/abxT[a]; if(p > bestP) { bestP=p; bestAbx=a; } } });
+        if(bestP === -1) { Object.keys(abxT).forEach(a => { let p = (abxS[a]||0)/abxT[a]; if(p > bestP) { bestP=p; bestAbx=a; } }); }
+
+        let fmtAbx = "N/A";
+        if (bestAbx !== "-") {
+            let ci = wilsonScoreCI(abxS[bestAbx]||0, abxT[bestAbx]);
+            fmtAbx = `<span class="block">${bestAbx} <span class="text-emerald-600 font-bold">(${Math.round(bestP*100)}% S)</span></span><span class="text-[9px] text-slate-400 bg-slate-100 px-1 rounded block mt-0.5">CI: ${ci.lower}%-${ci.upper}%</span>`;
+        }
+
+        htmlTop3 += `
+        <div class="bg-slate-50 border border-slate-100 p-2 rounded flex flex-col gap-1 text-[10px]">
+            <div class="font-bold text-blue-800 bg-blue-100 px-1.5 rounded self-start">${spec}</div>
+            <div class="text-slate-600">Top Bug: <span class="font-bold text-rose-600">${topBugSpec}</span></div>
+            <div class="text-slate-600 mt-1 pt-1 border-t border-slate-200">Most Susceptible:<br>${fmtAbx}</div>
+        </div>`;
+    });
+    if (top3Specs.length > 0) $(`#live_${prefix}_top3_container`).html(htmlTop3).removeClass('hidden');
+
+    // Pie & Bar
+    let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 5);
+    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_pie`), {
+        type: 'doughnut', data: { labels: sortedOrgs, datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0d9488','#0ea5e9','#8b5cf6','#ec4899','#f59e0b'] }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: {size: 9} } } } }
+    }));
+
+    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_bar`), {
+        type: 'bar', data: { labels: sortedSpecs.slice(0,5), datasets: [{ data: sortedSpecs.slice(0,5).map(s=>specCounts[s]), backgroundColor: '#14b8a6', borderRadius: 4 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false } } }
+    }));
+
+    buildMobileAbxProfileChart('Meropenem', `chart_${prefix}_mero`, `live_${prefix}_mero_count`, records, prefix === 'm' ? '#2563eb' : '#059669');
+    buildMobileAbxProfileChart('Ceftriaxone', `chart_${prefix}_cro`, `live_${prefix}_cro_count`, records, '#0d9488');
+}
+
+function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, primaryColor) {
+    let canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    let orgMap = {};
+    records.forEach(r => {
+        let org = r['Selective organism'];
+        if (!org || org === '-') return;
+        let val = r[abxName];
+        if (val && val !== '-' && val !== '') {
+            if (!orgMap[org]) orgMap[org] = { tested: 0, resistant: 0 };
+            orgMap[org].tested++;
+            if (val === 'R') orgMap[org].resistant++;
+        }
     });
 
-    if(chartAna) chartAna.destroy();
-    chartAna = new Chart(document.getElementById('chartAna'), {
-        type: 'bar',
-        data: { labels: targetAbxs, datasets },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: {boxWidth:10, font:{size:10}} } }, scales: { y: { max: 100 } } },
+    let sortedOrgs = Object.keys(orgMap).sort((a, b) => orgMap[b].tested - orgMap[a].tested).slice(0, 5);
+    let totalTestedAbx = Object.values(orgMap).reduce((sum, item) => sum + item.tested, 0);
+    if (countElId) $(`#${countElId}`).text(`(n=${totalTestedAbx})`);
+
+    let labels = [], data = [], bgColors = [], ciData = [];
+    sortedOrgs.forEach(org => {
+        let item = orgMap[org];
+        let p = Math.round((item.resistant / item.tested) * 100);
+        labels.push(org.length > 15 ? org.slice(0, 12) + '..' : org);
+        data.push(p);
+        bgColors.push(item.tested >= 30 ? primaryColor : 'rgba(148, 163, 184, 0.55)');
+        ciData.push(wilsonScoreCI(item.resistant, item.tested));
+    });
+
+    if (sortedOrgs.length === 0) { labels = ['No Data']; data = [0]; bgColors = ['#e2e8f0']; ciData = [{ lower: 0, upper: 0 }]; }
+
+    liveCharts.push(new Chart(canvas, {
+        type: 'bar', data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, borderRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { max: 100 }, x: { ticks: { font: {size: 8} } } } },
         plugins: [errorBarsPlugin]
+    }));
+}
+
+
+// -------------------------------------------------------------
+// ANALYTICS LOGIC (Matching app_2.js)
+// -------------------------------------------------------------
+function loadAnalyticsFilters() {
+    if (isUpdatingFilters) return;
+    isUpdatingFilters = true;
+
+    const startDate = $('#ana_start').val(), endDate = $('#ana_end').val();
+    let records = cloudRecords.filter(r => (!startDate || !endDate) ? true : (r.Date >= startDate && r.Date <= endDate));
+
+    // Wards
+    let currentWards = $('#ana_ward').val() || [];
+    $('#ana_ward').empty();
+    let specialOptGroup = $('<optgroup label="Categories"></optgroup>');
+    specialOptGroup.append(new Option("Inpatient (All except Outpatient)", "Inpatient", currentWards.includes("Inpatient"), currentWards.includes("Inpatient")));
+    specialOptGroup.append(new Option("Outpatient", "Outpatient", currentWards.includes("Outpatient"), currentWards.includes("Outpatient")));
+    $('#ana_ward').append(specialOptGroup);
+
+    let wardsOptGroup = $('<optgroup label="Specific Wards"></optgroup>');
+    let uniqueWards = new Set(cloudRecords.map(r => r.Ward).filter(w => w && w !== "-"));
+    Array.from(uniqueWards).sort().forEach(w => {
+        let isSelected = currentWards.includes(w);
+        wardsOptGroup.append(new Option(w, w, isSelected, isSelected));
+    });
+    $('#ana_ward').append(wardsOptGroup);
+
+    // Apply Wards Filter to refine Samples/Orgs/Abxs
+    if (currentWards.length > 0) {
+        let inpatientWards = Array.from(uniqueWards).filter(w => w.toLowerCase() !== 'outpatient');
+        records = records.filter(r => {
+            let rWard = r.Ward || '';
+            if (currentWards.includes(rWard)) return true;
+            if (currentWards.includes('Inpatient') && inpatientWards.includes(rWard)) return true;
+            if (currentWards.includes('Outpatient') && rWard.toLowerCase() === 'outpatient') return true;
+            return false;
+        });
+    }
+
+    // Apply Sample Filter
+    const targetSample = $('#ana_sample').val();
+    let uniqueSamples = new Set(records.map(r => r.Sample).filter(Boolean));
+    $('#ana_sample').empty().append(new Option("All Samples", ""));
+    Array.from(uniqueSamples).sort().forEach(s => $('#ana_sample').append(new Option(s, s)));
+    if (targetSample && uniqueSamples.has(targetSample)) $('#ana_sample').val(targetSample);
+    if (targetSample) records = records.filter(r => r.Sample === targetSample);
+
+    let orgs = new Set(), abxs = new Set();
+    records.forEach(r => {
+        if(r['Selective organism']) orgs.add(r['Selective organism']);
+        abxList.forEach(a => { if (r[a] && r[a] !== '-' && r[a] !== '') abxs.add(a); });
+    });
+
+    let currentOrgs = $('#ana_organism').val() || [];
+    $('#ana_organism').empty();
+    Array.from(orgs).sort().forEach(o => $('#ana_organism').append(new Option(o, o, currentOrgs.includes(o), currentOrgs.includes(o))));
+
+    let currentAbxs = $('#ana_antibiotic').val() || [];
+    $('#ana_antibiotic').empty();
+    Array.from(abxs).sort().forEach(a => $('#ana_antibiotic').append(new Option(a, a, currentAbxs.includes(a), currentAbxs.includes(a))));
+
+    $('#ana_sample, #ana_ward, #ana_organism, #ana_antibiotic').trigger('change.select2');
+    isUpdatingFilters = false;
+}
+
+window.generateAnalytics = function() {
+    const startDate = $('#ana_start').val(), endDate = $('#ana_end').val();
+    const targetSample = $('#ana_sample').val();
+    const targetWards = $('#ana_ward').val() || [];
+    const targetOrgs = $('#ana_organism').val() || [];
+    const targetAbxs = $('#ana_antibiotic').val() || [];
+    const metric = $('#ana_metric').val() || 'R'; 
+    const metricLabel = metric === 'R' ? 'Resistance' : 'Susceptibility';
+
+    if (!startDate || !endDate) { Swal.fire('Required', 'Please select both dates.', 'warning'); return; }
+
+    let records = cloudRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
+    if (targetSample) records = records.filter(r => r.Sample === targetSample);
+
+    if (targetWards.length > 0) {
+        let uniqueWards = new Set(cloudRecords.map(r => r.Ward).filter(w => w && w !== "-"));
+        let inpatientWards = Array.from(uniqueWards).filter(w => w.toLowerCase() !== 'outpatient');
+        records = records.filter(r => {
+            let rWard = r.Ward || '';
+            if (targetWards.includes(rWard)) return true;
+            if (targetWards.includes('Inpatient') && inpatientWards.includes(rWard)) return true;
+            if (targetWards.includes('Outpatient') && rWard.toLowerCase() === 'outpatient') return true;
+            return false;
+        });
+    }
+
+    if (records.length === 0 || targetOrgs.length === 0 || targetAbxs.length === 0) {
+        $('#analyticsContainer').addClass('hidden');
+        $('#analyticsPlaceholder').removeClass('hidden');
+        Swal.fire('No Data', 'No records match selected criteria.', 'info');
+        return;
+    }
+
+    $('#analyticsPlaceholder').addClass('hidden');
+    $('#analyticsContainer').removeClass('hidden');
+
+    let hmDesc = metric === 'R' ? 'Dark Red = High Resistance. <span class="text-red-500 font-bold">*</span> = n &lt; 30.' : 'Dark Green = High Susceptibility. <span class="text-red-500 font-bold">*</span> = n &lt; 30.';
+    $('#heatmapDesc').html(hmDesc);
+    let hmLegend = metric === 'R' ? 
+        `<span class="px-1 bg-emerald-100 text-emerald-800 rounded">0-20%</span><span class="px-1 bg-yellow-100 text-yellow-800 rounded">21-40%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">41-60%</span><span class="px-1 bg-red-400 text-white rounded">61-80%</span><span class="px-1 bg-red-600 text-white rounded">81-100%</span>` :
+        `<span class="px-1 bg-red-600 text-white rounded">0-20%</span><span class="px-1 bg-red-400 text-white rounded">21-40%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">41-60%</span><span class="px-1 bg-yellow-100 text-yellow-800 rounded">61-80%</span><span class="px-1 bg-emerald-100 text-emerald-800 rounded">81-100%</span>`;
+    $('#heatmapLegend').html(hmLegend);
+
+    let orgCounts = {}, specCounts = {}, genderCounts = { "Male": 0, "Female": 0 }, heatmapStats = {}, amrStats = {};
+    targetOrgs.forEach(org => {
+        amrStats[org] = { total: 0, abx: {} };
+        targetAbxs.forEach(a => { amrStats[org].abx[a] = { tested: 0, r: 0, s: 0 }; });
+    });
+
+    let allPresentOrgs = new Set();
+
+    records.forEach(r => {
+        let org = r['Selective organism'];
+        if(!org) return;
+        allPresentOrgs.add(org);
+        orgCounts[org] = (orgCounts[org] || 0) + 1;
+        if(r.Sample) specCounts[r.Sample] = (specCounts[r.Sample] || 0) + 1;
+        if(r.Sex && genderCounts[r.Sex] !== undefined) genderCounts[r.Sex] += 1;
+
+        if (!heatmapStats[org]) heatmapStats[org] = {};
+        abxList.forEach(abx => {
+            let res = r[abx];
+            if (res && res !== '-' && res !== '') {
+                if (!heatmapStats[org][abx]) heatmapStats[org][abx] = { t: 0, r: 0, s: 0 };
+                heatmapStats[org][abx].t += 1;
+                if (res === 'R') heatmapStats[org][abx].r += 1;
+                if (res === 'S') heatmapStats[org][abx].s += 1;
+            }
+        });
+
+        if (targetOrgs.includes(org)) {
+            targetAbxs.forEach(abx => {
+                let res = r[abx];
+                if (res && res !== '-' && res !== '') {
+                    amrStats[org].abx[abx].tested += 1;
+                    if (res === 'R') amrStats[org].abx[abx].r += 1;
+                    if (res === 'S') amrStats[org].abx[abx].s += 1;
+                }
+            });
+        }
+    });
+
+    // AMR Chart & CI Table
+    let datasets = [];
+    let tableHtml = '';
+
+    targetOrgs.forEach((org, orgIndex) => {
+        let s_org = amrStats[org];
+        let dataR = [], bgColors = [], ciData = [];
+        let palette = orgColorPalette[orgIndex % orgColorPalette.length];
+
+        targetAbxs.forEach(abx => {
+            let s = s_org.abx[abx];
+            if (!s || s.tested === 0) {
+                dataR.push(0); bgColors.push(palette.lowBg); ciData.push({lower: 0, upper: 0});
+            } else {
+                let targetVal = metric === 'R' ? s.r : s.s;
+                let p = Math.round((targetVal / s.tested) * 100);
+                let isReliable = s.tested >= 30;
+                
+                dataR.push(p);
+                bgColors.push(isReliable ? palette.bg : palette.lowBg);
+                let ci = wilsonScoreCI(targetVal, s.tested);
+                ciData.push(ci);
+
+                let dangerScore = metric === 'R' ? p : (100 - p);
+                let semColor = !isReliable ? 'text-slate-500' : (dangerScore <= 20 ? 'text-emerald-600' : dangerScore <= 40 ? 'text-yellow-600' : dangerScore <= 60 ? 'text-orange-500' : dangerScore <= 80 ? 'text-red-500' : 'text-red-700 font-bold');
+
+                tableHtml += `
+                    <tr>
+                        <td class="px-2 py-1.5 border-b truncate max-w-[80px]" title="${abx}">${abx}</td>
+                        <td class="px-2 py-1.5 border-b truncate max-w-[80px]" style="color:${palette.bg.replace('0.9','1')}">${org} ${!isReliable ? '<span class="text-red-500">*</span>' : ''}</td>
+                        <td class="px-2 py-1.5 border-b text-center">${s.tested}</td>
+                        <td class="px-2 py-1.5 border-b text-center">${targetVal}</td>
+                        <td class="px-2 py-1.5 border-b text-center ${semColor}">${p}%</td>
+                        <td class="px-2 py-1.5 border-b text-center text-slate-500">${ci.lower}%-${ci.upper}%</td>
+                    </tr>`;
+            }
+        });
+        datasets.push({ label: org, data: dataR, backgroundColor: bgColors, borderRadius: 4, ciData: ciData });
+    });
+
+    $('#ciTableBody').html(tableHtml);
+
+    if (chartAMR_instance) chartAMR_instance.destroy();
+    chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
+        type: 'bar',
+        data: { labels: targetAbxs, datasets: datasets },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { max: 100 } }, plugins: { legend: { position: 'top', labels: {boxWidth:10, font:{size:10}} } } },
+        plugins: [errorBarsPlugin]
+    });
+
+    // Heatmap
+    let hmOrgs = Object.keys(heatmapStats).filter(o => targetOrgs.includes(o)).sort();
+    let hmAbxs = targetAbxs.sort();
+
+    let hmHtml = '<table class="heatmap-table"><thead><tr><th>Org (n)</th>';
+    hmAbxs.forEach(a => { hmHtml += `<th><div class="w-16 truncate text-[10px]" title="${a}">${a}</div></th>`; });
+    hmHtml += '</tr></thead><tbody>';
+
+    hmOrgs.forEach(o => {
+        let rowHasData = hmAbxs.some(a => heatmapStats[o][a] && heatmapStats[o][a].t > 0);
+        if(!rowHasData) return;
+
+        hmHtml += `<tr><th>${o.slice(0, 10)}.. <span class="text-[9px] font-normal text-slate-400">(${orgCounts[o]||0})</span></th>`;
+        hmAbxs.forEach(a => {
+            let cell = heatmapStats[o][a];
+            if (!cell || cell.t === 0) { hmHtml += '<td class="bg-slate-50 text-slate-300">-</td>'; } 
+            else {
+                let targetVal = metric === 'R' ? cell.r : cell.s;
+                let p = Math.round((targetVal / cell.t) * 100);
+                let isLow = cell.t < 30;
+                let dangerScore = metric === 'R' ? p : (100 - p);
+                
+                let bgClass = 'bg-white', textClass = 'text-slate-700';
+                if (dangerScore <= 20) { bgClass = 'bg-emerald-100'; textClass = 'text-emerald-800'; }
+                else if (dangerScore <= 40) { bgClass = 'bg-yellow-100'; textClass = 'text-yellow-800'; }
+                else if (dangerScore <= 60) { bgClass = 'bg-orange-200'; textClass = 'text-orange-900'; }
+                else if (dangerScore <= 80) { bgClass = 'bg-red-400'; textClass = 'text-white font-bold'; }
+                else { bgClass = 'bg-red-600'; textClass = 'text-white font-bold'; }
+
+                if (isLow) textClass += dangerScore > 60 ? ' text-red-100' : ' opacity-70';
+                hmHtml += `<td class="${bgClass} ${textClass}">${p}% ${isLow ? '<span class="text-red-500 font-bold">*</span>' : ''}</td>`;
+            }
+        });
+        hmHtml += '</tr>';
+    });
+    hmHtml += '</tbody></table>';
+    $('#heatmapWrapper').html(hmHtml);
+
+    // Distribution Charts
+    let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 5);
+    if(chartOrg_instance) chartOrg_instance.destroy();
+    chartOrg_instance = new Chart(document.getElementById('chartOrg'), {
+        type: 'doughnut', data: { labels: sortedOrgs, datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0d9488','#0ea5e9','#3b82f6','#06b6d4','#14b8a6'] }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: {boxWidth: 8, font:{size: 9}} } } }
+    });
+
+    let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]).slice(0, 5);
+    if(chartSpec_instance) chartSpec_instance.destroy();
+    chartSpec_instance = new Chart(document.getElementById('chartSpecimen'), {
+        type: 'bar', data: { labels: sortedSpecs, datasets: [{ data: sortedSpecs.map(s=>specCounts[s]), backgroundColor: '#0ea5e9', borderRadius: 4 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false } } }
+    });
+
+    if(chartGen_instance) chartGen_instance.destroy();
+    chartGen_instance = new Chart(document.getElementById('chartGender'), {
+        type: 'pie', data: { labels: ['Male', 'Female'], datasets: [{ data: [genderCounts['Male'], genderCounts['Female']], backgroundColor: ['#0ea5e9', '#ec4899'] }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
     });
 };
