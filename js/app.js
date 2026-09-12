@@ -2089,10 +2089,16 @@ function buildLiveSection(records, prefix, settings) {
             }
 
             htmlTop3 += `
-            <div class="bg-slate-50 border border-slate-100 p-3 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
-                <div class="font-bold text-slate-800 text-sm flex items-center gap-2 w-full md:w-1/4"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs truncate">${spec}</span></div>
-                <div class="text-xs text-slate-600 w-full md:w-2/5 break-words min-w-0">Top Bug: <span class="font-bold text-rose-600">${topBugSpec}</span></div>
-                <div class="text-xs text-slate-600 w-full md:w-1/3 break-words min-w-0">Most Susceptible: <span class="font-bold text-slate-800">${formattedAbxLabel}</span></div>
+            <div class="bg-slate-50 border border-slate-100 p-3 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:h-28">
+                <div class="font-bold text-slate-800 text-sm flex items-center gap-2 w-full md:w-1/4">
+                    <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs truncate max-w-full" title="${spec}">${spec}</span>
+                </div>
+                <div class="text-xs text-slate-600 w-full md:w-1/3">
+                    Top Bug: <span class="font-bold text-rose-600 block mt-0.5 truncate" title="${topBugSpec}">${topBugSpec}</span>
+                </div>
+                <div class="text-xs text-slate-600 w-full md:flex-1 min-w-0">
+                    Most Susceptible: ${bestAbxLabel}
+                </div>
             </div>`;
         });
         htmlTop3 += `</div>`;
