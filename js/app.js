@@ -2074,10 +2074,9 @@ function buildLiveSection(records, prefix, settings) {
                 });
             }
             
-            let bestAbxLabel = bestAbx !== "-" ? `${bestAbx} <span class="text-emerald-600 font-bold ml-1 text-xs">(${Math.round(bestP*100)}% S)</span>` : "N/A";
-            
-            // [الحل العام]: استخدام Regex للبحث عن أي علامة / في أي مضاد وإضافة فاصل للسطر بعدها
-            let formattedAbxLabel = bestAbxLabel.replace(/\//g, '/<wbr>');
+            // نطبق الكسر على اسم المضاد فقط لتجنب تخريب أكواد الـ HTML
+let safeAbxName = bestAbx.replace(/\//g, '/<wbr>');
+let formattedAbxLabel = bestAbx !== "-" ? `${safeAbxName} <span class="text-emerald-600 font-bold ml-1 text-xs">(${Math.round(bestP*100)}% S)</span>` : "N/A";
 
             htmlTop3 += `
             <div class="bg-slate-50 border border-slate-100 p-3 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
