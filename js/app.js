@@ -2074,9 +2074,19 @@ function buildLiveSection(records, prefix, settings) {
                 });
             }
             
-            // نطبق الكسر على اسم المضاد فقط لتجنب تخريب أكواد الـ HTML
-let safeAbxName = bestAbx.replace(/\//g, '/<wbr>');
-let formattedAbxLabel = bestAbx !== "-" ? `${safeAbxName} <span class="text-emerald-600 font-bold ml-1 text-xs">(${Math.round(bestP*100)}% S)</span>` : "N/A";
+// نطبق الكسر على اسم المضاد فقط لتجنب تخريب أكواد الـ HTML
+            let safeAbxName = bestAbx.replace(/\//g, '/<wbr>');
+            
+            let formattedAbxLabel = "N/A";
+            if (bestAbx !== "-") {
+                let n = abxT[bestAbx]; // العدد الكلي للفحوصات على هذا المضاد
+                let sCount = abxS[bestAbx] || 0; // عدد العينات الحساسة
+                let ci = wilsonScoreCI(sCount, n); // حساب فترة الثقة 95%
+                
+                formattedAbxLabel = `${safeAbxName} 
+                    <span class="text-emerald-600 font-bold ml-1 text-xs">(${Math.round(bestP*100)}% S)</span>
+                    <span class="text-slate-500 font-medium text-[10.5px] ml-1 whitespace-nowrap bg-slate-100 px-1.5 py-0.5 rounded">95% C.I. (${ci.lower}% - ${ci.upper}%)</span>`;
+            }
 
             htmlTop3 += `
             <div class="bg-slate-50 border border-slate-100 p-3 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
