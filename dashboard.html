@@ -29,13 +29,11 @@
         .nav-btn svg { width: 24px; height: 24px; margin-bottom: 4px; }
         .select2-container .select2-selection--single, .select2-container .select2-selection--multiple { min-height: 42px; border-radius: 8px; border-color: #cbd5e1; }
         
-        /* Heatmap Styles - Updated Width */
         .heatmap-table { border-collapse: separate; border-spacing: 0; min-width: max-content; width: 100%; }
         .heatmap-table th, .heatmap-table td { padding: 8px 12px; text-align: center; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; font-size: 0.75rem; }
         .heatmap-table thead th { background-color: #f1f5f9; position: sticky; top: 0; z-index: 10; border-top: 1px solid #e2e8f0; }
         .heatmap-table tbody th { position: sticky; left: 0; z-index: 20; background-color: #ffffff; text-align: left; border-left: 1px solid #e2e8f0; }
         .heatmap-table thead th:first-child { position: sticky; left: 0; top: 0; z-index: 30; background-color: #f1f5f9; border-left: 1px solid #e2e8f0; }
-        /* Expanded fixed width for organism column */
         .heatmap-table th:first-child, .heatmap-table td:first-child { width: 160px; min-width: 160px; max-width: 160px; white-space: normal; word-wrap: break-word; line-height: 1.3; }
         
         .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -56,24 +54,22 @@
 
     <div class="px-3 mt-4 max-w-lg mx-auto">
         
-        <!-- VIEW: LIVE SURVEILLANCE -->
         <div id="viewLive" class="space-y-4">
             <div class="mobile-card border-t-4 border-t-blue-500">
                 <h3 class="text-sm font-bold text-blue-800 mb-3 bg-blue-50 p-2 rounded text-center" id="live_month_title">Latest Month</h3>
                 
-                <!-- Updated Height for Cards -->
                 <div class="grid grid-cols-3 gap-2 text-center mb-4">
-                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[90px] flex flex-col justify-center">
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
                         <div class="text-[10px] text-slate-500 font-bold mb-1">Isolates</div>
                         <div class="text-lg font-black text-slate-800" id="live_m_total">-</div>
                     </div>
-                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[90px] flex flex-col justify-center">
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
                         <div class="text-[10px] text-slate-500 font-bold mb-1">Top Bug</div>
-                        <div class="text-[11px] font-bold text-rose-600 leading-tight" id="live_m_bug">-</div>
+                        <div class="text-xs font-bold text-rose-600 leading-snug break-words" id="live_m_bug">-</div>
                     </div>
-                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[90px] flex flex-col justify-center">
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
                         <div class="text-[10px] text-slate-500 font-bold mb-1">Top Spec</div>
-                        <div class="text-[11px] font-bold text-teal-600 leading-tight" id="live_m_spec">-</div>
+                        <div class="text-xs font-bold text-teal-600 leading-snug break-words" id="live_m_spec">-</div>
                     </div>
                 </div>
                 
@@ -102,19 +98,18 @@
             <div class="mobile-card border-t-4 border-t-emerald-500">
                 <h3 class="text-sm font-bold text-emerald-800 mb-3 bg-emerald-50 p-2 rounded text-center" id="live_q_title">Last Quarter</h3>
                 
-                <!-- Updated Height for Cards -->
                 <div class="grid grid-cols-3 gap-2 text-center mb-4">
-                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[90px] flex flex-col justify-center">
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
                         <div class="text-[10px] text-slate-500 font-bold mb-1">Isolates</div>
                         <div class="text-lg font-black text-slate-800" id="live_q_total">-</div>
                     </div>
-                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[90px] flex flex-col justify-center">
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
                         <div class="text-[10px] text-slate-500 font-bold mb-1">Top Bug</div>
-                        <div class="text-[11px] font-bold text-rose-600 leading-tight" id="live_q_bug">-</div>
+                        <div class="text-xs font-bold text-rose-600 leading-snug break-words" id="live_q_bug">-</div>
                     </div>
-                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[90px] flex flex-col justify-center">
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
                         <div class="text-[10px] text-slate-500 font-bold mb-1">Top Spec</div>
-                        <div class="text-[11px] font-bold text-teal-600 leading-tight" id="live_q_spec">-</div>
+                        <div class="text-xs font-bold text-teal-600 leading-snug break-words" id="live_q_spec">-</div>
                     </div>
                 </div>
                 
@@ -141,7 +136,6 @@
             </div>
         </div>
 
-        <!-- VIEW: ANALYTICS -->
         <div id="viewAnalytics" class="hidden space-y-4">
             <div class="mobile-card bg-slate-50 border-indigo-200">
                 <h3 class="text-sm font-bold text-slate-800 mb-3 border-b pb-2 flex items-center gap-2"><span class="text-indigo-600">📊</span> Analytics Filters</h3>
@@ -194,17 +188,17 @@
                     <div class="w-full overflow-x-auto custom-scroll rounded-lg border border-slate-200" id="heatmapWrapper"></div>
                 </div>
 
-                <!-- AMR Profile Chart (Hidden CI Table, Scrollable Chart) -->
+                <!-- AMR Profile Chart (Hidden Default, Shows on selection) -->
                 <div class="mobile-card hidden" id="print_sect_amr">
                     <h3 class="text-sm font-bold text-slate-800 mb-1">AMR Profile Comparison</h3>
-                    <p class="text-[9px] text-slate-500 mb-2">Only showing selected & tested organisms/antibiotics.</p>
+                    <p class="text-[9px] text-slate-500 mb-2">Only showing selected organisms & antibiotics with data.</p>
                     
                     <div class="w-full overflow-x-auto custom-scroll mt-3">
                         <div class="h-[280px] relative" id="amrChartContainer">
                             <canvas id="chartAMR"></canvas>
                         </div>
                     </div>
-                    <div class="mt-2 text-[9px] text-slate-400 text-center">* Gray bars = n &lt; 30 (Low Confidence)</div>
+                    <div class="mt-2 text-[9px] text-slate-400 text-center">* Faded bars = n < 30 (Low Confidence)</div>
                 </div>
 
                 <div class="mobile-card">
