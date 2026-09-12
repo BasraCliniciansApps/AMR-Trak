@@ -1,4 +1,4 @@
-// Firebase Initialization (Read-Only Cloud Connection)
+// Firebase Initialization
 const firebaseConfig = {
     apiKey: "AIzaSyCyWcTzvYXwsYQEgs_iNh_Co68H9_2kYU4",
     authDomain: "antibiogramtrak.firebaseapp.com",
@@ -39,7 +39,8 @@ const errorBarsPlugin = {
             if (!meta.hidden && dataset.ciData) {
                 meta.data.forEach((element, index) => {
                     const ci = dataset.ciData[index];
-                    if (!ci || (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0)) return;
+                    // Skip if null or zeroed out
+                    if (!ci || (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0) || dataset.data[index] === null) return;
                     const yLower = chart.scales.y.getPixelForValue(ci.lower);
                     const yUpper = chart.scales.y.getPixelForValue(ci.upper);
                     let x = element.x;
@@ -342,8 +343,8 @@ function loadAnalyticsFilters() {
 window.generateAnalytics = function() {
     const startDate = $('#ana_start').val(), endDate = $('#ana_end').val();
     const targetSample = $('#ana_sample').val();
-    let targetOrgs = $('#ana_organism').val() || [];
-    let targetAbxs = $('#ana_antibiotic').val() || [];
+    let inputOrgs = $('#ana_organism').val() || [];
+    let inputAbxs = $('#ana_antibiotic').val() || [];
     const metric = $('#ana_metric').val() || 'R'; 
 
     if (!startDate || !endDate) { Swal.fire('Required', 'Please select both dates.', 'warning'); return; }
@@ -368,8 +369,9 @@ window.generateAnalytics = function() {
         }
     });
 
-    if (targetOrgs.length === 0) targetOrgs = Array.from(allPresentOrgs).sort();
-    if (targetAbxs.length === 0) targetAbxs = Array.from(allPresentAbxs).sort();
+    // للـ Heatmap نعرض كل شيء إذا تركها فارغة
+    let targetOrgs = inputOrgs.length > 0 ? inputOrgs : Array.from(allPresentOrgs).sort();
+    let targetAbxs = inputAbxs.length > 0 ? inputAbxs : Array.from(allPresentAbxs).sort();
 
     if (targetOrgs.length === 0 || targetAbxs.length === 0) {
         $('#analyticsContainer').addClass('hidden');
@@ -427,45 +429,122 @@ window.generateAnalytics = function() {
         }
     });
 
-    let datasets = [];
+    // ----------------------------------------------------
+    // AMR Profile Chart Logic (Only if filters selected)
+    // ----------------------------------------------------
+    if (inputOrgs.length === 0 && inputAbxs.length === 0) {
+        $('#print_sect_amr').addClass('hidden');
+    } else {
+        $('#print_sect_amr').removeClass('hidden');
 
-    targetOrgs.forEach((org, orgIndex) => {
-        let s_org = amrStats[org];
-        if (!s_org) return;
+        let displayOrgs = inputOrgs.length > 0 ? inputOrgs : targetOrgs;
+        let displayAbxs = inputAbxs.length > 0 ? inputAbxs : targetAbxs;
 
-        let dataR = [], bgColors = [], ciData = [];
-        let palette = orgColorPalette[orgIndex % orgColorPalette.length];
+        if (inputOrgs.length > 0 && inputAbxs.length === 0) {
+            displayOrgs = inputOrgs;
+            let foundAbxs = new Set();
+            displayOrgs.forEach(org => {
+                if (amrStats[org]) {
+                    Object.keys(amrStats[org].abx).forEach(abx => {
+                        if (amrStats[org].abx[abx].tested > 0) foundAbxs.add(abx);
+                    });
+                }
+            });
+            displayAbxs = Array.from(foundAbxs).sort();
+        } else if (inputOrgs.length === 0 && inputAbxs.length > 0) {
+            displayAbxs = inputAbxs;
+            let foundOrgs = new Set();
+            Array.from(allPresentOrgs).forEach(org => {
+                displayAbxs.forEach(abx => {
+                    if (amrStats[org] && amrStats[org].abx[abx] && amrStats[org].abx[abx].tested > 0) foundOrgs.add(org);
+                });
+            });
+            displayOrgs = Array.from(foundOrgs).sort();
+        }
 
-        targetAbxs.forEach(abx => {
-            let s = s_org.abx[abx];
-            if (!s || s.tested === 0) {
-                dataR.push(0); bgColors.push(palette.lowBg); ciData.push({lower: 0, upper: 0});
-            } else {
-                let targetVal = metric === 'R' ? s.r : s.s;
-                let p = Math.round((targetVal / s.tested) * 100);
-                let isReliable = s.tested >= 30;
-                
-                dataR.push(p);
-                bgColors.push(isReliable ? palette.bg : palette.lowBg);
-                ciData.push(wilsonScoreCI(targetVal, s.tested));
+        // إزالة المضادات التي لا تحتوي على أي فحص (لتنظيف الـ X-Axis)
+        let finalAbxs = [];
+        displayAbxs.forEach(abx => {
+            let hasData = displayOrgs.some(org => amrStats[org] && amrStats[org].abx[abx] && amrStats[org].abx[abx].tested > 0);
+            if(hasData) finalAbxs.push(abx);
+        });
+        displayAbxs = finalAbxs;
+
+        let datasets = [];
+        displayOrgs.forEach((org, orgIndex) => {
+            let s_org = amrStats[org];
+            if (!s_org) return;
+
+            let dataR = [], bgColors = [], ciData = [];
+            let palette = orgColorPalette[orgIndex % orgColorPalette.length];
+            let hasDataForThisOrg = false;
+
+            displayAbxs.forEach(abx => {
+                let s = s_org.abx[abx];
+                if (!s || s.tested === 0) {
+                    dataR.push(null); // استخدام null بدلاً من صفر لتركه فارغاً
+                    bgColors.push(palette.lowBg); 
+                    ciData.push({lower: 0, upper: 0});
+                } else {
+                    hasDataForThisOrg = true;
+                    let targetVal = metric === 'R' ? s.r : s.s;
+                    let p = Math.round((targetVal / s.tested) * 100);
+                    let isReliable = s.tested >= 30;
+                    
+                    dataR.push(p);
+                    bgColors.push(isReliable ? palette.bg : palette.lowBg);
+                    ciData.push(wilsonScoreCI(targetVal, s.tested));
+                }
+            });
+
+            if(hasDataForThisOrg) {
+                datasets.push({ 
+                    label: org, 
+                    data: dataR, 
+                    backgroundColor: bgColors, 
+                    borderRadius: 4, 
+                    ciData: ciData,
+                    maxBarThickness: 12 // تصغير عرض البار ليناسب الهاتف
+                });
             }
         });
-        datasets.push({ label: org, data: dataR, backgroundColor: bgColors, borderRadius: 4, ciData: ciData });
-    });
 
-    if (chartAMR_instance) chartAMR_instance.destroy();
-    
-    // إعطاء عرض ديناميكي للمخطط البياني ليسمح بالتمرير الأفقي
-    let chartWidth = targetAbxs.length > 4 ? (targetAbxs.length * 60) + 'px' : '100%';
-    $('#amrChartContainer').css('width', chartWidth);
+        if (chartAMR_instance) chartAMR_instance.destroy();
+        
+        // إعطاء عرض ديناميكي للمخطط البياني ليسمح بالتمرير الأفقي
+        let chartWidth = displayAbxs.length > 3 ? (displayAbxs.length * datasets.length * 20) + 80 + 'px' : '100%';
+        $('#amrChartContainer').css('width', chartWidth);
 
-    chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
-        type: 'bar',
-        data: { labels: targetAbxs, datasets: datasets },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { max: 100 } }, plugins: { legend: { position: 'top', labels: {boxWidth:10, font:{size:10}} } } },
-        plugins: [errorBarsPlugin]
-    });
+        chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
+            type: 'bar',
+            data: { labels: displayAbxs, datasets: datasets },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                skipNull: true,
+                scales: { 
+                    y: { max: 100 },
+                    x: { ticks: { maxRotation: 45, minRotation: 45, font: {size: 9} } }
+                }, 
+                plugins: { 
+                    legend: { position: 'top', labels: {boxWidth:8, font:{size:9}} },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                if (context.raw === null) return null;
+                                return context.dataset.label + ': ' + context.raw + '%';
+                            }
+                        }
+                    }
+                } 
+            },
+            plugins: [errorBarsPlugin]
+        });
+    }
 
+    // ----------------------------------------------------
+    // Heatmap Logic
+    // ----------------------------------------------------
     let hmOrgs = Object.keys(heatmapStats).filter(o => targetOrgs.includes(o)).sort();
     let hmAbxs = targetAbxs.sort();
 
@@ -477,7 +556,7 @@ window.generateAnalytics = function() {
         let rowHasData = hmAbxs.some(a => heatmapStats[o][a] && heatmapStats[o][a].t > 0);
         if(!rowHasData) return;
 
-        hmHtml += `<tr><th class="text-[10px] text-left leading-tight min-w-[120px] max-w-[140px] whitespace-normal break-words">${o} <br><span class="text-[9px] font-normal text-slate-400">(${orgCounts[o]||0})</span></th>`;
+        hmHtml += `<tr><th class="text-[10px] text-left leading-tight">${o} <br><span class="text-[9px] font-normal text-slate-400">(${orgCounts[o]||0})</span></th>`;
         hmAbxs.forEach(a => {
             let cell = heatmapStats[o][a];
             if (!cell || cell.t === 0) { hmHtml += '<td class="bg-slate-50 text-slate-300">-</td>'; } 
@@ -503,6 +582,9 @@ window.generateAnalytics = function() {
     hmHtml += '</tbody></table>';
     $('#heatmapWrapper').html(hmHtml);
 
+    // ----------------------------------------------------
+    // Distributions Logic
+    // ----------------------------------------------------
     let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 5);
     if(chartOrg_instance) chartOrg_instance.destroy();
     chartOrg_instance = new Chart(document.getElementById('chartOrg'), {
