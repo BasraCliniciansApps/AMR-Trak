@@ -31,7 +31,7 @@ const errorBarsPlugin = {
                     if (x === undefined) return;
                     ctx.save();
                     ctx.beginPath();
-                    ctx.lineWidth = 1; ctx.strokeStyle = '#334155';
+                    ctx.lineWidth = 1.5; ctx.strokeStyle = '#334155';
                     ctx.moveTo(x, yLower); ctx.lineTo(x, yUpper);
                     ctx.moveTo(x - 3, yUpper); ctx.lineTo(x + 3, yUpper);
                     ctx.moveTo(x - 3, yLower); ctx.lineTo(x + 3, yLower);
@@ -60,17 +60,25 @@ $(document).ready(function() {
     $('#ana_end').val(`${currentYear}-12-31`);
 });
 
+// الاتصال المباشر بقاعدة البيانات
 db.collection("amr_sync").doc("hospital_main").onSnapshot((doc) => {
     if (doc.exists) {
         cloudRecords = doc.data().records || [];
-        populateFilters(cloudRecords);
-        generateLiveSurveillance();
+        if(cloudRecords.length > 0) {
+            populateFilters(cloudRecords);
+            generateLiveSurveillance();
+        } else {
+            $('#live_m_total, #live_q_total').text('0');
+            $('#live_m_bug, #live_q_bug, #live_m_spec, #live_q_spec').text('-');
+        }
     }
 }, (error) => {
+    console.error("Firebase Error:", error);
     $('#connection_status').removeClass('text-emerald-600 bg-emerald-50 border-emerald-100').addClass('text-red-600 bg-red-50 border-red-100').html('Disconnected');
 });
 
-function switchTab(tab) {
+// تعريف وظيفة التبديل لتعمل كـ Global Function
+window.switchTab = function(tab) {
     $('#viewLive, #viewAnalytics').addClass('hidden');
     $('#btnNavLive, #btnNavAnalytics').removeClass('active');
     
@@ -83,7 +91,7 @@ function switchTab(tab) {
         $('#btnNavAnalytics').addClass('active');
         $('#headerTitle').text('Surveillance Analytics');
     }
-}
+};
 
 function generateLiveSurveillance() {
     const blacklist = ["xxx", "con", "no growth", "contaminated", "normal flora", "mixed flora"];
@@ -95,6 +103,8 @@ function generateLiveSurveillance() {
     if (cleanRecords.length === 0) return;
 
     let allDates = cleanRecords.map(r => r.Date).filter(Boolean).sort();
+    if(allDates.length === 0) return; // حماية ضد الأخطاء إذا لم يوجد تواريخ
+
     let latestDateStr = allDates[allDates.length - 1]; 
     let targetMonthPrefix = latestDateStr.substring(0, 7);
 
@@ -191,12 +201,16 @@ function populateFilters(records) {
         });
     });
 
+    $('#ana_sample').empty().append(new Option("All Specimens", ""));
+    $('#ana_organism, #ana_antibiotic').empty();
+
     Array.from(specs).sort().forEach(s => $('#ana_sample').append(new Option(s, s)));
     Array.from(orgs).sort().forEach(o => $('#ana_organism').append(new Option(o, o)));
     Array.from(abxs).sort().forEach(a => $('#ana_antibiotic').append(new Option(a, a)));
 }
 
-function runAnalytics() {
+// تعريف الدالة كـ Global لتعمل من زر الـ HTML
+window.runAnalytics = function() {
     const start = $('#ana_start').val(), end = $('#ana_end').val(), spec = $('#ana_sample').val();
     const targetOrgs = $('#ana_organism').val() || [], targetAbxs = $('#ana_antibiotic').val() || [];
 
@@ -204,7 +218,7 @@ function runAnalytics() {
     if(spec) filtered = filtered.filter(r => r.Sample === spec);
 
     if (filtered.length === 0 || targetOrgs.length === 0 || targetAbxs.length === 0) {
-        alert("Please select at least one Organism and one Antibiotic, or no data available."); return;
+        alert("Please select at least one Organism and one Antibiotic."); return;
     }
 
     $('#analyticsResults').removeClass('hidden');
@@ -236,4 +250,4 @@ function runAnalytics() {
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: {boxWidth:10, font:{size:10}} } }, scales: { y: { max: 100 } } },
         plugins: [errorBarsPlugin]
     });
-}
+};
