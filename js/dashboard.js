@@ -18,9 +18,6 @@ let chartSpec_instance = null;
 let chartGen_instance = null;
 let isUpdatingFilters = false;
 
-// Helpers
-function getCustomAntibiotics() { return []; } 
-
 const orgColorPalette = [
     { bg: 'rgba(185, 28, 28, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
     { bg: 'rgba(30, 64, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
@@ -74,7 +71,7 @@ $(document).ready(function() {
     $('#ana_start').val(`${currentYear}-01-01`);
     $('#ana_end').val(`${currentYear}-12-31`);
 
-    $('#ana_start, #ana_end, #ana_sample, #ana_ward').on('change', function() {
+    $('#ana_start, #ana_end, #ana_sample').on('change', function() {
         if(!isUpdatingFilters) loadAnalyticsFilters();
     });
 });
@@ -109,9 +106,6 @@ window.switchTab = function(tab) {
     }
 };
 
-// -------------------------------------------------------------
-// LIVE SURVEILLANCE LOGIC (Matching app_2.js)
-// -------------------------------------------------------------
 function generateLiveSurveillance() {
     const blacklist = ["xxx", "con", "no growth", "contaminated", "normal flora", "mixed flora", "no significant growth"];
     let cleanRecords = cloudRecords.filter(r => {
@@ -170,7 +164,6 @@ function buildMobileLiveSection(records, prefix) {
     ];
 
     let amrStats = criticalPairs.map(p => ({ label: p.label, tested: 0, resistant: 0 }));
-    let allPossibleAbxs = abxList;
 
     records.forEach(r => {
         let org = r['Selective organism'] || "", spec = r['Sample'];
@@ -207,7 +200,6 @@ function buildMobileLiveSection(records, prefix) {
         plugins: [errorBarsPlugin]
     }));
 
-    // Top 3 Specs Breakdown
     let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
     let top3Specs = sortedSpecs.slice(0, 3);
     let htmlTop3 = `<h4 class="text-xs font-bold text-slate-700 mt-2 mb-2 border-b pb-1">Top 3 Specimens Breakdown</h4>`;
@@ -220,7 +212,7 @@ function buildMobileLiveSection(records, prefix) {
 
         let abxS = {}, abxT = {};
         specRecords.forEach(r => {
-            allPossibleAbxs.forEach(a => {
+            abxList.forEach(a => {
                 if(r[a] && r[a] !== '-') {
                     abxT[a] = (abxT[a]||0)+1;
                     if(r[a] === 'S') abxS[a] = (abxS[a]||0)+1;
@@ -247,7 +239,6 @@ function buildMobileLiveSection(records, prefix) {
     });
     if (top3Specs.length > 0) $(`#live_${prefix}_top3_container`).html(htmlTop3).removeClass('hidden');
 
-    // Pie & Bar
     let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 5);
     liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_pie`), {
         type: 'doughnut', data: { labels: sortedOrgs, datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0d9488','#0ea5e9','#8b5cf6','#ec4899','#f59e0b'] }] },
@@ -302,10 +293,6 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
     }));
 }
 
-
-// -------------------------------------------------------------
-// ANALYTICS LOGIC (Matching app_2.js)
-// -------------------------------------------------------------
 function loadAnalyticsFilters() {
     if (isUpdatingFilters) return;
     isUpdatingFilters = true;
@@ -313,40 +300,12 @@ function loadAnalyticsFilters() {
     const startDate = $('#ana_start').val(), endDate = $('#ana_end').val();
     let records = cloudRecords.filter(r => (!startDate || !endDate) ? true : (r.Date >= startDate && r.Date <= endDate));
 
-    // Wards
-    let currentWards = $('#ana_ward').val() || [];
-    $('#ana_ward').empty();
-    let specialOptGroup = $('<optgroup label="Categories"></optgroup>');
-    specialOptGroup.append(new Option("Inpatient (All except Outpatient)", "Inpatient", currentWards.includes("Inpatient"), currentWards.includes("Inpatient")));
-    specialOptGroup.append(new Option("Outpatient", "Outpatient", currentWards.includes("Outpatient"), currentWards.includes("Outpatient")));
-    $('#ana_ward').append(specialOptGroup);
-
-    let wardsOptGroup = $('<optgroup label="Specific Wards"></optgroup>');
-    let uniqueWards = new Set(cloudRecords.map(r => r.Ward).filter(w => w && w !== "-"));
-    Array.from(uniqueWards).sort().forEach(w => {
-        let isSelected = currentWards.includes(w);
-        wardsOptGroup.append(new Option(w, w, isSelected, isSelected));
-    });
-    $('#ana_ward').append(wardsOptGroup);
-
-    // Apply Wards Filter to refine Samples/Orgs/Abxs
-    if (currentWards.length > 0) {
-        let inpatientWards = Array.from(uniqueWards).filter(w => w.toLowerCase() !== 'outpatient');
-        records = records.filter(r => {
-            let rWard = r.Ward || '';
-            if (currentWards.includes(rWard)) return true;
-            if (currentWards.includes('Inpatient') && inpatientWards.includes(rWard)) return true;
-            if (currentWards.includes('Outpatient') && rWard.toLowerCase() === 'outpatient') return true;
-            return false;
-        });
-    }
-
-    // Apply Sample Filter
     const targetSample = $('#ana_sample').val();
     let uniqueSamples = new Set(records.map(r => r.Sample).filter(Boolean));
     $('#ana_sample').empty().append(new Option("All Samples", ""));
     Array.from(uniqueSamples).sort().forEach(s => $('#ana_sample').append(new Option(s, s)));
     if (targetSample && uniqueSamples.has(targetSample)) $('#ana_sample').val(targetSample);
+    
     if (targetSample) records = records.filter(r => r.Sample === targetSample);
 
     let orgs = new Set(), abxs = new Set();
@@ -363,40 +322,44 @@ function loadAnalyticsFilters() {
     $('#ana_antibiotic').empty();
     Array.from(abxs).sort().forEach(a => $('#ana_antibiotic').append(new Option(a, a, currentAbxs.includes(a), currentAbxs.includes(a))));
 
-    $('#ana_sample, #ana_ward, #ana_organism, #ana_antibiotic').trigger('change.select2');
+    $('#ana_sample, #ana_organism, #ana_antibiotic').trigger('change.select2');
     isUpdatingFilters = false;
 }
 
 window.generateAnalytics = function() {
     const startDate = $('#ana_start').val(), endDate = $('#ana_end').val();
     const targetSample = $('#ana_sample').val();
-    const targetWards = $('#ana_ward').val() || [];
-    const targetOrgs = $('#ana_organism').val() || [];
-    const targetAbxs = $('#ana_antibiotic').val() || [];
+    let targetOrgs = $('#ana_organism').val() || [];
+    let targetAbxs = $('#ana_antibiotic').val() || [];
     const metric = $('#ana_metric').val() || 'R'; 
-    const metricLabel = metric === 'R' ? 'Resistance' : 'Susceptibility';
 
     if (!startDate || !endDate) { Swal.fire('Required', 'Please select both dates.', 'warning'); return; }
 
     let records = cloudRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
     if (targetSample) records = records.filter(r => r.Sample === targetSample);
 
-    if (targetWards.length > 0) {
-        let uniqueWards = new Set(cloudRecords.map(r => r.Ward).filter(w => w && w !== "-"));
-        let inpatientWards = Array.from(uniqueWards).filter(w => w.toLowerCase() !== 'outpatient');
-        records = records.filter(r => {
-            let rWard = r.Ward || '';
-            if (targetWards.includes(rWard)) return true;
-            if (targetWards.includes('Inpatient') && inpatientWards.includes(rWard)) return true;
-            if (targetWards.includes('Outpatient') && rWard.toLowerCase() === 'outpatient') return true;
-            return false;
-        });
-    }
-
-    if (records.length === 0 || targetOrgs.length === 0 || targetAbxs.length === 0) {
+    if (records.length === 0) {
         $('#analyticsContainer').addClass('hidden');
         $('#analyticsPlaceholder').removeClass('hidden');
-        Swal.fire('No Data', 'No records match selected criteria.', 'info');
+        Swal.fire('No Data', 'No records match the selected dates/sample.', 'info');
+        return;
+    }
+
+    // السماح بعرض كل شيء إذا تركها المستخدم فارغة (نفس نظام الحاسوب)
+    let allPresentOrgs = new Set();
+    let allPresentAbxs = new Set();
+    records.forEach(r => {
+        if(r['Selective organism']) allPresentOrgs.add(r['Selective organism']);
+        abxList.forEach(a => { if (r[a] && r[a] !== '-' && r[a] !== '') allPresentAbxs.add(a); });
+    });
+
+    if (targetOrgs.length === 0) targetOrgs = Array.from(allPresentOrgs).sort();
+    if (targetAbxs.length === 0) targetAbxs = Array.from(allPresentAbxs).sort();
+
+    if (targetOrgs.length === 0 || targetAbxs.length === 0) {
+        $('#analyticsContainer').addClass('hidden');
+        $('#analyticsPlaceholder').removeClass('hidden');
+        Swal.fire('No Data', 'No specific tests match the criteria.', 'info');
         return;
     }
 
@@ -416,12 +379,9 @@ window.generateAnalytics = function() {
         targetAbxs.forEach(a => { amrStats[org].abx[a] = { tested: 0, r: 0, s: 0 }; });
     });
 
-    let allPresentOrgs = new Set();
-
     records.forEach(r => {
         let org = r['Selective organism'];
         if(!org) return;
-        allPresentOrgs.add(org);
         orgCounts[org] = (orgCounts[org] || 0) + 1;
         if(r.Sample) specCounts[r.Sample] = (specCounts[r.Sample] || 0) + 1;
         if(r.Sex && genderCounts[r.Sex] !== undefined) genderCounts[r.Sex] += 1;
@@ -449,12 +409,13 @@ window.generateAnalytics = function() {
         }
     });
 
-    // AMR Chart & CI Table
     let datasets = [];
     let tableHtml = '';
 
     targetOrgs.forEach((org, orgIndex) => {
         let s_org = amrStats[org];
+        if (!s_org) return;
+
         let dataR = [], bgColors = [], ciData = [];
         let palette = orgColorPalette[orgIndex % orgColorPalette.length];
 
@@ -499,7 +460,6 @@ window.generateAnalytics = function() {
         plugins: [errorBarsPlugin]
     });
 
-    // Heatmap
     let hmOrgs = Object.keys(heatmapStats).filter(o => targetOrgs.includes(o)).sort();
     let hmAbxs = targetAbxs.sort();
 
@@ -537,7 +497,6 @@ window.generateAnalytics = function() {
     hmHtml += '</tbody></table>';
     $('#heatmapWrapper').html(hmHtml);
 
-    // Distribution Charts
     let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 5);
     if(chartOrg_instance) chartOrg_instance.destroy();
     chartOrg_instance = new Chart(document.getElementById('chartOrg'), {
