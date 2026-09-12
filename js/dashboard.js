@@ -1,4 +1,4 @@
-// Firebase Initialization
+// Firebase Initialization (Read-Only Cloud Connection)
 const firebaseConfig = {
     apiKey: "AIzaSyCyWcTzvYXwsYQEgs_iNh_Co68H9_2kYU4",
     authDomain: "antibiogramtrak.firebaseapp.com",
@@ -49,8 +49,9 @@ const errorBarsPlugin = {
                     ctx.beginPath();
                     ctx.lineWidth = 1.5; ctx.strokeStyle = '#334155';
                     ctx.moveTo(x, yLower); ctx.lineTo(x, yUpper);
-                    ctx.moveTo(x - 3, yUpper); ctx.lineTo(x + 3, yUpper);
-                    ctx.moveTo(x - 3, yLower); ctx.lineTo(x + 3, yLower);
+                    // تكبير سقف وقاعدة خط الثقة ليتناسب مع البار العريض
+                    ctx.moveTo(x - 5, yUpper); ctx.lineTo(x + 5, yUpper);
+                    ctx.moveTo(x - 5, yLower); ctx.lineTo(x + 5, yLower);
                     ctx.stroke(); ctx.restore();
                 });
             }
@@ -504,16 +505,16 @@ window.generateAnalytics = function() {
                     backgroundColor: bgColors, 
                     borderRadius: 4, 
                     ciData: ciData,
-                    maxBarThickness: 10 // تصغير عرض البار ليناسب الهاتف
+                    maxBarThickness: 45 // تم تكبير البار هنا ليصبح واضحاً ومقروءاً
                 });
             }
         });
 
         if (chartAMR_instance) chartAMR_instance.destroy();
         
-        // إعطاء عرض ديناميكي للمخطط البياني ليسمح بالتمرير الأفقي
-        let chartWidth = displayAbxs.length > 3 ? (displayAbxs.length * datasets.length * 15) + 60 + 'px' : '100%';
-        $('#amrChartContainer').css('width', chartWidth);
+        // إعطاء عرض ديناميكي للمخطط البياني ليسمح بالتمرير الأفقي براحة تامة
+        let minWidthNeeded = (displayAbxs.length * datasets.length * 50) + 80;
+        $('#amrChartContainer').css('width', `max(100%, ${minWidthNeeded}px)`);
 
         chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
             type: 'bar',
