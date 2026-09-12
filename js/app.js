@@ -1,4 +1,4 @@
-// --- Firebase Initialization ---
+// --- Firebase Hybrid Sync Initialization ---
 const firebaseConfig = {
     apiKey: "AIzaSyCyWcTzvYXwsYQEgs_iNh_Co68H9_2kYU4",
     authDomain: "antibiogramtrak.firebaseapp.com",
@@ -8,9 +8,59 @@ const firebaseConfig = {
     appId: "1:679667156703:web:ca37e1544e3d20e922cb6a"
 };
 
-// تهيئة الاتصال بقاعدة البيانات
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+// تهيئة الاتصال فقط في حال وجود مكتبة Firebase
+let db = null;
+try {
+    if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        
+        // تفعيل المزامنة التلقائية عند الاتصال بالإنترنت
+        window.addEventListener('online', syncLocalToCloud);
+        // سحب البيانات من السحابة عند بدء التشغيل
+        syncCloudToLocal();
+    }
+} catch(e) {
+    console.warn("Firebase not loaded, running strictly offline.");
+}
+
+// دالة لدفع البيانات المحلية إلى السحابة
+async function syncLocalToCloud() {
+    if (!db) return;
+    try {
+        let localRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+        // هنا يمكنك رفع البيانات بطريقتك (مثلا رفع السجل كاملا كوثيقة واحدة باسم المستشفى/اليوزر)
+        // هذا مجرد مثال لرفع الملف كاملا كنسخة احتياطية
+        await db.collection("amr_sync").doc("hospital_main").set({
+            records: localRecords,
+            last_updated: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log("Data synced to cloud successfully.");
+    } catch(e) {
+        console.error("Error syncing to cloud:", e);
+    }
+}
+
+// دالة لسحب البيانات من السحابة ودمجها مع المحلي
+async function syncCloudToLocal() {
+    if (!db) return;
+    try {
+        const doc = await db.collection("amr_sync").doc("hospital_main").get();
+        if (doc.exists) {
+            const cloudRecords = doc.data().records || [];
+            // في الحالات المتقدمة يجب عمل دمج (Merge) ذكي، ولكن للتبسيط هنا نأخذ السحابي إذا كان موجوداً
+            // يمكن الاستغناء عن هذه الخطوة إذا كنت تريد السحابة للـ Backup فقط
+            
+            // localStorage.setItem('amr_records', JSON.stringify(cloudRecords));
+            // initDataTable();
+            console.log("Cloud data check complete.");
+        }
+    } catch(e) {
+        console.error("Error fetching from cloud:", e);
+    }
+}
+
+// ---------------------------------------------------------
 let dataTable;
 let chartAMR_instance = null;
 let chartOrg_instance = null;
@@ -404,9 +454,14 @@ async function processDataExtraction(event) {
             addedCount++;
         }
 
-        localStorage.setItem('amr_records', JSON.stringify(records));
-        
-        initDataTable();
+       localStorage.setItem('amr_records', JSON.stringify(records));
+    closeModal();
+    initDataTable();
+    
+    // تشغيل المزامنة مع السحابة إذا كان الإنترنت متوفراً
+    if (navigator.onLine) {
+        syncLocalToCloud();
+    }
         if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
         
         Swal.fire('Success!', `Extraction complete: ${addedCount} isolates added.\nIgnored ${skippedCount} samples (No growth or invalid date).`, 'success');
@@ -1136,12 +1191,30 @@ function editRecord(index) {
 }
 
 function deleteRecord(index) {
-    Swal.fire({ title: 'Are you sure?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#e11d48', confirmButtonText: 'Yes, delete it!' })
+    Swal.fire({ 
+        title: 'Are you sure?', 
+        icon: 'warning', 
+        showCancelButton: true, 
+        confirmButtonColor: '#e11d48', 
+        confirmButtonText: 'Yes, delete it!' 
+    })
     .then((result) => {
         if (result.isConfirmed) {
             let records = JSON.parse(localStorage.getItem('amr_records')) || [];
-            records.splice(index, 1); localStorage.setItem('amr_records', JSON.stringify(records));
-            initDataTable(); Swal.fire('Deleted!', '', 'success');
+            
+            // 1. حذف القيد من السجلات المحلية
+            records.splice(index, 1); 
+            localStorage.setItem('amr_records', JSON.stringify(records));
+            
+            // 2. تحديث الجدول أمام المستخدم
+            initDataTable(); 
+            
+            // 3. الإضافة الجديدة: رفع التحديث (بعد الحذف) إلى السحابة إذا كان الإنترنت متوفراً
+            if (typeof syncLocalToCloud === "function" && navigator.onLine) {
+                syncLocalToCloud();
+            }
+
+            Swal.fire('Deleted!', '', 'success');
         }
     });
 }
