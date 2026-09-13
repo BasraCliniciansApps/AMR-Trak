@@ -29,6 +29,20 @@ const orgColorPalette = [
     { bg: 'rgba(194, 65, 12, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' }
 ];
 
+// دالة الاختصار العلمي لأسماء البكتيريا (مثال: S. aureus)
+function formatOrgName(org) {
+    if (!org || typeof org !== 'string' || org.startsWith('No ')) return org || "-";
+    // تنظيف الزيادات المكررة
+    let name = org.replace(/\(E\.coli\)/gi, "").trim();
+    
+    let parts = name.split(' ');
+    // إذا كان الاسم يتكون من كلمتين فأكثر والكلمة الأولى أطول من 3 أحرف (لتجنب اختصار الكلمات القصيرة جداً)
+    if (parts.length >= 2 && parts[0].length > 3) {
+        return parts[0].charAt(0).toUpperCase() + '. ' + parts.slice(1).join(' ');
+    }
+    return name;
+}
+
 const errorBarsPlugin = {
     id: 'errorBars',
     afterDatasetsDraw(chart) {
@@ -184,7 +198,7 @@ function buildMobileLiveSection(records, prefix, settings) {
         });
     });
 
-    $(`#live_${prefix}_bug`).text(Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a])[0] || "-");
+    $(`#live_${prefix}_bug`).text(formatOrgName(Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a])[0]) || "-");
     $(`#live_${prefix}_spec`).text(Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a])[0] || "-");
 
     let labels = [], data = [], bgColors = [], ciData = [];
@@ -220,7 +234,7 @@ function buildMobileLiveSection(records, prefix, settings) {
     let sortedUrine = Object.keys(urineCounts).sort((a,b)=>urineCounts[b]-urineCounts[a]).slice(0, 5);
     
     let bloodData = sortedBlood.length ? sortedBlood.map(o=>bloodCounts[o]) : [1];
-    let bloodLabels = sortedBlood.length ? sortedBlood.map(o => o.length > 15 ? o.substring(0, 15) + '...' : o) : ['No Blood Samples'];
+    let bloodLabels = sortedBlood.length ? sortedBlood.map(o => formatOrgName(o)) : ['No Blood Samples'];
     let bloodColors = sortedBlood.length ? ['#ef4444','#dc2626','#f87171','#fca5a5','#fef2f2'] : ['#e2e8f0'];
 
     liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_blood`), {
@@ -236,7 +250,7 @@ function buildMobileLiveSection(records, prefix, settings) {
     }));
     
     let urineData = sortedUrine.length ? sortedUrine.map(o=>urineCounts[o]) : [1];
-    let urineLabels = sortedUrine.length ? sortedUrine.map(o => o.length > 15 ? o.substring(0, 15) + '...' : o) : ['No Urine Samples'];
+    let urineLabels = sortedUrine.length ? sortedUrine.map(o => formatOrgName(o)) : ['No Urine Samples'];
     let urineColors = sortedUrine.length ? ['#eab308','#ca8a04','#fde047','#fef08a','#fefce8'] : ['#e2e8f0'];
 
     liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_urine`), {
@@ -260,7 +274,7 @@ function buildMobileLiveSection(records, prefix, settings) {
         let specRecords = records.filter(r => r.Sample === spec);
         let bCounts = {};
         specRecords.forEach(r => { let o = r['Selective organism']; if(o) bCounts[o] = (bCounts[o]||0)+1; });
-        let topBugSpec = Object.keys(bCounts).sort((a,b)=>bCounts[b]-bCounts[a])[0] || "-";
+        let topBugSpec = formatOrgName(Object.keys(bCounts).sort((a,b)=>bCounts[b]-bCounts[a])[0]) || "-";
 
         let abxS = {}, abxT = {};
         specRecords.forEach(r => {
@@ -294,8 +308,9 @@ function buildMobileLiveSection(records, prefix, settings) {
     if (top3Specs.length > 0) $(`#live_${prefix}_top3_container`).html(htmlTop3).removeClass('hidden');
 
     let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 5);
+    let pieLabels = sortedOrgs.map(o => formatOrgName(o));
     liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_pie`), {
-        type: 'doughnut', data: { labels: sortedOrgs, datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0d9488','#0ea5e9','#8b5cf6','#ec4899','#f59e0b'] }] },
+        type: 'doughnut', data: { labels: pieLabels, datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0d9488','#0ea5e9','#8b5cf6','#ec4899','#f59e0b'] }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: {size: 9} } } } }
     }));
 
@@ -338,7 +353,7 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
     sortedOrgs.forEach(org => {
         let item = orgMap[org];
         let p = Math.round((item.resistant / item.tested) * 100);
-        labels.push(org.length > 15 ? org.slice(0, 12) + '..' : org);
+        labels.push(formatOrgName(org));
         data.push(p);
         bgColors.push(item.tested >= 30 ? primaryColor : 'rgba(148, 163, 184, 0.55)');
         ciData.push(wilsonScoreCI(item.resistant, item.tested));
@@ -547,7 +562,7 @@ window.generateAnalytics = function() {
 
             if(hasDataForThisOrg) {
                 datasets.push({ 
-                    label: org, 
+                    label: formatOrgName(org), 
                     data: dataR, 
                     backgroundColor: bgColors, 
                     borderRadius: 4, 
@@ -600,7 +615,7 @@ window.generateAnalytics = function() {
         let rowHasData = hmAbxs.some(a => heatmapStats[o][a] && heatmapStats[o][a].t > 0);
         if(!rowHasData) return;
 
-        hmHtml += `<tr><th class="text-[10px] text-left leading-tight">${o} <br><span class="text-[9px] font-normal text-slate-400">(${orgCounts[o]||0})</span></th>`;
+        hmHtml += `<tr><th class="text-[10px] text-left leading-tight">${formatOrgName(o)} <br><span class="text-[9px] font-normal text-slate-400">(${orgCounts[o]||0})</span></th>`;
         hmAbxs.forEach(a => {
             let cell = heatmapStats[o][a];
             if (!cell || cell.t === 0) { hmHtml += '<td class="bg-slate-50 text-slate-300">-</td>'; } 
@@ -627,9 +642,10 @@ window.generateAnalytics = function() {
     $('#heatmapWrapper').html(hmHtml);
 
     let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 5);
+    let orgLabels = sortedOrgs.map(o => formatOrgName(o));
     if(chartOrg_instance) chartOrg_instance.destroy();
     chartOrg_instance = new Chart(document.getElementById('chartOrg'), {
-        type: 'doughnut', data: { labels: sortedOrgs, datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0d9488','#0ea5e9','#3b82f6','#06b6d4','#14b8a6'] }] },
+        type: 'doughnut', data: { labels: orgLabels, datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0d9488','#0ea5e9','#3b82f6','#06b6d4','#14b8a6'] }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: {boxWidth: 8, font:{size: 9}} } } }
     });
 
