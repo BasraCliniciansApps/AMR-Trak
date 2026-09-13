@@ -29,10 +29,11 @@ async function syncLocalToCloud() {
     if (!db) return;
     try {
         let localRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-        // هنا يمكنك رفع البيانات بطريقتك (مثلا رفع السجل كاملا كوثيقة واحدة باسم المستشفى/اليوزر)
-        // هذا مجرد مثال لرفع الملف كاملا كنسخة احتياطية
+        let liveSettings = JSON.parse(localStorage.getItem('amr_live_settings')) || { profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
+        
         await db.collection("amr_sync").doc("hospital_main").set({
             records: localRecords,
+            settings: liveSettings,
             last_updated: firebase.firestore.FieldValue.serverTimestamp()
         });
         console.log("Data synced to cloud successfully.");
@@ -1942,6 +1943,11 @@ function saveLiveSettings() {
     };
     localStorage.setItem('amr_live_settings', JSON.stringify(s));
     if(!$('#viewLive').hasClass('hidden')) generateLiveSurveillance();
+    
+    if (typeof syncLocalToCloud === "function" && navigator.onLine) {
+        syncLocalToCloud();
+    }
+    
     Swal.fire({icon:'success', title:'Saved', timer:1000, showConfirmButton:false});
 }
 
