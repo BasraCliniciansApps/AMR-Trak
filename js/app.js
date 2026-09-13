@@ -392,14 +392,20 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
 
     const wardMap = {
         'ped': 'Pediatrics', 'ped in': 'Pediatrics',
-        'icu': 'ICU', 'ccu': 'Resuscitation / CCU', 'eme': 'Resuscitation / CCU',
-        'sur': 'General Surgery', 'sur in': 'General Surgery',
+        'icu': 'ICU', 'ccu': 'CCU', 'eme': 'Emergency',
+        'sur': 'Surgery', 'sur in': 'Surgery',
         'med': 'Internal Medicine', 'med in': 'Internal Medicine',
         'neo': 'Neonatal Unit', 'neo in': 'Neonatal Unit',
-        'neu in': 'Neurology & Neurosurgery',
+        'neu in': 'Neurosurgery',
         'out': 'Outpatient',
-        'obg': 'General Obstetrics & Gynecology', 'obg in': 'General Obstetrics & Gynecology',
-        'ent': 'ENT'
+        'obg': 'Obstetrics & Gynecology', 'obg in': 'Obstetrics & Gynecology',
+        'ent': 'ENT',
+        'epd\\a': 'Epidemiology / Isolation',
+        'epd/a': 'Epidemiology / Isolation',
+        'epd': 'Epidemiology / Isolation',
+        'gyn': 'Obstetrics & Gynecology',
+        'nicu': 'Neonatal ICU',
+        'picu': 'Pediatric ICU'
     };
 
     for(let i = 1; i < rawData.length; i++) {
