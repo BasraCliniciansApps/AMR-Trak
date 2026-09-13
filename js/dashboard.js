@@ -76,33 +76,41 @@ function wilsonScoreCI(r, n) {
     return { lower: Math.max(0, Math.round(((center - spread) / denominator) * 100)), upper: Math.min(100, Math.round(((center + spread) / denominator) * 100)) };
 }
 
-// دالة جلب البيانات من السحابة مباشرة عند فتح الهاتف
-async function fetchCloudData() {
+// دالة جلب البيانات من السحابة وتحديثها في الوقت الفعلي (Real-time)
+function fetchCloudData() {
     if (!db) {
         loadAnalyticsFilters();
         generateLiveSurveillance();
         return;
     }
-    try {
-        Swal.fire({ title: 'Loading Cloud Data...', text: 'Fetching latest records...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-        const doc = await db.collection("amr_sync").doc("hospital_main").get();
+    
+    Swal.fire({ title: 'Connecting to Cloud...', text: 'Establishing live connection...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+    
+    // استخدام onSnapshot بدلاً من get لجعل التحديث فورياً ومستمراً
+    db.collection("amr_sync").doc("hospital_main").onSnapshot((doc) => {
         if (doc.exists) {
             const data = doc.data();
             const cloudRecords = data.records || [];
+            // سحب الإعدادات السحابية أو استخدام الافتراضية
             const cloudSettings = data.settings || { profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
             
+            // حفظ البيانات محلياً في الهاتف
             localStorage.setItem('amr_records', JSON.stringify(cloudRecords));
             localStorage.setItem('amr_live_settings', JSON.stringify(cloudSettings));
+            
+            // إعادة رسم المخططات فوراً بناءً على الإعدادات الجديدة
+            loadAnalyticsFilters();
+            generateLiveSurveillance();
         }
         Swal.close();
-    } catch(e) {
-        console.error("Error fetching from cloud:", e);
-        Swal.fire({ icon: 'warning', title: 'Offline Mode', text: 'Could not connect to cloud. Showing local data if available.', timer: 2000, showConfirmButton: false });
-    }
-    loadAnalyticsFilters();
-    generateLiveSurveillance();
+    }, (error) => {
+        console.error("Firebase Error:", error);
+        Swal.close();
+        Swal.fire({ icon: 'warning', title: 'Offline Mode', text: 'Could not connect to cloud.', timer: 2000, showConfirmButton: false });
+        loadAnalyticsFilters();
+        generateLiveSurveillance();
+    });
 }
-
 $(document).ready(function() {
     $('.select2-mobile').select2({ width: '100%' });
     $('.select2-multiple').select2({ width: '100%', allowClear: true });
