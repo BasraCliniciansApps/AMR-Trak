@@ -29,7 +29,6 @@ const orgColorPalette = [
     { bg: 'rgba(194, 65, 12, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' }
 ];
 
-// دالة الاختصار العلمي لأسماء البكتيريا (مثال: S. aureus)
 function formatOrgName(org) {
     if (!org || typeof org !== 'string' || org.startsWith('No ')) return org || "-";
     let name = org.replace(/\(E\.coli\)/gi, "").trim();
@@ -166,21 +165,16 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
         $(`#live_${prefix}_top3_container, #live_${prefix}_profiles_wrapper`).addClass('hidden');
         
         $(`#live_${prefix}_amr_title`).text(`Critical Resistance Markers (${timeLabel})`);
-        $(`#live_${prefix}_blood_title`).text(`Blood Isolates (${timeLabel})`);
-        $(`#live_${prefix}_urine_title`).text(`Urine Isolates (${timeLabel})`);
-        $(`#chart_${prefix}_pie_title`).text(`Top 5 Pathogens (${timeLabel})`);
-        $(`#chart_${prefix}_bar_title`).text(`Top 5 Specimens (${timeLabel})`);
+        $(`#live_${prefix}_blood_subtitle`).text(timeLabel);
+        $(`#live_${prefix}_urine_subtitle`).text(timeLabel);
         return;
     }
 
     $(`#live_${prefix}_profiles_wrapper`).removeClass('hidden');
 
-    // العناوين الديناميكية الجديدة المخصصة للزمن والعينة
     $(`#live_${prefix}_amr_title`).text(`Critical Resistance Markers (${timeLabel})`);
-    $(`#live_${prefix}_blood_title`).text(`Blood Isolates (${timeLabel})`);
-    $(`#live_${prefix}_urine_title`).text(`Urine Isolates (${timeLabel})`);
-    $(`#chart_${prefix}_pie_title`).text(`Top 5 Pathogens (${timeLabel})`);
-    $(`#chart_${prefix}_bar_title`).text(`Top 5 Specimens (${timeLabel})`);
+    $(`#live_${prefix}_blood_subtitle`).text(timeLabel);
+    $(`#live_${prefix}_urine_subtitle`).text(timeLabel);
 
     let orgCounts = {}, specCounts = {};
     const criticalPairs = [
@@ -228,7 +222,7 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     }));
 
     // ==========================================
-    // Blood & Urine Pie Charts
+    // Blood & Urine Pie Charts (Prevalence)
     // ==========================================
     let bloodRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'blood');
     let urineRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'urine');
@@ -315,23 +309,11 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     });
     if (top3Specs.length > 0) $(`#live_${prefix}_top3_container`).html(htmlTop3).removeClass('hidden');
 
-    let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 5);
-    let pieLabels = sortedOrgs.map(o => formatOrgName(o));
-    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_pie`), {
-        type: 'doughnut', data: { labels: pieLabels, datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0d9488','#0ea5e9','#8b5cf6','#ec4899','#f59e0b'] }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: {size: 9} } } } }
-    }));
-
-    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_bar`), {
-        type: 'bar', data: { labels: sortedSpecs.slice(0,5), datasets: [{ data: sortedSpecs.slice(0,5).map(s=>specCounts[s]), backgroundColor: '#14b8a6', borderRadius: 4 }] },
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false } } }
-    }));
-
     let p1 = settings.profile1_abx || 'Meropenem';
     let p2 = settings.profile2_abx || 'Ceftriaxone';
 
-    $(`#live_${prefix}_profile1_title`).text(`${p1}`);
-    $(`#live_${prefix}_profile2_title`).text(`${p2}`);
+    $(`#live_${prefix}_profile1_title`).text(`${p1} Resistance (% R)`);
+    $(`#live_${prefix}_profile2_title`).text(`${p2} Resistance (% R)`);
 
     buildMobileAbxProfileChart(p1, `chart_${prefix}_mero`, `live_${prefix}_mero_count`, records, prefix === 'm' ? '#2563eb' : '#059669');
     buildMobileAbxProfileChart(p2, `chart_${prefix}_cro`, `live_${prefix}_cro_count`, records, '#0d9488');
@@ -641,7 +623,7 @@ window.generateAnalytics = function() {
                 else { bgClass = 'bg-red-600'; textClass = 'text-white font-bold'; }
 
                 if (isLow) textClass += dangerScore > 60 ? ' text-red-100' : ' opacity-70';
-                hmHtml += `<td class="${bgClass} ${textClass}">${p}% ${isLow ? '<span class="text-red-500 font-bold">*</span>' : ''}</td>`;
+                hmHtml += `<td class="${bgClass} ${textClass}">${p}% ${isLow ? '<span class="text-[10px] text-red-500 font-bold">*</span>' : ''}</td>`;
             }
         });
         hmHtml += '</tr>';
