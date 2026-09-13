@@ -742,16 +742,26 @@ function showInstallGuide() {
 function clearAllDatabase() {
     Swal.fire({
         title: 'Are you absolutely sure?',
-        text: "This will delete ALL isolates, custom dictionaries, and settings permanently. You cannot undo this action!",
+        text: "This will permanently delete ALL patient isolate records. Your custom dictionaries and settings will NOT be affected. You cannot undo this action!",
         icon: 'error',
         showCancelButton: true,
         confirmButtonColor: '#dc2626',
         cancelButtonColor: '#64748b',
-        confirmButtonText: 'Yes, DELETE EVERYTHING'
+        confirmButtonText: 'Yes, DELETE ALL RECORDS'
     }).then((result) => {
         if (result.isConfirmed) {
-            localStorage.clear();
-            location.reload();
+            // Delete ONLY the records key from local storage
+            localStorage.removeItem('amr_records');
+            
+            // Refresh the data table to show it is empty
+            initDataTable();
+            
+            // Sync the empty table to the cloud to overwrite old data
+            if (typeof syncLocalToCloud === "function" && navigator.onLine) {
+                syncLocalToCloud();
+            }
+
+            Swal.fire('Cleared!', 'All patient records have been successfully deleted.', 'success');
         }
     });
 }
