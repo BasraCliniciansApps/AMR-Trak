@@ -87,8 +87,12 @@ async function fetchCloudData() {
         Swal.fire({ title: 'Loading Cloud Data...', text: 'Fetching latest records...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
         const doc = await db.collection("amr_sync").doc("hospital_main").get();
         if (doc.exists) {
-            const cloudRecords = doc.data().records || [];
+            const data = doc.data();
+            const cloudRecords = data.records || [];
+            const cloudSettings = data.settings || { profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
+            
             localStorage.setItem('amr_records', JSON.stringify(cloudRecords));
+            localStorage.setItem('amr_live_settings', JSON.stringify(cloudSettings));
         }
         Swal.close();
     } catch(e) {
