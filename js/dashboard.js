@@ -39,7 +39,6 @@ const errorBarsPlugin = {
             if (!meta.hidden && dataset.ciData) {
                 meta.data.forEach((element, index) => {
                     const ci = dataset.ciData[index];
-                    // Skip if null or zeroed out
                     if (!ci || (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0) || dataset.data[index] === null) return;
                     const yLower = chart.scales.y.getPixelForValue(ci.lower);
                     const yUpper = chart.scales.y.getPixelForValue(ci.upper);
@@ -49,7 +48,6 @@ const errorBarsPlugin = {
                     ctx.beginPath();
                     ctx.lineWidth = 1.5; ctx.strokeStyle = '#334155';
                     ctx.moveTo(x, yLower); ctx.lineTo(x, yUpper);
-                    // تكبير سقف وقاعدة خط الثقة ليتناسب مع البار العريض
                     ctx.moveTo(x - 5, yUpper); ctx.lineTo(x + 5, yUpper);
                     ctx.moveTo(x - 5, yLower); ctx.lineTo(x + 5, yLower);
                     ctx.stroke(); ctx.restore();
@@ -82,21 +80,28 @@ $(document).ready(function() {
 
     loadAnalyticsFilters();
     generateLiveSurveillance();
+    
+    // جعل تبويب Analytics هو الافتراضي عند فتح الصفحة
+    switchTab('analytics');
 });
 
 window.switchTab = function(tab) {
-    $('#viewLive, #viewAnalytics').addClass('hidden');
-    $('#btnNavLive, #btnNavAnalytics').removeClass('active');
+    $('#viewAnalytics, #viewLastMonth, #viewLastQuarter').addClass('hidden');
+    $('#btnNavAnalytics, #btnNavLastMonth, #btnNavLastQuarter').removeClass('active');
     
-    if(tab === 'live') {
-        $('#viewLive').removeClass('hidden');
-        $('#btnNavLive').addClass('active');
-        $('#headerTitle').text('Live Surveillance');
-    } else {
+    if(tab === 'analytics') {
         $('#viewAnalytics').removeClass('hidden');
         $('#btnNavAnalytics').addClass('active');
         $('#headerTitle').text('Surveillance Analytics');
         if(!isUpdatingFilters) loadAnalyticsFilters();
+    } else if(tab === 'last_month') {
+        $('#viewLastMonth').removeClass('hidden');
+        $('#btnNavLastMonth').addClass('active');
+        $('#headerTitle').text('Last Month Surveillance');
+    } else if(tab === 'last_quarter') {
+        $('#viewLastQuarter').removeClass('hidden');
+        $('#btnNavLastQuarter').addClass('active');
+        $('#headerTitle').text('Last Quarter Surveillance');
     }
 };
 
@@ -199,6 +204,53 @@ function buildMobileLiveSection(records, prefix, settings) {
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { max: 100 } } },
         plugins: [errorBarsPlugin]
     }));
+
+    // ==========================================
+    // Blood & Urine Pie Charts (Prevalence)
+    // ==========================================
+    let bloodRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'blood');
+    let urineRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'urine');
+    
+    let bloodCounts = {};
+    bloodRecords.forEach(r => { let o = r['Selective organism']; if(o) bloodCounts[o] = (bloodCounts[o] || 0) + 1; });
+    let urineCounts = {};
+    urineRecords.forEach(r => { let o = r['Selective organism']; if(o) urineCounts[o] = (urineCounts[o] || 0) + 1; });
+    
+    let sortedBlood = Object.keys(bloodCounts).sort((a,b)=>bloodCounts[b]-bloodCounts[a]).slice(0, 5);
+    let sortedUrine = Object.keys(urineCounts).sort((a,b)=>urineCounts[b]-urineCounts[a]).slice(0, 5);
+    
+    let bloodData = sortedBlood.length ? sortedBlood.map(o=>bloodCounts[o]) : [1];
+    let bloodLabels = sortedBlood.length ? sortedBlood.map(o => o.length > 15 ? o.substring(0, 15) + '...' : o) : ['No Blood Samples'];
+    let bloodColors = sortedBlood.length ? ['#ef4444','#dc2626','#f87171','#fca5a5','#fef2f2'] : ['#e2e8f0'];
+
+    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_blood`), {
+        type: 'doughnut', 
+        data: { labels: bloodLabels, datasets: [{ data: bloodData, backgroundColor: bloodColors }] },
+        options: { 
+            responsive: true, maintainAspectRatio: false, 
+            plugins: { 
+                legend: { display: false },
+                tooltip: { enabled: sortedBlood.length > 0 }
+            } 
+        }
+    }));
+    
+    let urineData = sortedUrine.length ? sortedUrine.map(o=>urineCounts[o]) : [1];
+    let urineLabels = sortedUrine.length ? sortedUrine.map(o => o.length > 15 ? o.substring(0, 15) + '...' : o) : ['No Urine Samples'];
+    let urineColors = sortedUrine.length ? ['#eab308','#ca8a04','#fde047','#fef08a','#fefce8'] : ['#e2e8f0'];
+
+    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_urine`), {
+        type: 'doughnut', 
+        data: { labels: urineLabels, datasets: [{ data: urineData, backgroundColor: urineColors }] },
+        options: { 
+            responsive: true, maintainAspectRatio: false, 
+            plugins: { 
+                legend: { display: false },
+                tooltip: { enabled: sortedUrine.length > 0 }
+            } 
+        }
+    }));
+    // ==========================================
 
     let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
     let top3Specs = sortedSpecs.slice(0, 3);
@@ -370,7 +422,6 @@ window.generateAnalytics = function() {
         }
     });
 
-    // للـ Heatmap وغيرها من الفلاتر الشاملة نعرض كل شيء إذا تركها فارغة
     let targetOrgs = inputOrgs.length > 0 ? inputOrgs : Array.from(allPresentOrgs).sort();
     let targetAbxs = inputAbxs.length > 0 ? inputAbxs : Array.from(allPresentAbxs).sort();
 
@@ -430,9 +481,6 @@ window.generateAnalytics = function() {
         }
     });
 
-    // ----------------------------------------------------
-    // AMR Profile Chart Logic (Only if explicitly selected)
-    // ----------------------------------------------------
     if (inputOrgs.length === 0 && inputAbxs.length === 0) {
         $('#print_sect_amr').addClass('hidden');
     } else {
@@ -463,7 +511,6 @@ window.generateAnalytics = function() {
             displayOrgs = Array.from(foundOrgs).sort();
         }
 
-        // إزالة المضادات التي لا تحتوي على أي فحص (لتنظيف الـ X-Axis)
         let finalAbxs = [];
         displayAbxs.forEach(abx => {
             let hasData = displayOrgs.some(org => amrStats[org] && amrStats[org].abx[abx] && amrStats[org].abx[abx].tested > 0);
@@ -483,7 +530,7 @@ window.generateAnalytics = function() {
             displayAbxs.forEach(abx => {
                 let s = s_org.abx[abx];
                 if (!s || s.tested === 0) {
-                    dataR.push(null); // استخدام null لعدم رسم بار فارغ
+                    dataR.push(null); 
                     bgColors.push(palette.lowBg); 
                     ciData.push({lower: 0, upper: 0});
                 } else {
@@ -505,14 +552,13 @@ window.generateAnalytics = function() {
                     backgroundColor: bgColors, 
                     borderRadius: 4, 
                     ciData: ciData,
-                    maxBarThickness: 45 // تم تكبير البار هنا ليصبح واضحاً ومقروءاً
+                    maxBarThickness: 45
                 });
             }
         });
 
         if (chartAMR_instance) chartAMR_instance.destroy();
         
-        // إعطاء عرض ديناميكي للمخطط البياني ليسمح بالتمرير الأفقي براحة تامة
         let minWidthNeeded = (displayAbxs.length * datasets.length * 50) + 80;
         $('#amrChartContainer').css('width', `max(100%, ${minWidthNeeded}px)`);
 
@@ -543,9 +589,6 @@ window.generateAnalytics = function() {
         });
     }
 
-    // ----------------------------------------------------
-    // Heatmap Logic
-    // ----------------------------------------------------
     let hmOrgs = Object.keys(heatmapStats).filter(o => targetOrgs.includes(o)).sort();
     let hmAbxs = targetAbxs.sort();
 
@@ -583,9 +626,6 @@ window.generateAnalytics = function() {
     hmHtml += '</tbody></table>';
     $('#heatmapWrapper').html(hmHtml);
 
-    // ----------------------------------------------------
-    // Distributions Logic
-    // ----------------------------------------------------
     let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 5);
     if(chartOrg_instance) chartOrg_instance.destroy();
     chartOrg_instance = new Chart(document.getElementById('chartOrg'), {
