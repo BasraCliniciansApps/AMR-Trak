@@ -162,18 +162,22 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
         $(`#live_${prefix}_top3_container, #live_${prefix}_profiles_wrapper`).addClass('hidden');
         
         $(`#live_${prefix}_amr_title`).text(`Critical Resistance Markers (${timeLabel})`);
-        $(`#live_${prefix}_blood_subtitle`).text(timeLabel);
-        $(`#live_${prefix}_urine_subtitle`).text(timeLabel);
-        $(`#live_${prefix}_bar_title`).text(`Top 5 Specimens (${timeLabel})`);
+        $(`#live_${prefix}_blood_title`).text(`Blood Specimens`);
+        $(`#live_${prefix}_urine_title`).text(`Urine Specimens`);
+        $(`#chart_${prefix}_pie_title`).text(`Top 5 Pathogens (${timeLabel})`);
+        $(`#chart_${prefix}_bar_title`).text(`Top 5 Specimens (${timeLabel})`);
         return;
     }
 
     $(`#live_${prefix}_profiles_wrapper`).removeClass('hidden');
 
     $(`#live_${prefix}_amr_title`).text(`Critical Resistance Markers (${timeLabel})`);
-    $(`#live_${prefix}_blood_subtitle`).text(timeLabel);
-    $(`#live_${prefix}_urine_subtitle`).text(timeLabel);
-    $(`#live_${prefix}_bar_title`).text(`Top 5 Specimens (${timeLabel})`);
+    $(`#live_${prefix}_blood_title`).text(`Blood Specimens`);
+    $(`#live_${prefix}_blood_subtitle`).text(`Prevalence (${timeLabel})`);
+    $(`#live_${prefix}_urine_title`).text(`Urine Specimens`);
+    $(`#live_${prefix}_urine_subtitle`).text(`Prevalence (${timeLabel})`);
+    $(`#chart_${prefix}_pie_title`).text(`Top 5 Pathogens (${timeLabel})`);
+    $(`#chart_${prefix}_bar_title`).text(`Top 5 Specimens (${timeLabel})`);
 
     let orgCounts = {}, specCounts = {};
     const criticalPairs = [
@@ -221,7 +225,7 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     }));
 
     // ==========================================
-    // Blood & Urine Pie Charts (Prevalence)
+    // Blood & Urine Pie Charts
     // ==========================================
     let bloodRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'blood');
     let urineRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'urine');
@@ -267,35 +271,31 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     }));
 
     // ==========================================
-    // Top 5 Specimens (Horizontal Bar Chart)
+    // Top 5 Pathogens & Specimens
     // ==========================================
+    let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 5);
+    let pieLabels = sortedOrgs.map(o => formatOrgName(o));
+    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_pie`), {
+        type: 'doughnut', data: { labels: pieLabels, datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0d9488','#0ea5e9','#8b5cf6','#ec4899','#f59e0b'] }] },
+        options: { 
+            responsive: true, maintainAspectRatio: false, 
+            plugins: { legend: { display: false } } 
+        }
+    }));
+
     let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
     let top5Specs = sortedSpecs.slice(0, 5);
 
     liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_bar`), {
         type: 'bar', 
-        data: { 
-            labels: top5Specs, 
-            datasets: [{ 
-                data: top5Specs.map(s => specCounts[s]), 
-                backgroundColor: '#2cb4a4', 
-                borderRadius: 4 
-            }] 
-        },
+        data: { labels: top5Specs, datasets: [{ data: top5Specs.map(s => specCounts[s]), backgroundColor: '#2cb4a4', borderRadius: 4 }] },
         options: { 
             indexAxis: 'y', 
-            responsive: true, 
-            maintainAspectRatio: false, 
+            responsive: true, maintainAspectRatio: false, 
             plugins: { legend: { display: false } }, 
-            scales: { 
-                x: { 
-                    ticks: { stepSize: 1, maxRotation: 45, minRotation: 45 } 
-                },
-                y: { grid: { display: false } }
-            } 
+            scales: { x: { ticks: { stepSize: 1, maxRotation: 45, minRotation: 45 } }, y: { grid: { display: false } } } 
         }
     }));
-    // ==========================================
 
     let top3Specs = sortedSpecs.slice(0, 3);
     let htmlTop3 = `<h4 class="text-xs font-bold text-slate-700 mt-2 mb-2 border-b pb-1">Top 3 Specimens Breakdown (${timeLabel})</h4>`;
@@ -340,8 +340,8 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     let p1 = settings.profile1_abx || 'Meropenem';
     let p2 = settings.profile2_abx || 'Ceftriaxone';
 
-    $(`#live_${prefix}_profile1_title`).text(`${p1} Resistance (% R)`);
-    $(`#live_${prefix}_profile2_title`).text(`${p2} Resistance (% R)`);
+    $(`#live_${prefix}_profile1_title`).text(`${p1} Resistance (% R) - ${timeLabel}`);
+    $(`#live_${prefix}_profile2_title`).text(`${p2} Resistance (% R) - ${timeLabel}`);
 
     buildMobileAbxProfileChart(p1, `chart_${prefix}_mero`, `live_${prefix}_mero_count`, records, prefix === 'm' ? '#2563eb' : '#059669');
     buildMobileAbxProfileChart(p2, `chart_${prefix}_cro`, `live_${prefix}_cro_count`, records, '#0d9488');
@@ -582,14 +582,14 @@ window.generateAnalytics = function() {
                     backgroundColor: bgColors, 
                     borderRadius: 4, 
                     ciData: ciData,
-                    maxBarThickness: 16
+                    maxBarThickness: 45
                 });
             }
         });
 
         if (chartAMR_instance) chartAMR_instance.destroy();
         
-        let minWidthNeeded = (displayAbxs.length * datasets.length * 20) + 100;
+        let minWidthNeeded = (displayAbxs.length * datasets.length * 50) + 80;
         $('#amrChartContainer').css('width', `max(100%, ${minWidthNeeded}px)`);
 
         chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
@@ -656,24 +656,50 @@ window.generateAnalytics = function() {
     hmHtml += '</tbody></table>';
     $('#heatmapWrapper').html(hmHtml);
 
-    let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 5);
+    // 1. Organism Prevalence Chart
+    let orgTitle = targetSample ? `Prevalence in ${targetSample} Specimens` : 'Overall Organism Prevalence';
+    $('#ana_org_title').text(orgTitle);
+
+    let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]);
     let orgLabels = sortedOrgs.map(o => formatOrgName(o));
+    
+    let baseColors = ['#0d9488','#0ea5e9','#3b82f6','#06b6d4','#14b8a6','#10b981','#84cc16','#eab308','#f59e0b','#f97316', '#ef4444', '#8b5cf6', '#ec4899'];
+    let orgColors = sortedOrgs.map((_, i) => baseColors[i % baseColors.length]);
+
     if(chartOrg_instance) chartOrg_instance.destroy();
     chartOrg_instance = new Chart(document.getElementById('chartOrg'), {
-        type: 'doughnut', data: { labels: orgLabels, datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0d9488','#0ea5e9','#3b82f6','#06b6d4','#14b8a6'] }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: {boxWidth: 8, font:{size: 9}} } } }
+        type: 'doughnut', 
+        data: { 
+            labels: orgLabels, 
+            datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: orgColors }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { legend: { display: false } } 
+        }
     });
 
+    // 2. Specimen Distribution Chart
     let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]).slice(0, 5);
     if(chartSpec_instance) chartSpec_instance.destroy();
     chartSpec_instance = new Chart(document.getElementById('chartSpecimen'), {
-        type: 'bar', data: { labels: sortedSpecs, datasets: [{ data: sortedSpecs.map(s=>specCounts[s]), backgroundColor: '#0ea5e9', borderRadius: 4 }] },
+        type: 'bar', 
+        data: { 
+            labels: sortedSpecs, 
+            datasets: [{ label: 'Isolates', data: sortedSpecs.map(s=>specCounts[s]), backgroundColor: '#0ea5e9', borderRadius: 4 }] 
+        },
         options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false } } }
     });
 
+    // 3. Gender Distribution Chart
     if(chartGen_instance) chartGen_instance.destroy();
     chartGen_instance = new Chart(document.getElementById('chartGender'), {
-        type: 'pie', data: { labels: ['Male', 'Female'], datasets: [{ data: [genderCounts['Male'], genderCounts['Female']], backgroundColor: ['#0ea5e9', '#ec4899'] }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        type: 'pie', 
+        data: { 
+            labels: ['Male', 'Female'], 
+            datasets: [{ data: [genderCounts['Male'], genderCounts['Female']], backgroundColor: ['#0ea5e9', '#ec4899'] }] 
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
     });
 };
