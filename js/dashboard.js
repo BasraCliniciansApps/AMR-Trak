@@ -1,705 +1,282 @@
-// Firebase Initialization
-const firebaseConfig = {
-    apiKey: "AIzaSyCyWcTzvYXwsYQEgs_iNh_Co68H9_2kYU4",
-    authDomain: "antibiogramtrak.firebaseapp.com",
-    projectId: "antibiogramtrak",
-    storageBucket: "antibiogramtrak.firebasestorage.app",
-    messagingSenderId: "679667156703",
-    appId: "1:679667156703:web:ca37e1544e3d20e922cb6a"
-};
-
-let db = null;
-try {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.firestore();
-} catch(e) { console.warn("Firebase offline"); }
-
-let liveCharts = [];
-let chartAMR_instance = null;
-let chartOrg_instance = null;
-let chartSpec_instance = null;
-let chartGen_instance = null;
-let isUpdatingFilters = false;
-
-const orgColorPalette = [
-    { bg: 'rgba(185, 28, 28, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(30, 64, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(21, 128, 61, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(162, 28, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(194, 65, 12, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' }
-];
-
-function formatOrgName(org) {
-    if (!org || typeof org !== 'string' || org.startsWith('No ')) return org || "-";
-    let name = org.replace(/\(E\.coli\)/gi, "").trim();
-    let parts = name.split(' ');
-    if (parts.length >= 2 && parts[0].length > 3) {
-        return parts[0].charAt(0).toUpperCase() + '. ' + parts.slice(1).join(' ');
-    }
-    return name;
-}
-
-const errorBarsPlugin = {
-    id: 'errorBars',
-    afterDatasetsDraw(chart) {
-        const ctx = chart.ctx;
-        if (!chart.scales || !chart.scales.y) return;
-        chart.data.datasets.forEach((dataset, i) => {
-            const meta = chart.getDatasetMeta(i);
-            if (!meta.hidden && dataset.ciData) {
-                meta.data.forEach((element, index) => {
-                    const ci = dataset.ciData[index];
-                    if (!ci || (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0) || dataset.data[index] === null) return;
-                    const yLower = chart.scales.y.getPixelForValue(ci.lower);
-                    const yUpper = chart.scales.y.getPixelForValue(ci.upper);
-                    let x = element.x;
-                    if (x === undefined) return;
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.lineWidth = 1.5; ctx.strokeStyle = '#334155';
-                    ctx.moveTo(x, yLower); ctx.lineTo(x, yUpper);
-                    ctx.moveTo(x - 5, yUpper); ctx.lineTo(x + 5, yUpper);
-                    ctx.moveTo(x - 5, yLower); ctx.lineTo(x + 5, yLower);
-                    ctx.stroke(); ctx.restore();
-                });
-            }
-        });
-    }
-};
-
-function wilsonScoreCI(r, n) {
-    if (n === 0) return { lower: 0, upper: 0 };
-    const p = r / n, z2 = 3.8416;
-    const denominator = 1 + z2 / n;
-    const center = p + z2 / (2 * n);
-    const spread = 1.96 * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n));
-    return { lower: Math.max(0, Math.round(((center - spread) / denominator) * 100)), upper: Math.min(100, Math.round(((center + spread) / denominator) * 100)) };
-}
-
-$(document).ready(function() {
-    $('.select2-mobile').select2({ width: '100%' });
-    $('.select2-multiple').select2({ width: '100%', allowClear: true });
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AMR Mobile Dashboard</title>
     
-    let currentYear = new Date().getFullYear();
-    $('#ana_start').val(`${currentYear}-01-01`);
-    $('#ana_end').val(`${currentYear}-12-31`);
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            safelist: ['bg-emerald-100', 'text-emerald-800', 'text-emerald-600', 'bg-yellow-100', 'text-yellow-800', 'bg-orange-200', 'text-orange-900', 'bg-red-400', 'text-white', 'text-red-500', 'bg-red-600', 'text-red-700', 'bg-white', 'text-slate-700', 'text-slate-500', 'opacity-70']
+        }
+    </script>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    $('#ana_start, #ana_end, #ana_sample').on('change', function() {
-        if(!isUpdatingFilters) loadAnalyticsFilters();
-    });
-
-    loadAnalyticsFilters();
-    generateLiveSurveillance();
-    switchTab('analytics');
-});
-
-window.switchTab = function(tab) {
-    $('#viewAnalytics, #viewLastMonth, #viewLastQuarter').addClass('hidden');
-    $('#btnNavAnalytics, #btnNavLastMonth, #btnNavLastQuarter').removeClass('active');
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
-    if(tab === 'analytics') {
-        $('#viewAnalytics').removeClass('hidden');
-        $('#btnNavAnalytics').addClass('active');
-        $('#headerTitle').text('Surveillance Analytics');
-        if(!isUpdatingFilters) loadAnalyticsFilters();
-    } else if(tab === 'last_month') {
-        $('#viewLastMonth').removeClass('hidden');
-        $('#btnNavLastMonth').addClass('active');
-        $('#headerTitle').text('Last Month Surveillance');
-    } else if(tab === 'last_quarter') {
-        $('#viewLastQuarter').removeClass('hidden');
-        $('#btnNavLastQuarter').addClass('active');
-        $('#headerTitle').text('Last Quarter Surveillance');
-    }
-};
-
-function generateLiveSurveillance() {
-    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    let settings = JSON.parse(localStorage.getItem('amr_live_settings')) || { profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
-
-    const blacklist = ["xxx", "con", "no growth", "contaminated", "normal flora", "mixed flora", "no significant growth"];
-    let cleanRecords = allRecords.filter(r => {
-        let org = (r['Selective organism'] || "").toLowerCase();
-        return org !== "" && !blacklist.some(b => org.includes(b));
-    });
-
-    if (cleanRecords.length === 0) return;
-
-    let allDates = cleanRecords.map(r => r.Date).filter(Boolean).sort();
-    if(allDates.length === 0) return; 
-
-    let latestDateStr = allDates[allDates.length - 1]; 
-    let targetMonthPrefix = latestDateStr.substring(0, 7);
-
-    let [lYear, lMonth] = targetMonthPrefix.split('-').map(Number);
-    let qYear = lYear, qMonths = [], qLabel = "";
-
-    if (lMonth <= 3) { qYear -= 1; qMonths = ["10","11","12"]; qLabel = `Q4 ${qYear}`; }
-    else if (lMonth <= 6) { qMonths = ["01","02","03"]; qLabel = `Q1 ${qYear}`; }
-    else if (lMonth <= 9) { qMonths = ["04","05","06"]; qLabel = `Q2 ${qYear}`; }
-    else { qMonths = ["07","08","09"]; qLabel = `Q3 ${qYear}`; }
-
-    let monthRecords = cleanRecords.filter(r => r.Date && r.Date.startsWith(targetMonthPrefix));
-    let quarterRecords = cleanRecords.filter(r => {
-        if(!r.Date) return false;
-        let parts = r.Date.split('-');
-        return parseInt(parts[0]) === qYear && qMonths.includes(parts[1]);
-    });
-
-    $('#live_month_title').text(`Surveillance Overview (${targetMonthPrefix})`);
-    $('#live_q_title').text(`Surveillance Overview (${qLabel})`);
-
-    liveCharts.forEach(c => c.destroy()); liveCharts = [];
-    buildMobileLiveSection(monthRecords, 'm', settings, targetMonthPrefix);
-    buildMobileLiveSection(quarterRecords, 'q', settings, qLabel);
-}
-
-function buildMobileLiveSection(records, prefix, settings, timeLabel) {
-    $(`#live_${prefix}_total`).text(records.length);
-    if(records.length === 0) {
-        $(`#live_${prefix}_bug`).text("-");
-        $(`#live_${prefix}_spec`).text("-");
-        $(`#live_${prefix}_top3_container, #live_${prefix}_profiles_wrapper`).addClass('hidden');
+    <style>
+        body { background-color: #f8fafc; padding-bottom: 75px; font-family: system-ui, -apple-system, sans-serif; }
+        .mobile-card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid #e2e8f0; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 10px 0; z-index: 50; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+        .nav-btn { display: flex; flex-direction: column; align-items: center; font-size: 11px; font-weight: 600; color: #64748b; transition: color 0.2s; background: transparent; border: none; }
+        .nav-btn.active { color: #0d9488; }
+        .nav-btn svg { width: 24px; height: 24px; margin-bottom: 4px; }
+        .select2-container .select2-selection--single, .select2-container .select2-selection--multiple { min-height: 42px; border-radius: 8px; border-color: #cbd5e1; }
         
-        $(`#live_${prefix}_amr_title`).text(`Critical Resistance Markers (${timeLabel})`);
-        $(`#live_${prefix}_blood_title`).text(`Blood Specimens`);
-        $(`#live_${prefix}_urine_title`).text(`Urine Specimens`);
-        $(`#chart_${prefix}_pie_title`).text(`Top 5 Pathogens (${timeLabel})`);
-        $(`#chart_${prefix}_bar_title`).text(`Top 5 Specimens (${timeLabel})`);
-        return;
-    }
-
-    $(`#live_${prefix}_profiles_wrapper`).removeClass('hidden');
-
-    $(`#live_${prefix}_amr_title`).text(`Critical Resistance Markers (${timeLabel})`);
-    $(`#live_${prefix}_blood_title`).text(`Blood Specimens`);
-    $(`#live_${prefix}_blood_subtitle`).text(`Prevalence (${timeLabel})`);
-    $(`#live_${prefix}_urine_title`).text(`Urine Specimens`);
-    $(`#live_${prefix}_urine_subtitle`).text(`Prevalence (${timeLabel})`);
-    $(`#chart_${prefix}_pie_title`).text(`Top 5 Pathogens (${timeLabel})`);
-    $(`#chart_${prefix}_bar_title`).text(`Top 5 Specimens (${timeLabel})`);
-
-    let orgCounts = {}, specCounts = {};
-    const criticalPairs = [
-        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abxList: ["Ceftriaxone", "Cefotaxime", "Ceftazidime"], label: "ESBL\n(3rd Gen Ceph)" },
-        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abxList: ["Meropenem", "Imipenem"], label: "CRE\n(Carbapenem)" },
-        { orgs: ["staphylococcus aureus"], abxList: ["Oxacillin", "Cefoxitin"], label: "MRSA\n(OX/FOX)" },
-        { orgs: ["enterococcus faecalis", "enterococcus faecium", "enterococcus spp", "staphylococcus aureus"], abxList: ["Vancomycin"], label: "VRE/VRSA\n(VA)" }
-    ];
-
-    let amrStats = criticalPairs.map(p => ({ label: p.label, tested: 0, resistant: 0 }));
-
-    records.forEach(r => {
-        let org = r['Selective organism'] || "", spec = r['Sample'];
-        orgCounts[org] = (orgCounts[org] || 0) + 1;
-        if(spec && spec !== "-") specCounts[spec] = (specCounts[spec] || 0) + 1;
-
-        let orgLower = org.toLowerCase();
-        criticalPairs.forEach((pair, index) => {
-            if (pair.orgs.some(o => orgLower.includes(o.toLowerCase()))) {
-                let abxFound = pair.abxList.find(a => r[a] && r[a] !== '-' && r[a] !== '');
-                if (abxFound) { amrStats[index].tested++; if (r[abxFound] === 'R') amrStats[index].resistant++; }
-            }
-        });
-    });
-
-    $(`#live_${prefix}_bug`).text(formatOrgName(Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a])[0]) || "-");
-    $(`#live_${prefix}_spec`).text(Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a])[0] || "-");
-
-    let labels = [], data = [], bgColors = [], ciData = [];
-    amrStats.forEach(stat => {
-        labels.push(stat.label.split('\n'));
-        if (stat.tested === 0) { data.push(0); bgColors.push('#e2e8f0'); ciData.push({lower:0, upper:0}); } 
-        else {
-            data.push(Math.round((stat.resistant / stat.tested) * 100));
-            bgColors.push(stat.tested >= 30 ? 'rgba(13, 148, 136, 0.9)' : 'rgba(148, 163, 184, 0.5)');
-            ciData.push(wilsonScoreCI(stat.resistant, stat.tested));
-        }
-    });
-
-    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_amr`), {
-        type: 'bar',
-        data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, borderRadius: 4 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { max: 100 } } },
-        plugins: [errorBarsPlugin]
-    }));
-
-    // ==========================================
-    // Blood & Urine Pie Charts
-    // ==========================================
-    let bloodRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'blood');
-    let urineRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'urine');
-    
-    let bloodCounts = {};
-    bloodRecords.forEach(r => { let o = r['Selective organism']; if(o) bloodCounts[o] = (bloodCounts[o] || 0) + 1; });
-    let urineCounts = {};
-    urineRecords.forEach(r => { let o = r['Selective organism']; if(o) urineCounts[o] = (urineCounts[o] || 0) + 1; });
-    
-    let sortedBlood = Object.keys(bloodCounts).sort((a,b)=>bloodCounts[b]-bloodCounts[a]).slice(0, 5);
-    let sortedUrine = Object.keys(urineCounts).sort((a,b)=>urineCounts[b]-urineCounts[a]).slice(0, 5);
-    
-    let bloodData = sortedBlood.length ? sortedBlood.map(o=>bloodCounts[o]) : [1];
-    let bloodLabels = sortedBlood.length ? sortedBlood.map(o => formatOrgName(o)) : ['No Blood Samples'];
-    let bloodColors = sortedBlood.length ? ['#ef4444','#dc2626','#f87171','#fca5a5','#fef2f2'] : ['#e2e8f0'];
-
-    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_blood`), {
-        type: 'doughnut', 
-        data: { labels: bloodLabels, datasets: [{ data: bloodData, backgroundColor: bloodColors }] },
-        options: { 
-            responsive: true, maintainAspectRatio: false, 
-            plugins: { 
-                legend: { display: false },
-                tooltip: { enabled: sortedBlood.length > 0 }
-            } 
-        }
-    }));
-    
-    let urineData = sortedUrine.length ? sortedUrine.map(o=>urineCounts[o]) : [1];
-    let urineLabels = sortedUrine.length ? sortedUrine.map(o => formatOrgName(o)) : ['No Urine Samples'];
-    let urineColors = sortedUrine.length ? ['#eab308','#ca8a04','#fde047','#fef08a','#fefce8'] : ['#e2e8f0'];
-
-    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_urine`), {
-        type: 'doughnut', 
-        data: { labels: urineLabels, datasets: [{ data: urineData, backgroundColor: urineColors }] },
-        options: { 
-            responsive: true, maintainAspectRatio: false, 
-            plugins: { 
-                legend: { display: false },
-                tooltip: { enabled: sortedUrine.length > 0 }
-            } 
-        }
-    }));
-
-    // ==========================================
-    // Top 5 Pathogens & Specimens
-    // ==========================================
-    let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]).slice(0, 5);
-    let pieLabels = sortedOrgs.map(o => formatOrgName(o));
-    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_pie`), {
-        type: 'doughnut', data: { labels: pieLabels, datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0d9488','#0ea5e9','#8b5cf6','#ec4899','#f59e0b'] }] },
-        options: { 
-            responsive: true, maintainAspectRatio: false, 
-            plugins: { legend: { display: false } } 
-        }
-    }));
-
-    let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
-    let top5Specs = sortedSpecs.slice(0, 5);
-
-    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_bar`), {
-        type: 'bar', 
-        data: { labels: top5Specs, datasets: [{ data: top5Specs.map(s => specCounts[s]), backgroundColor: '#2cb4a4', borderRadius: 4 }] },
-        options: { 
-            indexAxis: 'y', 
-            responsive: true, maintainAspectRatio: false, 
-            plugins: { legend: { display: false } }, 
-            scales: { x: { ticks: { stepSize: 1, maxRotation: 45, minRotation: 45 } }, y: { grid: { display: false } } } 
-        }
-    }));
-
-    let top3Specs = sortedSpecs.slice(0, 3);
-    let htmlTop3 = `<h4 class="text-xs font-bold text-slate-700 mt-2 mb-2 border-b pb-1">Top 3 Specimens Breakdown (${timeLabel})</h4>`;
-    
-    top3Specs.forEach(spec => {
-        let specRecords = records.filter(r => r.Sample === spec);
-        let bCounts = {};
-        specRecords.forEach(r => { let o = r['Selective organism']; if(o) bCounts[o] = (bCounts[o]||0)+1; });
-        let topBugSpec = formatOrgName(Object.keys(bCounts).sort((a,b)=>bCounts[b]-bCounts[a])[0]) || "-";
-
-        let abxS = {}, abxT = {};
-        specRecords.forEach(r => {
-            if(typeof abxList !== 'undefined') {
-                abxList.forEach(a => {
-                    if(r[a] && r[a] !== '-') {
-                        abxT[a] = (abxT[a]||0)+1;
-                        if(r[a] === 'S') abxS[a] = (abxS[a]||0)+1;
-                    }
-                });
-            }
-        });
+        .heatmap-table { border-collapse: separate; border-spacing: 0; min-width: max-content; width: 100%; }
+        .heatmap-table th, .heatmap-table td { padding: 8px 12px; text-align: center; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; font-size: 0.75rem; }
+        .heatmap-table thead th { background-color: #f1f5f9; position: sticky; top: 0; z-index: 10; border-top: 1px solid #e2e8f0; }
+        .heatmap-table tbody th { position: sticky; left: 0; z-index: 20; background-color: #ffffff; text-align: left; border-left: 1px solid #e2e8f0; }
+        .heatmap-table thead th:first-child { position: sticky; left: 0; top: 0; z-index: 30; background-color: #f1f5f9; border-left: 1px solid #e2e8f0; }
+        .heatmap-table th:first-child, .heatmap-table td:first-child { width: 160px; min-width: 160px; max-width: 160px; white-space: normal; word-wrap: break-word; line-height: 1.3; }
         
-        let bestAbx = "-", bestP = -1;
-        Object.keys(abxT).forEach(a => { if(abxT[a] >= 5) { let p = (abxS[a]||0)/abxT[a]; if(p > bestP) { bestP=p; bestAbx=a; } } });
-        if(bestP === -1) { Object.keys(abxT).forEach(a => { let p = (abxS[a]||0)/abxT[a]; if(p > bestP) { bestP=p; bestAbx=a; } }); }
+        .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body>
 
-        let fmtAbx = "N/A";
-        if (bestAbx !== "-") {
-            let ci = wilsonScoreCI(abxS[bestAbx]||0, abxT[bestAbx]);
-            fmtAbx = `<span class="block">${bestAbx} <span class="text-emerald-600 font-bold">(${Math.round(bestP*100)}% S)</span></span><span class="text-[9px] text-slate-400 bg-slate-100 px-1 rounded block mt-0.5">CI: ${ci.lower}%-${ci.upper}%</span>`;
-        }
+    <header class="bg-white px-4 py-3 sticky top-0 z-40 border-b border-slate-200 shadow-sm flex justify-between items-center">
+        <div>
+            <h1 class="text-lg font-bold text-teal-800 leading-tight" id="headerTitle">Surveillance Analytics</h1>
+            <p class="text-[10px] text-slate-500 font-medium">Clinical Dashboard</p>
+        </div>
+        <div id="connection_status" class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+            <span class="relative flex h-2 w-2"><span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span> Cloud
+        </div>
+    </header>
 
-        htmlTop3 += `
-        <div class="bg-slate-50 border border-slate-100 p-2 rounded flex flex-col gap-1 text-[10px]">
-            <div class="font-bold text-blue-800 bg-blue-100 px-1.5 rounded self-start">${spec}</div>
-            <div class="text-slate-600">Top Bug: <span class="font-bold text-rose-600">${topBugSpec}</span></div>
-            <div class="text-slate-600 mt-1 pt-1 border-t border-slate-200">Most Susceptible:<br>${fmtAbx}</div>
-        </div>`;
-    });
-    if (top3Specs.length > 0) $(`#live_${prefix}_top3_container`).html(htmlTop3).removeClass('hidden');
-
-    let p1 = settings.profile1_abx || 'Meropenem';
-    let p2 = settings.profile2_abx || 'Ceftriaxone';
-
-    $(`#live_${prefix}_profile1_title`).text(`${p1} Resistance (% R) - ${timeLabel}`);
-    $(`#live_${prefix}_profile2_title`).text(`${p2} Resistance (% R) - ${timeLabel}`);
-
-    buildMobileAbxProfileChart(p1, `chart_${prefix}_mero`, `live_${prefix}_mero_count`, records, prefix === 'm' ? '#2563eb' : '#059669');
-    buildMobileAbxProfileChart(p2, `chart_${prefix}_cro`, `live_${prefix}_cro_count`, records, '#0d9488');
-}
-
-function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, primaryColor) {
-    let canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-
-    let orgMap = {};
-    records.forEach(r => {
-        let org = r['Selective organism'];
-        if (!org || org === '-') return;
-        let val = r[abxName];
-        if (val && val !== '-' && val !== '') {
-            if (!orgMap[org]) orgMap[org] = { tested: 0, resistant: 0 };
-            orgMap[org].tested++;
-            if (val === 'R') orgMap[org].resistant++;
-        }
-    });
-
-    let sortedOrgs = Object.keys(orgMap).sort((a, b) => orgMap[b].tested - orgMap[a].tested).slice(0, 5);
-    let totalTestedAbx = Object.values(orgMap).reduce((sum, item) => sum + item.tested, 0);
-    if (countElId) $(`#${countElId}`).text(`(n=${totalTestedAbx})`);
-
-    let labels = [], data = [], bgColors = [], ciData = [];
-    sortedOrgs.forEach(org => {
-        let item = orgMap[org];
-        let p = Math.round((item.resistant / item.tested) * 100);
-        labels.push(formatOrgName(org));
-        data.push(p);
-        bgColors.push(item.tested >= 30 ? primaryColor : 'rgba(148, 163, 184, 0.55)');
-        ciData.push(wilsonScoreCI(item.resistant, item.tested));
-    });
-
-    if (sortedOrgs.length === 0) { labels = ['No Data']; data = [0]; bgColors = ['#e2e8f0']; ciData = [{ lower: 0, upper: 0 }]; }
-
-    liveCharts.push(new Chart(canvas, {
-        type: 'bar', data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, borderRadius: 4, maxBarThickness: 30 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { max: 100 }, x: { ticks: { font: {size: 8} } } } },
-        plugins: [errorBarsPlugin]
-    }));
-}
-
-function loadAnalyticsFilters() {
-    if (isUpdatingFilters) return;
-    isUpdatingFilters = true;
-
-    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    const startDate = $('#ana_start').val(), endDate = $('#ana_end').val();
-    
-    let records = allRecords.filter(r => (!startDate || !endDate) ? true : (r.Date >= startDate && r.Date <= endDate));
-
-    const targetSample = $('#ana_sample').val();
-    let uniqueSamples = new Set(records.map(r => r.Sample).filter(Boolean));
-    $('#ana_sample').empty().append(new Option("All Samples", ""));
-    Array.from(uniqueSamples).sort().forEach(s => $('#ana_sample').append(new Option(s, s)));
-    if (targetSample && uniqueSamples.has(targetSample)) $('#ana_sample').val(targetSample);
-    
-    if (targetSample) records = records.filter(r => r.Sample === targetSample);
-
-    let orgs = new Set(), abxs = new Set();
-    records.forEach(r => {
-        if(r['Selective organism']) orgs.add(r['Selective organism']);
-        if(typeof abxList !== 'undefined') {
-            abxList.forEach(a => { if (r[a] && r[a] !== '-' && r[a] !== '') abxs.add(a); });
-        }
-    });
-
-    let currentOrgs = $('#ana_organism').val() || [];
-    $('#ana_organism').empty();
-    Array.from(orgs).sort().forEach(o => $('#ana_organism').append(new Option(o, o, currentOrgs.includes(o), currentOrgs.includes(o))));
-
-    let currentAbxs = $('#ana_antibiotic').val() || [];
-    $('#ana_antibiotic').empty();
-    Array.from(abxs).sort().forEach(a => $('#ana_antibiotic').append(new Option(a, a, currentAbxs.includes(a), currentAbxs.includes(a))));
-
-    $('#ana_sample, #ana_organism, #ana_antibiotic').trigger('change.select2');
-    isUpdatingFilters = false;
-}
-
-window.generateAnalytics = function() {
-    const startDate = $('#ana_start').val(), endDate = $('#ana_end').val();
-    const targetSample = $('#ana_sample').val();
-    let inputOrgs = $('#ana_organism').val() || [];
-    let inputAbxs = $('#ana_antibiotic').val() || [];
-    const metric = $('#ana_metric').val() || 'R'; 
-
-    if (!startDate || !endDate) { Swal.fire('Required', 'Please select both dates.', 'warning'); return; }
-
-    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
-    if (targetSample) records = records.filter(r => r.Sample === targetSample);
-
-    if (records.length === 0) {
-        $('#analyticsContainer').addClass('hidden');
-        $('#analyticsPlaceholder').removeClass('hidden');
-        Swal.fire('No Data', 'No records match selected criteria.', 'info');
-        return;
-    }
-
-    let allPresentOrgs = new Set();
-    let allPresentAbxs = new Set();
-    records.forEach(r => {
-        if(r['Selective organism']) allPresentOrgs.add(r['Selective organism']);
-        if(typeof abxList !== 'undefined') {
-            abxList.forEach(a => { if (r[a] && r[a] !== '-' && r[a] !== '') allPresentAbxs.add(a); });
-        }
-    });
-
-    let targetOrgs = inputOrgs.length > 0 ? inputOrgs : Array.from(allPresentOrgs).sort();
-    let targetAbxs = inputAbxs.length > 0 ? inputAbxs : Array.from(allPresentAbxs).sort();
-
-    if (targetOrgs.length === 0 || targetAbxs.length === 0) {
-        $('#analyticsContainer').addClass('hidden');
-        $('#analyticsPlaceholder').removeClass('hidden');
-        Swal.fire('No Data', 'No specific tests match the criteria.', 'info');
-        return;
-    }
-
-    $('#analyticsPlaceholder').addClass('hidden');
-    $('#analyticsContainer').removeClass('hidden');
-
-    let hmDesc = metric === 'R' ? 'Dark Red = High Resistance. <span class="text-red-500 font-bold">*</span> = n &lt; 30.' : 'Dark Green = High Susceptibility. <span class="text-red-500 font-bold">*</span> = n &lt; 30.';
-    $('#heatmapDesc').html(hmDesc);
-    let hmLegend = metric === 'R' ? 
-        `<span class="px-1 bg-emerald-100 text-emerald-800 rounded">0-20%</span><span class="px-1 bg-yellow-100 text-yellow-800 rounded">21-40%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">41-60%</span><span class="px-1 bg-red-400 text-white rounded">61-80%</span><span class="px-1 bg-red-600 text-white rounded">81-100%</span>` :
-        `<span class="px-1 bg-red-600 text-white rounded">0-20%</span><span class="px-1 bg-red-400 text-white rounded">21-40%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">41-60%</span><span class="px-1 bg-yellow-100 text-yellow-800 rounded">61-80%</span><span class="px-1 bg-emerald-100 text-emerald-800 rounded">81-100%</span>`;
-    $('#heatmapLegend').html(hmLegend);
-
-    let orgCounts = {}, specCounts = {}, genderCounts = { "Male": 0, "Female": 0 }, heatmapStats = {}, amrStats = {};
-    targetOrgs.forEach(org => {
-        amrStats[org] = { total: 0, abx: {} };
-        targetAbxs.forEach(a => { amrStats[org].abx[a] = { tested: 0, r: 0, s: 0 }; });
-    });
-
-    records.forEach(r => {
-        let org = r['Selective organism'];
-        if(!org) return;
-        orgCounts[org] = (orgCounts[org] || 0) + 1;
-        if(r.Sample) specCounts[r.Sample] = (specCounts[r.Sample] || 0) + 1;
-        if(r.Sex && genderCounts[r.Sex] !== undefined) genderCounts[r.Sex] += 1;
-
-        if (!heatmapStats[org]) heatmapStats[org] = {};
+    <div class="px-3 mt-4 max-w-lg mx-auto">
         
-        if(typeof abxList !== 'undefined') {
-            abxList.forEach(abx => {
-                let res = r[abx];
-                if (res && res !== '-' && res !== '') {
-                    if (!heatmapStats[org][abx]) heatmapStats[org][abx] = { t: 0, r: 0, s: 0 };
-                    heatmapStats[org][abx].t += 1;
-                    if (res === 'R') heatmapStats[org][abx].r += 1;
-                    if (res === 'S') heatmapStats[org][abx].s += 1;
-                }
-            });
-        }
+        <!-- Tab 1: Analytics (Default) -->
+        <div id="viewAnalytics" class="space-y-4">
+            <div class="mobile-card bg-slate-50 border-indigo-200">
+                <h3 class="text-sm font-bold text-slate-800 mb-3 border-b pb-2 flex items-center gap-2"><span class="text-indigo-600">📊</span> Analytics Filters</h3>
+                <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">From Date</label>
+                            <input type="date" id="ana_start" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">To Date</label>
+                            <input type="date" id="ana_end" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Sample</label>
+                            <select id="ana_sample" class="w-full text-sm select2-mobile"><option value="">All Samples</option></select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Display Metric</label>
+                            <select id="ana_metric" class="w-full text-sm border border-slate-300 rounded-lg p-2 bg-white">
+                                <option value="R">Resistance (% R)</option>
+                                <option value="S">Susceptibility (% S)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Organisms</label>
+                        <select id="ana_organism" class="w-full text-sm select2-multiple" multiple="multiple" data-placeholder="All Organisms (Leave blank for all)"></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Antibiotics</label>
+                        <select id="ana_antibiotic" class="w-full text-sm select2-multiple" multiple="multiple" data-placeholder="All Antibiotics (Leave blank for all)"></select>
+                    </div>
+                    <button onclick="generateAnalytics()" class="w-full bg-indigo-600 text-white font-bold py-2.5 rounded-lg shadow-sm mt-2 text-sm">Analyze Data</button>
+                </div>
+            </div>
 
-        if (targetOrgs.includes(org)) {
-            targetAbxs.forEach(abx => {
-                let res = r[abx];
-                if (res && res !== '-' && res !== '') {
-                    amrStats[org].abx[abx].tested += 1;
-                    if (res === 'R') amrStats[org].abx[abx].r += 1;
-                    if (res === 'S') amrStats[org].abx[abx].s += 1;
-                }
-            });
-        }
-    });
+            <div id="analyticsPlaceholder" class="mobile-card text-center py-10">
+                <div class="text-3xl mb-2 opacity-50">📉</div>
+                <p class="text-sm font-medium text-slate-500">Select parameters to view insights.</p>
+            </div>
 
-    if (inputOrgs.length === 0 && inputAbxs.length === 0) {
-        $('#print_sect_amr').addClass('hidden');
-    } else {
-        $('#print_sect_amr').removeClass('hidden');
+            <div id="analyticsContainer" class="hidden space-y-4">
+                <div class="mobile-card overflow-hidden">
+                    <h3 class="text-sm font-bold text-slate-800 mb-2">Antibiogram Heatmap</h3>
+                    <p class="text-[9px] text-slate-500 mb-2" id="heatmapDesc"></p>
+                    <div id="heatmapLegend" class="flex flex-wrap gap-1 mb-3 text-[8px] font-bold"></div>
+                    <div class="w-full overflow-x-auto custom-scroll rounded-lg border border-slate-200" id="heatmapWrapper"></div>
+                </div>
 
-        let displayOrgs = inputOrgs.length > 0 ? inputOrgs : targetOrgs;
-        let displayAbxs = inputAbxs.length > 0 ? inputAbxs : targetAbxs;
+                <div class="mobile-card hidden" id="print_sect_amr">
+                    <h3 class="text-sm font-bold text-slate-800 mb-1">AMR Profile Comparison</h3>
+                    <p class="text-[9px] text-slate-500 mb-2">Only showing selected organisms & antibiotics with data.</p>
+                    <div class="w-full overflow-x-auto custom-scroll mt-3">
+                        <div class="h-[280px] relative" id="amrChartContainer">
+                            <canvas id="chartAMR"></canvas>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-[9px] text-slate-400 text-center">* Faded bars = n &lt; 30 (Low Confidence)</div>
+                </div>
 
-        if (inputOrgs.length > 0 && inputAbxs.length === 0) {
-            displayOrgs = inputOrgs;
-            let foundAbxs = new Set();
-            displayOrgs.forEach(org => {
-                if (amrStats[org]) {
-                    Object.keys(amrStats[org].abx).forEach(abx => {
-                        if (amrStats[org].abx[abx].tested > 0) foundAbxs.add(abx);
-                    });
-                }
-            });
-            displayAbxs = Array.from(foundAbxs).sort();
-        } else if (inputOrgs.length === 0 && inputAbxs.length > 0) {
-            displayAbxs = inputAbxs;
-            let foundOrgs = new Set();
-            Array.from(allPresentOrgs).forEach(org => {
-                displayAbxs.forEach(abx => {
-                    if (amrStats[org] && amrStats[org].abx[abx] && amrStats[org].abx[abx].tested > 0) foundOrgs.add(org);
-                });
-            });
-            displayOrgs = Array.from(foundOrgs).sort();
-        }
+                <div class="mobile-card">
+                    <h3 id="ana_org_title" class="text-sm font-bold text-slate-800 mb-3 text-center">Organism Prevalence</h3>
+                    <div class="h-48 relative"><canvas id="chartOrg"></canvas></div>
+                </div>
+                <div class="mobile-card">
+                    <h3 class="text-sm font-bold text-slate-800 mb-3 text-center">Specimen Distribution</h3>
+                    <div class="h-48 relative"><canvas id="chartSpecimen"></canvas></div>
+                </div>
+                <div class="mobile-card">
+                    <h3 class="text-sm font-bold text-slate-800 mb-3 text-center">Sample Distribution by Gender</h3>
+                    <div class="h-48 relative"><canvas id="chartGender"></canvas></div>
+                </div>
+            </div>
+        </div>
 
-        let finalAbxs = [];
-        displayAbxs.forEach(abx => {
-            let hasData = displayOrgs.some(org => amrStats[org] && amrStats[org].abx[abx] && amrStats[org].abx[abx].tested > 0);
-            if(hasData) finalAbxs.push(abx);
-        });
-        displayAbxs = finalAbxs;
-
-        let datasets = [];
-        displayOrgs.forEach((org, orgIndex) => {
-            let s_org = amrStats[org];
-            if (!s_org) return;
-
-            let dataR = [], bgColors = [], ciData = [];
-            let palette = orgColorPalette[orgIndex % orgColorPalette.length];
-            let hasDataForThisOrg = false;
-
-            displayAbxs.forEach(abx => {
-                let s = s_org.abx[abx];
-                if (!s || s.tested === 0) {
-                    dataR.push(null); 
-                    bgColors.push(palette.lowBg); 
-                    ciData.push({lower: 0, upper: 0});
-                } else {
-                    hasDataForThisOrg = true;
-                    let targetVal = metric === 'R' ? s.r : s.s;
-                    let p = Math.round((targetVal / s.tested) * 100);
-                    let isReliable = s.tested >= 30;
-                    
-                    dataR.push(p);
-                    bgColors.push(isReliable ? palette.bg : palette.lowBg);
-                    ciData.push(wilsonScoreCI(targetVal, s.tested));
-                }
-            });
-
-            if(hasDataForThisOrg) {
-                datasets.push({ 
-                    label: formatOrgName(org), 
-                    data: dataR, 
-                    backgroundColor: bgColors, 
-                    borderRadius: 4, 
-                    ciData: ciData,
-                    maxBarThickness: 45
-                });
-            }
-        });
-
-        if (chartAMR_instance) chartAMR_instance.destroy();
-        
-        let minWidthNeeded = (displayAbxs.length * datasets.length * 50) + 80;
-        $('#amrChartContainer').css('width', `max(100%, ${minWidthNeeded}px)`);
-
-        chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
-            type: 'bar',
-            data: { labels: displayAbxs, datasets: datasets },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                skipNull: true,
-                scales: { 
-                    y: { max: 100 },
-                    x: { ticks: { maxRotation: 45, minRotation: 45, font: {size: 9} } }
-                }, 
-                plugins: { 
-                    legend: { position: 'top', labels: {boxWidth:8, font:{size:9}} },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                if (context.raw === null) return null;
-                                return context.dataset.label + ': ' + context.raw + '%';
-                            }
-                        }
-                    }
-                } 
-            },
-            plugins: [errorBarsPlugin]
-        });
-    }
-
-    let hmOrgs = Object.keys(heatmapStats).filter(o => targetOrgs.includes(o)).sort();
-    let hmAbxs = targetAbxs.sort();
-
-    let hmHtml = '<table class="heatmap-table"><thead><tr><th>Org (n)</th>';
-    hmAbxs.forEach(a => { hmHtml += `<th><div class="w-16 truncate text-[10px]" title="${a}">${a}</div></th>`; });
-    hmHtml += '</tr></thead><tbody>';
-
-    hmOrgs.forEach(o => {
-        let rowHasData = hmAbxs.some(a => heatmapStats[o][a] && heatmapStats[o][a].t > 0);
-        if(!rowHasData) return;
-
-        hmHtml += `<tr><th class="text-[10px] text-left leading-tight">${formatOrgName(o)} <br><span class="text-[9px] font-normal text-slate-400">(${orgCounts[o]||0})</span></th>`;
-        hmAbxs.forEach(a => {
-            let cell = heatmapStats[o][a];
-            if (!cell || cell.t === 0) { hmHtml += '<td class="bg-slate-50 text-slate-300">-</td>'; } 
-            else {
-                let targetVal = metric === 'R' ? cell.r : cell.s;
-                let p = Math.round((targetVal / cell.t) * 100);
-                let isLow = cell.t < 30;
-                let dangerScore = metric === 'R' ? p : (100 - p);
+        <!-- Tab 2: Last Month -->
+        <div id="viewLastMonth" class="hidden space-y-4">
+            <div class="mobile-card border-t-4 border-t-blue-500">
+                <h3 class="text-sm font-bold text-blue-800 mb-3 bg-blue-50 p-2 rounded text-center" id="live_month_title">Surveillance Overview</h3>
                 
-                let bgClass = 'bg-white', textClass = 'text-slate-700';
-                if (dangerScore <= 20) { bgClass = 'bg-emerald-100'; textClass = 'text-emerald-800'; }
-                else if (dangerScore <= 40) { bgClass = 'bg-yellow-100'; textClass = 'text-yellow-800'; }
-                else if (dangerScore <= 60) { bgClass = 'bg-orange-200'; textClass = 'text-orange-900'; }
-                else if (dangerScore <= 80) { bgClass = 'bg-red-400'; textClass = 'text-white font-bold'; }
-                else { bgClass = 'bg-red-600'; textClass = 'text-white font-bold'; }
+                <div class="grid grid-cols-3 gap-2 text-center mb-4">
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
+                        <div class="text-[10px] text-slate-500 font-bold mb-1">Isolates</div>
+                        <div class="text-lg font-black text-slate-800" id="live_m_total">-</div>
+                    </div>
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
+                        <div class="text-[10px] text-slate-500 font-bold mb-1">Top Bug</div>
+                        <div class="text-[11px] font-bold text-rose-600 leading-snug break-words" id="live_m_bug">-</div>
+                    </div>
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
+                        <div class="text-[10px] text-slate-500 font-bold mb-1">Top Specimen</div>
+                        <div class="text-[11px] font-bold text-teal-600 leading-snug break-words" id="live_m_spec">-</div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 border-t border-slate-100 pt-4">
+                    <h4 id="live_m_amr_title" class="text-xs font-bold text-slate-700 text-center mb-2">Critical Resistance Markers</h4>
+                    <div class="w-full overflow-x-auto custom-scroll mb-2">
+                        <div class="h-[220px] relative" style="min-width: 400px;"><canvas id="chart_m_amr"></canvas></div>
+                    </div>
+                    <p class="text-[9px] text-slate-400 text-center mb-4">* Gray bars = n &lt; 30 (Low Confidence)</p>
+                </div>
+                
+                <!-- Blood & Urine Charts -->
+                <div class="grid grid-cols-2 gap-2 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                    <div>
+                        <h4 class="text-[10px] font-bold text-center text-red-700 mb-0">Prevalence in Blood Sample</h4>
+                        <div id="live_m_blood_subtitle" class="text-[8px] text-center text-slate-500 mb-1"></div>
+                        <div class="h-28 relative"><canvas id="chart_m_blood"></canvas></div>
+                    </div>
+                    <div>
+                        <h4 class="text-[10px] font-bold text-center text-yellow-600 mb-0">Prevalence in Urine Sample</h4>
+                        <div id="live_m_urine_subtitle" class="text-[8px] text-center text-slate-500 mb-1"></div>
+                        <div class="h-28 relative"><canvas id="chart_m_urine"></canvas></div>
+                    </div>
+                </div>
 
-                if (isLow) textClass += dangerScore > 60 ? ' text-red-100' : ' opacity-70';
-                hmHtml += `<td class="${bgClass} ${textClass}">${p}% ${isLow ? '<span class="text-[10px] text-red-500 font-bold">*</span>' : ''}</td>`;
-            }
-        });
-        hmHtml += '</tr>';
-    });
-    hmHtml += '</tbody></table>';
-    $('#heatmapWrapper').html(hmHtml);
+                <!-- Top 5 Specimens Bar Chart -->
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4 mt-2">
+                    <h4 id="live_m_bar_title" class="text-[11px] font-bold text-center text-slate-700 mb-2">Top 5 Specimens</h4>
+                    <div class="h-40 relative"><canvas id="chart_m_bar"></canvas></div>
+                </div>
 
-    // 1. Organism Prevalence Chart
-    let orgTitle = targetSample ? `Prevalence in ${targetSample} Specimens` : 'Overall Organism Prevalence';
-    $('#ana_org_title').text(orgTitle);
+                <div id="live_m_top3_container" class="mt-4 space-y-2 hidden"></div>
+                <div id="live_m_profiles_wrapper" class="space-y-3 mt-4 pt-4 border-t border-slate-100 hidden">
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <h4 class="text-xs font-bold text-blue-900 mb-2 flex justify-between"><span id="live_m_profile1_title">Profile 1</span><span class="text-[9px] text-slate-500" id="live_m_mero_count"></span></h4>
+                        <div class="w-full overflow-x-auto custom-scroll"><div class="h-40 relative" style="min-width: 300px;"><canvas id="chart_m_mero"></canvas></div></div>
+                    </div>
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <h4 class="text-xs font-bold text-teal-900 mb-2 flex justify-between"><span id="live_m_profile2_title">Profile 2</span><span class="text-[9px] text-slate-500" id="live_m_cro_count"></span></h4>
+                        <div class="w-full overflow-x-auto custom-scroll"><div class="h-40 relative" style="min-width: 300px;"><canvas id="chart_m_cro"></canvas></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    let sortedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]);
-    let orgLabels = sortedOrgs.map(o => formatOrgName(o));
-    
-    let baseColors = ['#0d9488','#0ea5e9','#3b82f6','#06b6d4','#14b8a6','#10b981','#84cc16','#eab308','#f59e0b','#f97316', '#ef4444', '#8b5cf6', '#ec4899'];
-    let orgColors = sortedOrgs.map((_, i) => baseColors[i % baseColors.length]);
+        <!-- Tab 3: Last Quarter -->
+        <div id="viewLastQuarter" class="hidden space-y-4">
+            <div class="mobile-card border-t-4 border-t-emerald-500">
+                <h3 class="text-sm font-bold text-emerald-800 mb-3 bg-emerald-50 p-2 rounded text-center" id="live_q_title">Surveillance Overview</h3>
+                
+                <div class="grid grid-cols-3 gap-2 text-center mb-4">
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
+                        <div class="text-[10px] text-slate-500 font-bold mb-1">Isolates</div>
+                        <div class="text-lg font-black text-slate-800" id="live_q_total">-</div>
+                    </div>
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
+                        <div class="text-[10px] text-slate-500 font-bold mb-1">Top Bug</div>
+                        <div class="text-[11px] font-bold text-rose-600 leading-snug break-words" id="live_q_bug">-</div>
+                    </div>
+                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
+                        <div class="text-[10px] text-slate-500 font-bold mb-1">Top Specimen</div>
+                        <div class="text-[11px] font-bold text-teal-600 leading-snug break-words" id="live_q_spec">-</div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 border-t border-slate-100 pt-4">
+                    <h4 id="live_q_amr_title" class="text-xs font-bold text-slate-700 text-center mb-2">Critical Resistance Markers</h4>
+                    <div class="w-full overflow-x-auto custom-scroll mb-2">
+                        <div class="h-[220px] relative" style="min-width: 400px;"><canvas id="chart_q_amr"></canvas></div>
+                    </div>
+                    <p class="text-[9px] text-slate-400 text-center mb-4">* Gray bars = n &lt; 30 (Low Confidence)</p>
+                </div>
+                
+                <!-- Blood & Urine Charts -->
+                <div class="grid grid-cols-2 gap-2 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                    <div>
+                        <h4 class="text-[10px] font-bold text-center text-red-700 mb-0">Prevalence in Blood Sample</h4>
+                        <div id="live_q_blood_subtitle" class="text-[8px] text-center text-slate-500 mb-1"></div>
+                        <div class="h-28 relative"><canvas id="chart_q_blood"></canvas></div>
+                    </div>
+                    <div>
+                        <h4 class="text-[10px] font-bold text-center text-yellow-600 mb-0">Prevalence in Urine Sample</h4>
+                        <div id="live_q_urine_subtitle" class="text-[8px] text-center text-slate-500 mb-1"></div>
+                        <div class="h-28 relative"><canvas id="chart_q_urine"></canvas></div>
+                    </div>
+                </div>
 
-    if(chartOrg_instance) chartOrg_instance.destroy();
-    chartOrg_instance = new Chart(document.getElementById('chartOrg'), {
-        type: 'doughnut', 
-        data: { 
-            labels: orgLabels, 
-            datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: orgColors }] 
-        },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            plugins: { legend: { display: false } } 
-        }
-    });
+                <!-- Top 5 Specimens Bar Chart -->
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4 mt-2">
+                    <h4 id="live_q_bar_title" class="text-[11px] font-bold text-center text-slate-700 mb-2">Top 5 Specimens</h4>
+                    <div class="h-40 relative"><canvas id="chart_q_bar"></canvas></div>
+                </div>
 
-    // 2. Specimen Distribution Chart
-    let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]).slice(0, 5);
-    if(chartSpec_instance) chartSpec_instance.destroy();
-    chartSpec_instance = new Chart(document.getElementById('chartSpecimen'), {
-        type: 'bar', 
-        data: { 
-            labels: sortedSpecs, 
-            datasets: [{ label: 'Isolates', data: sortedSpecs.map(s=>specCounts[s]), backgroundColor: '#0ea5e9', borderRadius: 4 }] 
-        },
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false } } }
-    });
+                <div id="live_q_top3_container" class="mt-4 space-y-2 hidden"></div>
+                <div id="live_q_profiles_wrapper" class="space-y-3 mt-4 pt-4 border-t border-slate-100 hidden">
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <h4 class="text-xs font-bold text-emerald-900 mb-2 flex justify-between"><span id="live_q_profile1_title">Profile 1</span><span class="text-[9px] text-slate-500" id="live_q_mero_count"></span></h4>
+                        <div class="w-full overflow-x-auto custom-scroll"><div class="h-40 relative" style="min-width: 300px;"><canvas id="chart_q_mero"></canvas></div></div>
+                    </div>
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <h4 class="text-xs font-bold text-teal-900 mb-2 flex justify-between"><span id="live_q_profile2_title">Profile 2</span><span class="text-[9px] text-slate-500" id="live_q_cro_count"></span></h4>
+                        <div class="w-full overflow-x-auto custom-scroll"><div class="h-40 relative" style="min-width: 300px;"><canvas id="chart_q_cro"></canvas></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    // 3. Gender Distribution Chart
-    if(chartGen_instance) chartGen_instance.destroy();
-    chartGen_instance = new Chart(document.getElementById('chartGender'), {
-        type: 'pie', 
-        data: { 
-            labels: ['Male', 'Female'], 
-            datasets: [{ data: [genderCounts['Male'], genderCounts['Female']], backgroundColor: ['#0ea5e9', '#ec4899'] }] 
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-    });
-};
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <button onclick="switchTab('analytics')" id="btnNavAnalytics" class="nav-btn active">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" /></svg>
+            Analytics
+        </button>
+        <button onclick="switchTab('last_month')" id="btnNavLastMonth" class="nav-btn">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            Last Month
+        </button>
+        <button onclick="switchTab('last_quarter')" id="btnNavLastQuarter" class="nav-btn">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
+            Last Quarter
+        </button>
+    </nav>
+
+    <script src="js/data.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
