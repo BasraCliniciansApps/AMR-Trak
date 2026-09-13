@@ -314,6 +314,9 @@ async function processDataExtraction(event) {
             "fox": "Cefoxitin", "czz": "Cefazolin", "czo": "Cefazolin", "cxm": "Cefuroxime", 
             "cro": "Ceftriaxone", "ctx": "Cefotaxime", "caz": "Ceftazidime", "fep": "Cefepime",
             "cep": "Cephalothin", "cec": "Cefaclor", "cpd": "Cefpodoxime", "cdr": "Cefdinir",
+            "cza": "Ceftazidime/Avibactam",
+            "czt": "Ceftolozane/Tazobactam",
+    
             
             // Carbapenems & Monobactams
             "ipm": "Imipenem", "mem": "Meropenem", "etp": "Ertapenem", "atm": "Aztreonam",
