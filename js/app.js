@@ -304,20 +304,47 @@ async function processDataExtraction(event) {
         const allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
         
         const whonetAbxMap = {
+            // Penicillins
             "amp": "Ampicillin", "amc": "Amoxicillin/Clavulanic acid", "amx": "Amoxicillin",
             "sam": "Ampicillin/Sulbactam", "tzp": "Piperacillin/Tazobactam", "pip": "Piperacillin",
-            "pen": "Penicillin", "oxc": "Oxacillin", "fox": "Cefoxitin",
-            "czz": "Cefazolin", "cxm": "Cefuroxime", "cro": "Ceftriaxone",
-            "ctx": "Cefotaxime", "caz": "Ceftazidime", "fep": "Cefepime",
-            "ipm": "Imipenem", "mem": "Meropenem", "etp": "Ertapenem",
-            "atm": "Aztreonam", "ami": "Amikacin", "gen": "Gentamicin",
-            "tob": "Tobramycin", "cip": "Ciprofloxacin", "lev": "Levofloxacin",
-            "mox": "Moxifloxacin", "ery": "Erythromycin", "azi": "Azithromycin",
-            "clr": "Clarithromycin", "cli": "Clindamycin", "van": "Vancomycin",
-            "tec": "Teicoplanin", "tcy": "Tetracycline", "dox": "Doxycycline",
-            "tgc": "Tigecycline", "sxt": "Trimethoprim/Sulfamethoxazole",
-            "nit": "Nitrofurantoin", "fos": "Fosfomycin", "col": "Colistin",
-            "lnz": "Linezolid", "rif": "Rifampicin"
+            "pen": "Penicillin", "oxc": "Oxacillin", "oxa": "Oxacillin",
+            "tic": "Ticarcillin", "tcc": "Ticarcillin/Clavulanic acid",
+            
+            // Cephalosporins
+            "fox": "Cefoxitin", "czz": "Cefazolin", "czo": "Cefazolin", "cxm": "Cefuroxime", 
+            "cro": "Ceftriaxone", "ctx": "Cefotaxime", "caz": "Ceftazidime", "fep": "Cefepime",
+            "cep": "Cephalothin", "cec": "Cefaclor", "cpd": "Cefpodoxime", "cdr": "Cefdinir",
+            
+            // Carbapenems & Monobactams
+            "ipm": "Imipenem", "mem": "Meropenem", "etp": "Ertapenem", "atm": "Aztreonam",
+            
+            // Aminoglycosides
+            "ami": "Amikacin", "amk": "Amikacin", "gen": "Gentamicin", "tob": "Tobramycin", "net": "Netilmicin",
+            
+            // Fluoroquinolones
+            "cip": "Ciprofloxacin", "lev": "Levofloxacin", "lvx": "Levofloxacin", "mox": "Moxifloxacin",
+            "ofx": "Ofloxacin", "nor": "Norfloxacin", "nal": "Nalidixic acid",
+            
+            // Macrolides & Lincosamides
+            "ery": "Erythromycin", "azi": "Azithromycin", "azm": "Azithromycin", 
+            "clr": "Clarithromycin", "cli": "Clindamycin",
+            
+            // Glycopeptides & Lipopeptides
+            "van": "Vancomycin", "tec": "Teicoplanin", "dap": "Daptomycin",
+            
+            // Tetracyclines
+            "tcy": "Tetracycline", "dox": "Doxycycline", "tgc": "Tigecycline",
+            
+            // Others
+            "sxt": "Trimethoprim/Sulfamethoxazole", "tmp": "Trimethoprim", 
+            "nit": "Nitrofurantoin", "fos": "Fosfomycin", "col": "Colistin", 
+            "lnz": "Linezolid", "rif": "Rifampicin", "chl": "Chloramphenicol",
+            "fct": "Fusidic acid", "fdc": "Fusidic acid", "fuc": "Fusidic acid",
+            "met": "Metronidazole", "mtr": "Metronidazole",
+            
+            // Antifungals (Must be added as Custom Antibiotics via the UI to display)
+            "flu": "Fluconazole", "cas": "Caspofungin", "vor": "Voriconazole", 
+            "mif": "Micafungin", "ani": "Anidulafungin"
         };
 
         for(let i = 0; i < actualHeaders.length; i++) {
