@@ -1,4 +1,4 @@
-// Firebase Initialization (Read-Only Cloud Connection)
+// Firebase Initialization
 const firebaseConfig = {
     apiKey: "AIzaSyCyWcTzvYXwsYQEgs_iNh_Co68H9_2kYU4",
     authDomain: "antibiogramtrak.firebaseapp.com",
@@ -113,9 +113,6 @@ window.switchTab = function(tab) {
     }
 };
 
-// -------------------------------------------------------------
-// LIVE SURVEILLANCE LOGIC
-// -------------------------------------------------------------
 function generateLiveSurveillance() {
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
     let settings = JSON.parse(localStorage.getItem('amr_live_settings')) || { profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
@@ -167,6 +164,7 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
         $(`#live_${prefix}_amr_title`).text(`Critical Resistance Markers (${timeLabel})`);
         $(`#live_${prefix}_blood_subtitle`).text(timeLabel);
         $(`#live_${prefix}_urine_subtitle`).text(timeLabel);
+        $(`#live_${prefix}_bar_title`).text(`Top 5 Specimens (${timeLabel})`);
         return;
     }
 
@@ -175,6 +173,7 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     $(`#live_${prefix}_amr_title`).text(`Critical Resistance Markers (${timeLabel})`);
     $(`#live_${prefix}_blood_subtitle`).text(timeLabel);
     $(`#live_${prefix}_urine_subtitle`).text(timeLabel);
+    $(`#live_${prefix}_bar_title`).text(`Top 5 Specimens (${timeLabel})`);
 
     let orgCounts = {}, specCounts = {};
     const criticalPairs = [
@@ -266,9 +265,38 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
             } 
         }
     }));
+
+    // ==========================================
+    // Top 5 Specimens (Horizontal Bar Chart)
+    // ==========================================
+    let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
+    let top5Specs = sortedSpecs.slice(0, 5);
+
+    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_bar`), {
+        type: 'bar', 
+        data: { 
+            labels: top5Specs, 
+            datasets: [{ 
+                data: top5Specs.map(s => specCounts[s]), 
+                backgroundColor: '#2cb4a4', 
+                borderRadius: 4 
+            }] 
+        },
+        options: { 
+            indexAxis: 'y', 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { legend: { display: false } }, 
+            scales: { 
+                x: { 
+                    ticks: { stepSize: 1, maxRotation: 45, minRotation: 45 } 
+                },
+                y: { grid: { display: false } }
+            } 
+        }
+    }));
     // ==========================================
 
-    let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
     let top3Specs = sortedSpecs.slice(0, 3);
     let htmlTop3 = `<h4 class="text-xs font-bold text-slate-700 mt-2 mb-2 border-b pb-1">Top 3 Specimens Breakdown (${timeLabel})</h4>`;
     
@@ -352,15 +380,12 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
     if (sortedOrgs.length === 0) { labels = ['No Data']; data = [0]; bgColors = ['#e2e8f0']; ciData = [{ lower: 0, upper: 0 }]; }
 
     liveCharts.push(new Chart(canvas, {
-        type: 'bar', data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, borderRadius: 4 }] },
+        type: 'bar', data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, borderRadius: 4, maxBarThickness: 30 }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { max: 100 }, x: { ticks: { font: {size: 8} } } } },
         plugins: [errorBarsPlugin]
     }));
 }
 
-// -------------------------------------------------------------
-// ANALYTICS LOGIC 
-// -------------------------------------------------------------
 function loadAnalyticsFilters() {
     if (isUpdatingFilters) return;
     isUpdatingFilters = true;
@@ -557,14 +582,14 @@ window.generateAnalytics = function() {
                     backgroundColor: bgColors, 
                     borderRadius: 4, 
                     ciData: ciData,
-                    maxBarThickness: 45
+                    maxBarThickness: 16
                 });
             }
         });
 
         if (chartAMR_instance) chartAMR_instance.destroy();
         
-        let minWidthNeeded = (displayAbxs.length * datasets.length * 50) + 80;
+        let minWidthNeeded = (displayAbxs.length * datasets.length * 20) + 100;
         $('#amrChartContainer').css('width', `max(100%, ${minWidthNeeded}px)`);
 
         chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
