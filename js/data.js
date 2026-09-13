@@ -87,16 +87,16 @@ const bacteriaLibrary = [
 ];
 
 const abxGroups = {
-    "Penicillins": ["Benzylpenicillin", "Penicillin", "Ampicillin", "Amoxicillin", "Cloxacillin", "Oxacillin", "Amoxicillin/Clavulanic acid", "Ampicillin/Sulbactam", "Piperacillin", "Piperacillin/Tazobactam", "Ticarcillin", "Ticarcillin/Clavulanic acid"],
-    "Cephalosporins": ["Cefazolin", "Cefoxitin", "Cefuroxime", "Cefixime", "Ceftriaxone", "Cefotaxime", "Ceftazidime", "Cefepime", "Cefaclor", "Cefpodoxime", "Cefdinir", "Cephalothin", "Cefoxitin screen"],
-    "Carbapenems & Monobactams": ["Imipenem", "Meropenem", "Ertapenem", "Aztreonam"],
-    "Aminoglycosides": ["Amikacin", "Gentamicin", "Tobramycin", "Netilmicin"],
+    "Penicillins": ["Benzylpenicillin", "Penicillin", "Ampicillin", "Amoxicillin", "Cloxacillin", "Oxacillin", "Amoxicillin/Clavulanic acid", "Ampicillin/Sulbactam", "Amoxicillin/Sulbactam", "Piperacillin", "Piperacillin/Tazobactam", "Ticarcillin", "Ticarcillin/Clavulanic acid", "Mecillinam"],
+    "Cephalosporins": ["Cefazolin", "Cefoxitin", "Cefuroxime", "Cefixime", "Ceftriaxone", "Cefotaxime", "Ceftazidime", "Cefepime", "Cefaclor", "Cefpodoxime", "Cefdinir", "Cephalothin", "Cefoperazone", "Cefotetan", "Ceftaroline", "Ceftizoxime", "Ceftobiprole", "Ceftazidime/Avibactam", "Ceftolozane/Tazobactam", "Cefoxitin screen"],
+    "Carbapenems & Monobactams": ["Imipenem", "Meropenem", "Ertapenem", "Doripenem", "Meropenem/Vaborbactam", "Imipenem/Relebactam", "Aztreonam"],
+    "Aminoglycosides": ["Amikacin", "Gentamicin", "Tobramycin", "Netilmicin", "Streptomycin", "Kanamycin", "Plazomicin", "Spectinomycin"],
     "Fluoroquinolones": ["Nalidixic acid", "Ciprofloxacin", "Levofloxacin", "Moxifloxacin", "Ofloxacin", "Norfloxacin"],
-    "Macrolides & Lincosamides": ["Erythromycin", "Azithromycin", "Clarithromycin", "Clindamycin", "Inducible Clindamycin Resistance"],
-    "Glycopeptides": ["Vancomycin", "Teicoplanin", "Daptomycin"],
-    "Tetracyclines": ["Tetracycline", "Doxycycline", "Tigecycline"],
-    "Others": ["Trimethoprim/Sulfamethoxazole", "Trimethoprim", "Nitrofurantoin", "Fosfomycin", "Colistin", "Linezolid", "Rifampicin", "Fusidic acid", "Mupirocin"],
-    "Antifungals": []
+    "Macrolides & Lincosamides": ["Erythromycin", "Azithromycin", "Clarithromycin", "Clindamycin", "Quinupristin/Dalfopristin", "Inducible Clindamycin Resistance"],
+    "Glycopeptides": ["Vancomycin", "Teicoplanin", "Daptomycin", "Dalbavancin", "Oritavancin", "Telavancin"],
+    "Tetracyclines": ["Tetracycline", "Doxycycline", "Minocycline", "Tigecycline"],
+    "Others": ["Trimethoprim/Sulfamethoxazole", "Trimethoprim", "Sulfonamides", "Nitrofurantoin", "Fosfomycin", "Colistin", "Polymyxin B", "Linezolid", "Rifampicin", "Fusidic acid", "Mupirocin"],
+    "Antifungals": ["Fluconazole", "Caspofungin", "Voriconazole", "Micafungin", "Anidulafungin", "Rezafungin", "Clotrimazole"]
 };
 
 const abxList = Object.values(abxGroups).flat();
