@@ -1,4 +1,4 @@
-// Firebase Initialization
+// Firebase Initialization (Read-Only Cloud Connection)
 const firebaseConfig = {
     apiKey: "AIzaSyCyWcTzvYXwsYQEgs_iNh_Co68H9_2kYU4",
     authDomain: "antibiogramtrak.firebaseapp.com",
@@ -76,6 +76,29 @@ function wilsonScoreCI(r, n) {
     return { lower: Math.max(0, Math.round(((center - spread) / denominator) * 100)), upper: Math.min(100, Math.round(((center + spread) / denominator) * 100)) };
 }
 
+// دالة جلب البيانات من السحابة مباشرة عند فتح الهاتف
+async function fetchCloudData() {
+    if (!db) {
+        loadAnalyticsFilters();
+        generateLiveSurveillance();
+        return;
+    }
+    try {
+        Swal.fire({ title: 'Loading Cloud Data...', text: 'Fetching latest records...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+        const doc = await db.collection("amr_sync").doc("hospital_main").get();
+        if (doc.exists) {
+            const cloudRecords = doc.data().records || [];
+            localStorage.setItem('amr_records', JSON.stringify(cloudRecords));
+        }
+        Swal.close();
+    } catch(e) {
+        console.error("Error fetching from cloud:", e);
+        Swal.fire({ icon: 'warning', title: 'Offline Mode', text: 'Could not connect to cloud. Showing local data if available.', timer: 2000, showConfirmButton: false });
+    }
+    loadAnalyticsFilters();
+    generateLiveSurveillance();
+}
+
 $(document).ready(function() {
     $('.select2-mobile').select2({ width: '100%' });
     $('.select2-multiple').select2({ width: '100%', allowClear: true });
@@ -88,9 +111,10 @@ $(document).ready(function() {
         if(!isUpdatingFilters) loadAnalyticsFilters();
     });
 
-    loadAnalyticsFilters();
-    generateLiveSurveillance();
     switchTab('analytics');
+    
+    // بدء جلب البيانات وتحديث الواجهة
+    fetchCloudData();
 });
 
 window.switchTab = function(tab) {
@@ -220,9 +244,6 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
         plugins: [errorBarsPlugin]
     }));
 
-    // ==========================================
-    // Blood & Urine Pie Charts (Prevalence)
-    // ==========================================
     let bloodRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'blood');
     let urineRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'urine');
     
@@ -266,9 +287,6 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
         }
     }));
 
-    // ==========================================
-    // Top 5 Specimens (Horizontal Bar Chart)
-    // ==========================================
     let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
     let top5Specs = sortedSpecs.slice(0, 5);
 
@@ -385,9 +403,6 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
     }));
 }
 
-// -------------------------------------------------------------
-// ANALYTICS LOGIC 
-// -------------------------------------------------------------
 function loadAnalyticsFilters() {
     if (isUpdatingFilters) return;
     isUpdatingFilters = true;
