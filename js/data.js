@@ -139,7 +139,21 @@ const orgMapExport = {
 };
 
 const defaultSamples = ["Blood", "Urine", "Sputum", "Wound Swab", "CSF", "Pus", "Stool", "Aspirate"];
-const defaultWards = ["Pediatrics", "Resuscitation / CCU", "Internal Medicine", "General Surgery", "Private Ward", "Neonatal Unit", "NICU", "ICU", "General Obstetrics & Gynecology", "Private Obstetrics & Gynecology", "Neurology & Neurosurgery", "Delivery Room", "Orthopedics"];
+const defaultWards = [
+    "Pediatrics", 
+    "Emergency", 
+    "CCU", 
+    "Internal Medicine", 
+    "Surgery", 
+    "Neonatal Unit", 
+    "Neonatal ICU", 
+    "Pediatric ICU", 
+    "ICU", 
+    "Obstetrics & Gynecology", 
+    "Neurosurgery", 
+    "Orthopedics",
+    "Epidemiology / Isolation"
+];
 
 // WHONET Fallback Mapping
 const whonetOrgMap = {
