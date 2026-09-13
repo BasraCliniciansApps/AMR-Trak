@@ -237,7 +237,7 @@ function togglePrintSection(id) {
     }
 }
 
-// --- WHONET DATA EXTRACTOR & INJECTOR ---
+// --- UNIVERSAL WHONET DATA EXTRACTOR & INJECTOR ---
 function triggerDataExtractor() {
     document.getElementById('extractorFileInput').click();
 }
@@ -248,272 +248,258 @@ async function processDataExtraction(event) {
 
     Swal.fire({ title: 'Processing File...', text: 'Loading dictionaries and extracting records...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
+    // 1. Fetch Organisms Dictionary
     let externalOrgMap = {};
     try {
         const response = await fetch('organisms_dictionary.json');
         if (response.ok) {
             const jsonDict = await response.json();
-            Object.keys(jsonDict).forEach(key => {
-                externalOrgMap[key.toLowerCase()] = jsonDict[key];
-            });
+            Object.keys(jsonDict).forEach(key => { externalOrgMap[key.toLowerCase()] = jsonDict[key]; });
         } else {
-            console.warn("organisms_dictionary.json not found on server, continuing with internal mapping.");
+            console.warn("organisms_dictionary.json not found on server.");
         }
-    } catch (error) {
-        console.warn("Could not fetch organisms_dictionary.json.");
-    }
+    } catch (error) { console.warn("Could not fetch organisms_dictionary.json."); }
 
+    // 2. Fetch Specimens Dictionary
     let externalSpecimenMap = {};
     try {
         const response = await fetch('specimens_dictionary.json');
         if (response.ok) {
             const jsonDict = await response.json();
-            Object.keys(jsonDict).forEach(key => {
-                externalSpecimenMap[key.toLowerCase()] = jsonDict[key];
-            });
+            Object.keys(jsonDict).forEach(key => { externalSpecimenMap[key.toLowerCase()] = jsonDict[key]; });
         } else {
-            console.warn("specimens_dictionary.json not found on server, continuing with internal fallback mapping.");
+            console.warn("specimens_dictionary.json not found on server.");
         }
-    } catch (error) {
-        console.warn("Could not fetch specimens_dictionary.json.");
+    } catch (error) { console.warn("Could not fetch specimens_dictionary.json."); }
+
+    const fileName = file.name.toLowerCase();
+
+    // 3. Process Excel Files
+    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const arrayBuffer = e.target.result;
+                const workbook = await XlsxPopulate.fromDataAsync(arrayBuffer);
+                const values = workbook.sheet(0).usedRange().value();
+                
+                // Convert 2D Excel array to standardized string array (handling empty cells)
+                const rawData = values.map(row => row.map(cell => cell != null ? String(cell).trim() : ""));
+                parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event);
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Error', 'Failed to read Excel file. Make sure it is not corrupted.', 'error');
+                event.target.value = '';
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    } 
+    // 4. Process TXT/CSV Files
+    else {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const text = e.target.result;
+            const lines = text.split(/\r?\n/);
+            if(lines.length < 2) {
+                Swal.fire('Error', 'File appears to be empty or invalid.', 'error');
+                event.target.value = ''; return;
+            }
+
+            let separator = '\t';
+            if(lines[0].split('\t').length <= 1) { separator = ','; }
+            
+            // Convert to 2D array
+            const rawData = lines.filter(line => line.trim() !== '').map(line => line.split(separator).map(c => c.trim()));
+            parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event);
+        };
+        reader.readAsText(file);
+    }
+}
+
+// --- UNIFIED INJECTION LOGIC ---
+function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event) {
+    if (!rawData || rawData.length < 2) {
+        Swal.fire('Error', 'No valid data found to extract.', 'error');
+        event.target.value = ''; return;
     }
 
-    const reader = new FileReader();
-    reader.onload = e => {
-        const text = e.target.result;
-        const lines = text.split(/\r?\n/);
-        if(lines.length < 2) {
-            Swal.fire('Error', 'File appears to be empty or invalid.', 'error');
-            return;
+    const actualHeaders = rawData[0].map(h => h.toLowerCase());
+
+    const idxFName = actualHeaders.findIndex(h => h === 'first_name' || h === 'first name' || h === 'patient_name');
+    const idxLName = actualHeaders.findIndex(h => h === 'last_name' || h === 'last name');
+    const idxAge = actualHeaders.findIndex(h => h === 'age');
+    const idxSex = actualHeaders.findIndex(h => h === 'sex' || h === 'gender');
+    const idxWard = actualHeaders.findIndex(h => h === 'ward' || h === 'location' || h === 'department');
+    const idxSample = actualHeaders.findIndex(h => h === 'specimen' || h === 'sample' || h === 'spec_type' || h === 'specimen type');
+    const idxDate = actualHeaders.findIndex(h => h === 'spec_date' || h === 'specimen date' || h === 'date');
+    const idxOrg = actualHeaders.findIndex(h => h === 'organism' || h === 'org');
+
+    const abxColumns = [];
+    const allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
+    
+    // Complete WHONET Antibiotics Dictionary
+    const whonetAbxMap = {
+        "amp": "Ampicillin", "amc": "Amoxicillin/Clavulanic acid", "amx": "Amoxicillin",
+        "sam": "Ampicillin/Sulbactam", "axs": "Amoxicillin/Sulbactam", "tzp": "Piperacillin/Tazobactam", 
+        "pip": "Piperacillin", "pen": "Penicillin", "oxc": "Oxacillin", "oxa": "Oxacillin",
+        "tic": "Ticarcillin", "tcc": "Ticarcillin/Clavulanic acid", "mec": "Mecillinam",
+        "fox": "Cefoxitin", "czz": "Cefazolin", "czo": "Cefazolin", "cxm": "Cefuroxime", 
+        "cfm": "Cefixime", "cro": "Ceftriaxone", "ctx": "Cefotaxime", "caz": "Ceftazidime", 
+        "fep": "Cefepime", "cep": "Cephalothin", "cec": "Cefaclor", "cpd": "Cefpodoxime", 
+        "cdr": "Cefdinir", "cfp": "Cefoperazone", "ctt": "Cefotetan", "cpt": "Ceftaroline", 
+        "czx": "Ceftizoxime", "cfb": "Ceftobiprole", "cza": "Ceftazidime/Avibactam", "czt": "Ceftolozane/Tazobactam",
+        "ipm": "Imipenem", "mem": "Meropenem", "etp": "Ertapenem", "dor": "Doripenem", 
+        "mev": "Meropenem/Vaborbactam", "imr": "Imipenem/Relebactam", "atm": "Aztreonam",
+        "ami": "Amikacin", "amk": "Amikacin", "gen": "Gentamicin", "tob": "Tobramycin", 
+        "net": "Netilmicin", "str": "Streptomycin", "kan": "Kanamycin", "plz": "Plazomicin", "spt": "Spectinomycin",
+        "cip": "Ciprofloxacin", "lev": "Levofloxacin", "lvx": "Levofloxacin", "mox": "Moxifloxacin",
+        "ofx": "Ofloxacin", "nor": "Norfloxacin", "nal": "Nalidixic acid",
+        "ery": "Erythromycin", "azi": "Azithromycin", "azm": "Azithromycin", 
+        "clr": "Clarithromycin", "cli": "Clindamycin", "qda": "Quinupristin/Dalfopristin",
+        "van": "Vancomycin", "tec": "Teicoplanin", "dap": "Daptomycin",
+        "dal": "Dalbavancin", "ori": "Oritavancin", "tlv": "Telavancin",
+        "tcy": "Tetracycline", "dox": "Doxycycline", "mno": "Minocycline", "tgc": "Tigecycline",
+        "sxt": "Trimethoprim/Sulfamethoxazole", "tmp": "Trimethoprim", "sss": "Sulfonamides",
+        "nit": "Nitrofurantoin", "fos": "Fosfomycin", "col": "Colistin", "pol": "Polymyxin B",
+        "lnz": "Linezolid", "rif": "Rifampicin", "chl": "Chloramphenicol",
+        "fct": "Fusidic acid", "fdc": "Fusidic acid", "fuc": "Fusidic acid",
+        "met": "Metronidazole", "mtr": "Metronidazole",
+        "flu": "Fluconazole", "cas": "Caspofungin", "vor": "Voriconazole", 
+        "mif": "Micafungin", "ani": "Anidulafungin", "rzf": "Rezafungin", "clo": "Clotrimazole"
+    };
+
+    for(let i = 0; i < actualHeaders.length; i++) {
+        let h = actualHeaders[i].toLowerCase();
+        let matchedName = null;
+        if (whonetAbxMap[h]) {
+            matchedName = whonetAbxMap[h];
+        } else if (h.includes('_nd') || h.includes('_nm')) {
+            let prefix = h.split('_')[0];
+            if (whonetAbxMap[prefix]) matchedName = whonetAbxMap[prefix];
+        } else {
+            let directMatch = allPossibleAbxs.find(a => a.toLowerCase() === h);
+            if(directMatch) matchedName = directMatch;
         }
 
-        let separator = '\t';
-        if(lines[0].split('\t').length <= 1) { separator = ','; }
-        const actualHeaders = lines[0].split(separator).map(h => h.trim().toLowerCase());
+        if(matchedName) {
+            abxColumns.push({ index: i, name: matchedName });
+        }
+    }
 
-        const idxFName = actualHeaders.findIndex(h => h === 'first_name' || h === 'first name' || h === 'patient_name');
-        const idxLName = actualHeaders.findIndex(h => h === 'last_name' || h === 'last name');
-        const idxAge = actualHeaders.findIndex(h => h === 'age');
-        const idxSex = actualHeaders.findIndex(h => h === 'sex' || h === 'gender');
-        const idxWard = actualHeaders.findIndex(h => h === 'ward' || h === 'location' || h === 'department');
-        const idxSample = actualHeaders.findIndex(h => h === 'specimen' || h === 'sample' || h === 'spec_type' || h === 'specimen type');
-        const idxDate = actualHeaders.findIndex(h => h === 'spec_date' || h === 'specimen date' || h === 'date');
-        const idxOrg = actualHeaders.findIndex(h => h === 'organism' || h === 'org');
+    let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let addedCount = 0;
+    let skippedCount = 0;
 
-        const abxColumns = [];
-        const allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
+    const wardMap = {
+        'ped': 'Pediatrics', 'ped in': 'Pediatrics',
+        'icu': 'ICU', 'ccu': 'Resuscitation / CCU', 'eme': 'Resuscitation / CCU',
+        'sur': 'General Surgery', 'sur in': 'General Surgery',
+        'med': 'Internal Medicine', 'med in': 'Internal Medicine',
+        'neo': 'Neonatal Unit', 'neo in': 'Neonatal Unit',
+        'neu in': 'Neurology & Neurosurgery',
+        'out': 'Outpatient',
+        'obg': 'General Obstetrics & Gynecology', 'obg in': 'General Obstetrics & Gynecology',
+        'ent': 'ENT'
+    };
+
+    for(let i = 1; i < rawData.length; i++) {
+        const cols = rawData[i];
+
+        let orgCode = idxOrg > -1 && cols[idxOrg] ? cols[idxOrg].toLowerCase() : "";
+        if(!orgCode || orgCode === 'xxx' || orgCode === 'con' || orgCode === 'no growth') {
+            skippedCount++; continue;
+        }
+
+        let hasSRIData = false;
+        let abxResults = {};
         
-        const whonetAbxMap = {
-            // Penicillins
-            "amp": "Ampicillin", "amc": "Amoxicillin/Clavulanic acid", "amx": "Amoxicillin",
-            "sam": "Ampicillin/Sulbactam", "axs": "Amoxicillin/Sulbactam", "tzp": "Piperacillin/Tazobactam", 
-            "pip": "Piperacillin", "pen": "Penicillin", "oxc": "Oxacillin", "oxa": "Oxacillin",
-            "tic": "Ticarcillin", "tcc": "Ticarcillin/Clavulanic acid", "mec": "Mecillinam",
-            
-            // Cephalosporins
-            "fox": "Cefoxitin", "czz": "Cefazolin", "czo": "Cefazolin", "cxm": "Cefuroxime", 
-            "cfm": "Cefixime", "cro": "Ceftriaxone", "ctx": "Cefotaxime", "caz": "Ceftazidime", 
-            "fep": "Cefepime", "cep": "Cephalothin", "cec": "Cefaclor", "cpd": "Cefpodoxime", 
-            "cdr": "Cefdinir", "cfp": "Cefoperazone", "ctt": "Cefotetan", "cpt": "Ceftaroline", 
-            "czx": "Ceftizoxime", "cfb": "Ceftobiprole", "cza": "Ceftazidime/Avibactam", "czt": "Ceftolozane/Tazobactam",
-            
-            // Carbapenems & Monobactams
-            "ipm": "Imipenem", "mem": "Meropenem", "etp": "Ertapenem", "dor": "Doripenem", 
-            "mev": "Meropenem/Vaborbactam", "imr": "Imipenem/Relebactam", "atm": "Aztreonam",
-            
-            // Aminoglycosides
-            "ami": "Amikacin", "amk": "Amikacin", "gen": "Gentamicin", "tob": "Tobramycin", 
-            "net": "Netilmicin", "str": "Streptomycin", "kan": "Kanamycin", "plz": "Plazomicin", "spt": "Spectinomycin",
-            
-            // Fluoroquinolones
-            "cip": "Ciprofloxacin", "lev": "Levofloxacin", "lvx": "Levofloxacin", "mox": "Moxifloxacin",
-            "ofx": "Ofloxacin", "nor": "Norfloxacin", "nal": "Nalidixic acid",
-            
-            // Macrolides, Lincosamides & Streptogramins
-            "ery": "Erythromycin", "azi": "Azithromycin", "azm": "Azithromycin", 
-            "clr": "Clarithromycin", "cli": "Clindamycin", "qda": "Quinupristin/Dalfopristin",
-            
-            // Glycopeptides & Lipopeptides
-            "van": "Vancomycin", "tec": "Teicoplanin", "dap": "Daptomycin",
-            "dal": "Dalbavancin", "ori": "Oritavancin", "tlv": "Telavancin",
-            
-            // Tetracyclines
-            "tcy": "Tetracycline", "dox": "Doxycycline", "mno": "Minocycline", "tgc": "Tigecycline",
-            
-            // Others
-            "sxt": "Trimethoprim/Sulfamethoxazole", "tmp": "Trimethoprim", "sss": "Sulfonamides",
-            "nit": "Nitrofurantoin", "fos": "Fosfomycin", "col": "Colistin", "pol": "Polymyxin B",
-            "lnz": "Linezolid", "rif": "Rifampicin", "chl": "Chloramphenicol",
-            "fct": "Fusidic acid", "fdc": "Fusidic acid", "fuc": "Fusidic acid",
-            "met": "Metronidazole", "mtr": "Metronidazole",
-            
-            // Antifungals 
-            "flu": "Fluconazole", "cas": "Caspofungin", "vor": "Voriconazole", 
-            "mif": "Micafungin", "ani": "Anidulafungin", "rzf": "Rezafungin", "clo": "Clotrimazole"
-        };
-        for(let i = 0; i < actualHeaders.length; i++) {
-            let h = actualHeaders[i].toLowerCase();
-            let matchedName = null;
-            if (whonetAbxMap[h]) {
-                matchedName = whonetAbxMap[h];
-            } else if (h.includes('_nd') || h.includes('_nm')) {
-                let prefix = h.split('_')[0];
-                if (whonetAbxMap[prefix]) matchedName = whonetAbxMap[prefix];
+        abxColumns.forEach(abx => {
+            let val = cols[abx.index] ? String(cols[abx.index]).trim().toUpperCase() : "";
+            if (val === 'S' || val === 'I' || val === 'R') {
+                hasSRIData = true;
+                abxResults[abx.name] = val;
+            } else if (val.startsWith('S') || val.startsWith('I') || val.startsWith('R')) {
+                hasSRIData = true;
+                abxResults[abx.name] = val.charAt(0);
+            }
+        });
+
+        if (!hasSRIData) { skippedCount++; continue; }
+
+        let fName = idxFName > -1 && cols[idxFName] ? cols[idxFName] : "";
+        let lName = idxLName > -1 && cols[idxLName] ? cols[idxLName] : "";
+        let name = (fName + " " + lName).trim() || "Unknown Patient";
+
+        let rawAge = idxAge > -1 && cols[idxAge] ? String(cols[idxAge]) : "";
+        let ageNum = parseInt(rawAge) || "";
+        let ageUnit = "Years";
+        if(rawAge.toLowerCase().includes('m')) ageUnit = "Months";
+        if(rawAge.toLowerCase().includes('d')) ageUnit = "Days";
+
+        let rawSex = idxSex > -1 && cols[idxSex] ? String(cols[idxSex]).toLowerCase() : "";
+        let sex = rawSex.startsWith('f') ? "Female" : "Male";
+
+        let rawWard = idxWard > -1 && cols[idxWard] ? String(cols[idxWard]).toLowerCase() : "";
+        let ward = wardMap[rawWard] || (rawWard ? rawWard.charAt(0).toUpperCase() + rawWard.slice(1) : "-");
+
+        let rawSample = idxSample > -1 && cols[idxSample] ? String(cols[idxSample]).toLowerCase() : "";
+        let sample = externalSpecimenMap[rawSample] || (rawSample ? rawSample.charAt(0).toUpperCase() + rawSample.slice(1) : "-");
+
+        let rawDate = idxDate > -1 && cols[idxDate] ? String(cols[idxDate]).trim() : "";
+        let formattedDate = ""; 
+        
+        if(rawDate) {
+            // Excel Date Fix: Converts Excel serial dates (e.g. 45293) to JS format natively
+            if (!isNaN(rawDate) && Number(rawDate) > 10000 && !rawDate.includes('-') && !rawDate.includes('/')) {
+                let d = new Date((Number(rawDate) - 25569) * 86400 * 1000);
+                formattedDate = d.toISOString().slice(0, 7);
             } else {
-                let directMatch = allPossibleAbxs.find(a => a.toLowerCase() === h);
-                if(directMatch) matchedName = directMatch;
-            }
-
-            if(matchedName) {
-                abxColumns.push({ index: i, name: matchedName });
-            }
-        }
-
-        let records = JSON.parse(localStorage.getItem('amr_records')) || [];
-        let addedCount = 0;
-        let skippedCount = 0;
-
-        const wardMap = {
-            'ped': 'Pediatrics', 'ped in': 'Pediatrics',
-            'icu': 'ICU', 'ccu': 'Resuscitation / CCU', 'eme': 'Resuscitation / CCU',
-            'sur': 'General Surgery', 'sur in': 'General Surgery',
-            'med': 'Internal Medicine', 'med in': 'Internal Medicine',
-            'neo': 'Neonatal Unit', 'neo in': 'Neonatal Unit',
-            'neu in': 'Neurology & Neurosurgery',
-            'out': 'Outpatient',
-            'obg': 'General Obstetrics & Gynecology', 'obg in': 'General Obstetrics & Gynecology',
-            'ent': 'ENT'
-        };
-
-        for(let i = 1; i < lines.length; i++) {
-            if(!lines[i].trim()) continue;
-            const cols = lines[i].split(separator).map(c => c.trim());
-
-            let orgCode = idxOrg > -1 && cols[idxOrg] ? cols[idxOrg].toLowerCase() : "";
-            if(!orgCode || orgCode === 'xxx' || orgCode === 'con' || orgCode === 'no growth') {
-                skippedCount++;
-                continue;
-            }
-
-            let hasSRIData = false;
-            let abxResults = {};
-            
-            abxColumns.forEach(abx => {
-                let val = cols[abx.index] ? cols[abx.index].trim().toUpperCase() : "";
-                if (val === 'S' || val === 'I' || val === 'R') {
-                    hasSRIData = true;
-                    abxResults[abx.name] = val;
-                } else if (val.startsWith('S') || val.startsWith('I') || val.startsWith('R')) {
-                    hasSRIData = true;
-                    abxResults[abx.name] = val.charAt(0);
-                }
-            });
-
-            if (!hasSRIData) {
-                skippedCount++;
-                continue;
-            }
-
-            let fName = idxFName > -1 && cols[idxFName] ? cols[idxFName] : "";
-            let lName = idxLName > -1 && cols[idxLName] ? cols[idxLName] : "";
-            let name = (fName + " " + lName).trim() || "Unknown Patient";
-
-            let rawAge = idxAge > -1 && cols[idxAge] ? cols[idxAge] : "";
-            let ageNum = parseInt(rawAge) || "";
-            let ageUnit = "Years";
-            if(rawAge.toLowerCase().includes('m')) ageUnit = "Months";
-            if(rawAge.toLowerCase().includes('d')) ageUnit = "Days";
-
-            let rawSex = idxSex > -1 && cols[idxSex] ? cols[idxSex].toLowerCase() : "";
-            let sex = rawSex.startsWith('f') ? "Female" : "Male";
-
-            let rawWard = idxWard > -1 && cols[idxWard] ? cols[idxWard].toLowerCase() : "";
-            let ward = wardMap[rawWard] || (rawWard ? rawWard.charAt(0).toUpperCase() + rawWard.slice(1) : "-");
-
-            let rawSample = idxSample > -1 && cols[idxSample] ? cols[idxSample].toLowerCase() : "";
-            let sample = externalSpecimenMap[rawSample] || (rawSample ? rawSample.charAt(0).toUpperCase() + rawSample.slice(1) : "-");
-
-            let rawDate = idxDate > -1 && cols[idxDate] ? cols[idxDate].trim() : "";
-            let formattedDate = ""; 
-            
-            if(rawDate) {
                 let dateParts = rawDate.split(/[\/\-]/);
-                
                 if(dateParts.length >= 3) {
                     let part1 = dateParts[0];
                     let part2 = dateParts[1].padStart(2, '0');
                     let part3 = dateParts[2].split(' ')[0]; 
                     
-                    let year, month;
-                    if(part1.length === 4) {
-                        year = part1;
-                        month = part2;
-                    } else {
-                        year = part3;
-                        if(year.length === 2) year = "20" + year;
-                        month = part2;
-                    }
-                    formattedDate = `${year}-${month}`;
+                    let year = part1.length === 4 ? part1 : (part3.length === 2 ? "20" + part3 : part3);
+                    formattedDate = `${year}-${part2}`;
                 } else {
                     let d = new Date(rawDate);
                     if(!isNaN(d)) formattedDate = d.toISOString().slice(0, 7);
                 }
             }
-
-            if(!formattedDate) {
-                skippedCount++;
-                continue;
-            }
-
-            let fullOrgName = externalOrgMap[orgCode] || whonetOrgMap[orgCode] || (orgCode.charAt(0).toUpperCase() + orgCode.slice(1));
-                    
-            const orgNameCleanup = {
-                "Escherichia coli (E.coli)": "Escherichia coli",
-                "Klebsiella pneumoniae ss. pneumoniae": "Klebsiella pneumoniae",
-                "Staphylococcus aureus ss. aureus": "Staphylococcus aureus",
-                "Staphylococcus hominis ss. hominis": "Staphylococcus hominis",
-                "Staphylococcus capitis ss. capitis": "Staphylococcus capitis",
-                "Staphylococcus saprophyticus ss. saprophyticus": "Staphylococcus saprophyticus"
-            };
-
-            if (orgNameCleanup[fullOrgName]) {
-                fullOrgName = orgNameCleanup[fullOrgName];
-            }
-
-            let record = {
-                'Name': name,
-                'Age': ageNum,
-                'Age Unit': ageUnit,
-                'Sex': sex,
-                'Ward': ward,
-                'Sample': sample,
-                'Date': formattedDate,
-                'Selective organism': fullOrgName,
-                'Antibiogram organism': fullOrgName 
-            };
-
-            Object.assign(record, abxResults);
-
-            records.push(record);
-            addedCount++;
         }
 
-       localStorage.setItem('amr_records', JSON.stringify(records));
-    closeModal();
-    initDataTable();
-    
-    // تشغيل المزامنة مع السحابة إذا كان الإنترنت متوفراً
-    if (navigator.onLine) {
-        syncLocalToCloud();
-    }
-        if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
-        
-        Swal.fire('Success!', `Extraction complete: ${addedCount} isolates added.\nIgnored ${skippedCount} samples (No growth or invalid date).`, 'success');
-        event.target.value = ''; 
-    };
-    reader.readAsText(file);
-}
+        if(!formattedDate) { skippedCount++; continue; }
 
+        let fullOrgName = externalOrgMap[orgCode] || whonetOrgMap[orgCode] || (orgCode.charAt(0).toUpperCase() + orgCode.slice(1));
+        const orgNameCleanup = {
+            "Escherichia coli (E.coli)": "Escherichia coli", "Klebsiella pneumoniae ss. pneumoniae": "Klebsiella pneumoniae",
+            "Staphylococcus aureus ss. aureus": "Staphylococcus aureus", "Staphylococcus hominis ss. hominis": "Staphylococcus hominis",
+            "Staphylococcus capitis ss. capitis": "Staphylococcus capitis", "Staphylococcus saprophyticus ss. saprophyticus": "Staphylococcus saprophyticus"
+        };
+        if (orgNameCleanup[fullOrgName]) fullOrgName = orgNameCleanup[fullOrgName];
+
+        let record = {
+            'Name': name, 'Age': ageNum, 'Age Unit': ageUnit, 'Sex': sex,
+            'Ward': ward, 'Sample': sample, 'Date': formattedDate,
+            'Selective organism': fullOrgName, 'Antibiogram organism': fullOrgName 
+        };
+
+        Object.assign(record, abxResults);
+        records.push(record);
+        addedCount++;
+    }
+
+    localStorage.setItem('amr_records', JSON.stringify(records));
+    
+    initDataTable();
+    if (typeof syncLocalToCloud === "function" && navigator.onLine) syncLocalToCloud();
+    if (!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
+    if (!$('#viewLive').hasClass('hidden')) generateLiveSurveillance();
+    
+    Swal.fire('Success!', `Extraction complete: ${addedCount} isolates added.\nIgnored ${skippedCount} samples (No growth or invalid format).`, 'success');
+    event.target.value = ''; 
+}
 // --- 3. Initialization ---
 $(document).ready(function() {
     runDatabaseMigration();
