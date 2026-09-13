@@ -306,50 +306,51 @@ async function processDataExtraction(event) {
         const whonetAbxMap = {
             // Penicillins
             "amp": "Ampicillin", "amc": "Amoxicillin/Clavulanic acid", "amx": "Amoxicillin",
-            "sam": "Ampicillin/Sulbactam", "tzp": "Piperacillin/Tazobactam", "pip": "Piperacillin",
-            "pen": "Penicillin", "oxc": "Oxacillin", "oxa": "Oxacillin",
-            "tic": "Ticarcillin", "tcc": "Ticarcillin/Clavulanic acid",
+            "sam": "Ampicillin/Sulbactam", "axs": "Amoxicillin/Sulbactam", "tzp": "Piperacillin/Tazobactam", 
+            "pip": "Piperacillin", "pen": "Penicillin", "oxc": "Oxacillin", "oxa": "Oxacillin",
+            "tic": "Ticarcillin", "tcc": "Ticarcillin/Clavulanic acid", "mec": "Mecillinam",
             
             // Cephalosporins
             "fox": "Cefoxitin", "czz": "Cefazolin", "czo": "Cefazolin", "cxm": "Cefuroxime", 
-            "cro": "Ceftriaxone", "ctx": "Cefotaxime", "caz": "Ceftazidime", "fep": "Cefepime",
-            "cep": "Cephalothin", "cec": "Cefaclor", "cpd": "Cefpodoxime", "cdr": "Cefdinir",
-            "cza": "Ceftazidime/Avibactam",
-            "czt": "Ceftolozane/Tazobactam",
-    
+            "cfm": "Cefixime", "cro": "Ceftriaxone", "ctx": "Cefotaxime", "caz": "Ceftazidime", 
+            "fep": "Cefepime", "cep": "Cephalothin", "cec": "Cefaclor", "cpd": "Cefpodoxime", 
+            "cdr": "Cefdinir", "cfp": "Cefoperazone", "ctt": "Cefotetan", "cpt": "Ceftaroline", 
+            "czx": "Ceftizoxime", "cfb": "Ceftobiprole", "cza": "Ceftazidime/Avibactam", "czt": "Ceftolozane/Tazobactam",
             
             // Carbapenems & Monobactams
-            "ipm": "Imipenem", "mem": "Meropenem", "etp": "Ertapenem", "atm": "Aztreonam",
+            "ipm": "Imipenem", "mem": "Meropenem", "etp": "Ertapenem", "dor": "Doripenem", 
+            "mev": "Meropenem/Vaborbactam", "imr": "Imipenem/Relebactam", "atm": "Aztreonam",
             
             // Aminoglycosides
-            "ami": "Amikacin", "amk": "Amikacin", "gen": "Gentamicin", "tob": "Tobramycin", "net": "Netilmicin",
+            "ami": "Amikacin", "amk": "Amikacin", "gen": "Gentamicin", "tob": "Tobramycin", 
+            "net": "Netilmicin", "str": "Streptomycin", "kan": "Kanamycin", "plz": "Plazomicin", "spt": "Spectinomycin",
             
             // Fluoroquinolones
             "cip": "Ciprofloxacin", "lev": "Levofloxacin", "lvx": "Levofloxacin", "mox": "Moxifloxacin",
             "ofx": "Ofloxacin", "nor": "Norfloxacin", "nal": "Nalidixic acid",
             
-            // Macrolides & Lincosamides
+            // Macrolides, Lincosamides & Streptogramins
             "ery": "Erythromycin", "azi": "Azithromycin", "azm": "Azithromycin", 
-            "clr": "Clarithromycin", "cli": "Clindamycin",
+            "clr": "Clarithromycin", "cli": "Clindamycin", "qda": "Quinupristin/Dalfopristin",
             
             // Glycopeptides & Lipopeptides
             "van": "Vancomycin", "tec": "Teicoplanin", "dap": "Daptomycin",
+            "dal": "Dalbavancin", "ori": "Oritavancin", "tlv": "Telavancin",
             
             // Tetracyclines
-            "tcy": "Tetracycline", "dox": "Doxycycline", "tgc": "Tigecycline",
+            "tcy": "Tetracycline", "dox": "Doxycycline", "mno": "Minocycline", "tgc": "Tigecycline",
             
             // Others
-            "sxt": "Trimethoprim/Sulfamethoxazole", "tmp": "Trimethoprim", 
-            "nit": "Nitrofurantoin", "fos": "Fosfomycin", "col": "Colistin", 
+            "sxt": "Trimethoprim/Sulfamethoxazole", "tmp": "Trimethoprim", "sss": "Sulfonamides",
+            "nit": "Nitrofurantoin", "fos": "Fosfomycin", "col": "Colistin", "pol": "Polymyxin B",
             "lnz": "Linezolid", "rif": "Rifampicin", "chl": "Chloramphenicol",
             "fct": "Fusidic acid", "fdc": "Fusidic acid", "fuc": "Fusidic acid",
             "met": "Metronidazole", "mtr": "Metronidazole",
             
-            // Antifungals (Must be added as Custom Antibiotics via the UI to display)
+            // Antifungals 
             "flu": "Fluconazole", "cas": "Caspofungin", "vor": "Voriconazole", 
-            "mif": "Micafungin", "ani": "Anidulafungin"
+            "mif": "Micafungin", "ani": "Anidulafungin", "rzf": "Rezafungin", "clo": "Clotrimazole"
         };
-
         for(let i = 0; i < actualHeaders.length; i++) {
             let h = actualHeaders[i].toLowerCase();
             let matchedName = null;
