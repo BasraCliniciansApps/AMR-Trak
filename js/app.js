@@ -35,7 +35,7 @@ async function syncLocalToCloud() {
             records: localRecords,
             settings: liveSettings,
             last_updated: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        }, { merge: true }); // استخدام merge لحماية أي بيانات أخرى في السحابة
         console.log("Data synced to cloud successfully.");
     } catch(e) {
         console.error("Error syncing to cloud:", e);
@@ -43,22 +43,34 @@ async function syncLocalToCloud() {
 }
 
 // دالة لسحب البيانات من السحابة ودمجها مع المحلي
-async function syncCloudToLocal() {
+function syncCloudToLocal() {
     if (!db) return;
-    try {
-        const doc = await db.collection("amr_sync").doc("hospital_main").get();
+    
+    db.collection("amr_sync").doc("hospital_main").onSnapshot((doc) => {
         if (doc.exists) {
+            // منع التحديث العكسي المزعج إذا كانت حاسبتك الحالية هي من تقوم بالرفع الآن
+            if (doc.metadata.hasPendingWrites) return;
+
             const cloudRecords = doc.data().records || [];
-            // في الحالات المتقدمة يجب عمل دمج (Merge) ذكي، ولكن للتبسيط هنا نأخذ السحابي إذا كان موجوداً
-            // يمكن الاستغناء عن هذه الخطوة إذا كنت تريد السحابة للـ Backup فقط
+            const cloudSettings = doc.data().settings || null;
             
-            // localStorage.setItem('amr_records', JSON.stringify(cloudRecords));
-            // initDataTable();
-            console.log("Cloud data check complete.");
+            // تحديث الذاكرة المحلية ببيانات السحابة القادمة من الأجهزة الأخرى
+            localStorage.setItem('amr_records', JSON.stringify(cloudRecords));
+            
+            if (cloudSettings) {
+                localStorage.setItem('amr_live_settings', JSON.stringify(cloudSettings));
+            }
+            
+            // تحديث الجداول والمخططات في الحاسبة فوراً لتعكس التحديثات الخارجية
+            if (typeof initDataTable === 'function') initDataTable();
+            if (!$('#viewAnalytics').hasClass('hidden') && typeof loadAnalyticsFilters === 'function') loadAnalyticsFilters();
+            if (!$('#viewLive').hasClass('hidden') && typeof generateLiveSurveillance === 'function') generateLiveSurveillance();
+            
+            console.log("Real-time sync: Data updated from another device.");
         }
-    } catch(e) {
-        console.error("Error fetching from cloud:", e);
-    }
+    }, (error) => {
+        console.error("Error fetching live data from cloud:", error);
+    });
 }
 
 // ---------------------------------------------------------
@@ -1114,7 +1126,7 @@ $('#entryForm').submit(function(e) {
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
     let editIndex = $('#editIndex').val();
 
-    if (editIndex > -1) {
+if (editIndex > -1) {
         records[editIndex] = record; 
     } else {
         records.push(record); 
@@ -1125,6 +1137,11 @@ $('#entryForm').submit(function(e) {
     initDataTable();
     
     if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
+
+    // السطور التي يجب إضافتها لرفع السجل الجديد فوراً للسحابة
+    if (typeof syncLocalToCloud === "function" && navigator.onLine) {
+        syncLocalToCloud();
+    }
 
     Swal.fire({ icon: 'success', title: 'Saved!', timer: 1500, showConfirmButton: false });
 });
