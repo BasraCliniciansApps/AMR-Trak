@@ -1622,43 +1622,25 @@ function generateAnalytics() {
     }
 
         let anyLowReliability = false;
-        let datasets = [];
         let tableHtml = '';
 
+        // 1. بناء جدول الثقة (Confidence Interval Table)
         if (displayOrgs.length === 0 || displayAbxs.length === 0) {
             tableHtml = '<tr><td colspan="6" class="text-center py-4 text-slate-500">No cross-data found for the selected combinations.</td></tr>';
         } else {
-            // جعلنا المضادات هي الـ Datasets والبكتيريا هي المحور السيني (X-axis)
             displayAbxs.forEach((abx, abxIndex) => {
-                let dataR = [];
-                let bgColors = [];
-                let ciData = [];
-                let nDataArr = [];
-
                 let palette = extendedPalette[abxIndex % extendedPalette.length];
-
                 displayOrgs.forEach(org => {
                     let s_org = amrStats[org];
                     let s = s_org ? s_org.abx[abx] : null;
 
-                    if (!s || s.tested === 0) {
-                        dataR.push(0); 
-                        bgColors.push(palette.faded);
-                        ciData.push({lower: 0, upper: 0});
-                        nDataArr.push(0);
-                    } else {
+                    if (s && s.tested > 0) {
                         let targetVal = metric === 'R' ? s.r : s.s;
                         let p = Math.round((targetVal / s.tested) * 100);
                         let isReliable = s.tested >= 30;
                         if (!isReliable) anyLowReliability = true;
                         
                         let ci = wilsonScoreCI(targetVal, s.tested);
-                        
-                        dataR.push(p);
-                        bgColors.push(isReliable ? palette.bg : palette.faded);
-                        ciData.push(ci);
-                        nDataArr.push(s.tested);
-
                         let dangerScore = metric === 'R' ? p : (100 - p);
                         let semColor = '';
                         if (!isReliable) semColor = 'text-slate-500';
@@ -1680,15 +1662,6 @@ function generateAnalytics() {
                         `;
                     }
                 });
-
-                datasets.push({
-                    label: abx,
-                    data: dataR,
-                    backgroundColor: bgColors,
-                    borderRadius: 4,
-                    ciData: ciData,
-                    nData: nDataArr
-                });
             });
         }
 
@@ -1699,26 +1672,73 @@ function generateAnalytics() {
         $('#ciTableBody').siblings('thead').find('th').eq(3).text(`Count (${metric})`);
         $('#ciTableBody').siblings('thead').find('th').eq(4).text(`% ${metricLabel}`);
 
-        if (chartAMR_instance) chartAMR_instance.destroy();
+        // 2. بناء المخطط الديناميكي (Dynamic Axes Swapping)
+        let datasets = [];
+        // تحديد التركيز: إذا اختار بكتيريا محددة بدون مضادات، أو بكتيريا واحدة مع عدة مضادات
+        let focusOnOrganism = (targetOrgs.length > 0 && targetAbxs.length === 0) || (displayOrgs.length === 1 && displayAbxs.length > 1);
         
-        // بناء عنوان المخطط الديناميكي
+        let primaryItems = focusOnOrganism ? displayOrgs : displayAbxs; // الأعمدة / الداتا
+        let secondaryItems = focusOnOrganism ? displayAbxs : displayOrgs; // المحور السيني بالأسفل
         let chartTitleText = "";
-        if (displayAbxs.length <= 3) {
-            chartTitleText = displayAbxs.map(a => formatScientificName(a)).join(' & ') + ` ${metricLabel} Profile`;
+
+        if (focusOnOrganism) {
+            chartTitleText = (displayOrgs.length <= 3 ? displayOrgs.map(o => formatScientificName(o)).join(' & ') : 'Multiple Organisms') + ` ${metricLabel} Profile`;
         } else {
-            chartTitleText = `Multiple Antibiotics ${metricLabel} Profile`;
+            chartTitleText = (displayAbxs.length <= 3 ? displayAbxs.join(' & ') : 'Multiple Antibiotics') + ` ${metricLabel} Profile`;
         }
 
+        if (displayOrgs.length > 0 && displayAbxs.length > 0) {
+            primaryItems.forEach((primary, pIndex) => {
+                let dataR = [], bgColors = [], ciData = [], nDataArr = [];
+                let palette = extendedPalette[pIndex % extendedPalette.length];
+
+                secondaryItems.forEach((secondary) => {
+                    let org = focusOnOrganism ? primary : secondary;
+                    let abx = focusOnOrganism ? secondary : primary;
+                    
+                    let s_org = amrStats[org];
+                    let s = s_org ? s_org.abx[abx] : null;
+
+                    if (!s || s.tested === 0) {
+                        dataR.push(0); 
+                        bgColors.push(palette.faded);
+                        ciData.push({lower: 0, upper: 0});
+                        nDataArr.push(0);
+                    } else {
+                        let targetVal = metric === 'R' ? s.r : s.s;
+                        let p = Math.round((targetVal / s.tested) * 100);
+                        let isReliable = s.tested >= 30;
+                        
+                        dataR.push(p);
+                        bgColors.push(isReliable ? palette.bg : palette.faded);
+                        ciData.push(wilsonScoreCI(targetVal, s.tested));
+                        nDataArr.push(s.tested);
+                    }
+                });
+
+                datasets.push({
+                    label: focusOnOrganism ? formatScientificName(primary) : primary,
+                    data: dataR,
+                    backgroundColor: bgColors,
+                    borderRadius: 4,
+                    ciData: ciData,
+                    nData: nDataArr
+                });
+            });
+        }
+
+        if (chartAMR_instance) chartAMR_instance.destroy();
+        
         chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
             type: 'bar',
             data: { 
-                labels: displayOrgs.map(org => formatScientificName(org)), // المحور السيني أصبح للبكتيريا
-                datasets: datasets // الأعمدة أصبحت للمضادات الحيوية
+                labels: secondaryItems.map(item => focusOnOrganism ? item : formatScientificName(item)),
+                datasets: datasets
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 plugins: { 
-                    legend: { display: false }, // إخفاء الدلالات اللونية
+                    legend: { display: false }, 
                     title: {
                         display: true,
                         text: chartTitleText,
@@ -1732,7 +1752,7 @@ function generateAnalytics() {
                     x: { 
                         grid: {display: false}, 
                         ticks: { 
-                            autoSkip: false,
+                            autoSkip: false, // يمنع إخفاء الكلمات الطويلة
                             maxRotation: 45,
                             minRotation: 45,
                             font: { size: 10 } 
@@ -1742,7 +1762,6 @@ function generateAnalytics() {
             },
             plugins: [errorBarsPlugin]
         });
-
     // Heatmap Building 
     let hmOrgs = Object.keys(heatmapStats);
     if (targetOrgs.length > 0) {
