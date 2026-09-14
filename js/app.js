@@ -2324,66 +2324,41 @@ function buildAbxProfileChart(abxName, canvasId, countElId, records, primaryColo
         $(`#${countElId}`).text(`Tested: ${totalTestedAbx} isolates`);
     }
 
-    let labels = [];
-    let data = [];
-    let bgColors = [];
-    let ciData = [];
-
-    sortedOrgs.forEach(org => {
+    let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
+    sortedOrgs.forEach((org, index) => {
         let item = orgMap[org];
         let p = Math.round((item.resistant / item.tested) * 100);
-        let isReliable = item.tested >= 30;
+        let palette = extendedPalette[index % extendedPalette.length]; // إعطاء كل بكتيريا لون
         
-        labels.push(org.length > 20 ? org.slice(0, 18) + '..' : org);
+        labels.push(org.length > 15 ? org.slice(0, 12) + '..' : org);
         data.push(p);
-        bgColors.push(isReliable ? primaryColor : 'rgba(148, 163, 184, 0.55)');
+        bgColors.push(item.tested >= 30 ? palette.bg : palette.faded);
         ciData.push(wilsonScoreCI(item.resistant, item.tested));
+        nDataArr.push(item.tested);
     });
 
-    if (sortedOrgs.length === 0) {
-        labels = ['No Isolates Tested'];
-        data = [0];
-        bgColors = ['#e2e8f0'];
-        ciData = [{ lower: 0, upper: 0 }];
-    }
+    if (sortedOrgs.length === 0) { labels = ['No Data']; data = [0]; bgColors = ['#e2e8f0']; ciData = [{ lower: 0, upper: 0 }]; nDataArr = [0]; }
 
     let chart = new Chart(canvas, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [{
-                label: '% Resistance',
+                label: abxName,
                 data: data,
                 backgroundColor: bgColors,
                 ciData: ciData,
+                nData: nDataArr,
                 borderRadius: 4
             }]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let idx = context.dataIndex;
-                            let orgKey = sortedOrgs[idx];
-                            if (!orgKey) return 'No data';
-                            let item = orgMap[orgKey];
-                            let ci = ciData[idx];
-                            return `${context.raw}% R (${item.resistant}/${item.tested}) [95% CI: ${ci.lower}%-${ci.upper}%]`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: { beginAtZero: true, max: 100, title: { display: true, text: '% Resistance', font: { size: 10, weight: 'bold' } } },
-                x: { ticks: { autoSkip: false, maxRotation: 35, minRotation: 20, font: { size: 9 } } }
-            }
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, max: 100 }, x: { ticks: { font: { size: 9 } } } }
         },
-        plugins: [errorBarsPlugin]
+        plugins: [errorBarsPlugin, barLabelsPlugin] // إضافة البلجنات هنا أيضاً
     });
-
-    liveCharts.push(chart);
+    
+    if(typeof liveCharts !== 'undefined') liveCharts.push(chart);
 }
