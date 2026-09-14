@@ -665,38 +665,21 @@ window.generateAnalytics = function() {
             }
         });
 
-        if (chartAMR_instance) chartAMR_instance.destroy();
+       if (chartAMR_instance) chartAMR_instance.destroy();
         
-        let minWidthNeeded = (displayAbxs.length * datasets.length * 50) + 80;
-        $('#amrChartContainer').css('width', `max(100%, ${minWidthNeeded}px)`);
-
         chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
             type: 'bar',
             data: { labels: displayAbxs, datasets: datasets },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                skipNull: true,
+            options: {
+                responsive: true, maintainAspectRatio: false,
                 scales: { 
-                    y: { max: 100 },
-                    x: { ticks: { maxRotation: 45, minRotation: 45, font: {size: 9} } }
-                }, 
-                plugins: { 
-                    legend: { position: 'top', labels: {boxWidth:8, font:{size:9}} },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                if (context.raw === null) return null;
-                                return context.dataset.label + ': ' + context.raw + '%';
-                            }
-                        }
-                    }
-                } 
+                    y: { beginAtZero: true, max: 100, title: { display: true, text: `% ${metricLabel}`, font: {weight: 'bold'} }, grid: {color: '#f1f5f9'} },
+                    x: { grid: {display: false}, ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
+                },
+                plugins: { legend: { display: false } } // إخفاء الـ Legend كلياً
             },
-            plugins: [errorBarsPlugin]
+            plugins: [errorBarsPlugin, barLabelsPlugin] // إضافة كلا البلجن
         });
-    }
-
     let hmOrgs = Object.keys(heatmapStats).filter(o => targetOrgs.includes(o)).sort();
     let hmAbxs = targetAbxs.sort();
 
