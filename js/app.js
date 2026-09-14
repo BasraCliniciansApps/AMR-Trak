@@ -1689,33 +1689,39 @@ function generateAnalytics() {
 
         if (displayOrgs.length > 0 && displayAbxs.length > 0) {
             primaryItems.forEach((primary, pIndex) => {
-                let dataR = [], bgColors = [], ciData = [], nDataArr = [];
-                let palette = extendedPalette[pIndex % extendedPalette.length];
+            let dataR = [], bgColors = [], ciData = [], nDataArr = [];
+            let hasDataForThisPrimary = false;
 
-                secondaryItems.forEach((secondary) => {
-                    let org = focusOnOrganism ? primary : secondary;
-                    let abx = focusOnOrganism ? secondary : primary;
+            // إضافة sIndex لمعرفة رقم البار الحالي
+            secondaryItems.forEach((secondary, sIndex) => {
+                // سحب اللون هنا بناءً على رقم البار (sIndex) من الـ extendedPalette
+                let palette = extendedPalette[sIndex % extendedPalette.length];
+                
+                let org = focusOnOrganism ? primary : secondary;
+                let abx = focusOnOrganism ? secondary : primary;
+                
+                let s_org = amrStats[org];
+                let s = s_org ? s_org.abx[abx] : null;
+
+                if (!s || s.tested === 0) {
+                    dataR.push(0); 
+                    bgColors.push(palette.faded);
+                    ciData.push({lower: 0, upper: 0});
+                    nDataArr.push(0);
+                } else {
+                    hasDataForThisPrimary = true;
+                    let targetVal = metric === 'R' ? s.r : s.s;
+                    let p = Math.round((targetVal / s.tested) * 100);
+                    let isReliable = s.tested >= 30;
                     
-                    let s_org = amrStats[org];
-                    let s = s_org ? s_org.abx[abx] : null;
+                    dataR.push(p);
+                    bgColors.push(isReliable ? palette.bg : palette.faded);
+                    ciData.push(wilsonScoreCI(targetVal, s.tested));
+                    nDataArr.push(s.tested);
+                }
+            });
 
-                    if (!s || s.tested === 0) {
-                        dataR.push(0); 
-                        bgColors.push(palette.faded);
-                        ciData.push({lower: 0, upper: 0});
-                        nDataArr.push(0);
-                    } else {
-                        let targetVal = metric === 'R' ? s.r : s.s;
-                        let p = Math.round((targetVal / s.tested) * 100);
-                        let isReliable = s.tested >= 30;
-                        
-                        dataR.push(p);
-                        bgColors.push(isReliable ? palette.bg : palette.faded);
-                        ciData.push(wilsonScoreCI(targetVal, s.tested));
-                        nDataArr.push(s.tested);
-                    }
-                });
-
+            if (hasDataForThisPrimary) {
                 datasets.push({
                     label: focusOnOrganism ? formatScientificName(primary) : primary,
                     data: dataR,
@@ -1724,8 +1730,8 @@ function generateAnalytics() {
                     ciData: ciData,
                     nData: nDataArr
                 });
-            });
-        }
+            }
+        });
 
         if (chartAMR_instance) chartAMR_instance.destroy();
         
