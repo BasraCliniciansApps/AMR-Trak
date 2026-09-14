@@ -1632,21 +1632,17 @@ function generateAnalytics() {
 
     if (targetOrgs.length === 0 && targetAbxs.length === 0) {
         $('#print_sect_amr').addClass('hidden');
-        if (chartAMR_instance) chartAMR_instance.destroy();
-        
-        chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
-            type: 'bar',
-            data: { labels: displayAbxs, datasets: datasets },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                scales: { 
-                    y: { beginAtZero: true, max: 100, title: { display: true, text: `% ${metricLabel}`, font: {weight: 'bold'} }, grid: {color: '#f1f5f9'} },
-                    x: { grid: {display: false}, ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
-                },
-                plugins: { legend: { display: false } } // إخفاء الـ Legend كلياً
-            },
-            plugins: [errorBarsPlugin, barLabelsPlugin] // إضافة كلا البلجن
-        });
+    } else {
+        $('#print_sect_amr').removeClass('hidden');
+
+        if (targetOrgs.length > 0 && targetAbxs.length === 0) {
+            displayOrgs = targetOrgs;
+            let foundAbxs = new Set();
+            displayOrgs.forEach(org => {
+                if (amrStats[org]) {
+                    Object.keys(amrStats[org].abx).forEach(abx => {
+                        if (amrStats[org].abx[abx].tested > 0) foundAbxs.add(abx);
+                    });
                 }
             });
             displayAbxs = Array.from(foundAbxs).sort();
@@ -1655,7 +1651,7 @@ function generateAnalytics() {
             let foundOrgs = new Set();
             Array.from(allPresentOrgs).forEach(org => {
                 displayAbxs.forEach(abx => {
-                    if (amrStats[org].abx[abx] && amrStats[org].abx[abx].tested > 0) foundOrgs.add(org);
+                    if (amrStats[org] && amrStats[org].abx[abx] && amrStats[org].abx[abx].tested > 0) foundOrgs.add(org);
                 });
             });
             displayOrgs = Array.from(foundOrgs).sort();
@@ -1663,6 +1659,7 @@ function generateAnalytics() {
             displayOrgs = targetOrgs;
             displayAbxs = targetAbxs;
         }
+    }
 
         let anyLowReliability = false;
         let datasets = [];
