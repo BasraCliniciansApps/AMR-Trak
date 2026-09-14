@@ -48,7 +48,8 @@ const extendedPalette = [
 
 
 
-// إضافة مخصصة لرسم خطوط فترة الثقة (Confidence Intervals)
+
+// إضافة مخصصة لرسم خطوط فترة الثقة (Confidence Intervals) مؤمنة بالكامل
 const errorBarsPlugin = {
     id: 'errorBars',
     afterDatasetsDraw(chart) {
@@ -58,12 +59,16 @@ const errorBarsPlugin = {
             const meta = chart.getDatasetMeta(i);
             if (!meta.hidden && dataset.ciData) {
                 meta.data.forEach((element, index) => {
+                    // حماية المخطط من التوقف إذا كانت البيانات فارغة
+                    if (!element || element.x === undefined) return; 
+                    
                     const ci = dataset.ciData[index];
-                    if (!ci || (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0)) return;
+                    if (!ci || (ci.lower === 0 && ci.upper === 0 && (dataset.data[index] === 0 || dataset.data[index] === null))) return;
+                    
                     const yLower = chart.scales.y.getPixelForValue(ci.lower);
                     const yUpper = chart.scales.y.getPixelForValue(ci.upper);
                     let x = element.x;
-                    if (x === undefined) return;
+                    
                     ctx.save();
                     ctx.beginPath();
                     ctx.lineWidth = 1; ctx.strokeStyle = '#334155';
@@ -76,6 +81,7 @@ const errorBarsPlugin = {
         });
     }
 };
+// تم حذف barLabelsPlugin نهائياً لمنع أي كتابة فوق الأعمدة
 
 function getCustomAntibiotics() { 
     return JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || []; 
@@ -650,7 +656,7 @@ window.generateAnalytics = function() {
                 let s = s_org ? s_org.abx[abx] : null;
 
                 if (!s || s.tested === 0) {
-                    dataR.push(null); 
+                    dataR.push(0); 
                     bgColors.push(palette.faded); 
                     ciData.push({lower: 0, upper: 0});
                     nDataArr.push(0);
