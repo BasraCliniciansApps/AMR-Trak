@@ -1695,11 +1695,12 @@ function generateAnalytics() {
                         let isReliable = s.tested >= 30;
                         if (!isReliable) anyLowReliability = true;
                         
+                        let ci = wilsonScoreCI(targetVal, s.tested); // تعريف المتغير هنا
+                        
                         dataR.push(p);
                         bgColors.push(isReliable ? palette.bg : palette.faded);
-                        ciData.push(wilsonScoreCI(targetVal, s.tested));
+                        ciData.push(ci); // إضافته للمصفوفة بدون تكرار
                         nDataArr.push(s.tested);
-
 
                         let dangerScore = metric === 'R' ? p : (100 - p);
                         let semColor = '';
