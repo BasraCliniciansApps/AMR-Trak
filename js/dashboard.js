@@ -703,6 +703,7 @@ window.generateAnalytics = function() {
             },
             plugins: [errorBarsPlugin, barLabelsPlugin] // إضافة كلا البلجن
         });
+}
     let hmOrgs = Object.keys(heatmapStats).filter(o => targetOrgs.includes(o)).sort();
     let hmAbxs = targetAbxs.sort();
 
