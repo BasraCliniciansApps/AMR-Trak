@@ -301,13 +301,13 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
     amrStats.forEach((stat, index) => {
         labels.push(stat.label.split('\n'));
-        let palette = extendedPalette[index % extendedPalette.length]; // ألوان مختلفة لكل بكتيريا
+        let palette = extendedPalette[index % extendedPalette.length]; 
         
         if (stat.tested === 0) { 
             data.push(0); bgColors.push(palette.faded); ciData.push({lower:0, upper:0}); nDataArr.push(0);
         } else {
             data.push(Math.round((stat.resistant / stat.tested) * 100));
-            bgColors.push(stat.tested >= 30 ? palette.bg : palette.faded); // باهت إذا كان أقل من 30
+            bgColors.push(stat.tested >= 30 ? palette.bg : palette.faded); 
             ciData.push(wilsonScoreCI(stat.resistant, stat.tested));
             nDataArr.push(stat.tested);
         }
@@ -315,11 +315,12 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
 
     liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_amr`), {
         type: 'bar',
-        data: { labels, datasets: [{ label: 'Pathogen', data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
+        data: { labels, datasets: [{ label: 'Pathogen', data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4, maxBarThickness: 30 }] },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { max: 100 } } },
         plugins: [errorBarsPlugin, barLabelsPlugin]
     }));
 
+    
     let bloodRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'blood');
     let urineRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'urine');
     
@@ -464,7 +465,7 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
     sortedOrgs.forEach((org, index) => {
         let item = orgMap[org];
         let p = Math.round((item.resistant / item.tested) * 100);
-        let palette = extendedPalette[index % extendedPalette.length]; // إعطاء كل بكتيريا لون
+        let palette = extendedPalette[index % extendedPalette.length];
         
         labels.push(org.length > 15 ? org.slice(0, 12) + '..' : org);
         data.push(p);
@@ -475,30 +476,12 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
 
     if (sortedOrgs.length === 0) { labels = ['No Data']; data = [0]; bgColors = ['#e2e8f0']; ciData = [{ lower: 0, upper: 0 }]; nDataArr = [0]; }
 
-    let chart = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: abxName,
-                data: data,
-                backgroundColor: bgColors,
-                ciData: ciData,
-                nData: nDataArr,
-                borderRadius: 4
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, max: 100 }, x: { ticks: { font: { size: 9 } } } }
-        },
-        plugins: [errorBarsPlugin, barLabelsPlugin] // إضافة البلجنات هنا أيضاً
-    });
-    
-    if(typeof liveCharts !== 'undefined') liveCharts.push(chart);
+    liveCharts.push(new Chart(canvas, {
+        type: 'bar', 
+        data: { labels, datasets: [{ label: abxName, data, backgroundColor: bgColors, ciData: ciData, nData: nDataArr, borderRadius: 4, maxBarThickness: 30 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { max: 100 }, x: { ticks: { font: {size: 8} } } } },
+        plugins: [errorBarsPlugin, barLabelsPlugin]
     }));
-}
 
 function loadAnalyticsFilters() {
     if (isUpdatingFilters) return;
@@ -664,33 +647,30 @@ window.generateAnalytics = function() {
 
         let datasets = [];
         displayOrgs.forEach((org, orgIndex) => {
-                let s_org = amrStats[org];
-                if (!s_org) return;
+            let s_org = amrStats[org];
+            if (!s_org) return;
 
-                let dataR = [];
-                let bgColors = [];
-                let ciData = [];
-                let nDataArr = []; // جديد لحمل أعداد العينات
+            let dataR = [], bgColors = [], ciData = [], nDataArr = [];
+            let palette = extendedPalette[orgIndex % extendedPalette.length];
+            let hasDataForThisOrg = false;
 
-                let palette = extendedPalette[orgIndex % extendedPalette.length];
-
-                displayAbxs.forEach(abx => {
-                    let s = s_org.abx[abx];
-                    if (!s || s.tested === 0) {
-                        dataR.push(0); 
-                        bgColors.push(palette.faded);
-                        ciData.push({lower: 0, upper: 0});
-                        nDataArr.push(0);
-                    } else {
-                        let targetVal = metric === 'R' ? s.r : s.s;
-                        let p = Math.round((targetVal / s.tested) * 100);
-                        let isReliable = s.tested >= 30;
-                        if (!isReliable) anyLowReliability = true;
-                        
-                        dataR.push(p);
-                        bgColors.push(isReliable ? palette.bg : palette.faded);
-                        ciData.push(wilsonScoreCI(targetVal, s.tested));
-                        nDataArr.push(s.tested);
+            displayAbxs.forEach(abx => {
+                let s = s_org.abx[abx];
+                if (!s || s.tested === 0) {
+                    dataR.push(null); 
+                    bgColors.push(palette.faded); 
+                    ciData.push({lower: 0, upper: 0});
+                    nDataArr.push(0);
+                } else {
+                    hasDataForThisOrg = true;
+                    let targetVal = metric === 'R' ? s.r : s.s;
+                    let p = Math.round((targetVal / s.tested) * 100);
+                    let isReliable = s.tested >= 30;
+                    
+                    dataR.push(p);
+                    bgColors.push(isReliable ? palette.bg : palette.faded);
+                    ciData.push(wilsonScoreCI(targetVal, s.tested));
+                    nDataArr.push(s.tested);
                 }
             });
 
@@ -701,11 +681,12 @@ window.generateAnalytics = function() {
                     backgroundColor: bgColors, 
                     borderRadius: 4, 
                     ciData: ciData,
-                    nData: nDataArr, // تمت إضافتها هنا لكي يعمل بلجن النصوص
-                    maxBarThickness: 16
+                    nData: nDataArr,
+                    maxBarThickness: 16 
                 });
             }
-
+        });
+        
        if (chartAMR_instance) chartAMR_instance.destroy();
         
         chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
