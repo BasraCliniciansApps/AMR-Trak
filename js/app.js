@@ -42,7 +42,7 @@ async function syncLocalToCloud() {
     }
 }
 
-// دالة لسحب البيانات من السحابة ودمجها مع المحلي
+// دالة لسحب البيانات من السحابة ودمجها مع المحلي بأمان
 function syncCloudToLocal() {
     if (!db) return;
     
@@ -54,8 +54,15 @@ function syncCloudToLocal() {
             const cloudRecords = doc.data().records || [];
             const cloudSettings = doc.data().settings || null;
             
-            // تحديث الذاكرة المحلية ببيانات السحابة القادمة من الأجهزة الأخرى
-            localStorage.setItem('amr_records', JSON.stringify(cloudRecords));
+            let localRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+
+            // حماية البيانات المحلية: لا تقم أبداً بالكتابة الفوقية إذا كانت السحابة فارغة ومحلياً يوجد بيانات
+            if (cloudRecords.length > 0 || localRecords.length === 0) {
+                localStorage.setItem('amr_records', JSON.stringify(cloudRecords));
+            } else if (localRecords.length > 0 && cloudRecords.length === 0) {
+                // إذا كانت السحابة فارغة والمحلي يحتوي على بيانات، قم برفع المحلي فوراً بدلاً من مسحه
+                if (typeof syncLocalToCloud === 'function') syncLocalToCloud();
+            }
             
             if (cloudSettings) {
                 localStorage.setItem('amr_live_settings', JSON.stringify(cloudSettings));
@@ -66,13 +73,12 @@ function syncCloudToLocal() {
             if (!$('#viewAnalytics').hasClass('hidden') && typeof loadAnalyticsFilters === 'function') loadAnalyticsFilters();
             if (!$('#viewLive').hasClass('hidden') && typeof generateLiveSurveillance === 'function') generateLiveSurveillance();
             
-            console.log("Real-time sync: Data updated from another device.");
+            console.log("Real-time sync: Data synchronized safely.");
         }
     }, (error) => {
         console.error("Error fetching live data from cloud:", error);
     });
 }
-
 // ---------------------------------------------------------
 let dataTable;
 let chartAMR_instance = null;
