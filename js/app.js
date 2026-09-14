@@ -103,33 +103,6 @@ const extendedPalette = [
     { bg: 'rgba(220, 38, 38, 0.9)', faded: 'rgba(220, 38, 38, 0.25)' }   // Red
 ];
 
-const errorBarsPlugin = {
-    id: 'errorBars',
-    afterDatasetsDraw(chart) {
-        const ctx = chart.ctx;
-        if (!chart.scales || !chart.scales.y) return;
-        chart.data.datasets.forEach((dataset, i) => {
-            const meta = chart.getDatasetMeta(i);
-            if (!meta.hidden && dataset.ciData) {
-                meta.data.forEach((element, index) => {
-                    const ci = dataset.ciData[index];
-                    if (!ci || (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0)) return;
-                    const yLower = chart.scales.y.getPixelForValue(ci.lower);
-                    const yUpper = chart.scales.y.getPixelForValue(ci.upper);
-                    let x = element.x;
-                    if (x === undefined) return;
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.lineWidth = 1; ctx.strokeStyle = '#334155';
-                    ctx.moveTo(x, yLower); ctx.lineTo(x, yUpper);
-                    ctx.moveTo(x - 3, yUpper); ctx.lineTo(x + 3, yUpper);
-                    ctx.moveTo(x - 3, yLower); ctx.lineTo(x + 3, yLower);
-                    ctx.stroke(); ctx.restore();
-                });
-            }
-        });
-    }
-};
 
 // إضافة مخصصة لرسم خطوط فترة الثقة (Confidence Intervals)
 const errorBarsPlugin = {
