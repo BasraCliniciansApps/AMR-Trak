@@ -2173,31 +2173,27 @@ function buildLiveSection(records, prefix, settings) {
     // 1. Bar Chart (Critical AMR)
     if (settings.show_amr) {
         $(`#live_${prefix}_amr_wrapper`).removeClass('hidden');
-        let labels = []; let data = []; let bgColors = []; let ciData = [];
-        amrStats.forEach(stat => {
-            labels.push(stat.label.split('\n'));
-            if (stat.tested === 0) {
-                data.push(0); bgColors.push('#e2e8f0'); ciData.push({lower:0, upper:0});
-            } else {
-                let p = Math.round((stat.resistant / stat.tested) * 100);
-                let isReliable = stat.tested >= 30;
-                data.push(p);
-                bgColors.push(isReliable ? 'rgba(220, 38, 38, 0.9)' : 'rgba(148, 163, 184, 0.5)'); 
-                ciData.push(wilsonScoreCI(stat.resistant, stat.tested));
-            }
-        });
+        let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
+    amrStats.forEach((stat, index) => {
+        labels.push(stat.label.split('\n'));
+        let palette = extendedPalette[index % extendedPalette.length]; // ألوان مختلفة لكل بكتيريا
+        
+        if (stat.tested === 0) { 
+            data.push(0); bgColors.push(palette.faded); ciData.push({lower:0, upper:0}); nDataArr.push(0);
+        } else {
+            data.push(Math.round((stat.resistant / stat.tested) * 100));
+            bgColors.push(stat.tested >= 30 ? palette.bg : palette.faded); // باهت إذا كان أقل من 30
+            ciData.push(wilsonScoreCI(stat.resistant, stat.tested));
+            nDataArr.push(stat.tested);
+        }
+    });
 
-        let chartAmr = new Chart(document.getElementById(`chart_${prefix}_amr`), {
-            type: 'bar',
-            data: { labels: labels, datasets: [{ label: '% Resistance', data: data, backgroundColor: bgColors, ciData: ciData, borderRadius: 4 }] },
-            options: { 
-                responsive: true, maintainAspectRatio: false, 
-                plugins: { legend: { display: false } },
-                scales: { y: { max: 100, beginAtZero: true } }
-            },
-            plugins: [errorBarsPlugin]
-        });
-        liveCharts.push(chartAmr);
+    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_amr`), {
+        type: 'bar',
+        data: { labels, datasets: [{ label: 'Pathogen', data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { max: 100 } } },
+        plugins: [errorBarsPlugin, barLabelsPlugin]
+    }));        liveCharts.push(chartAmr);
     } else {
         $(`#live_${prefix}_amr_wrapper`).addClass('hidden');
     }
