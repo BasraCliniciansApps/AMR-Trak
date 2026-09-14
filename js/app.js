@@ -131,72 +131,46 @@ const errorBarsPlugin = {
     }
 };
 
-const barLabelsPlugin = {
-    id: 'barLabels',
+// إضافة مخصصة لرسم خطوط فترة الثقة (Confidence Intervals)
+const errorBarsPlugin = {
+    id: 'errorBars',
     afterDatasetsDraw(chart) {
-        if (chart.config.options.indexAxis === 'y') return; // تجاهل البار الأفقي
         const ctx = chart.ctx;
+        if (!chart.scales || !chart.scales.y) return;
         chart.data.datasets.forEach((dataset, i) => {
             const meta = chart.getDatasetMeta(i);
-            if (!meta.hidden) {
+            if (!meta.hidden && dataset.ciData) {
                 meta.data.forEach((element, index) => {
-                    if (dataset.nData && dataset.nData[index] === 0) return; // لا ترسم إذا لم يتم الفحص
-                    
-                    let rawLabel = chart.data.datasets.length > 1 ? dataset.label : chart.data.labels[index];
-                    let labelText = Array.isArray(rawLabel) ? rawLabel.join(' ') : rawLabel;
-                    
-                    // ===== 1. دالة اختصار اسم البكتيريا علمياً (S. aureus) =====
-                    // تنظيف الاسم من أي زيادات
-                    let cleanName = labelText.replace(/\(E\.coli\)/gi, "").trim();
-                    // نمنع اختصار المضادات الحيوية المركبة (التي تحتوي على شارحة أو كلمة acid)
-                    let isAntibiotic = cleanName.includes('/') || cleanName.toLowerCase().includes('acid');
-                    let parts = cleanName.split(' ');
-                    
-                    // إذا كان بكتيريا (وليس مضاداً) ويتكون من مقطعين أو أكثر، نختصره
-                    if (!isAntibiotic && parts.length >= 2 && parts[0].length > 3) {
-                        labelText = parts[0].charAt(0).toUpperCase() + '. ' + parts.slice(1).join(' ');
-                    } else {
-                        labelText = cleanName;
-                    }
-                    
-                    // إضافة النجمة للعينات القليلة
-                    if (dataset.nData && dataset.nData[index] < 30) {
-                        labelText += ' *'; 
-                    }
-
+                    const ci = dataset.ciData[index];
+                    if (!ci || (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0)) return;
+                    const yLower = chart.scales.y.getPixelForValue(ci.lower);
+                    const yUpper = chart.scales.y.getPixelForValue(ci.upper);
+                    let x = element.x;
+                    if (x === undefined) return;
                     ctx.save();
-                    ctx.translate(element.x, element.y);
-                    
-                    // ===== 2. تنسيق الخط (صغير جداً، غير عريض، لون باهت/شفاف) =====
-                    ctx.shadowColor = 'rgba(255, 255, 255, 0.7)'; // توهج أبيض خفيف خلف النص لتسهيل القراءة
-                    ctx.shadowBlur = 3;
-                    ctx.fillStyle = 'rgba(15, 23, 42, 0.6)'; // لون داكن شفاف بنسبة 60%
-                    ctx.font = 'normal 9px sans-serif'; // خط صغير جداً وغير عريض (normal بدلاً من bold)
-                    ctx.textBaseline = 'middle';
-                    
-                    // حساب ارتفاع العمود لتوسيط النص
-                    let baselineY = chart.scales.y.getPixelForValue(0);
-                    let barHeight = baselineY - element.y;
-                    
-                    // ===== 3. توحيد الاتجاه والموقع (من الأسفل للأعلى دائماً) =====
-                    ctx.rotate(-Math.PI / 2); // تدوير للأعلى بزاوية 90 درجة دائماً
-                    
-                    if (barHeight < 35) {
-                        // إذا كان البار صفر أو قصير جداً، نكتبه فوق البار مباشرة
-                        ctx.textAlign = 'left';
-                        ctx.fillText(labelText, 5, 0); 
-                    } else {
-                        // إذا كان البار طويل، نكتبه في منتصف البار تماماً
-                        ctx.textAlign = 'center';
-                        ctx.fillText(labelText, - (barHeight / 2), 0); 
-                    }
-                    
-                    ctx.restore();
+                    ctx.beginPath();
+                    ctx.lineWidth = 1; ctx.strokeStyle = '#334155';
+                    ctx.moveTo(x, yLower); ctx.lineTo(x, yUpper);
+                    ctx.moveTo(x - 3, yUpper); ctx.lineTo(x + 3, yUpper);
+                    ctx.moveTo(x - 3, yLower); ctx.lineTo(x + 3, yLower);
+                    ctx.stroke(); ctx.restore();
                 });
             }
         });
     }
 };
+
+// دالة ذكية للاختصار العلمي للبكتيريا (تحول Staphylococcus aureus إلى S. aureus)
+function formatScientificName(name) {
+    if (!name || typeof name !== 'string') return name;
+    let cleanName = name.replace(/\(E\.coli\)/gi, "").trim(); // إزالة الزوائد
+    let isAntibiotic = cleanName.includes('/') || cleanName.toLowerCase().includes('acid'); // حماية المضادات الحيوية
+    let parts = cleanName.split(' ');
+    if (!isAntibiotic && parts.length >= 2 && parts[0].length > 3) {
+        return parts[0].charAt(0).toUpperCase() + '. ' + parts.slice(1).join(' ');
+    }
+    return cleanName;
+}
 // --- Migration Script to update old records to new clean names ---
 function runDatabaseMigration() {
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
@@ -1756,16 +1730,32 @@ function generateAnalytics() {
         
         chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
             type: 'bar',
-            data: { labels: displayAbxs, datasets: datasets },
+            data: { 
+                // تمرير أسماء المضادات (أو البكتيريا) بعد اختصارها
+                labels: displayAbxs.map(abx => formatScientificName(abx)), 
+                datasets: datasets.map(ds => {
+                    // اختصار اسم البكتيريا (label) في الـ Legend إن وجد
+                    ds.label = formatScientificName(ds.label);
+                    return ds;
+                })
+            },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 scales: { 
                     y: { beginAtZero: true, max: 100, title: { display: true, text: `% ${metricLabel}`, font: {weight: 'bold'} }, grid: {color: '#f1f5f9'} },
-                    x: { grid: {display: false}, ticks: { autoSkip: false, maxRotation: 45, minRotation: 45 } }
+                    x: { 
+                        grid: {display: false}, 
+                        ticks: { 
+                            autoSkip: false, // منع إخفاء أي اسم
+                            maxRotation: 45, // زاوية الميلان للأسفل 45 درجة لتناسب الأسماء
+                            minRotation: 45,
+                            font: { size: 10 } // حجم الخط في الأسفل
+                        } 
+                    }
                 },
                 plugins: { legend: { display: true, position: 'top' } } 
             },
-            plugins: [errorBarsPlugin]
+            plugins: [errorBarsPlugin] // حذفنا barLabelsPlugin لأن الأسماء ستظهر أسفل المخطط
         });
 
     // Heatmap Building 
@@ -2367,11 +2357,12 @@ function buildAbxProfileChart(abxName, canvasId, countElId, records, primaryColo
     let chart = new Chart(canvas, {
         type: 'bar',
         data: {
-            labels: labels,
+            // استخدام دالة الاختصار للأسماء وتطبيقها على تسميات المحور السيني (X-Axis)
+            labels: labels.map(lbl => formatScientificName(lbl)),
             datasets: [{
                 label: abxName,
                 data: data,
-                backgroundColor: bgColors,
+                backgroundColor: bgColors, // الألوان الباهتة سيتم تطبيقها هنا تلقائياً
                 ciData: ciData,
                 nData: nDataArr,
                 borderRadius: 4
@@ -2380,9 +2371,19 @@ function buildAbxProfileChart(abxName, canvasId, countElId, records, primaryColo
         options: {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, max: 100 }, x: { ticks: { font: { size: 9 } } } }
+            scales: { 
+                y: { beginAtZero: true, max: 100 }, 
+                x: { 
+                    ticks: { 
+                        autoSkip: false, // لا تقم بقص أو إخفاء أي اسم
+                        maxRotation: 45, 
+                        minRotation: 45,
+                        font: { size: 10 } 
+                    } 
+                } 
+            }
         },
-        plugins: [errorBarsPlugin, barLabelsPlugin] // إضافة البلجنات هنا أيضاً
+        plugins: [errorBarsPlugin] // إزالة إضافة الأسماء العمودية
     });
     
     if(typeof liveCharts !== 'undefined') liveCharts.push(chart);
