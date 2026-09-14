@@ -635,23 +635,24 @@ window.generateAnalytics = function() {
         displayAbxs = finalAbxs;
 
         let datasets = [];
-        displayOrgs.forEach((org, orgIndex) => {
-            let s_org = amrStats[org];
-            if (!s_org) return;
-
+        
+        // عكس المحاور لتصبح المضادات الحيوية هي الـ Datasets
+        displayAbxs.forEach((abx, abxIndex) => {
             let dataR = [], bgColors = [], ciData = [], nDataArr = [];
-            let palette = extendedPalette[orgIndex % extendedPalette.length];
-            let hasDataForThisOrg = false;
+            let palette = extendedPalette[abxIndex % extendedPalette.length];
+            let hasDataForThisAbx = false;
 
-            displayAbxs.forEach(abx => {
-                let s = s_org.abx[abx];
+            displayOrgs.forEach(org => {
+                let s_org = amrStats[org];
+                let s = s_org ? s_org.abx[abx] : null;
+
                 if (!s || s.tested === 0) {
                     dataR.push(null); 
                     bgColors.push(palette.faded); 
                     ciData.push({lower: 0, upper: 0});
                     nDataArr.push(0);
                 } else {
-                    hasDataForThisOrg = true;
+                    hasDataForThisAbx = true;
                     let targetVal = metric === 'R' ? s.r : s.s;
                     let p = Math.round((targetVal / s.tested) * 100);
                     let isReliable = s.tested >= 30;
@@ -663,9 +664,9 @@ window.generateAnalytics = function() {
                 }
             });
 
-            if(hasDataForThisOrg) {
+            if(hasDataForThisAbx) {
                 datasets.push({ 
-                    label: org, 
+                    label: abx, 
                     data: dataR, 
                     backgroundColor: bgColors, 
                     borderRadius: 4, 
@@ -676,19 +677,33 @@ window.generateAnalytics = function() {
             }
         });
         
-       if (chartAMR_instance) chartAMR_instance.destroy();
+        if (chartAMR_instance) chartAMR_instance.destroy();
+        
+        let chartTitleText = "";
+        if (displayAbxs.length <= 2) {
+            chartTitleText = displayAbxs.map(a => formatScientificName(a)).join(' & ') + ` ${metricLabel} Profile`;
+        } else {
+            chartTitleText = `Multiple Antibiotics ${metricLabel} Profile`;
+        }
         
         chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
             type: 'bar',
             data: { 
-                labels: displayAbxs.map(abx => formatScientificName(abx)), 
-                datasets: datasets.map(ds => {
-                    ds.label = formatScientificName(ds.label);
-                    return ds;
-                })
+                labels: displayOrgs.map(org => formatScientificName(org)), // المحور السيني للبكتيريا المختصرة
+                datasets: datasets
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
+                plugins: { 
+                    legend: { display: false }, // إخفاء الدلالات
+                    title: {
+                        display: true,
+                        text: chartTitleText,
+                        font: { size: 13, weight: 'bold' },
+                        color: '#1e293b',
+                        padding: { bottom: 10 }
+                    }
+                },
                 scales: { 
                     y: { beginAtZero: true, max: 100, title: { display: true, text: `% ${metricLabel}`, font: {weight: 'bold'} }, grid: {color: '#f1f5f9'} },
                     x: { 
@@ -700,8 +715,7 @@ window.generateAnalytics = function() {
                             font: { size: 10 } 
                         } 
                     }
-                },
-                plugins: { legend: { display: false } } 
+                }
             },
             plugins: [errorBarsPlugin] 
         });
