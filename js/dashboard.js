@@ -673,11 +673,13 @@ window.generateAnalytics = function() {
 
         primaryItems.forEach((primary, pIndex) => {
             let dataR = [], bgColors = [], ciData = [], nDataArr = [];
-            // التصحيح 1: استخدام safePalette بدلاً من extendedPalette لمنع التعارض
-            let palette = safePalette[pIndex % safePalette.length];
             let hasDataForThisPrimary = false;
 
-            secondaryItems.forEach((secondary) => {
+            // إضافة sIndex لمعرفة رقم البار الحالي
+            secondaryItems.forEach((secondary, sIndex) => {
+                // سحب اللون هنا بناءً على رقم البار (sIndex) بدلاً من (pIndex)
+                let palette = safePalette[sIndex % safePalette.length];
+                
                 let org = focusOnOrganism ? primary : secondary;
                 let abx = focusOnOrganism ? secondary : primary;
                 
@@ -685,8 +687,7 @@ window.generateAnalytics = function() {
                 let s = s_org ? s_org.abx[abx] : null;
 
                 if (!s || s.tested === 0) {
-                    dataR.push(null); // يستخدم Null لإخفاء الفراغات في واجهة الموبايل
-                    // التصحيح 2: استخدام lowBg بدلاً من faded
+                    dataR.push(null); 
                     bgColors.push(palette.lowBg);
                     ciData.push({lower: 0, upper: 0});
                     nDataArr.push(0);
@@ -697,7 +698,6 @@ window.generateAnalytics = function() {
                     let isReliable = s.tested >= 30;
                     
                     dataR.push(p);
-                    // التصحيح 3: استخدام lowBg بدلاً من faded
                     bgColors.push(isReliable ? palette.bg : palette.lowBg);
                     ciData.push(wilsonScoreCI(targetVal, s.tested));
                     nDataArr.push(s.tested);
