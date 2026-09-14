@@ -1728,7 +1728,8 @@ function generateAnalytics() {
                     data: dataR,
                     backgroundColor: bgColors,
                     borderRadius: 4,
-                    ciData: ciData // Injected for custom plugin
+                    ciData: ciData, // Injected for custom plugin
+                    nData: nDataArr // ضروري جداً لكي تظهر النصوص بشكل عمودي صحيح
                 });
             });
         }
