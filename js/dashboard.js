@@ -21,13 +21,6 @@ let chartSpec_instance = null;
 let chartGen_instance = null;
 let isUpdatingFilters = false;
 
-const orgColorPalette = [
-    { bg: 'rgba(185, 28, 28, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(30, 64, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(21, 128, 61, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(162, 28, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(194, 65, 12, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' }
-];
 
 function formatOrgName(org) {
     if (!org || typeof org !== 'string' || org.startsWith('No ')) return org || "-";
@@ -39,6 +32,20 @@ function formatOrgName(org) {
     return name;
 }
 
+// --- 1. COLOR PALETTE & CUSTOM PLUGINS ---
+const extendedPalette = [
+    { bg: 'rgba(13, 148, 136, 0.9)', faded: 'rgba(13, 148, 136, 0.25)' }, // Teal
+    { bg: 'rgba(14, 165, 233, 0.9)', faded: 'rgba(14, 165, 233, 0.25)' }, // Light Blue
+    { bg: 'rgba(59, 130, 246, 0.9)', faded: 'rgba(59, 130, 246, 0.25)' }, // Blue
+    { bg: 'rgba(139, 92, 246, 0.9)', faded: 'rgba(139, 92, 246, 0.25)' }, // Violet
+    { bg: 'rgba(217, 70, 239, 0.9)', faded: 'rgba(217, 70, 239, 0.25)' }, // Fuchsia
+    { bg: 'rgba(244, 63, 94, 0.9)', faded: 'rgba(244, 63, 94, 0.25)' }, // Rose
+    { bg: 'rgba(249, 115, 22, 0.9)', faded: 'rgba(249, 115, 22, 0.25)' }, // Orange
+    { bg: 'rgba(234, 179, 8, 0.9)', faded: 'rgba(234, 179, 8, 0.25)' }, // Yellow
+    { bg: 'rgba(132, 204, 22, 0.9)', faded: 'rgba(132, 204, 22, 0.25)' }, // Lime
+    { bg: 'rgba(220, 38, 38, 0.9)', faded: 'rgba(220, 38, 38, 0.25)' }   // Red
+];
+
 const errorBarsPlugin = {
     id: 'errorBars',
     afterDatasetsDraw(chart) {
@@ -49,17 +56,17 @@ const errorBarsPlugin = {
             if (!meta.hidden && dataset.ciData) {
                 meta.data.forEach((element, index) => {
                     const ci = dataset.ciData[index];
-                    if (!ci || (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0) || dataset.data[index] === null) return;
+                    if (!ci || (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0)) return;
                     const yLower = chart.scales.y.getPixelForValue(ci.lower);
                     const yUpper = chart.scales.y.getPixelForValue(ci.upper);
                     let x = element.x;
                     if (x === undefined) return;
                     ctx.save();
                     ctx.beginPath();
-                    ctx.lineWidth = 1.5; ctx.strokeStyle = '#334155';
+                    ctx.lineWidth = 1; ctx.strokeStyle = '#334155';
                     ctx.moveTo(x, yLower); ctx.lineTo(x, yUpper);
-                    ctx.moveTo(x - 5, yUpper); ctx.lineTo(x + 5, yUpper);
-                    ctx.moveTo(x - 5, yLower); ctx.lineTo(x + 5, yLower);
+                    ctx.moveTo(x - 3, yUpper); ctx.lineTo(x + 3, yUpper);
+                    ctx.moveTo(x - 3, yLower); ctx.lineTo(x + 3, yLower);
                     ctx.stroke(); ctx.restore();
                 });
             }
@@ -67,6 +74,43 @@ const errorBarsPlugin = {
     }
 };
 
+const barLabelsPlugin = {
+    id: 'barLabels',
+    afterDatasetsDraw(chart) {
+        if (chart.config.options.indexAxis === 'y') return; // تجاهل البار الأفقي
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((dataset, i) => {
+            const meta = chart.getDatasetMeta(i);
+            if (!meta.hidden) {
+                meta.data.forEach((element, index) => {
+                    if (dataset.nData && dataset.nData[index] === 0) return; // لا ترسم إذا لم يتم الفحص
+                    
+                    let labelText = dataset.label || '';
+                    if (dataset.nData && dataset.nData[index] < 30) {
+                        labelText += ' *'; // إضافة النجمة للعينات القليلة
+                    }
+
+                    ctx.save();
+                    ctx.translate(element.x, element.y);
+                    ctx.rotate(Math.PI / 2); // تدوير 90 درجة للقراءة من الأعلى للأسفل
+                    
+                    // إضافة ظل للنص لضمان قراءته حتى لو كان لون العمود غامق
+                    ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
+                    ctx.shadowBlur = 4;
+                    ctx.fillStyle = '#0f172a'; 
+                    ctx.font = 'bold 11px sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    
+                    // الرسم اسفل خط البداية بقليل لينزل للأسفل
+                    ctx.fillText(labelText, 8, 0); 
+                    ctx.restore();
+                });
+            }
+        });
+    }
+};
+// --------------------------------------------------------
 function wilsonScoreCI(r, n) {
     if (n === 0) return { lower: 0, upper: 0 };
     const p = r / n, z2 = 3.8416;
@@ -579,28 +623,33 @@ window.generateAnalytics = function() {
 
         let datasets = [];
         displayOrgs.forEach((org, orgIndex) => {
-            let s_org = amrStats[org];
-            if (!s_org) return;
+                let s_org = amrStats[org];
+                if (!s_org) return;
 
-            let dataR = [], bgColors = [], ciData = [];
-            let palette = orgColorPalette[orgIndex % orgColorPalette.length];
-            let hasDataForThisOrg = false;
+                let dataR = [];
+                let bgColors = [];
+                let ciData = [];
+                let nDataArr = []; // جديد لحمل أعداد العينات
 
-            displayAbxs.forEach(abx => {
-                let s = s_org.abx[abx];
-                if (!s || s.tested === 0) {
-                    dataR.push(null); 
-                    bgColors.push(palette.lowBg); 
-                    ciData.push({lower: 0, upper: 0});
-                } else {
-                    hasDataForThisOrg = true;
-                    let targetVal = metric === 'R' ? s.r : s.s;
-                    let p = Math.round((targetVal / s.tested) * 100);
-                    let isReliable = s.tested >= 30;
-                    
-                    dataR.push(p);
-                    bgColors.push(isReliable ? palette.bg : palette.lowBg);
-                    ciData.push(wilsonScoreCI(targetVal, s.tested));
+                let palette = extendedPalette[orgIndex % extendedPalette.length];
+
+                displayAbxs.forEach(abx => {
+                    let s = s_org.abx[abx];
+                    if (!s || s.tested === 0) {
+                        dataR.push(0); 
+                        bgColors.push(palette.faded);
+                        ciData.push({lower: 0, upper: 0});
+                        nDataArr.push(0);
+                    } else {
+                        let targetVal = metric === 'R' ? s.r : s.s;
+                        let p = Math.round((targetVal / s.tested) * 100);
+                        let isReliable = s.tested >= 30;
+                        if (!isReliable) anyLowReliability = true;
+                        
+                        dataR.push(p);
+                        bgColors.push(isReliable ? palette.bg : palette.faded);
+                        ciData.push(wilsonScoreCI(targetVal, s.tested));
+                        nDataArr.push(s.tested);
                 }
             });
 
