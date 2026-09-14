@@ -89,52 +89,85 @@ let liveCharts = [];
 let isUpdatingFilters = false;
 
 
-// Register custom chart plugin for Error Bars (Confidence Interval) - Bulletproof version
+// --- 1. COLOR PALETTE & CUSTOM PLUGINS ---
+const extendedPalette = [
+    { bg: 'rgba(13, 148, 136, 0.9)', faded: 'rgba(13, 148, 136, 0.25)' }, // Teal
+    { bg: 'rgba(14, 165, 233, 0.9)', faded: 'rgba(14, 165, 233, 0.25)' }, // Light Blue
+    { bg: 'rgba(59, 130, 246, 0.9)', faded: 'rgba(59, 130, 246, 0.25)' }, // Blue
+    { bg: 'rgba(139, 92, 246, 0.9)', faded: 'rgba(139, 92, 246, 0.25)' }, // Violet
+    { bg: 'rgba(217, 70, 239, 0.9)', faded: 'rgba(217, 70, 239, 0.25)' }, // Fuchsia
+    { bg: 'rgba(244, 63, 94, 0.9)', faded: 'rgba(244, 63, 94, 0.25)' }, // Rose
+    { bg: 'rgba(249, 115, 22, 0.9)', faded: 'rgba(249, 115, 22, 0.25)' }, // Orange
+    { bg: 'rgba(234, 179, 8, 0.9)', faded: 'rgba(234, 179, 8, 0.25)' }, // Yellow
+    { bg: 'rgba(132, 204, 22, 0.9)', faded: 'rgba(132, 204, 22, 0.25)' }, // Lime
+    { bg: 'rgba(220, 38, 38, 0.9)', faded: 'rgba(220, 38, 38, 0.25)' }   // Red
+];
+
 const errorBarsPlugin = {
     id: 'errorBars',
-    afterDatasetsDraw(chart, args, pluginOptions) {
-        try {
-            const ctx = chart.ctx;
-            if (!chart.scales || !chart.scales.y) return;
-
-            chart.data.datasets.forEach((dataset, i) => {
-                const meta = chart.getDatasetMeta(i);
-                if (!meta.hidden && dataset.ciData) {
-                    meta.data.forEach((element, index) => {
-                        const ci = dataset.ciData[index];
-                        if (!ci || typeof ci.lower === 'undefined' || typeof ci.upper === 'undefined') return;
-                        if (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0) return;
-                        
-                        const yLower = chart.scales.y.getPixelForValue(ci.lower);
-                        const yUpper = chart.scales.y.getPixelForValue(ci.upper);
-                        let x = element.x;
-                        if (x === undefined) return;
-                        
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.lineWidth = 1.5; 
-                        ctx.strokeStyle = '#000000'; 
-                        
-                        ctx.moveTo(x, yLower);
-                        ctx.lineTo(x, yUpper);
-                        
-                        const capWidth = 5;
-                        ctx.moveTo(x - capWidth, yUpper);
-                        ctx.lineTo(x + capWidth, yUpper);
-                        ctx.moveTo(x - capWidth, yLower);
-                        ctx.lineTo(x + capWidth, yLower);
-                        
-                        ctx.stroke();
-                        ctx.restore();
-                    });
-                }
-            });
-        } catch (e) {
-            console.error('Error drawing error bars:', e);
-        }
+    afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        if (!chart.scales || !chart.scales.y) return;
+        chart.data.datasets.forEach((dataset, i) => {
+            const meta = chart.getDatasetMeta(i);
+            if (!meta.hidden && dataset.ciData) {
+                meta.data.forEach((element, index) => {
+                    const ci = dataset.ciData[index];
+                    if (!ci || (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0)) return;
+                    const yLower = chart.scales.y.getPixelForValue(ci.lower);
+                    const yUpper = chart.scales.y.getPixelForValue(ci.upper);
+                    let x = element.x;
+                    if (x === undefined) return;
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.lineWidth = 1; ctx.strokeStyle = '#334155';
+                    ctx.moveTo(x, yLower); ctx.lineTo(x, yUpper);
+                    ctx.moveTo(x - 3, yUpper); ctx.lineTo(x + 3, yUpper);
+                    ctx.moveTo(x - 3, yLower); ctx.lineTo(x + 3, yLower);
+                    ctx.stroke(); ctx.restore();
+                });
+            }
+        });
     }
 };
 
+const barLabelsPlugin = {
+    id: 'barLabels',
+    afterDatasetsDraw(chart) {
+        if (chart.config.options.indexAxis === 'y') return; // تجاهل البار الأفقي
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((dataset, i) => {
+            const meta = chart.getDatasetMeta(i);
+            if (!meta.hidden) {
+                meta.data.forEach((element, index) => {
+                    if (dataset.nData && dataset.nData[index] === 0) return; // لا ترسم إذا لم يتم الفحص
+                    
+                    let labelText = dataset.label || '';
+                    if (dataset.nData && dataset.nData[index] < 30) {
+                        labelText += ' *'; // إضافة النجمة للعينات القليلة
+                    }
+
+                    ctx.save();
+                    ctx.translate(element.x, element.y);
+                    ctx.rotate(Math.PI / 2); // تدوير 90 درجة للقراءة من الأعلى للأسفل
+                    
+                    // إضافة ظل للنص لضمان قراءته حتى لو كان لون العمود غامق
+                    ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
+                    ctx.shadowBlur = 4;
+                    ctx.fillStyle = '#0f172a'; 
+                    ctx.font = 'bold 11px sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    
+                    // الرسم اسفل خط البداية بقليل لينزل للأسفل
+                    ctx.fillText(labelText, 8, 0); 
+                    ctx.restore();
+                });
+            }
+        });
+    }
+};
+// --------------------------------------------------------
 // --- Migration Script to update old records to new clean names ---
 function runDatabaseMigration() {
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
@@ -1448,15 +1481,6 @@ function wilsonScoreCI(r, n) {
     return { lower: Math.max(0, Math.round(lower * 100)), upper: Math.min(100, Math.round(upper * 100)) };
 }
 
-const orgColorPalette = [
-    { bg: 'rgba(185, 28, 28, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(30, 64, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(21, 128, 61, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(162, 28, 175, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(194, 65, 12, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(13, 148, 136, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' },
-    { bg: 'rgba(217, 70, 239, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' }
-];
 
 window.clearAnalyticsFilters = function() {
     let currentYear = new Date().getFullYear();
