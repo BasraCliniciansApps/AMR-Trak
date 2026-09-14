@@ -1659,15 +1659,17 @@ function generateAnalytics() {
                 let dataR = [];
                 let bgColors = [];
                 let ciData = [];
+                let nDataArr = []; // جديد لحمل أعداد العينات
 
-                let palette = orgColorPalette[orgIndex % orgColorPalette.length];
+                let palette = extendedPalette[orgIndex % extendedPalette.length];
 
                 displayAbxs.forEach(abx => {
                     let s = s_org.abx[abx];
                     if (!s || s.tested === 0) {
                         dataR.push(0); 
-                        bgColors.push(palette.lowBg);
+                        bgColors.push(palette.faded);
                         ciData.push({lower: 0, upper: 0});
+                        nDataArr.push(0);
                     } else {
                         let targetVal = metric === 'R' ? s.r : s.s;
                         let p = Math.round((targetVal / s.tested) * 100);
@@ -1675,7 +1677,9 @@ function generateAnalytics() {
                         if (!isReliable) anyLowReliability = true;
                         
                         dataR.push(p);
-                        bgColors.push(isReliable ? palette.bg : palette.lowBg);
+                        bgColors.push(isReliable ? palette.bg : palette.faded);
+                        ciData.push(wilsonScoreCI(targetVal, s.tested));
+                        nDataArr.push(s.tested);
 
                         let ci = wilsonScoreCI(targetVal, s.tested);
                         ciData.push(ci);
