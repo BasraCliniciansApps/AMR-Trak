@@ -659,101 +659,96 @@ window.generateAnalytics = function() {
         ];
 
         let datasets = [];
+        let focusOnOrganism = (targetOrgs.length > 0 && targetAbxs.length === 0) || (displayOrgs.length === 1 && displayAbxs.length > 1);
         
-        // عكس المحاور لتصبح المضادات الحيوية هي الـ Datasets
-        displayAbxs.forEach((abx, abxIndex) => {
-            let dataR = [], bgColors = [], ciData = [], nDataArr = [];
-            let palette = safePalette[abxIndex % safePalette.length];
-            let hasDataForThisAbx = false;
+        let primaryItems = focusOnOrganism ? displayOrgs : displayAbxs; 
+        let secondaryItems = focusOnOrganism ? displayAbxs : displayOrgs; 
+        let chartTitleText = "";
 
-            displayOrgs.forEach(org => {
+        if (focusOnOrganism) {
+            chartTitleText = (displayOrgs.length <= 2 ? displayOrgs.map(o => formatScientificName(o)).join(' & ') : 'Multiple Organisms') + ` ${metricLabel} Profile`;
+        } else {
+            chartTitleText = (displayAbxs.length <= 2 ? displayAbxs.join(' & ') : 'Multiple Antibiotics') + ` ${metricLabel} Profile`;
+        }
+
+        primaryItems.forEach((primary, pIndex) => {
+            let dataR = [], bgColors = [], ciData = [], nDataArr = [];
+            let palette = extendedPalette[pIndex % extendedPalette.length];
+            let hasDataForThisPrimary = false;
+
+            secondaryItems.forEach((secondary) => {
+                let org = focusOnOrganism ? primary : secondary;
+                let abx = focusOnOrganism ? secondary : primary;
+                
                 let s_org = amrStats[org];
                 let s = s_org ? s_org.abx[abx] : null;
 
                 if (!s || s.tested === 0) {
-                    dataR.push(0); 
-                    bgColors.push(palette.lowBg); 
+                    dataR.push(null); // يستخدم Null لإخفاء الفراغات في واجهة الموبايل
+                    bgColors.push(palette.faded);
                     ciData.push({lower: 0, upper: 0});
                     nDataArr.push(0);
                 } else {
-                    hasDataForThisAbx = true;
+                    hasDataForThisPrimary = true;
                     let targetVal = metric === 'R' ? s.r : s.s;
                     let p = Math.round((targetVal / s.tested) * 100);
                     let isReliable = s.tested >= 30;
                     
                     dataR.push(p);
-                    bgColors.push(isReliable ? palette.bg : palette.lowBg);
+                    bgColors.push(isReliable ? palette.bg : palette.faded);
                     ciData.push(wilsonScoreCI(targetVal, s.tested));
                     nDataArr.push(s.tested);
                 }
             });
 
-            if(hasDataForThisAbx) {
-                datasets.push({ 
-                    label: formatScientificName(abx), 
-                    data: dataR, 
-                    backgroundColor: bgColors, 
-                    borderRadius: 4, 
+            if (hasDataForThisPrimary) {
+                datasets.push({
+                    label: focusOnOrganism ? formatScientificName(primary) : primary,
+                    data: dataR,
+                    backgroundColor: bgColors,
+                    borderRadius: 4,
                     ciData: ciData,
                     nData: nDataArr,
-                    maxBarThickness: 45
+                    maxBarThickness: 16
                 });
             }
         });
 
         if (chartAMR_instance) chartAMR_instance.destroy();
         
-        // تعريف متغيرات العنوان بأمان تام هنا
-        const metricLabelSafe = metric === 'R' ? 'Resistance' : 'Susceptibility';
-        let chartTitleText = "";
-        if (displayAbxs.length <= 2) {
-            chartTitleText = displayAbxs.map(a => formatScientificName(a)).join(' & ') + ` ${metricLabelSafe} Profile`;
-        } else {
-            chartTitleText = `Multiple Antibiotics ${metricLabelSafe} Profile`;
-        }
-
-        let minWidthNeeded = (displayOrgs.length * datasets.length * 50) + 80;
-        $('#amrChartContainer').css('width', `max(100%, ${minWidthNeeded}px)`);
-
         chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
             type: 'bar',
             data: { 
-                labels: displayOrgs.map(org => formatScientificName(org)), // أسماء البكتيريا بالأسفل
-                datasets: datasets 
+                labels: secondaryItems.map(item => focusOnOrganism ? item : formatScientificName(item)), 
+                datasets: datasets
             },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                scales: { 
-                    y: { beginAtZero: true, max: 100, title: { display: true, text: `% ${metricLabelSafe}`, font: {weight: 'bold'} }, grid: {color: '#f1f5f9'} },
-                    x: { 
-                        grid: {display: false},
-                        ticks: { autoSkip: false, maxRotation: 45, minRotation: 45, font: {size: 10} } 
-                    }
-                }, 
+            options: {
+                responsive: true, maintainAspectRatio: false,
                 plugins: { 
-                    legend: { display: false }, // إخفاء الدلالات
+                    legend: { display: false }, 
                     title: {
                         display: true,
-                        text: chartTitleText, // العنوان الديناميكي
-                        font: { size: 14, weight: 'bold' },
+                        text: chartTitleText,
+                        font: { size: 13, weight: 'bold' },
                         color: '#1e293b',
-                        padding: { bottom: 15 }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                // إخفاء الـ Tooltip إذا كانت القيمة 0 والعدد الأصلي 0
-                                if (context.raw === 0 && context.dataset.nData[context.dataIndex] === 0) return null;
-                                return context.dataset.label + ': ' + context.raw + '%';
-                            }
-                        }
+                        padding: { bottom: 10 }
                     }
-                } 
+                },
+                scales: { 
+                    y: { beginAtZero: true, max: 100, title: { display: true, text: `% ${metricLabel}`, font: {weight: 'bold'} }, grid: {color: '#f1f5f9'} },
+                    x: { 
+                        grid: {display: false}, 
+                        ticks: { 
+                            autoSkip: false, 
+                            maxRotation: 45, 
+                            minRotation: 45,
+                            font: { size: 10 } 
+                        } 
+                    }
+                }
             },
-            plugins: [errorBarsPlugin] // التأكد من عدم وجود barLabelsPlugin
+            plugins: [errorBarsPlugin] 
         });
-    }
     let hmOrgs = Object.keys(heatmapStats).filter(o => targetOrgs.includes(o)).sort();
     let hmAbxs = targetAbxs.sort();
 
