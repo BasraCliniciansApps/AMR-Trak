@@ -1761,7 +1761,7 @@ function generateAnalytics() {
             if(!rowHasData) return;
 
             let orgTotal = orgCounts[o] || 0;
-            hmHtml += `<tr><th>${o} <span class="text-xs font-normal text-slate-400">(${orgTotal})</span></th>`;
+            hmHtml += `<tr><th>${formatScientificName(o)} <span class="text-xs font-normal text-slate-400">(${orgTotal})</span></th>`;
             
             hmAbxs.forEach(a => {
                 let cell = heatmapStats[o][a];
@@ -1804,7 +1804,7 @@ function generateAnalytics() {
     chartOrg_instance = new Chart(document.getElementById('chartOrg'), {
         type: 'doughnut',
         data: {
-            labels: sortedOrgs,
+            labels: sortedOrgs.map(o => formatScientificName(o)),
             datasets: [{ data: sortedOrgs.map(o=>orgCounts[o]), backgroundColor: ['#0d9488','#0ea5e9','#3b82f6','#06b6d4','#14b8a6','#10b981','#84cc16','#eab308','#f59e0b','#f97316'] }]
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } } }
@@ -2155,7 +2155,7 @@ function buildLiveSection(records, prefix, settings) {
     let topOrg = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a])[0] || "-";
     let topSpec = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a])[0] || "-";
     
-    $(`#live_${prefix}_bug`).text(topOrg);
+    $(`#live_${prefix}_bug`).text(formatScientificName(topOrg));
     $(`#live_${prefix}_spec`).text(topSpec);
 
     // 1. Bar Chart (Critical AMR)
@@ -2213,7 +2213,8 @@ function buildLiveSection(records, prefix, settings) {
             let specRecords = records.filter(r => r.Sample === spec);
             let bCounts = {};
             specRecords.forEach(r => { let o = r['Selective organism']; if(o) bCounts[o] = (bCounts[o]||0)+1; });
-            let topBugSpec = Object.keys(bCounts).sort((a,b)=>bCounts[b]-bCounts[a])[0] || "-";
+           let topBugSpec = Object.keys(bCounts).sort((a,b)=>bCounts[b]-bCounts[a])[0] || "-";
+let topBugSpecFormatted = formatScientificName(topBugSpec);
 
             let abxS = {}; let abxT = {};
             specRecords.forEach(r => {
@@ -2256,9 +2257,9 @@ function buildLiveSection(records, prefix, settings) {
                 <div class="font-bold text-slate-800 text-sm flex items-center gap-2 w-full md:w-1/4">
                     <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs truncate max-w-full" title="${spec}">${spec}</span>
                 </div>
-                <div class="text-xs text-slate-600 w-full md:w-1/3">
-                    Top Bug: <span class="font-bold text-rose-600 block mt-0.5 truncate" title="${topBugSpec}">${topBugSpec}</span>
-                </div>
+                <div class="text-xs text-slate-600 w-full md:w-1/3 break-words min-w-0">
+    Top Bug: <span class="font-bold text-rose-600 block mt-0.5 break-words whitespace-normal" title="${topBugSpec}">${topBugSpecFormatted}</span>
+</div>
                 <div class="text-xs text-slate-600 w-full md:flex-1 min-w-0">
                     Most Susceptible: ${formattedAbxLabel}
                 </div>
@@ -2318,7 +2319,7 @@ function buildAbxProfileChart(abxName, canvasId, countElId, records, primaryColo
         let p = Math.round((item.resistant / item.tested) * 100);
         let palette = extendedPalette[index % extendedPalette.length]; // إعطاء كل بكتيريا لون
         
-        labels.push(org.length > 15 ? org.slice(0, 12) + '..' : org);
+        labels.push(org);
         data.push(p);
         bgColors.push(item.tested >= 30 ? palette.bg : palette.faded);
         ciData.push(wilsonScoreCI(item.resistant, item.tested));
