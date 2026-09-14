@@ -658,7 +658,7 @@ window.generateAnalytics = function() {
             { bg: 'rgba(234, 179, 8, 0.9)', lowBg: 'rgba(203, 213, 225, 0.6)' }
         ];
 
-        let datasets = [];
+       let datasets = [];
         let focusOnOrganism = (targetOrgs.length > 0 && targetAbxs.length === 0) || (displayOrgs.length === 1 && displayAbxs.length > 1);
         
         let primaryItems = focusOnOrganism ? displayOrgs : displayAbxs; 
@@ -673,7 +673,8 @@ window.generateAnalytics = function() {
 
         primaryItems.forEach((primary, pIndex) => {
             let dataR = [], bgColors = [], ciData = [], nDataArr = [];
-            let palette = extendedPalette[pIndex % extendedPalette.length];
+            // التصحيح 1: استخدام safePalette بدلاً من extendedPalette لمنع التعارض
+            let palette = safePalette[pIndex % safePalette.length];
             let hasDataForThisPrimary = false;
 
             secondaryItems.forEach((secondary) => {
@@ -685,7 +686,8 @@ window.generateAnalytics = function() {
 
                 if (!s || s.tested === 0) {
                     dataR.push(null); // يستخدم Null لإخفاء الفراغات في واجهة الموبايل
-                    bgColors.push(palette.faded);
+                    // التصحيح 2: استخدام lowBg بدلاً من faded
+                    bgColors.push(palette.lowBg);
                     ciData.push({lower: 0, upper: 0});
                     nDataArr.push(0);
                 } else {
@@ -695,7 +697,8 @@ window.generateAnalytics = function() {
                     let isReliable = s.tested >= 30;
                     
                     dataR.push(p);
-                    bgColors.push(isReliable ? palette.bg : palette.faded);
+                    // التصحيح 3: استخدام lowBg بدلاً من faded
+                    bgColors.push(isReliable ? palette.bg : palette.lowBg);
                     ciData.push(wilsonScoreCI(targetVal, s.tested));
                     nDataArr.push(s.tested);
                 }
