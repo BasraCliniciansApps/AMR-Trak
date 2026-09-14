@@ -74,59 +74,46 @@ const errorBarsPlugin = {
     }
 };
 
-const barLabelsPlugin = {
-    id: 'barLabels',
+// إضافة مخصصة لرسم خطوط فترة الثقة (Confidence Intervals)
+const errorBarsPlugin = {
+    id: 'errorBars',
     afterDatasetsDraw(chart) {
-        if (chart.config.options.indexAxis === 'y') return; // تجاهل البار الأفقي
         const ctx = chart.ctx;
+        if (!chart.scales || !chart.scales.y) return;
         chart.data.datasets.forEach((dataset, i) => {
             const meta = chart.getDatasetMeta(i);
-            if (!meta.hidden) {
+            if (!meta.hidden && dataset.ciData) {
                 meta.data.forEach((element, index) => {
-                    if (dataset.nData && dataset.nData[index] === 0) return; // لا ترسم إذا لم يتم الفحص
-                    
-                    // تحديد الاسم المناسب (اسم البكتيريا إذا كانت مقارنة، أو اسم المضاد إذا كان بروفايل)
-                    let rawLabel = chart.data.datasets.length > 1 ? dataset.label : chart.data.labels[index];
-                    let labelText = Array.isArray(rawLabel) ? rawLabel.join(' ') : rawLabel;
-                    
-                    if (dataset.nData && dataset.nData[index] < 30) {
-                        labelText += ' *'; // إضافة النجمة للعينات القليلة
-                    }
-
+                    const ci = dataset.ciData[index];
+                    if (!ci || (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0)) return;
+                    const yLower = chart.scales.y.getPixelForValue(ci.lower);
+                    const yUpper = chart.scales.y.getPixelForValue(ci.upper);
+                    let x = element.x;
+                    if (x === undefined) return;
                     ctx.save();
-                    ctx.translate(element.x, element.y);
-                    
-                    // إضافة ظل للنص لضمان قراءته بوضوح
-                    ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
-                    ctx.shadowBlur = 4;
-                    ctx.fillStyle = '#0f172a'; 
-                    ctx.font = 'bold 11px sans-serif';
-                    ctx.textBaseline = 'middle';
-                    
-                    // حساب ارتفاع العمود
-                    let baselineY = chart.scales.y.getPixelForValue(0);
-                    let barHeight = baselineY - element.y;
-                    
-                    // إذا كان البار صفر أو قصير جداً، نرسم النص من الأسفل للأعلى
-                    if (barHeight < 30) {
-                        ctx.translate(0, barHeight - 5); 
-                        ctx.rotate(-Math.PI / 2); // تدوير للأعلى
-                        ctx.textAlign = 'left';
-                        ctx.fillText(labelText, 0, 0);
-                    } else {
-                        // البار طويل، نرسم النص من الأعلى للأسفل
-                        ctx.rotate(Math.PI / 2); 
-                        ctx.textAlign = 'left';
-                        ctx.fillText(labelText, 8, 0); 
-                    }
-                    
-                    ctx.restore();
+                    ctx.beginPath();
+                    ctx.lineWidth = 1; ctx.strokeStyle = '#334155';
+                    ctx.moveTo(x, yLower); ctx.lineTo(x, yUpper);
+                    ctx.moveTo(x - 3, yUpper); ctx.lineTo(x + 3, yUpper);
+                    ctx.moveTo(x - 3, yLower); ctx.lineTo(x + 3, yLower);
+                    ctx.stroke(); ctx.restore();
                 });
             }
         });
     }
 };
 
+// دالة ذكية للاختصار العلمي للبكتيريا (تحول Staphylococcus aureus إلى S. aureus)
+function formatScientificName(name) {
+    if (!name || typeof name !== 'string') return name;
+    let cleanName = name.replace(/\(E\.coli\)/gi, "").trim(); // إزالة الزوائد
+    let isAntibiotic = cleanName.includes('/') || cleanName.toLowerCase().includes('acid'); // حماية المضادات الحيوية
+    let parts = cleanName.split(' ');
+    if (!isAntibiotic && parts.length >= 2 && parts[0].length > 3) {
+        return parts[0].charAt(0).toUpperCase() + '. ' + parts.slice(1).join(' ');
+    }
+    return cleanName;
+}
 function wilsonScoreCI(r, n) {
     if (n === 0) return { lower: 0, upper: 0 };
     const p = r / n, z2 = 3.8416;
@@ -476,12 +463,39 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
 
     if (sortedOrgs.length === 0) { labels = ['No Data']; data = [0]; bgColors = ['#e2e8f0']; ciData = [{ lower: 0, upper: 0 }]; nDataArr = [0]; }
 
-    liveCharts.push(new Chart(canvas, {
-        type: 'bar', 
-        data: { labels, datasets: [{ label: abxName, data, backgroundColor: bgColors, ciData: ciData, nData: nDataArr, borderRadius: 4, maxBarThickness: 30 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { max: 100 }, x: { ticks: { font: {size: 8} } } } },
-        plugins: [errorBarsPlugin, barLabelsPlugin]
-    }));
+    let chart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            // استخدام دالة الاختصار للأسماء وتطبيقها على تسميات المحور السيني (X-Axis)
+            labels: labels.map(lbl => formatScientificName(lbl)),
+            datasets: [{
+                label: abxName,
+                data: data,
+                backgroundColor: bgColors, // الألوان الباهتة سيتم تطبيقها هنا تلقائياً
+                ciData: ciData,
+                nData: nDataArr,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { 
+                y: { beginAtZero: true, max: 100 }, 
+                x: { 
+                    ticks: { 
+                        autoSkip: false, // لا تقم بقص أو إخفاء أي اسم
+                        maxRotation: 45, 
+                        minRotation: 45,
+                        font: { size: 10 } 
+                    } 
+                } 
+            }
+        },
+        plugins: [errorBarsPlugin] // إزالة إضافة الأسماء العمودية
+    });
+    
+    liveCharts.push(chart);
 }
 
 function loadAnalyticsFilters() {
