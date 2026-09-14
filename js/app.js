@@ -1628,19 +1628,19 @@ function generateAnalytics() {
         if (displayOrgs.length === 0 || displayAbxs.length === 0) {
             tableHtml = '<tr><td colspan="6" class="text-center py-4 text-slate-500">No cross-data found for the selected combinations.</td></tr>';
         } else {
-            displayOrgs.forEach((org, orgIndex) => {
-                let s_org = amrStats[org];
-                if (!s_org) return;
-
+            // جعلنا المضادات هي الـ Datasets والبكتيريا هي المحور السيني (X-axis)
+            displayAbxs.forEach((abx, abxIndex) => {
                 let dataR = [];
                 let bgColors = [];
                 let ciData = [];
-                let nDataArr = []; // جديد لحمل أعداد العينات
+                let nDataArr = [];
 
-                let palette = extendedPalette[orgIndex % extendedPalette.length];
+                let palette = extendedPalette[abxIndex % extendedPalette.length];
 
-                displayAbxs.forEach(abx => {
-                    let s = s_org.abx[abx];
+                displayOrgs.forEach(org => {
+                    let s_org = amrStats[org];
+                    let s = s_org ? s_org.abx[abx] : null;
+
                     if (!s || s.tested === 0) {
                         dataR.push(0); 
                         bgColors.push(palette.faded);
@@ -1652,11 +1652,11 @@ function generateAnalytics() {
                         let isReliable = s.tested >= 30;
                         if (!isReliable) anyLowReliability = true;
                         
-                        let ci = wilsonScoreCI(targetVal, s.tested); // تعريف المتغير هنا
+                        let ci = wilsonScoreCI(targetVal, s.tested);
                         
                         dataR.push(p);
                         bgColors.push(isReliable ? palette.bg : palette.faded);
-                        ciData.push(ci); // إضافته للمصفوفة بدون تكرار
+                        ciData.push(ci);
                         nDataArr.push(s.tested);
 
                         let dangerScore = metric === 'R' ? p : (100 - p);
@@ -1670,8 +1670,8 @@ function generateAnalytics() {
 
                         tableHtml += `
                             <tr class="hover:bg-slate-50 transition-colors ${!isReliable ? 'text-slate-500' : 'font-semibold text-slate-700'}">
-                                <td class="px-4 py-2 border-b border-slate-100">${abx}</td>
-                                <td class="px-4 py-2 border-b border-slate-100"><span style="color:${palette.bg.replace('0.9','1')}">${org}</span> ${!isReliable ? '<span class="text-red-500 font-bold">*</span>' : ''}</td>
+                                <td class="px-4 py-2 border-b border-slate-100"><span style="color:${palette.bg.replace('0.9','1')}">${abx}</span></td>
+                                <td class="px-4 py-2 border-b border-slate-100">${formatScientificName(org)} ${!isReliable ? '<span class="text-red-500 font-bold">*</span>' : ''}</td>
                                 <td class="px-4 py-2 border-b border-slate-100 text-center">${s.tested}</td>
                                 <td class="px-4 py-2 border-b border-slate-100 text-center">${targetVal}</td>
                                 <td class="px-4 py-2 border-b border-slate-100 text-center ${semColor}">${p}%</td>
@@ -1682,12 +1682,12 @@ function generateAnalytics() {
                 });
 
                 datasets.push({
-                    label: org,
+                    label: abx,
                     data: dataR,
                     backgroundColor: bgColors,
                     borderRadius: 4,
-                    ciData: ciData, // Injected for custom plugin
-                    nData: nDataArr // ضروري جداً لكي تظهر النصوص بشكل عمودي صحيح
+                    ciData: ciData,
+                    nData: nDataArr
                 });
             });
         }
@@ -1701,34 +1701,46 @@ function generateAnalytics() {
 
         if (chartAMR_instance) chartAMR_instance.destroy();
         
+        // بناء عنوان المخطط الديناميكي
+        let chartTitleText = "";
+        if (displayAbxs.length <= 3) {
+            chartTitleText = displayAbxs.map(a => formatScientificName(a)).join(' & ') + ` ${metricLabel} Profile`;
+        } else {
+            chartTitleText = `Multiple Antibiotics ${metricLabel} Profile`;
+        }
+
         chartAMR_instance = new Chart(document.getElementById('chartAMR'), {
             type: 'bar',
             data: { 
-                // تمرير أسماء المضادات (أو البكتيريا) بعد اختصارها
-                labels: displayAbxs.map(abx => formatScientificName(abx)), 
-                datasets: datasets.map(ds => {
-                    // اختصار اسم البكتيريا (label) في الـ Legend إن وجد
-                    ds.label = formatScientificName(ds.label);
-                    return ds;
-                })
+                labels: displayOrgs.map(org => formatScientificName(org)), // المحور السيني أصبح للبكتيريا
+                datasets: datasets // الأعمدة أصبحت للمضادات الحيوية
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
+                plugins: { 
+                    legend: { display: false }, // إخفاء الدلالات اللونية
+                    title: {
+                        display: true,
+                        text: chartTitleText,
+                        font: { size: 15, weight: 'bold' },
+                        color: '#1e293b',
+                        padding: { bottom: 15 }
+                    }
+                },
                 scales: { 
                     y: { beginAtZero: true, max: 100, title: { display: true, text: `% ${metricLabel}`, font: {weight: 'bold'} }, grid: {color: '#f1f5f9'} },
                     x: { 
                         grid: {display: false}, 
                         ticks: { 
-                            autoSkip: false, // منع إخفاء أي اسم
-                            maxRotation: 45, // زاوية الميلان للأسفل 45 درجة لتناسب الأسماء
+                            autoSkip: false,
+                            maxRotation: 45,
                             minRotation: 45,
-                            font: { size: 10 } // حجم الخط في الأسفل
+                            font: { size: 10 } 
                         } 
                     }
-                },
-                plugins: { legend: { display: true, position: 'top' } } 
+                }
             },
-            plugins: [errorBarsPlugin] // حذفنا barLabelsPlugin لأن الأسماء ستظهر أسفل المخطط
+            plugins: [errorBarsPlugin]
         });
 
     // Heatmap Building 
