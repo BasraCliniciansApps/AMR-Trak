@@ -76,7 +76,52 @@ const errorBarsPlugin = {
         });
     }
 };
+const barLabelsPlugin = {
+    id: 'barLabels',
+    afterDatasetsDraw(chart) {
+        if (chart.config.options.indexAxis === 'y') return; 
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((dataset, i) => {
+            const meta = chart.getDatasetMeta(i);
+            if (!meta.hidden) {
+                meta.data.forEach((element, index) => {
+                    if (dataset.nData && dataset.nData[index] === 0) return; 
+                    
+                    let rawLabel = chart.data.datasets.length > 1 ? dataset.label : chart.data.labels[index];
+                    let labelText = Array.isArray(rawLabel) ? rawLabel.join(' ') : rawLabel;
+                    if (dataset.nData && dataset.nData[index] < 30) labelText += ' *';
 
+                    ctx.save();
+                    ctx.translate(element.x, element.y);
+                    ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
+                    ctx.shadowBlur = 4;
+                    ctx.fillStyle = '#0f172a'; 
+                    ctx.font = 'bold 11px sans-serif';
+                    ctx.textBaseline = 'middle';
+                    
+                    let baselineY = chart.scales.y.getPixelForValue(0);
+                    let barHeight = baselineY - element.y;
+                    
+                    if (barHeight < 30) {
+                        ctx.translate(0, barHeight - 5); 
+                        ctx.rotate(-Math.PI / 2); 
+                        ctx.textAlign = 'left';
+                        ctx.fillText(labelText, 0, 0);
+                    } else {
+                        ctx.rotate(Math.PI / 2); 
+                        ctx.textAlign = 'left';
+                        ctx.fillText(labelText, 8, 0); 
+                    }
+                    ctx.restore();
+                });
+            }
+        });
+    }
+};
+
+function getCustomAntibiotics() { 
+    return JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || []; 
+}
 // دالة ذكية للاختصار العلمي للبكتيريا (تحول Staphylococcus aureus إلى S. aureus)
 function formatScientificName(name) {
     if (!name || typeof name !== 'string') return name;
