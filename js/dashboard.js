@@ -85,32 +85,48 @@ const barLabelsPlugin = {
                 meta.data.forEach((element, index) => {
                     if (dataset.nData && dataset.nData[index] === 0) return; // لا ترسم إذا لم يتم الفحص
                     
-                    let labelText = dataset.label || '';
+                    // تحديد الاسم المناسب (اسم البكتيريا إذا كانت مقارنة، أو اسم المضاد إذا كان بروفايل)
+                    let rawLabel = chart.data.datasets.length > 1 ? dataset.label : chart.data.labels[index];
+                    let labelText = Array.isArray(rawLabel) ? rawLabel.join(' ') : rawLabel;
+                    
                     if (dataset.nData && dataset.nData[index] < 30) {
                         labelText += ' *'; // إضافة النجمة للعينات القليلة
                     }
 
                     ctx.save();
                     ctx.translate(element.x, element.y);
-                    ctx.rotate(Math.PI / 2); // تدوير 90 درجة للقراءة من الأعلى للأسفل
                     
-                    // إضافة ظل للنص لضمان قراءته حتى لو كان لون العمود غامق
+                    // إضافة ظل للنص لضمان قراءته بوضوح
                     ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
                     ctx.shadowBlur = 4;
                     ctx.fillStyle = '#0f172a'; 
                     ctx.font = 'bold 11px sans-serif';
-                    ctx.textAlign = 'left';
                     ctx.textBaseline = 'middle';
                     
-                    // الرسم اسفل خط البداية بقليل لينزل للأسفل
-                    ctx.fillText(labelText, 8, 0); 
+                    // حساب ارتفاع العمود
+                    let baselineY = chart.scales.y.getPixelForValue(0);
+                    let barHeight = baselineY - element.y;
+                    
+                    // إذا كان البار صفر أو قصير جداً، نرسم النص من الأسفل للأعلى
+                    if (barHeight < 30) {
+                        ctx.translate(0, barHeight - 5); 
+                        ctx.rotate(-Math.PI / 2); // تدوير للأعلى
+                        ctx.textAlign = 'left';
+                        ctx.fillText(labelText, 0, 0);
+                    } else {
+                        // البار طويل، نرسم النص من الأعلى للأسفل
+                        ctx.rotate(Math.PI / 2); 
+                        ctx.textAlign = 'left';
+                        ctx.fillText(labelText, 8, 0); 
+                    }
+                    
                     ctx.restore();
                 });
             }
         });
     }
 };
-// --------------------------------------------------------
+
 function wilsonScoreCI(r, n) {
     if (n === 0) return { lower: 0, upper: 0 };
     const p = r / n, z2 = 3.8416;
@@ -680,15 +696,15 @@ window.generateAnalytics = function() {
 
             if(hasDataForThisOrg) {
                 datasets.push({ 
-                    label: formatOrgName(org), 
+                    label: org, 
                     data: dataR, 
                     backgroundColor: bgColors, 
                     borderRadius: 4, 
                     ciData: ciData,
-                    maxBarThickness: 45
+                    nData: nDataArr, // تمت إضافتها هنا لكي يعمل بلجن النصوص
+                    maxBarThickness: 16
                 });
             }
-        });
 
        if (chartAMR_instance) chartAMR_instance.destroy();
         
