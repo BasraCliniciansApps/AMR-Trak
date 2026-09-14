@@ -1730,8 +1730,9 @@ function generateAnalytics() {
                     ciData: ciData,
                     nData: nDataArr
                 });
-            }
-        });
+                }
+            });
+        }
 
         if (chartAMR_instance) chartAMR_instance.destroy();
         
