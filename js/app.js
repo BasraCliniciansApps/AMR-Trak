@@ -1715,7 +1715,7 @@ function generateAnalytics() {
                     let isReliable = s.tested >= 30;
                     
                     dataR.push(p);
-                    bgColors.push(isReliable ? palette.bg : palette.faded);
+                    bgColors.push(isReliable ? palette.bg : '#94a3b8');
                     ciData.push(wilsonScoreCI(targetVal, s.tested));
                     nDataArr.push(s.tested);
                 }
@@ -2208,7 +2208,7 @@ function buildLiveSection(records, prefix, settings) {
             data.push(0); bgColors.push(palette.faded); ciData.push({lower:0, upper:0}); nDataArr.push(0);
         } else {
             data.push(Math.round((stat.resistant / stat.tested) * 100));
-            bgColors.push(stat.tested >= 30 ? palette.bg : palette.faded); // باهت إذا كان أقل من 30
+            bgColors.push(stat.tested >= 30 ? palette.bg : '#94a3b8'); // باهت إذا كان أقل من 30
             ciData.push(wilsonScoreCI(stat.resistant, stat.tested));
             nDataArr.push(stat.tested);
         }
@@ -2359,7 +2359,7 @@ function buildAbxProfileChart(abxName, canvasId, countElId, records, primaryColo
         
         labels.push(org);
         data.push(p);
-        bgColors.push(item.tested >= 30 ? palette.bg : palette.faded);
+        bgColors.push(item.tested >= 30 ? palette.bg : '#94a3b8');
         ciData.push(wilsonScoreCI(item.resistant, item.tested));
         nDataArr.push(item.tested);
     });
