@@ -277,7 +277,7 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
             data.push(0); bgColors.push(palette.faded); ciData.push({lower:0, upper:0}); nDataArr.push(0);
         } else {
             data.push(Math.round((stat.resistant / stat.tested) * 100));
-            bgColors.push(stat.tested >= 30 ? palette.bg : palette.faded); 
+            bgColors.push(stat.tested >= 30 ? palette.bg : '#94a3b8'); 
             ciData.push(wilsonScoreCI(stat.resistant, stat.tested));
             nDataArr.push(stat.tested);
         }
@@ -438,7 +438,7 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
         
         labels.push(org);
         data.push(p);
-        bgColors.push(item.tested >= 30 ? palette.bg : palette.faded);
+        bgColors.push(item.tested >= 30 ? palette.bg : '#94a3b8');
         ciData.push(wilsonScoreCI(item.resistant, item.tested));
         nDataArr.push(item.tested);
     });
@@ -698,7 +698,7 @@ window.generateAnalytics = function() {
                     let isReliable = s.tested >= 30;
                     
                     dataR.push(p);
-                    bgColors.push(isReliable ? palette.bg : palette.lowBg);
+                    bgColors.push(isReliable ? palette.bg : '#94a3b8');
                     ciData.push(wilsonScoreCI(targetVal, s.tested));
                     nDataArr.push(s.tested);
                 }
