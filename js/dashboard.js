@@ -444,22 +444,43 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
     let totalTestedAbx = Object.values(orgMap).reduce((sum, item) => sum + item.tested, 0);
     if (countElId) $(`#${countElId}`).text(`(n=${totalTestedAbx})`);
 
-    let labels = [], data = [], bgColors = [], ciData = [];
-    sortedOrgs.forEach(org => {
+    let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
+    sortedOrgs.forEach((org, index) => {
         let item = orgMap[org];
         let p = Math.round((item.resistant / item.tested) * 100);
-        labels.push(formatOrgName(org));
+        let palette = extendedPalette[index % extendedPalette.length]; // إعطاء كل بكتيريا لون
+        
+        labels.push(org.length > 15 ? org.slice(0, 12) + '..' : org);
         data.push(p);
-        bgColors.push(item.tested >= 30 ? primaryColor : 'rgba(148, 163, 184, 0.55)');
+        bgColors.push(item.tested >= 30 ? palette.bg : palette.faded);
         ciData.push(wilsonScoreCI(item.resistant, item.tested));
+        nDataArr.push(item.tested);
     });
 
-    if (sortedOrgs.length === 0) { labels = ['No Data']; data = [0]; bgColors = ['#e2e8f0']; ciData = [{ lower: 0, upper: 0 }]; }
+    if (sortedOrgs.length === 0) { labels = ['No Data']; data = [0]; bgColors = ['#e2e8f0']; ciData = [{ lower: 0, upper: 0 }]; nDataArr = [0]; }
 
-    liveCharts.push(new Chart(canvas, {
-        type: 'bar', data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, borderRadius: 4, maxBarThickness: 30 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { max: 100 }, x: { ticks: { font: {size: 8} } } } },
-        plugins: [errorBarsPlugin]
+    let chart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: abxName,
+                data: data,
+                backgroundColor: bgColors,
+                ciData: ciData,
+                nData: nDataArr,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, max: 100 }, x: { ticks: { font: { size: 9 } } } }
+        },
+        plugins: [errorBarsPlugin, barLabelsPlugin] // إضافة البلجنات هنا أيضاً
+    });
+    
+    if(typeof liveCharts !== 'undefined') liveCharts.push(chart);
     }));
 }
 
