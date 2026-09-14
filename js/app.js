@@ -142,39 +142,53 @@ const barLabelsPlugin = {
                 meta.data.forEach((element, index) => {
                     if (dataset.nData && dataset.nData[index] === 0) return; // لا ترسم إذا لم يتم الفحص
                     
-                    // تحديد الاسم المناسب (اسم البكتيريا إذا كانت مقارنة، أو اسم المضاد إذا كان بروفايل)
                     let rawLabel = chart.data.datasets.length > 1 ? dataset.label : chart.data.labels[index];
                     let labelText = Array.isArray(rawLabel) ? rawLabel.join(' ') : rawLabel;
                     
+                    // ===== 1. دالة اختصار اسم البكتيريا علمياً (S. aureus) =====
+                    // تنظيف الاسم من أي زيادات
+                    let cleanName = labelText.replace(/\(E\.coli\)/gi, "").trim();
+                    // نمنع اختصار المضادات الحيوية المركبة (التي تحتوي على شارحة أو كلمة acid)
+                    let isAntibiotic = cleanName.includes('/') || cleanName.toLowerCase().includes('acid');
+                    let parts = cleanName.split(' ');
+                    
+                    // إذا كان بكتيريا (وليس مضاداً) ويتكون من مقطعين أو أكثر، نختصره
+                    if (!isAntibiotic && parts.length >= 2 && parts[0].length > 3) {
+                        labelText = parts[0].charAt(0).toUpperCase() + '. ' + parts.slice(1).join(' ');
+                    } else {
+                        labelText = cleanName;
+                    }
+                    
+                    // إضافة النجمة للعينات القليلة
                     if (dataset.nData && dataset.nData[index] < 30) {
-                        labelText += ' *'; // إضافة النجمة للعينات القليلة
+                        labelText += ' *'; 
                     }
 
                     ctx.save();
                     ctx.translate(element.x, element.y);
                     
-                    // إضافة ظل للنص لضمان قراءته بوضوح
-                    ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
-                    ctx.shadowBlur = 4;
-                    ctx.fillStyle = '#0f172a'; 
-                    ctx.font = 'bold 11px sans-serif';
+                    // ===== 2. تنسيق الخط (صغير جداً، غير عريض، لون باهت/شفاف) =====
+                    ctx.shadowColor = 'rgba(255, 255, 255, 0.7)'; // توهج أبيض خفيف خلف النص لتسهيل القراءة
+                    ctx.shadowBlur = 3;
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.6)'; // لون داكن شفاف بنسبة 60%
+                    ctx.font = 'normal 9px sans-serif'; // خط صغير جداً وغير عريض (normal بدلاً من bold)
                     ctx.textBaseline = 'middle';
                     
-                    // حساب ارتفاع العمود
+                    // حساب ارتفاع العمود لتوسيط النص
                     let baselineY = chart.scales.y.getPixelForValue(0);
                     let barHeight = baselineY - element.y;
                     
-                    // إذا كان البار صفر أو قصير جداً، نرسم النص من الأسفل للأعلى
-                    if (barHeight < 30) {
-                        ctx.translate(0, barHeight - 5); 
-                        ctx.rotate(-Math.PI / 2); // تدوير للأعلى
+                    // ===== 3. توحيد الاتجاه والموقع (من الأسفل للأعلى دائماً) =====
+                    ctx.rotate(-Math.PI / 2); // تدوير للأعلى بزاوية 90 درجة دائماً
+                    
+                    if (barHeight < 35) {
+                        // إذا كان البار صفر أو قصير جداً، نكتبه فوق البار مباشرة
                         ctx.textAlign = 'left';
-                        ctx.fillText(labelText, 0, 0);
+                        ctx.fillText(labelText, 5, 0); 
                     } else {
-                        // البار طويل، نرسم النص من الأعلى للأسفل
-                        ctx.rotate(Math.PI / 2); 
-                        ctx.textAlign = 'left';
-                        ctx.fillText(labelText, 8, 0); 
+                        // إذا كان البار طويل، نكتبه في منتصف البار تماماً
+                        ctx.textAlign = 'center';
+                        ctx.fillText(labelText, - (barHeight / 2), 0); 
                     }
                     
                     ctx.restore();
@@ -183,7 +197,6 @@ const barLabelsPlugin = {
         });
     }
 };
-
 // --- Migration Script to update old records to new clean names ---
 function runDatabaseMigration() {
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
