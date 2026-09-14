@@ -428,7 +428,7 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
         let p = Math.round((item.resistant / item.tested) * 100);
         let palette = extendedPalette[index % extendedPalette.length];
         
-        labels.push(org.length > 15 ? org.slice(0, 12) + '..' : org);
+        labels.push(org);
         data.push(p);
         bgColors.push(item.tested >= 30 ? palette.bg : palette.faded);
         ciData.push(wilsonScoreCI(item.resistant, item.tested));
