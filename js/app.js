@@ -1754,7 +1754,6 @@ function generateAnalytics() {
             },
             plugins: [errorBarsPlugin]
         });
-    }
 
     // Heatmap Building 
     let hmOrgs = Object.keys(heatmapStats);
