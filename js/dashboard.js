@@ -482,6 +482,7 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { max: 100 }, x: { ticks: { font: {size: 8} } } } },
         plugins: [errorBarsPlugin, barLabelsPlugin]
     }));
+}
 
 function loadAnalyticsFilters() {
     if (isUpdatingFilters) return;
