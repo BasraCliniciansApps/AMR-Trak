@@ -2400,3 +2400,63 @@ function buildAbxProfileChart(abxName, canvasId, countElId, records, primaryColo
     
     if(typeof liveCharts !== 'undefined') liveCharts.push(chart);
 }
+// --- WHONET TEXT TO EXCEL CONVERTER ---
+function convertTextToExcel() {
+    const fileInput = document.getElementById('converterFileInput');
+    const statusDiv = document.getElementById('converterStatus');
+    
+    // Check if file is selected
+    if (!fileInput.files.length) {
+        statusDiv.className = 'text-xs font-bold mt-3 text-red-500 block';
+        statusDiv.innerText = "⚠️ Please select a file first!";
+        return;
+    }
+
+    // Show loading status
+    statusDiv.className = 'text-xs font-bold mt-3 text-amber-500 block';
+    statusDiv.innerText = "⏳ Converting...";
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        try {
+            const text = e.target.result;
+            // Auto-detect if it's tab-separated (WHONET default) or comma-separated
+            const delimiter = text.indexOf('\t') !== -1 ? '\t' : ',';
+            
+            // Parse text into an array of rows and columns
+            const rows = text.split('\n').map(row => row.split(delimiter));
+            
+            // Build the Excel file
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            XLSX.utils.book_append_sheet(wb, ws, "AMR Data");
+            
+            // Generate Download Name
+            const originalName = file.name.replace(/\.[^/.]+$/, "");
+            const outputName = originalName + "_Converted.xlsx";
+            
+            XLSX.writeFile(wb, outputName);
+            
+            // Update status to success
+            statusDiv.className = 'text-xs font-bold mt-3 text-emerald-600 block';
+            statusDiv.innerText = "✅ Success! File converted and downloaded.";
+            
+            // Clear the file input after a short delay
+            setTimeout(() => { fileInput.value = ''; }, 2000);
+            
+        } catch (error) {
+            statusDiv.className = 'text-xs font-bold mt-3 text-red-500 block';
+            statusDiv.innerText = "❌ An error occurred during conversion.";
+            console.error(error);
+        }
+    };
+
+    reader.onerror = function() {
+        statusDiv.className = 'text-xs font-bold mt-3 text-red-500 block';
+        statusDiv.innerText = "❌ Failed to read the file.";
+    };
+
+    reader.readAsText(file);
+}
