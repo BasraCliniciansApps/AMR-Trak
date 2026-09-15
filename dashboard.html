@@ -111,14 +111,20 @@
                         </div>
                     </div>
 
-                    <!-- S / R Toggle Switch -->
-                    <div class="flex justify-center items-center mb-4 gap-3 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm max-w-[200px] mx-auto">
-                        <span id="lbl_S" class="text-[10px] font-bold text-emerald-600 transition-colors">Susceptibility</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="guided_metric_toggle" class="sr-only peer">
-                            <div class="w-9 h-5 bg-emerald-500 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
-                        </label>
-                        <span id="lbl_R" class="text-[10px] font-bold text-slate-400 transition-colors">Resistance</span>
+                    <!-- S/R and n<30 Toggles -->
+                    <div class="flex flex-col sm:flex-row justify-center items-center mb-4 gap-4">
+                        <div class="flex justify-center items-center gap-3 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm">
+                            <span id="lbl_S" class="text-[10px] font-bold text-emerald-600 transition-colors">Susceptibility</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="guided_metric_toggle" class="sr-only peer">
+                                <div class="w-9 h-5 bg-emerald-500 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
+                            </label>
+                            <span id="lbl_R" class="text-[10px] font-bold text-slate-400 transition-colors">Resistance</span>
+                        </div>
+                        <div class="flex justify-center items-center gap-2 bg-white p-2 px-3 rounded-lg border border-slate-200 shadow-sm">
+                            <input type="checkbox" id="guided_hide_low" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                            <label for="guided_hide_low" class="text-[10px] font-bold text-slate-600 cursor-pointer mb-0">Hide n &lt; 30</label>
+                        </div>
                     </div>
 
                     <div class="w-full overflow-x-auto custom-scroll mt-1">
@@ -157,13 +163,19 @@
                         <select id="patho_bug" class="w-full text-sm select2-mobile"><option value="">Select Date First...</option></select>
                     </div>
                     
-                    <div class="flex justify-center items-center my-3 gap-3 bg-slate-50 p-1.5 rounded-lg border border-slate-200 shadow-sm max-w-[200px] mx-auto">
-                        <span id="lbl_patho_S" class="text-[10px] font-bold text-emerald-600 transition-colors">Susceptibility</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="patho_metric_toggle" class="sr-only peer">
-                            <div class="w-9 h-5 bg-emerald-500 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
-                        </label>
-                        <span id="lbl_patho_R" class="text-[10px] font-bold text-slate-400 transition-colors">Resistance</span>
+                    <div class="flex flex-col sm:flex-row justify-center items-center my-3 gap-4">
+                        <div class="flex justify-center items-center gap-3 bg-slate-50 p-1.5 rounded-lg border border-slate-200 shadow-sm">
+                            <span id="lbl_patho_S" class="text-[10px] font-bold text-emerald-600 transition-colors">Susceptibility</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="patho_metric_toggle" class="sr-only peer">
+                                <div class="w-9 h-5 bg-emerald-500 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
+                            </label>
+                            <span id="lbl_patho_R" class="text-[10px] font-bold text-slate-400 transition-colors">Resistance</span>
+                        </div>
+                        <div class="flex justify-center items-center gap-2 bg-slate-50 p-2 px-3 rounded-lg border border-slate-200 shadow-sm">
+                            <input type="checkbox" id="patho_hide_low" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500">
+                            <label for="patho_hide_low" class="text-[10px] font-bold text-slate-600 cursor-pointer mb-0">Hide n &lt; 30</label>
+                        </div>
                     </div>
 
                     <div class="w-full overflow-x-auto custom-scroll mt-2">
@@ -197,13 +209,19 @@
                         <select id="abx_drug" class="w-full text-sm select2-mobile"><option value="">Select Date First...</option></select>
                     </div>
                     
-                    <div class="flex justify-center items-center my-3 gap-3 bg-slate-50 p-1.5 rounded-lg border border-slate-200 shadow-sm max-w-[200px] mx-auto">
-                        <span id="lbl_abx_S" class="text-[10px] font-bold text-emerald-600 transition-colors">Susceptibility</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="abx_metric_toggle" class="sr-only peer">
-                            <div class="w-9 h-5 bg-emerald-500 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
-                        </label>
-                        <span id="lbl_abx_R" class="text-[10px] font-bold text-slate-400 transition-colors">Resistance</span>
+                    <div class="flex flex-col sm:flex-row justify-center items-center my-3 gap-4">
+                        <div class="flex justify-center items-center gap-3 bg-slate-50 p-1.5 rounded-lg border border-slate-200 shadow-sm">
+                            <span id="lbl_abx_S" class="text-[10px] font-bold text-emerald-600 transition-colors">Susceptibility</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="abx_metric_toggle" class="sr-only peer">
+                                <div class="w-9 h-5 bg-emerald-500 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
+                            </label>
+                            <span id="lbl_abx_R" class="text-[10px] font-bold text-slate-400 transition-colors">Resistance</span>
+                        </div>
+                        <div class="flex justify-center items-center gap-2 bg-slate-50 p-2 px-3 rounded-lg border border-slate-200 shadow-sm">
+                            <input type="checkbox" id="abx_hide_low" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                            <label for="abx_hide_low" class="text-[10px] font-bold text-slate-600 cursor-pointer mb-0">Hide n &lt; 30</label>
+                        </div>
                     </div>
 
                     <div class="w-full overflow-x-auto custom-scroll mt-2">
