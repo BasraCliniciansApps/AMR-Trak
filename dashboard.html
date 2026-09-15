@@ -56,85 +56,122 @@
 
     <div class="px-3 mt-4 max-w-lg mx-auto">
         
-        <!-- Tab 1: Analytics (Default) -->
+        <!-- Tab 1: Analytics (Guided & Advanced) -->
         <div id="viewAnalytics" class="space-y-4">
-            <div class="mobile-card bg-slate-50 border-indigo-200">
-                <h3 class="text-sm font-bold text-slate-800 mb-3 border-b pb-2 flex items-center gap-2"><span class="text-indigo-600">📊</span> Analytics Filters</h3>
+            
+            <!-- GUIDED SEARCH (Clinical Pipeline) -->
+            <div class="mobile-card bg-white border-teal-200 shadow-sm border-t-4 border-t-teal-500">
+                <h3 class="text-sm font-bold text-teal-800 mb-3 border-b border-slate-100 pb-2 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    Guided Clinical Search
+                </h3>
+                
                 <div class="space-y-3">
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[10px] font-bold text-slate-500 mb-1">From Date</label>
-                            <input type="date" id="ana_start" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input type="date" id="guided_start" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-teal-500 outline-none">
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-slate-500 mb-1">To Date</label>
-                            <input type="date" id="ana_end" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <input type="date" id="guided_end" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-teal-500 outline-none">
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Sample</label>
-                            <select id="ana_sample" class="w-full text-sm select2-mobile"><option value="">All Samples</option></select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Display Metric</label>
-                            <select id="ana_metric" class="w-full text-sm border border-slate-300 rounded-lg p-2 bg-white">
-                                <option value="R">Resistance (% R)</option>
-                                <option value="S">Susceptibility (% S)</option>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Specimen (Updates based on date)</label>
+                        <select id="guided_sample" class="w-full text-sm select2-mobile">
+                            <option value="">All Specimens</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="guidedPlaceholder" class="mobile-card text-center py-10 bg-slate-50">
+                <div class="text-3xl mb-2 opacity-50">📉</div>
+                <p class="text-sm font-medium text-slate-500">Select a date to view clinical prevalence.</p>
+            </div>
+
+            <!-- GUIDED RESULTS PIPELINE -->
+            <div id="guidedContainer" class="hidden space-y-4">
+                
+                <!-- 1. Prevalence Pie Chart -->
+                <div class="mobile-card">
+                    <h3 class="text-sm font-bold text-slate-800 text-center mb-1">Organism Prevalence</h3>
+                    <p class="text-[9px] text-center text-slate-500 mb-2">Tap any slice to view its AST profile below.</p>
+                    <div class="h-48 relative"><canvas id="chartGuidedPie"></canvas></div>
+                </div>
+
+                <!-- 2. Auto AST Bar Chart -->
+                <div class="mobile-card border-t-4 border-t-indigo-500 bg-slate-50">
+                    <div class="flex justify-between items-center mb-3 border-b border-slate-200 pb-2">
+                        <div class="w-full">
+                            <select id="guided_bug_select" class="w-full text-sm font-bold text-indigo-800 bg-transparent border-none outline-none focus:ring-0 p-0 truncate">
+                                <!-- Populated dynamically -->
                             </select>
                         </div>
                     </div>
+
+                    <!-- S / R Toggle Switch -->
+                    <div class="flex justify-center items-center mb-4 gap-3 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm max-w-[200px] mx-auto">
+                        <span id="lbl_S" class="text-[10px] font-bold text-emerald-600 transition-colors">Susceptibility</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="guided_metric_toggle" class="sr-only peer">
+                            <div class="w-9 h-5 bg-emerald-500 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
+                        </label>
+                        <span id="lbl_R" class="text-[10px] font-bold text-slate-400 transition-colors">Resistance</span>
+                    </div>
+
+                    <div class="w-full overflow-x-auto custom-scroll mt-1">
+                        <div class="h-[260px] relative" id="guidedAmrContainer">
+                            <canvas id="chartGuidedAMR"></canvas>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-[9px] text-slate-500 text-center bg-white border border-slate-100 p-1.5 rounded">
+                        * Faded bars with (*) = n &lt; 30 (Low Confidence)
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADVANCED SEARCH (Collapsible) -->
+            <div class="mobile-card border border-slate-200 p-0 overflow-hidden">
+                <button onclick="toggleAdvancedSearch()" class="w-full flex justify-between items-center bg-slate-100 p-3 text-left focus:outline-none">
+                    <span class="text-xs font-bold text-slate-700 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                        Advanced Cross-Search (Heatmaps)
+                    </span>
+                    <svg id="adv_icon" class="w-4 h-4 text-slate-500 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                
+                <div id="adv_content" class="hidden p-4 space-y-3 bg-white border-t border-slate-200">
                     <div>
                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Organisms</label>
-                        <select id="ana_organism" class="w-full text-sm select2-multiple" multiple="multiple" data-placeholder="All Organisms (Leave blank for all)"></select>
+                        <select id="adv_organism" class="w-full text-sm select2-multiple" multiple="multiple" data-placeholder="Select Organisms"></select>
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Antibiotics</label>
-                        <select id="ana_antibiotic" class="w-full text-sm select2-multiple" multiple="multiple" data-placeholder="All Antibiotics (Leave blank for all)"></select>
+                        <select id="adv_antibiotic" class="w-full text-sm select2-multiple" multiple="multiple" data-placeholder="Select Antibiotics"></select>
                     </div>
-                    <button onclick="generateAnalytics()" class="w-full bg-indigo-600 text-white font-bold py-2.5 rounded-lg shadow-sm mt-2 text-sm">Analyze Data</button>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Metric</label>
+                        <select id="adv_metric" class="w-full text-sm border border-slate-300 rounded-lg p-2 bg-white">
+                            <option value="R">Resistance (% R)</option>
+                            <option value="S">Susceptibility (% S)</option>
+                        </select>
+                    </div>
+                    <button onclick="generateAdvancedAnalytics()" class="w-full bg-slate-800 text-white font-bold py-2 rounded-lg shadow-sm text-sm">Generate Heatmap</button>
                 </div>
             </div>
 
-            <div id="analyticsPlaceholder" class="mobile-card text-center py-10">
-                <div class="text-3xl mb-2 opacity-50">📉</div>
-                <p class="text-sm font-medium text-slate-500">Select parameters to view insights.</p>
-            </div>
-
-            <div id="analyticsContainer" class="hidden space-y-4">
+            <!-- ADVANCED RESULTS -->
+            <div id="advContainer" class="hidden space-y-4">
                 <div class="mobile-card overflow-hidden">
-                    <h3 class="text-sm font-bold text-slate-800 mb-2">Antibiogram Heatmap</h3>
-                    <p class="text-[9px] text-slate-500 mb-2" id="heatmapDesc"></p>
+                    <h3 class="text-sm font-bold text-slate-800 mb-2">Advanced Heatmap</h3>
                     <div id="heatmapLegend" class="flex flex-wrap gap-1 mb-3 text-[8px] font-bold"></div>
                     <div class="w-full overflow-x-auto custom-scroll rounded-lg border border-slate-200" id="heatmapWrapper"></div>
                 </div>
-
-                <div class="mobile-card hidden" id="print_sect_amr">
-                    <h3 class="text-sm font-bold text-slate-800 mb-1">AMR Profile Comparison</h3>
-                    <p class="text-[9px] text-slate-500 mb-2">Only showing selected organisms & antibiotics with data.</p>
-                    <div class="w-full overflow-x-auto custom-scroll mt-3">
-                        <div class="h-[280px] relative" id="amrChartContainer">
-                            <canvas id="chartAMR"></canvas>
-                        </div>
-                    </div>
-                    <div class="mt-2 text-[9px] text-slate-400 text-center">* Gray bars indicate a small sample size (n < 30).</div>
-                </div>
-
-                <div class="mobile-card">
-                    <h3 id="ana_org_title" class="text-sm font-bold text-slate-800 mb-3 text-center">Organism Prevalence</h3>
-                    <div class="h-48 relative"><canvas id="chartOrg"></canvas></div>
-                </div>
-                <div class="mobile-card">
-                    <h3 class="text-sm font-bold text-slate-800 mb-3 text-center">Specimen Distribution</h3>
-                    <div class="h-48 relative"><canvas id="chartSpecimen"></canvas></div>
-                </div>
-                <div class="mobile-card">
-                    <h3 class="text-sm font-bold text-slate-800 mb-3 text-center">Sample Distribution by Gender</h3>
-                    <div class="h-48 relative"><canvas id="chartGender"></canvas></div>
-                </div>
             </div>
-        </div>
 
+        </div>
         <!-- Tab 2: Last Month -->
         <div id="viewLastMonth" class="hidden space-y-4">
             <div class="mobile-card border-t-4 border-t-blue-500">
