@@ -570,6 +570,16 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
 window.toggleAdvancedSearch = function() {
     $('#adv_content').toggleClass('hidden');
     $('#adv_icon').toggleClass('rotate-180');
+    
+    // Populate the all specimens dropdown when opened
+    if(!$('#adv_content').hasClass('hidden')) {
+        let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+        let allSamples = new Set(allRecords.map(r => r.Sample).filter(Boolean));
+        let currentAdvSample = $('#adv_sample').val();
+        $('#adv_sample').empty().append(new Option("All Specimens", ""));
+        Array.from(allSamples).sort().forEach(s => $('#adv_sample').append(new Option(s, s)));
+        if(currentAdvSample) $('#adv_sample').val(currentAdvSample);
+    }
 };
 
 function loadAnalyticsFilters() {
@@ -987,17 +997,29 @@ function renderAbxChart() {
     });
 }
 window.generateAdvancedAnalytics = function() {
-    const startDate = $('#guided_start').val();
-    const endDate = $('#guided_end').val();
-    const targetSample = $('#guided_sample').val();
+    const startDate = $('#adv_start').val();
+    const endDate = $('#adv_end').val();
+    const targetSample = $('#adv_sample').val();
     let targetOrgs = $('#adv_organism').val() || [];
     let targetAbxs = $('#adv_antibiotic').val() || [];
     const metric = $('#adv_metric').val() || 'R'; 
 
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
-    if (targetSample) records = records.filter(r => r.Sample === targetSample);
+    let records = allRecords; // Start with entire database
 
+    // Filter ONLY if the user selected a date
+    if (startDate && endDate) {
+        records = records.filter(r => r.Date >= startDate && r.Date <= endDate);
+    } else if (startDate) {
+        records = records.filter(r => r.Date >= startDate);
+    } else if (endDate) {
+        records = records.filter(r => r.Date <= endDate);
+    }
+
+    // Filter ONLY if the user selected a sample
+    if (targetSample) { 
+        records = records.filter(r => r.Sample === targetSample); 
+    }
     if (targetOrgs.length === 0 || targetAbxs.length === 0) {
         Swal.fire('Required', 'Select at least one organism and one antibiotic to generate the heatmap.', 'info');
         return;
