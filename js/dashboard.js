@@ -280,6 +280,12 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
             orgs: ["enterococcus faecalis", "enterococcus faecium", "enterococcus spp"], 
             abxList: ["Vancomycin", "Teicoplanin"], 
             label: "VRE\n(Vancomycin)" 
+        },
+        { 
+            // Tracked independently due to high clinical severity
+            orgs: ["staphylococcus aureus"], 
+            abxList: ["Vancomycin"], 
+            label: "VRSA\n(Vancomycin)" 
         }
     ];
 
