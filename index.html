@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AMR Tracker | Antimicrobial Surveillance</title>
     
+    <!-- SheetJS library for Excel conversion -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Tailwind Config for Semantic Colors -->
@@ -679,6 +681,17 @@
                     <button onclick="triggerDataExtractor()" class="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm transition">Select File to Extract</button>
                     <input type="file" id="extractorFileInput" accept=".txt,.csv,.xlsx,.xls" class="hidden" onchange="processDataExtraction(event)">
                 </div>
+
+                <!-- AMR Text to Excel Converter -->
+<div class="border border-slate-200 rounded-xl p-5 bg-slate-50/50">
+    <h4 class="font-bold text-slate-800 mb-1 flex items-center gap-2 text-lg">📊 WHONET Text to Excel Converter</h4>
+    <p class="text-xs text-slate-500 mb-4">Select your WHONET text file to convert it instantly into an Excel spreadsheet. Works completely offline.</p>
+    <div class="flex flex-col sm:flex-row gap-4 items-center">
+        <input type="file" id="converterFileInput" accept=".txt,.csv,.tsv" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 flex-1 cursor-pointer">
+        <button onclick="convertTextToExcel()" class="w-full sm:w-auto bg-sky-500 hover:bg-sky-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm transition whitespace-nowrap">Convert & Download</button>
+    </div>
+    <p id="converterStatus" class="text-xs font-bold mt-3 hidden"></p>
+</div>
 
                 <!-- Backup & Restore -->
                 <div class="border border-slate-200 rounded-xl p-5 bg-slate-50/50">
