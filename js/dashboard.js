@@ -1020,13 +1020,22 @@ window.generateAdvancedAnalytics = function() {
     if (targetSample) { 
         records = records.filter(r => r.Sample === targetSample); 
     }
+
+    // --- NEW LOGIC: If left blank, automatically grab ALL available options ---
+    if (targetOrgs.length === 0) {
+        targetOrgs = Array.from(document.getElementById('adv_organism').options).map(o => o.value);
+    }
+    if (targetAbxs.length === 0) {
+        targetAbxs = Array.from(document.getElementById('adv_antibiotic').options).map(o => o.value);
+    }
+
+    // If there is literally zero data in the database matching the criteria
     if (targetOrgs.length === 0 || targetAbxs.length === 0) {
-        Swal.fire('Required', 'Select at least one organism and one antibiotic to generate the heatmap.', 'info');
+        Swal.fire('No Data', 'No records match your selected criteria.', 'info');
         return;
     }
 
     $('#advContainer').removeClass('hidden');
-
     let hmLegend = metric === 'R' ? 
         `<span class="px-1 bg-emerald-100 text-emerald-800 rounded">0-20%</span><span class="px-1 bg-yellow-100 text-yellow-800 rounded">21-40%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">41-60%</span><span class="px-1 bg-red-400 text-white rounded">61-80%</span><span class="px-1 bg-red-600 text-white rounded">81-100%</span>` :
         `<span class="px-1 bg-red-600 text-white rounded">0-20%</span><span class="px-1 bg-red-400 text-white rounded">21-40%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">41-60%</span><span class="px-1 bg-yellow-100 text-yellow-800 rounded">61-80%</span><span class="px-1 bg-emerald-100 text-emerald-800 rounded">81-100%</span>`;
