@@ -241,32 +241,82 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     $(`#live_${prefix}_urine_subtitle`).text(timeLabel);
     $(`#live_${prefix}_bar_title`).text(`Top 5 Specimens (${timeLabel})`);
 
+    // --- CLSI M39 DEDUPLICATION (First isolate per patient per organism) ---
+    const seenPatientOrg = new Set();
+    const surveillanceRecords = records.filter(r => {
+        const pName = (r['Name'] || '').trim().toLowerCase();
+        const orgName = (r['Selective organism'] || '').trim().toLowerCase();
+        // If patient name is missing, retain the record to prevent data loss
+        if (!pName || pName === 'unknown' || pName === 'unknown patient') return true;
+        
+        const key = `${pName}_${orgName}`;
+        if (seenPatientOrg.has(key)) return false;
+        seenPatientOrg.add(key);
+        return true;
+    });
+
     let orgCounts = {}, specCounts = {};
+
+    // --- CLINICALLY VALIDATED CRITICAL MARKERS (CLSI M100 / WHO GLASS) ---
     const criticalPairs = [
-        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abxList: ["Ceftriaxone", "Cefotaxime", "Ceftazidime"], label: "ESBL\n(3rd Gen Ceph)" },
-        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abxList: ["Meropenem", "Imipenem"], label: "CRE\n(Carbapenem)" },
-        { orgs: ["staphylococcus aureus"], abxList: ["Oxacillin", "Cefoxitin"], label: "MRSA\n(OX/FOX)" },
-        { orgs: ["enterococcus faecalis", "enterococcus faecium", "enterococcus spp", "staphylococcus aureus"], abxList: ["Vancomycin"], label: "VRE/VRSA\n(VA)" }
+        { 
+            orgs: ["escherichia coli", "klebsiella pneumoniae"], 
+            abxList: ["Ceftriaxone", "Cefotaxime", "Ceftazidime"], 
+            label: "ESBL Indicator\n(3rd Gen Ceph)" 
+        },
+        { 
+            orgs: ["escherichia coli", "klebsiella pneumoniae"], 
+            abxList: ["Ertapenem", "Meropenem", "Imipenem"], 
+            label: "CRE\n(Carbapenem)" 
+        },
+        { 
+            orgs: ["staphylococcus aureus"], 
+            // Cefoxitin is the gold standard surrogate test for mecA-mediated MRSA
+            abxList: ["Cefoxitin", "Cefoxitin screen", "Oxacillin"], 
+            label: "MRSA\n(FOX/OX)" 
+        },
+        { 
+            // Purely Enterococcal VRE (Separated from Staph aureus)
+            orgs: ["enterococcus faecalis", "enterococcus faecium", "enterococcus spp"], 
+            abxList: ["Vancomycin", "Teicoplanin"], 
+            label: "VRE\n(Vancomycin)" 
+        }
     ];
 
     let amrStats = criticalPairs.map(p => ({ label: p.label, tested: 0, resistant: 0 }));
 
+    // Tally prevalence using all valid records
     records.forEach(r => {
         let org = r['Selective organism'] || "", spec = r['Sample'];
         orgCounts[org] = (orgCounts[org] || 0) + 1;
-        if(spec && spec !== "-") specCounts[spec] = (specCounts[spec] || 0) + 1;
+        if (spec && spec !== "-") specCounts[spec] = (specCounts[spec] || 0) + 1;
+    });
 
+    // Evaluate AMR resistance on deduplicated surveillance records
+    surveillanceRecords.forEach(r => {
+        let org = r['Selective organism'] || "";
         let orgLower = org.toLowerCase();
+
         criticalPairs.forEach((pair, index) => {
             if (pair.orgs.some(o => orgLower.includes(o.toLowerCase()))) {
-                let abxFound = pair.abxList.find(a => r[a] && r[a] !== '-' && r[a] !== '');
-                if (abxFound) { amrStats[index].tested++; if (r[abxFound] === 'R') amrStats[index].resistant++; }
+                // Collect all valid test results available in this panel
+                let validResults = pair.abxList
+                    .map(a => r[a] ? String(r[a]).trim().toUpperCase() : '')
+                    .filter(val => val && val !== '-');
+
+                if (validResults.length > 0) {
+                    amrStats[index].tested++;
+                    // Non-susceptible/Resistant if ANY indicator agent in the panel is 'R'
+                    if (validResults.some(val => val === 'R' || val.startsWith('R'))) {
+                        amrStats[index].resistant++;
+                    }
+                }
             }
         });
     });
 
-    $(`#live_${prefix}_bug`).text(formatOrgName(Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a])[0]) || "-");
-    $(`#live_${prefix}_spec`).text(Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a])[0] || "-");
+    $(`#live_${prefix}_bug`).text(formatOrgName(Object.keys(orgCounts).sort((a, b) => orgCounts[b] - orgCounts[a])[0]) || "-");
+    $(`#live_${prefix}_spec`).text(Object.keys(specCounts).sort((a, b) => specCounts[b] - specCounts[a])[0] || "-");
 
     let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
     amrStats.forEach((stat, index) => {
@@ -274,9 +324,13 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
         let palette = extendedPalette[index % extendedPalette.length]; 
         
         if (stat.tested === 0) { 
-            data.push(0); bgColors.push(palette.faded); ciData.push({lower:0, upper:0}); nDataArr.push(0);
+            data.push(0); 
+            bgColors.push(palette.faded); 
+            ciData.push({ lower: 0, upper: 0 }); 
+            nDataArr.push(0);
         } else {
             data.push(Math.round((stat.resistant / stat.tested) * 100));
+            // Gray out bar if sample size is below CLSI statistical threshold (n < 30)
             bgColors.push(stat.tested >= 30 ? palette.bg : '#94a3b8'); 
             ciData.push(wilsonScoreCI(stat.resistant, stat.tested));
             nDataArr.push(stat.tested);
@@ -284,11 +338,27 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     });
 
     liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_amr`), {
-            type: 'bar',
-            data: { labels, datasets: [{ label: 'Pathogen', data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4, maxBarThickness: 30 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { max: 100 } } },
-            plugins: [errorBarsPlugin] // تم الإصلاح هنا
-        }));
+        type: 'bar',
+        data: { 
+            labels, 
+            datasets: [{ 
+                label: 'Pathogen', 
+                data, 
+                backgroundColor: bgColors, 
+                ciData, 
+                nData: nDataArr, 
+                borderRadius: 4, 
+                maxBarThickness: 30 
+            }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { legend: { display: false } }, 
+            scales: { y: { max: 100, beginAtZero: true } } 
+        },
+        plugins: [errorBarsPlugin]
+    }));
     
     let bloodRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'blood');
     let urineRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'urine');
