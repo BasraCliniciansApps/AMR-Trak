@@ -697,6 +697,8 @@ function generateGuidedAnalytics() {
     renderGuidedAST();
 }
 
+$(document).on('change', '#guided_hide_low', function() { renderGuidedAST(); });
+
 function renderGuidedAST() {
     if (!currentGuidedBug) return;
 
@@ -726,12 +728,17 @@ function renderGuidedAST() {
     let testedAbxs = Object.keys(abxStats).sort();
     let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
     let baseColor = currentGuidedMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : 'rgba(225, 29, 72, 0.9)'; 
+    let hideLowN = $('#guided_hide_low').is(':checked');
 
     testedAbxs.forEach(abx => {
         let s = abxStats[abx];
+        let isReliable = s.tested >= 30;
+
+        // Skip adding this bar to the chart if n < 30 and the toggle is ON
+        if (hideLowN && !isReliable) return;
+
         let targetVal = currentGuidedMetric === 'R' ? s.r : s.s;
         let p = Math.round((targetVal / s.tested) * 100);
-        let isReliable = s.tested >= 30;
 
         labels.push(isReliable ? abx : `${abx} *`);
         data.push(p);
@@ -755,7 +762,6 @@ function renderGuidedAST() {
         plugins: [errorBarsPlugin]
     });
 }
-
 // -------------------------------------------------------------
 // PATHOGEN AST PROFILE LOGIC
 // -------------------------------------------------------------
@@ -802,6 +808,8 @@ function updatePathoDropdowns() {
     renderPathoChart();
 }
 
+$(document).on('change', '#patho_hide_low', function() { renderPathoChart(); });
+
 function renderPathoChart() {
     const bug = $('#patho_bug').val();
     if(!bug) {
@@ -833,12 +841,16 @@ function renderPathoChart() {
     let testedAbxs = Object.keys(abxStats).sort();
     let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
     let baseColor = currentPathoMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : 'rgba(225, 29, 72, 0.9)'; 
+    let hideLowN = $('#patho_hide_low').is(':checked');
 
     testedAbxs.forEach(abx => {
         let s = abxStats[abx];
+        let isReliable = s.tested >= 30;
+
+        if (hideLowN && !isReliable) return;
+
         let targetVal = currentPathoMetric === 'R' ? s.r : s.s;
         let p = Math.round((targetVal / s.tested) * 100);
-        let isReliable = s.tested >= 30;
 
         labels.push(isReliable ? abx : `${abx} *`);
         data.push(p);
@@ -862,7 +874,6 @@ function renderPathoChart() {
         plugins: [errorBarsPlugin]
     });
 }
-
 // -------------------------------------------------------------
 // ANTIMICROBIAL EFFICACY PROFILE LOGIC
 // -------------------------------------------------------------
@@ -912,6 +923,8 @@ function updateAbxDropdowns() {
     renderAbxChart();
 }
 
+$(document).on('change', '#abx_hide_low', function() { renderAbxChart(); });
+
 function renderAbxChart() {
     const drug = $('#abx_drug').val();
     if(!drug) {
@@ -939,12 +952,16 @@ function renderAbxChart() {
     let testedOrgs = Object.keys(orgStats).sort();
     let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
     let baseColor = currentAbxMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : 'rgba(225, 29, 72, 0.9)'; 
+    let hideLowN = $('#abx_hide_low').is(':checked');
 
     testedOrgs.forEach(org => {
         let s = orgStats[org];
+        let isReliable = s.tested >= 30;
+
+        if (hideLowN && !isReliable) return;
+
         let targetVal = currentAbxMetric === 'R' ? s.r : s.s;
         let p = Math.round((targetVal / s.tested) * 100);
-        let isReliable = s.tested >= 30;
 
         let formattedOrg = formatScientificName(org);
         labels.push(isReliable ? formattedOrg : `${formattedOrg} *`);
