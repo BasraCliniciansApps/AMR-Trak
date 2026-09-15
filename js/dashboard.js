@@ -27,7 +27,11 @@ let chartGuidedAMR_instance = null;
 let currentGuidedOrgs = [];
 let currentGuidedBug = "";
 let currentGuidedMetric = 'S';
-
+// New Profile Variables
+let chartPathoAMR_instance = null;
+let currentPathoMetric = 'S';
+let chartAbxAMR_instance = null;
+let currentAbxMetric = 'S';
 
 function formatOrgName(org) {
     if (!org || typeof org !== 'string' || org.startsWith('No ')) return org || "-";
@@ -752,6 +756,219 @@ function renderGuidedAST() {
     });
 }
 
+// -------------------------------------------------------------
+// PATHOGEN AST PROFILE LOGIC
+// -------------------------------------------------------------
+window.togglePathoSearch = function() {
+    $('#patho_content').toggleClass('hidden');
+    $('#patho_icon').toggleClass('rotate-180');
+    if(!$('#patho_content').hasClass('hidden')) updatePathoDropdowns();
+};
+
+$(document).on('change', '#patho_start, #patho_end', function() { updatePathoDropdowns(); });
+$(document).on('change', '#patho_bug', function() { renderPathoChart(); });
+$(document).on('change', '#patho_metric_toggle', function() {
+    if ($(this).is(':checked')) {
+        currentPathoMetric = 'R';
+        $('#lbl_patho_R').removeClass('text-slate-400').addClass('text-rose-600');
+        $('#lbl_patho_S').removeClass('text-emerald-600').addClass('text-slate-400');
+    } else {
+        currentPathoMetric = 'S';
+        $('#lbl_patho_S').removeClass('text-slate-400').addClass('text-emerald-600');
+        $('#lbl_patho_R').removeClass('text-rose-600').addClass('text-slate-400');
+    }
+    renderPathoChart(); 
+});
+
+function updatePathoDropdowns() {
+    const start = $('#patho_start').val();
+    const end = $('#patho_end').val();
+    let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+    records = records.filter(r => {
+        if(!start || !end) return true;
+        return r.Date >= start && r.Date <= end;
+    });
+
+    let orgs = new Set();
+    records.forEach(r => { if(r['Selective organism']) orgs.add(r['Selective organism']); });
+
+    let bugSelect = $('#patho_bug');
+    let currentVal = bugSelect.val();
+    bugSelect.empty().append(new Option("Select a bacteria...", ""));
+    Array.from(orgs).sort().forEach(o => bugSelect.append(new Option(formatScientificName(o), o)));
+    
+    if(currentVal && orgs.has(currentVal)) bugSelect.val(currentVal);
+    bugSelect.trigger('change.select2');
+    renderPathoChart();
+}
+
+function renderPathoChart() {
+    const bug = $('#patho_bug').val();
+    if(!bug) {
+        if (chartPathoAMR_instance) chartPathoAMR_instance.destroy();
+        return;
+    }
+
+    const start = $('#patho_start').val();
+    const end = $('#patho_end').val();
+    let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+    records = records.filter(r => r['Selective organism'] === bug);
+    if(start && end) records = records.filter(r => r.Date >= start && r.Date <= end);
+
+    let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
+    let abxStats = {};
+
+    records.forEach(r => {
+        allPossibleAbxs.forEach(abx => {
+            let res = r[abx];
+            if (res && res !== '-' && res !== '') {
+                if (!abxStats[abx]) abxStats[abx] = { tested: 0, r: 0, s: 0 };
+                abxStats[abx].tested += 1;
+                if (res === 'R') abxStats[abx].r += 1;
+                if (res === 'S') abxStats[abx].s += 1;
+            }
+        });
+    });
+
+    let testedAbxs = Object.keys(abxStats).sort();
+    let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
+    let baseColor = currentPathoMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : 'rgba(225, 29, 72, 0.9)'; 
+
+    testedAbxs.forEach(abx => {
+        let s = abxStats[abx];
+        let targetVal = currentPathoMetric === 'R' ? s.r : s.s;
+        let p = Math.round((targetVal / s.tested) * 100);
+        let isReliable = s.tested >= 30;
+
+        labels.push(isReliable ? abx : `${abx} *`);
+        data.push(p);
+        bgColors.push(isReliable ? baseColor : 'rgba(148, 163, 184, 0.5)'); 
+        ciData.push(wilsonScoreCI(targetVal, s.tested));
+        nDataArr.push(s.tested);
+    });
+
+    if (chartPathoAMR_instance) chartPathoAMR_instance.destroy();
+
+    let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
+    $('#pathoAmrContainer').css('width', chartWidth);
+
+    chartPathoAMR_instance = new Chart(document.getElementById('chartPathoAMR'), {
+        type: 'bar',
+        data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
+        options: { 
+            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
+            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, font: {size: 10, weight: 'bold'} } } } 
+        },
+        plugins: [errorBarsPlugin]
+    });
+}
+
+// -------------------------------------------------------------
+// ANTIMICROBIAL EFFICACY PROFILE LOGIC
+// -------------------------------------------------------------
+window.toggleAbxSearch = function() {
+    $('#abx_content').toggleClass('hidden');
+    $('#abx_icon').toggleClass('rotate-180');
+    if(!$('#abx_content').hasClass('hidden')) updateAbxDropdowns();
+};
+
+$(document).on('change', '#abx_start, #abx_end', function() { updateAbxDropdowns(); });
+$(document).on('change', '#abx_drug', function() { renderAbxChart(); });
+$(document).on('change', '#abx_metric_toggle', function() {
+    if ($(this).is(':checked')) {
+        currentAbxMetric = 'R';
+        $('#lbl_abx_R').removeClass('text-slate-400').addClass('text-rose-600');
+        $('#lbl_abx_S').removeClass('text-emerald-600').addClass('text-slate-400');
+    } else {
+        currentAbxMetric = 'S';
+        $('#lbl_abx_S').removeClass('text-slate-400').addClass('text-emerald-600');
+        $('#lbl_abx_R').removeClass('text-rose-600').addClass('text-slate-400');
+    }
+    renderAbxChart(); 
+});
+
+function updateAbxDropdowns() {
+    const start = $('#abx_start').val();
+    const end = $('#abx_end').val();
+    let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+    records = records.filter(r => {
+        if(!start || !end) return true;
+        return r.Date >= start && r.Date <= end;
+    });
+
+    let abxs = new Set();
+    let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
+    records.forEach(r => {
+        allPossibleAbxs.forEach(a => { if (r[a] && r[a] !== '-' && r[a] !== '') abxs.add(a); });
+    });
+
+    let drugSelect = $('#abx_drug');
+    let currentVal = drugSelect.val();
+    drugSelect.empty().append(new Option("Select an antimicrobial...", ""));
+    Array.from(abxs).sort().forEach(a => drugSelect.append(new Option(a, a)));
+    
+    if(currentVal && abxs.has(currentVal)) drugSelect.val(currentVal);
+    drugSelect.trigger('change.select2');
+    renderAbxChart();
+}
+
+function renderAbxChart() {
+    const drug = $('#abx_drug').val();
+    if(!drug) {
+        if (chartAbxAMR_instance) chartAbxAMR_instance.destroy();
+        return;
+    }
+
+    const start = $('#abx_start').val();
+    const end = $('#abx_end').val();
+    let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+    if(start && end) records = records.filter(r => r.Date >= start && r.Date <= end);
+
+    let orgStats = {};
+    records.forEach(r => {
+        let org = r['Selective organism'];
+        let res = r[drug];
+        if (org && res && res !== '-' && res !== '') {
+            if (!orgStats[org]) orgStats[org] = { tested: 0, r: 0, s: 0 };
+            orgStats[org].tested += 1;
+            if (res === 'R') orgStats[org].r += 1;
+            if (res === 'S') orgStats[org].s += 1;
+        }
+    });
+
+    let testedOrgs = Object.keys(orgStats).sort();
+    let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
+    let baseColor = currentAbxMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : 'rgba(225, 29, 72, 0.9)'; 
+
+    testedOrgs.forEach(org => {
+        let s = orgStats[org];
+        let targetVal = currentAbxMetric === 'R' ? s.r : s.s;
+        let p = Math.round((targetVal / s.tested) * 100);
+        let isReliable = s.tested >= 30;
+
+        let formattedOrg = formatScientificName(org);
+        labels.push(isReliable ? formattedOrg : `${formattedOrg} *`);
+        data.push(p);
+        bgColors.push(isReliable ? baseColor : 'rgba(148, 163, 184, 0.5)'); 
+        ciData.push(wilsonScoreCI(targetVal, s.tested));
+        nDataArr.push(s.tested);
+    });
+
+    if (chartAbxAMR_instance) chartAbxAMR_instance.destroy();
+
+    let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
+    $('#abxAmrContainer').css('width', chartWidth);
+
+    chartAbxAMR_instance = new Chart(document.getElementById('chartAbxAMR'), {
+        type: 'bar',
+        data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
+        options: { 
+            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
+            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, font: {size: 10, weight: 'bold'} } } } 
+        },
+        plugins: [errorBarsPlugin]
+    });
+}
 window.generateAdvancedAnalytics = function() {
     const startDate = $('#guided_start').val();
     const endDate = $('#guided_end').val();
