@@ -14,6 +14,49 @@ try {
     if (typeof firebase !== 'undefined') {
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
+
+        // تعريف متغير المصادقة
+const auth = firebase.auth();
+
+// مراقبة حالة المستخدم (هل هو مسجل دخول أم لا؟)
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        // إذا كان مسجلاً، أخفِ شاشة الدخول وأظهر التطبيق
+        $('#loginOverlay').addClass('hidden');
+        $('#mainAppContainer').removeClass('hidden');
+    } else {
+        // إذا لم يكن مسجلاً، أظهر شاشة الدخول وأخفِ التطبيق
+        $('#loginOverlay').removeClass('hidden');
+        $('#mainAppContainer').addClass('hidden');
+    }
+});
+
+// دالة تسجيل الدخول (مرتبطة بالزر في شاشة الدخول)
+function loginUser() {
+    const email = $('#loginEmail').val();
+    const pass = $('#loginPass').val();
+    
+    if(!email || !pass) {
+        Swal.fire('تنبيه', 'يرجى إدخال البريد وكلمة المرور', 'warning');
+        return;
+    }
+
+    Swal.showLoading();
+    auth.signInWithEmailAndPassword(email, pass)
+        .then(() => {
+            Swal.close();
+            // سيتم تشغيل onAuthStateChanged تلقائياً وفتح التطبيق
+        })
+        .catch((error) => {
+            Swal.fire('خطأ', 'بيانات الدخول غير صحيحة!', 'error');
+            console.error(error);
+        });
+}
+
+// دالة تسجيل الخروج (يمكنك إضافتها لأي زر داخل التطبيق لاحقاً)
+function logoutUser() {
+    auth.signOut();
+}
         
         // تفعيل المزامنة التلقائية عند الاتصال بالإنترنت
         window.addEventListener('online', syncLocalToCloud);
