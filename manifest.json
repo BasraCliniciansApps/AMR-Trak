@@ -1,6 +1,6 @@
 {
-  "name": "AMR Dashboard",
-  "short_name": "AMR Dash",
+  "name": "AMR Trak",
+  "short_name": "AMR Trak",
   "start_url": "./dashboard.html",
   "display": "standalone",
   "background_color": "#f8fafc",
