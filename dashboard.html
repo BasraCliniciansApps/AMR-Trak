@@ -321,12 +321,28 @@
                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Antibiotics</label>
                         <select id="adv_antibiotic" class="w-full text-sm select2-multiple" multiple="multiple" data-placeholder="Leave blank for ALL Antibiotics"></select>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Metric</label>
-                        <select id="adv_metric" class="w-full text-sm border border-slate-300 rounded-lg p-2 bg-white">
-                            <option value="R">Resistance (% R)</option>
-                            <option value="S">Susceptibility (% S)</option>
-                        </select>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Metric</label>
+                            <select id="adv_metric" class="w-full text-sm border border-slate-300 rounded-lg p-2 bg-white">
+                                <option value="R">Resistance (% R)</option>
+                                <option value="S">Susceptibility (% S)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Ward Filter</label>
+                            <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm text-[10px] font-bold w-full h-[38px]">
+                                <label class="cursor-pointer px-2 py-1 flex-1 text-center rounded-md transition-all adv-ward-btn bg-white text-slate-800 shadow-sm">
+                                    <input type="radio" name="adv_ward" value="total" class="hidden" checked> All
+                                </label>
+                                <label class="cursor-pointer px-2 py-1 flex-1 text-center rounded-md transition-all adv-ward-btn text-slate-500 hover:text-slate-700">
+                                    <input type="radio" name="adv_ward" value="inpatient" class="hidden"> In
+                                </label>
+                                <label class="cursor-pointer px-2 py-1 flex-1 text-center rounded-md transition-all adv-ward-btn text-slate-500 hover:text-slate-700">
+                                    <input type="radio" name="adv_ward" value="outpatient" class="hidden"> Out
+                                </label>
+                            </div>
+                        </div>
                     </div>
                     <button onclick="generateAdvancedAnalytics()" class="w-full bg-slate-800 text-white font-bold py-2 rounded-lg shadow-sm text-sm">Generate Heatmap</button>
                 </div>
