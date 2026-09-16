@@ -126,8 +126,22 @@
                         </div>
                     </div>
 
-                    <!-- S/R and n<30 Toggles -->
-                    <div class="flex flex-col sm:flex-row justify-center items-center mb-4 gap-4">
+                    <!-- Advanced Filters Wrapper -->
+                    <div class="flex flex-wrap justify-center items-center mb-4 gap-3">
+                        <!-- 3-Way Ward Toggle -->
+                        <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm text-[10px] font-bold">
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all guided-ward-btn bg-white text-indigo-700 shadow-sm">
+                                <input type="radio" name="guided_ward" value="total" class="hidden" checked> Total
+                            </label>
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all guided-ward-btn text-slate-500 hover:text-slate-700">
+                                <input type="radio" name="guided_ward" value="inpatient" class="hidden"> Inpatient
+                            </label>
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all guided-ward-btn text-slate-500 hover:text-slate-700">
+                                <input type="radio" name="guided_ward" value="outpatient" class="hidden"> Outpatient
+                            </label>
+                        </div>
+
+                        <!-- S/R Toggle -->
                         <div class="flex justify-center items-center gap-3 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm">
                             <span id="lbl_S" class="text-[10px] font-bold text-emerald-600 transition-colors">Susceptibility</span>
                             <label class="relative inline-flex items-center cursor-pointer">
@@ -136,6 +150,8 @@
                             </label>
                             <span id="lbl_R" class="text-[10px] font-bold text-slate-400 transition-colors">Resistance</span>
                         </div>
+                        
+                        <!-- n < 30 -->
                         <div class="flex justify-center items-center gap-2 bg-white p-2 px-3 rounded-lg border border-slate-200 shadow-sm">
                             <input type="checkbox" id="guided_hide_low" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
                             <label for="guided_hide_low" class="text-[10px] font-bold text-slate-600 cursor-pointer mb-0">Hide n &lt; 30</label>
@@ -178,7 +194,20 @@
                         <select id="patho_bug" class="w-full text-sm select2-mobile"><option value="">Select Date First...</option></select>
                     </div>
                     
-                    <div class="flex flex-col sm:flex-row justify-center items-center my-3 gap-4">
+                    <!-- Advanced Filters Wrapper -->
+                    <div class="flex flex-wrap justify-center items-center my-3 gap-3">
+                        <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm text-[10px] font-bold">
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all patho-ward-btn bg-white text-emerald-700 shadow-sm">
+                                <input type="radio" name="patho_ward" value="total" class="hidden" checked> Total
+                            </label>
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all patho-ward-btn text-slate-500 hover:text-slate-700">
+                                <input type="radio" name="patho_ward" value="inpatient" class="hidden"> Inpatient
+                            </label>
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all patho-ward-btn text-slate-500 hover:text-slate-700">
+                                <input type="radio" name="patho_ward" value="outpatient" class="hidden"> Outpatient
+                            </label>
+                        </div>
+
                         <div class="flex justify-center items-center gap-3 bg-slate-50 p-1.5 rounded-lg border border-slate-200 shadow-sm">
                             <span id="lbl_patho_S" class="text-[10px] font-bold text-emerald-600 transition-colors">Susceptibility</span>
                             <label class="relative inline-flex items-center cursor-pointer">
@@ -192,7 +221,6 @@
                             <label for="patho_hide_low" class="text-[10px] font-bold text-slate-600 cursor-pointer mb-0">Hide n &lt; 30</label>
                         </div>
                     </div>
-
                     <div class="w-full overflow-x-auto custom-scroll mt-2">
                         <div class="h-[260px] relative" id="pathoAmrContainer"><canvas id="chartPathoAMR"></canvas></div>
                     </div>
@@ -224,7 +252,20 @@
                         <select id="abx_drug" class="w-full text-sm select2-mobile"><option value="">Select Date First...</option></select>
                     </div>
                     
-                    <div class="flex flex-col sm:flex-row justify-center items-center my-3 gap-4">
+                    <!-- Advanced Filters Wrapper -->
+                    <div class="flex flex-wrap justify-center items-center my-3 gap-3">
+                        <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm text-[10px] font-bold">
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all abx-ward-btn bg-white text-blue-700 shadow-sm">
+                                <input type="radio" name="abx_ward" value="total" class="hidden" checked> Total
+                            </label>
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all abx-ward-btn text-slate-500 hover:text-slate-700">
+                                <input type="radio" name="abx_ward" value="inpatient" class="hidden"> Inpatient
+                            </label>
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all abx-ward-btn text-slate-500 hover:text-slate-700">
+                                <input type="radio" name="abx_ward" value="outpatient" class="hidden"> Outpatient
+                            </label>
+                        </div>
+
                         <div class="flex justify-center items-center gap-3 bg-slate-50 p-1.5 rounded-lg border border-slate-200 shadow-sm">
                             <span id="lbl_abx_S" class="text-[10px] font-bold text-emerald-600 transition-colors">Susceptibility</span>
                             <label class="relative inline-flex items-center cursor-pointer">
