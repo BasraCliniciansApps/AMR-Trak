@@ -155,7 +155,18 @@ function fetchCloudData() {
 $(document).ready(function() {
     $('.select2-mobile').select2({ width: '100%' });
     $('.select2-multiple').select2({ width: '100%', allowClear: true });
+    // (أضف هذا داخل document.ready)
     
+    // التحقق إذا كان التطبيق مفتوح كـ App مستقل أم داخل متصفح
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    
+    // إظهار نافذة التثبيت للمرة الأولى فقط إذا لم يكن مثبتاً
+    if (!isStandalone && !localStorage.getItem('amr_dashboard_install_prompted')) {
+        setTimeout(() => {
+            showInstallGuide();
+            localStorage.setItem('amr_dashboard_install_prompted', 'true');
+        }, 2000); // تأخير ثانيتين لضمان تحميل الصفحة بالكامل
+    }
     let currentYear = new Date().getFullYear();
     $('#ana_start').val(`${currentYear}-01-01`);
     $('#ana_end').val(`${currentYear}-12-31`);
@@ -1097,3 +1108,62 @@ window.generateAdvancedAnalytics = function() {
     hmHtml += '</tbody></table>';
     $('#heatmapWrapper').html(hmHtml);
 };
+// --- Modal: About App ---
+function showAboutModal() {
+    Swal.fire({
+        html: `
+            <div class="text-sm text-slate-600 leading-relaxed text-center space-y-4">
+                <div class="mx-auto w-20 h-20 bg-teal-50 text-teal-700 rounded-full flex items-center justify-center mb-4 border border-teal-100 shadow-sm overflow-hidden p-1">
+                    <img src="icon.png" alt="AMR Icon" class="w-full h-full object-contain">
+                </div>
+                <h3 class="text-xl font-bold text-slate-800">AMR Tracker Dashboard</h3>
+                <p class="font-medium text-teal-700">Antimicrobial Resistance Surveillance System</p>
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-right text-sm leading-loose mt-4" dir="rtl">
+                    تم تصميم وإعداد هذه المنصة البرمجية من قبل عضو لجنة المضادات الحيوية، <b>الصيدلاني السريري سعد نبيل الحمادي</b>، 
+                    بالتعاون مع <b>وحدة الـ AMR</b> وكادر <b>مختبر المايكروبايولوجي</b> في <b>مستشفى الموانئ التعليمي</b>.
+                </div>
+                <p class="text-[11px] text-slate-500 mt-4 leading-relaxed bg-amber-50 p-3 rounded-lg border border-amber-100 text-right" dir="rtl">
+                    <b>الحقوق القانونية:</b> هذه الأداة مخصصة لتسهيل عمليات الرصد الوبائي وتوليد الإحصائيات السريرية الدقيقة، جميع الحقوق الفكرية والبرمجية محفوظة &copy; 2026.
+                </p>
+            </div>
+        `,
+        showConfirmButton: true,
+        confirmButtonText: 'إغلاق',
+        confirmButtonColor: '#0d9488',
+        width: '90%'
+    });
+}
+
+// --- Modal: Install Guide ---
+function showInstallGuide() {
+    Swal.fire({
+        title: '📲 تثبيت التطبيق',
+        html: `
+            <div class="text-sm text-slate-600 leading-relaxed space-y-5 text-right mt-3" dir="rtl">
+                <p class="font-medium text-slate-700">للحصول على أفضل تجربة وسرعة في الوصول، قم بتثبيت لوحة البيانات كبرنامج على هاتفك:</p>
+                
+                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <h4 class="font-bold text-blue-800 mb-2 flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> أجهزة آيفون (iOS)</h4>
+                    <ol class="list-decimal list-inside space-y-1 text-xs">
+                        <li>افتح هذا الرابط باستخدام متصفح <b>Safari</b> حصراً.</li>
+                        <li>اضغط على زر المشاركة <span class="inline-block border border-slate-300 rounded px-1 bg-white">⍗</span> أسفل الشاشة.</li>
+                        <li>اختر <b>"إضافة إلى الصفحة الرئيسية"</b> (Add to Home Screen).</li>
+                    </ol>
+                </div>
+
+                <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                    <h4 class="font-bold text-emerald-800 mb-2 flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> أجهزة أندرويد (Android)</h4>
+                    <ol class="list-decimal list-inside space-y-1 text-xs">
+                        <li>افتح هذا الرابط باستخدام متصفح <b>Chrome</b>.</li>
+                        <li>اضغط على خيارات القائمة <span class="inline-block border border-slate-300 rounded px-1 bg-white">⋮</span> أعلى الشاشة.</li>
+                        <li>اختر <b>"تثبيت التطبيق"</b> (Install app) أو <b>"الإضافة للشاشة الرئيسية"</b>.</li>
+                    </ol>
+                </div>
+            </div>
+        `,
+        showConfirmButton: true,
+        confirmButtonText: 'حسناً، فهمت',
+        confirmButtonColor: '#0d9488',
+        width: '90%'
+    });
+}
