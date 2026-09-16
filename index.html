@@ -53,7 +53,20 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased overflow-hidden">
 
-    <div class="flex h-screen w-full">
+    <!-- شاشة تسجيل الدخول -->
+<div id="loginOverlay" class="fixed inset-0 bg-slate-900 flex justify-center items-center z-50">
+    <div class="bg-white p-8 rounded-xl shadow-2xl w-96 text-center">
+        <h2 class="text-2xl font-bold text-slate-800 mb-2">AMR Tracker</h2>
+        <p class="text-sm text-slate-500 mb-6">يرجى تسجيل الدخول للوصول إلى النظام</p>
+        <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" class="w-full border border-slate-300 p-3 rounded-lg mb-4 text-left outline-none focus:ring-2 focus:ring-teal-500" dir="ltr">
+        <input type="password" id="loginPass" placeholder="كلمة المرور" class="w-full border border-slate-300 p-3 rounded-lg mb-6 text-left outline-none focus:ring-2 focus:ring-teal-500" dir="ltr">
+        <button onclick="loginUser()" class="w-full bg-teal-600 text-white font-bold py-3 rounded-lg hover:bg-teal-700 transition-colors">تسجيل الدخول</button>
+    </div>
+</div>
+
+<!-- التطبيق الرئيسي (لاحظ إضافة الـ ID وإخفائه مبدئياً) -->
+<div id="mainAppContainer" class="flex h-screen w-full hidden">
+    <!-- القائمة الجانبية وباقي محتوى التطبيق الموجود لديك مسبقاً -->
         
         <!-- Sidebar Navigation -->
         <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex z-20 no-print shadow-xl">
@@ -741,7 +754,9 @@
         </div>
     </div>
 <!-- Firebase SDKs -->
+    
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <!-- Scripts -->
     <script src="js/data.js"></script>
