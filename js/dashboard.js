@@ -710,13 +710,10 @@ records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() 
     
     if (records.length === 0) {
         $('#guidedContainer').addClass('hidden');
-        $('#guidedPlaceholder').removeClass('hidden');
         return;
     }
 
-    $('#guidedPlaceholder').addClass('hidden');
     $('#guidedContainer').removeClass('hidden');
-
     let orgCounts = {};
     records.forEach(r => {
         let org = r['Selective organism'];
