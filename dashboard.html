@@ -75,11 +75,13 @@
         <div id="viewAnalytics" class="space-y-4">
             
             <!-- GUIDED SEARCH (Clinical Pipeline) -->
-            <div class="mobile-card bg-white border-teal-200 shadow-sm border-t-4 border-t-teal-500">
-                <h3 class="text-sm font-bold text-teal-800 mb-3 border-b border-slate-100 pb-2 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    Guided Clinical Search
-                </h3>
+            <div class="mb-3 border-b border-slate-100 pb-2">
+                    <h3 class="text-sm font-bold text-teal-800 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        Guided Clinical Search
+                    </h3>
+                    <p class="text-[9px] text-teal-600 mt-1 ml-6">Select a date range below to automatically generate prevalence charts.</p>
+                </div>
                 
                 <div class="space-y-3">
                     <div class="grid grid-cols-2 gap-3">
@@ -101,12 +103,7 @@
                 </div>
             </div>
 
-            <div id="guidedPlaceholder" class="bg-teal-50 border border-teal-100 rounded-xl p-3 mb-4 flex items-center gap-3 shadow-sm mx-1">
-                <div class="bg-white p-1.5 rounded-full shadow-sm text-teal-600 flex-shrink-0">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                </div>
-                <p class="text-xs font-bold text-teal-800 leading-tight">Please select a date range above to generate the prevalence report.</p>
-            </div>
+        
 
             <!-- GUIDED RESULTS PIPELINE -->
             <div id="guidedContainer" class="hidden space-y-4">
@@ -174,9 +171,12 @@
             <!-- 1. BACTERIA RESISTANCE PROFILE (Collapsible) -->
             <div class="mobile-card border border-slate-200 p-0 overflow-hidden mb-4">
                 <button onclick="togglePathoSearch()" class="w-full flex justify-between items-center bg-emerald-50 p-3 text-left focus:outline-none border-b border-emerald-100">
-                    <span class="text-xs font-bold text-emerald-800 flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                        Bacteria Resistance Profile
+                    <span class="text-xs font-bold text-emerald-800 flex flex-col items-start">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                            Bacteria Resistance Profile
+                        </span>
+                        <span class="text-[9px] font-normal text-emerald-600 mt-0.5 ml-6">Select a bug to view its full AST profile</span>
                     </span>
                     <svg id="patho_icon" class="w-4 h-4 text-emerald-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 </button>
@@ -232,9 +232,12 @@
             <!-- 2. ANTIMICROBIAL EFFICACY PROFILE (Collapsible) -->
             <div class="mobile-card border border-slate-200 p-0 overflow-hidden mb-4">
                 <button onclick="toggleAbxSearch()" class="w-full flex justify-between items-center bg-blue-50 p-3 text-left focus:outline-none border-b border-blue-100">
-                    <span class="text-xs font-bold text-blue-800 flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                        Antimicrobial Efficacy Profile
+                    <span class="text-xs font-bold text-blue-800 flex flex-col items-start">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                            Antimicrobial Efficacy Profile
+                        </span>
+                        <span class="text-[9px] font-normal text-blue-600 mt-0.5 ml-6">Select a drug to view its effectiveness</span>
                     </span>
                     <svg id="abx_icon" class="w-4 h-4 text-blue-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 </button>
