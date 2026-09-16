@@ -33,6 +33,39 @@ let currentPathoMetric = 'S';
 let chartAbxAMR_instance = null;
 let currentAbxMetric = 'S';
 
+// --- WARD FILTER LOGIC (Inpatient / Outpatient) ---
+function applyWardFilter(records, filterValue) {
+    if (filterValue === 'inpatient') {
+        return records.filter(r => {
+            let w = (r.Ward || "").toLowerCase().trim();
+            return w !== 'outpatient' && w !== 'out-patient' && w !== 'opd'; 
+        });
+    } else if (filterValue === 'outpatient') {
+        return records.filter(r => {
+            let w = (r.Ward || "").toLowerCase().trim();
+            return w === 'outpatient' || w === 'out-patient' || w === 'opd';
+        });
+    }
+    return records; // 'total'
+}
+
+// Visual updates and re-renders for the segmented toggles
+$(document).on('change', 'input[name="guided_ward"]', function() {
+    $('.guided-ward-btn').removeClass('bg-white text-indigo-700 shadow-sm').addClass('text-slate-500');
+    $(this).parent().removeClass('text-slate-500').addClass('bg-white text-indigo-700 shadow-sm');
+    loadAnalyticsFilters();
+});
+$(document).on('change', 'input[name="patho_ward"]', function() {
+    $('.patho-ward-btn').removeClass('bg-white text-emerald-700 shadow-sm').addClass('text-slate-500');
+    $(this).parent().removeClass('text-slate-500').addClass('bg-white text-emerald-700 shadow-sm');
+    updatePathoDropdowns();
+});
+$(document).on('change', 'input[name="abx_ward"]', function() {
+    $('.abx-ward-btn').removeClass('bg-white text-blue-700 shadow-sm').addClass('text-slate-500');
+    $(this).parent().removeClass('text-slate-500').addClass('bg-white text-blue-700 shadow-sm');
+    updateAbxDropdowns();
+});
+
 function formatOrgName(org) {
     if (!org || typeof org !== 'string' || org.startsWith('No ')) return org || "-";
     let name = org.replace(/\(E\.coli\)/gi, "").trim();
@@ -605,7 +638,8 @@ function loadAnalyticsFilters() {
         if(!start || !end) return true;
         return r.Date >= start && r.Date <= end;
     });
-
+dateRecords = applyWardFilter(dateRecords, $('input[name="guided_ward"]:checked').val() || 'total');
+    
     let uniqueSamples = new Set(dateRecords.map(r => r.Sample).filter(Boolean));
     let currentSample = $('#guided_sample').val();
     $('#guided_sample').empty().append(new Option("All Specimens", ""));
@@ -667,7 +701,8 @@ function generateGuidedAnalytics() {
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
     let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
     if (targetSample) records = records.filter(r => r.Sample === targetSample);
-
+records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
+    
     if (records.length === 0) {
         $('#guidedContainer').addClass('hidden');
         $('#guidedPlaceholder').removeClass('hidden');
@@ -730,7 +765,8 @@ function renderGuidedAST() {
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
     let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate && r['Selective organism'] === currentGuidedBug);
     if (targetSample) records = records.filter(r => r.Sample === targetSample);
-
+records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
+    
     let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
     let abxStats = {};
 
@@ -815,7 +851,7 @@ function updatePathoDropdowns() {
         if(!start || !end) return true;
         return r.Date >= start && r.Date <= end;
     });
-
+    records = applyWardFilter(records, $('input[name="patho_ward"]:checked').val() || 'total');
     let orgs = new Set();
     records.forEach(r => { if(r['Selective organism']) orgs.add(r['Selective organism']); });
 
@@ -843,6 +879,7 @@ function renderPathoChart() {
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
     records = records.filter(r => r['Selective organism'] === bug);
     if(start && end) records = records.filter(r => r.Date >= start && r.Date <= end);
+    records = applyWardFilter(records, $('input[name="patho_ward"]:checked').val() || 'total');
 
     let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
     let abxStats = {};
@@ -927,6 +964,7 @@ function updateAbxDropdowns() {
         if(!start || !end) return true;
         return r.Date >= start && r.Date <= end;
     });
+    records = applyWardFilter(records, $('input[name="abx_ward"]:checked').val() || 'total');
 
     let abxs = new Set();
     let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
@@ -957,6 +995,7 @@ function renderAbxChart() {
     const end = $('#abx_end').val();
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
     if(start && end) records = records.filter(r => r.Date >= start && r.Date <= end);
+    records = applyWardFilter(records, $('input[name="abx_ward"]:checked').val() || 'total');
 
     let orgStats = {};
     records.forEach(r => {
