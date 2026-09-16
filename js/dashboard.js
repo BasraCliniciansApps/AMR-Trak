@@ -60,10 +60,10 @@ $(document).on('change', 'input[name="patho_ward"]', function() {
     $(this).parent().removeClass('text-slate-500').addClass('bg-white text-emerald-700 shadow-sm');
     updatePathoDropdowns();
 });
-$(document).on('change', 'input[name="abx_ward"]', function() {
-    $('.abx-ward-btn').removeClass('bg-white text-blue-700 shadow-sm').addClass('text-slate-500');
-    $(this).parent().removeClass('text-slate-500').addClass('bg-white text-blue-700 shadow-sm');
-    updateAbxDropdowns();
+$(document).on('change', 'input[name="adv_ward"]', function() {
+    $('.adv-ward-btn').removeClass('bg-white text-slate-800 shadow-sm').addClass('text-slate-500');
+    $(this).parent().removeClass('text-slate-500').addClass('bg-white text-slate-800 shadow-sm');
+    // Note: We don't auto-refresh here because the user must click "Generate Heatmap"
 });
 
 function formatOrgName(org) {
@@ -700,7 +700,12 @@ function generateGuidedAnalytics() {
 
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
     let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
-    if (targetSample) records = records.filter(r => r.Sample === targetSample);
+    if (targetSample) { 
+        records = records.filter(r => r.Sample === targetSample); 
+    }
+    
+    // Apply Ward Filter for Advanced Heatmap
+    records = applyWardFilter(records, $('input[name="adv_ward"]:checked').val() || 'total');
 records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
     
     if (records.length === 0) {
