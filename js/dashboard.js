@@ -892,7 +892,6 @@ $(document).on('change', '#patho_metric_toggle', function() {
 
 function updatePathoDropdowns() {
     let period = $('input[name="patho_period"]:checked').val() || 'all';
-    let bugSelect = $('#patho_bug');
 
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
     records = filterByPeriod(records, period);
@@ -1003,7 +1002,6 @@ $(document).on('change', '#abx_metric_toggle', function() {
 
 function updateAbxDropdowns() {
     let period = $('input[name="abx_period"]:checked').val() || 'all';
-    let drugSelect = $('#abx_drug');
 
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
     records = filterByPeriod(records, period);
