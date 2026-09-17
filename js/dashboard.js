@@ -675,19 +675,28 @@ function loadAnalyticsFilters() {
     if (isUpdatingFilters) return;
     isUpdatingFilters = true;
 
-   let period = $('input[name="guided_period"]:checked').val() || 'all';
+    let period = $('input[name="guided_period"]:checked').val() || 'all';
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    let dateRecords = filterByPeriod(allRecords, period); // Replaces the start/end filter
-dateRecords = applyWardFilter(dateRecords, $('input[name="guided_ward"]:checked').val() || 'total');
+    let dateRecords = filterByPeriod(allRecords, period); 
+    dateRecords = applyWardFilter(dateRecords, $('input[name="guided_ward"]:checked').val() || 'total');
     
     let uniqueSamples = new Set(dateRecords.map(r => r.Sample).filter(Boolean));
     let currentSample = $('#guided_sample').val();
-    $('#guided_sample').empty().append(new Option("All Specimens", ""));
+    
+    // Force the "Select a Specimen" prompt
+    $('#guided_sample').empty();
+    $('#guided_sample').append(new Option("Select a specimen first...", "none", true, true));
+    $('#guided_sample').append(new Option("All Specimens", "all"));
+    
     Array.from(uniqueSamples).sort().forEach(s => {
         $('#guided_sample').append(new Option(s, s));
     });
-    if (currentSample && uniqueSamples.has(currentSample)) {
+    
+    // Keep selection if valid, otherwise force "none"
+    if (currentSample && currentSample !== "none" && (uniqueSamples.has(currentSample) || currentSample === "all")) {
         $('#guided_sample').val(currentSample);
+    } else {
+        $('#guided_sample').val("none");
     }
 
     let orgs = new Set(), abxs = new Set();
@@ -708,6 +717,8 @@ dateRecords = applyWardFilter(dateRecords, $('input[name="guided_ward"]:checked'
 
     $('#guided_sample, #adv_organism, #adv_antibiotic').trigger('change.select2');
     isUpdatingFilters = false;
+    
+    // Trigger analysis
     generateGuidedAnalytics();
 }
 
@@ -716,6 +727,10 @@ window.toggleGuidedSearch = function() {
     $('#guided_icon').toggleClass('rotate-180');
 };
 
+// Add listener to trigger search when a specimen is selected
+$(document).on('change', '#guided_sample', function() {
+    generateGuidedAnalytics();
+});
 
 $(document).on('change', '#guided_metric_toggle', function() {
     if ($(this).is(':checked')) {
@@ -736,23 +751,40 @@ $(document).on('change', '#guided_bug_select', function() {
 });
 
 function generateGuidedAnalytics() {
-    const startDate = $('#guided_start').val();
-    const endDate = $('#guided_end').val();
     const targetSample = $('#guided_sample').val();
 
+    // Block execution if no valid specimen is selected
+    if (!targetSample || targetSample === "none") {
+        $('#guidedContainer').addClass('hidden');
+        $('#guidedPlaceholder').removeClass('hidden').html(`
+            <div class="bg-teal-50 border border-teal-100 rounded-xl p-3 flex items-center gap-3 shadow-sm mx-1 w-full">
+                <div class="bg-white p-1.5 rounded-full shadow-sm text-teal-600 flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </div>
+                <p class="text-xs font-bold text-teal-800 leading-tight">Please select a specimen from the dropdown above to view the Prevalence Profile.</p>
+            </div>
+        `);
+        return;
+    }
+
+    let period = $('input[name="guided_period"]:checked').val() || 'all';
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
-    if (targetSample) { 
+    let records = filterByPeriod(allRecords, period);
+
+    if (targetSample !== "all") { 
         records = records.filter(r => r.Sample === targetSample); 
     }
     
-    // Apply Ward Filter for Advanced Heatmap
     records = applyWardFilter(records, $('input[name="adv_ward"]:checked').val() || 'total');
-records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
+    records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
     
     if (records.length === 0) {
         $('#guidedContainer').addClass('hidden');
-        $('#guidedPlaceholder').removeClass('hidden');
+        $('#guidedPlaceholder').removeClass('hidden').html(`
+            <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-center gap-3 shadow-sm mx-1 w-full">
+                <p class="text-xs font-bold text-amber-800 leading-tight">No records found for the selected criteria.</p>
+            </div>
+        `);
         return;
     }
 
@@ -805,14 +837,18 @@ $(document).on('change', '#guided_hide_low', function() { renderGuidedAST(); });
 function renderGuidedAST() {
     if (!currentGuidedBug) return;
 
-    const startDate = $('#guided_start').val();
-    const endDate = $('#guided_end').val();
     const targetSample = $('#guided_sample').val();
+    let period = $('input[name="guided_period"]:checked').val() || 'all';
 
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate && r['Selective organism'] === currentGuidedBug);
-    if (targetSample) records = records.filter(r => r.Sample === targetSample);
-records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
+    let records = filterByPeriod(allRecords, period);
+    records = records.filter(r => r['Selective organism'] === currentGuidedBug);
+    
+    if (targetSample && targetSample !== "all") {
+        records = records.filter(r => r.Sample === targetSample);
+    }
+    
+    records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
     
     let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
     let abxStats = {};
@@ -838,7 +874,6 @@ records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() 
         let s = abxStats[abx];
         let isReliable = s.tested >= 30;
 
-        // Skip adding this bar to the chart if n < 30 and the toggle is ON
         if (hideLowN && !isReliable) return;
 
         let targetVal = currentGuidedMetric === 'R' ? s.r : s.s;
