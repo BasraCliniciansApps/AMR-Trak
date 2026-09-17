@@ -60,12 +60,18 @@ $(document).on('change', 'input[name="patho_ward"]', function() {
     $(this).parent().removeClass('text-slate-500').addClass('bg-white text-emerald-700 shadow-sm');
     updatePathoDropdowns();
 });
+
+$(document).on('change', 'input[name="abx_ward"]', function() {
+    $('.abx-ward-btn').removeClass('bg-white text-blue-700 shadow-sm').addClass('text-slate-500');
+    $(this).parent().removeClass('text-slate-500').addClass('bg-white text-blue-700 shadow-sm');
+    updateAbxDropdowns();
+});
+
 $(document).on('change', 'input[name="adv_ward"]', function() {
     $('.adv-ward-btn').removeClass('bg-white text-slate-800 shadow-sm').addClass('text-slate-500');
     $(this).parent().removeClass('text-slate-500').addClass('bg-white text-slate-800 shadow-sm');
     // Note: We don't auto-refresh here because the user must click "Generate Heatmap"
 });
-
 // --- TIME PERIOD FILTER LOGIC ---
 function filterByPeriod(records, periodType) {
     if (!periodType || periodType === 'all') return records;
