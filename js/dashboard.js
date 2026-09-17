@@ -66,9 +66,54 @@ $(document).on('change', 'input[name="adv_ward"]', function() {
     // Note: We don't auto-refresh here because the user must click "Generate Heatmap"
 });
 
+// --- TIME PERIOD FILTER LOGIC ---
+function filterByPeriod(records, periodType) {
+    if (!periodType || periodType === 'all') return records;
+
+    let validRecords = records.filter(r => r.Date);
+    if (validRecords.length === 0) return records;
+
+    if (periodType === 'year') {
+        let lastYear = (new Date().getFullYear() - 1).toString();
+        return validRecords.filter(r => r.Date.startsWith(lastYear));
+    }
+
+    // Identify the latest month in the dataset to calculate Month/Quarter
+    let allDates = validRecords.map(r => r.Date).sort();
+    let latestDateStr = allDates[allDates.length - 1]; 
+    let targetMonthPrefix = latestDateStr.substring(0, 7);
+
+    if (periodType === 'month') {
+        return validRecords.filter(r => r.Date.startsWith(targetMonthPrefix));
+    }
+
+    if (periodType === 'quarter') {
+        let [lYear, lMonth] = targetMonthPrefix.split('-').map(Number);
+        let qYear = lYear, qMonths = [];
+
+        if (lMonth <= 3) { qYear -= 1; qMonths = ["10","11","12"]; }
+        else if (lMonth <= 6) { qMonths = ["01","02","03"]; }
+        else if (lMonth <= 9) { qMonths = ["04","05","06"]; }
+        else { qMonths = ["07","08","09"]; }
+
+        return validRecords.filter(r => {
+            let parts = r.Date.split('-');
+            return parseInt(parts[0]) === qYear && qMonths.includes(parts[1]);
+        });
+    }
+
+    return records;
+}
+
+// Visual updates for period toggles
+$(document).on('change', 'input[name="guided_period"]', function() { loadAnalyticsFilters(); });
+$(document).on('change', 'input[name="patho_period"]', function() { updatePathoDropdowns(); });
+$(document).on('change', 'input[name="abx_period"]', function() { updateAbxDropdowns(); });
+
+
 function formatOrgName(org) {
     if (!org || typeof org !== 'string' || org.startsWith('No ')) return org || "-";
-    let name = org.replace(/\(E\.coli\)/gi, "").trim();
+    let name = org.replace(/\(E\.coli\)/gi, "").trim(); 
     let parts = name.split(' ');
     if (parts.length >= 2 && parts[0].length > 3) {
         return parts[0].charAt(0).toUpperCase() + '. ' + parts.slice(1).join(' ');
@@ -630,14 +675,9 @@ function loadAnalyticsFilters() {
     if (isUpdatingFilters) return;
     isUpdatingFilters = true;
 
-    let start = $('#guided_start').val();
-    let end = $('#guided_end').val();
+   let period = $('input[name="guided_period"]:checked').val() || 'all';
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    
-    let dateRecords = allRecords.filter(r => {
-        if(!start || !end) return true;
-        return r.Date >= start && r.Date <= end;
-    });
+    let dateRecords = filterByPeriod(allRecords, period); // Replaces the start/end filter
 dateRecords = applyWardFilter(dateRecords, $('input[name="guided_ward"]:checked').val() || 'total');
     
     let uniqueSamples = new Set(dateRecords.map(r => r.Sample).filter(Boolean));
@@ -676,9 +716,6 @@ window.toggleGuidedSearch = function() {
     $('#guided_icon').toggleClass('rotate-180');
 };
 
-$(document).on('change', '#guided_start, #guided_end, #guided_sample', function() {
-    loadAnalyticsFilters();
-});
 
 $(document).on('change', '#guided_metric_toggle', function() {
     if ($(this).is(':checked')) {
@@ -838,7 +875,7 @@ window.togglePathoSearch = function() {
     if(!$('#patho_content').hasClass('hidden')) updatePathoDropdowns();
 };
 
-$(document).on('change', '#patho_start, #patho_end', function() { updatePathoDropdowns(); });
+
 $(document).on('change', '#patho_bug', function() { renderPathoChart(); });
 $(document).on('change', '#patho_metric_toggle', function() {
     if ($(this).is(':checked')) {
@@ -854,14 +891,13 @@ $(document).on('change', '#patho_metric_toggle', function() {
 });
 
 function updatePathoDropdowns() {
-    const start = $('#patho_start').val();
-    const end = $('#patho_end').val();
+    let period = $('input[name="patho_period"]:checked').val() || 'all';
+    let bugSelect = $('#patho_bug');
+
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
-    records = records.filter(r => {
-        if(!start || !end) return true;
-        return r.Date >= start && r.Date <= end;
-    });
+    records = filterByPeriod(records, period);
     records = applyWardFilter(records, $('input[name="patho_ward"]:checked').val() || 'total');
+
     let orgs = new Set();
     records.forEach(r => { if(r['Selective organism']) orgs.add(r['Selective organism']); });
 
@@ -884,12 +920,12 @@ function renderPathoChart() {
         return;
     }
 
-    const start = $('#patho_start').val();
-    const end = $('#patho_end').val();
+    let period = $('input[name="patho_period"]:checked').val() || 'all';
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+    records = filterByPeriod(records, period);
     records = records.filter(r => r['Selective organism'] === bug);
-    if(start && end) records = records.filter(r => r.Date >= start && r.Date <= end);
     records = applyWardFilter(records, $('input[name="patho_ward"]:checked').val() || 'total');
+    
 
     let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
     let abxStats = {};
@@ -951,7 +987,6 @@ window.toggleAbxSearch = function() {
     if(!$('#abx_content').hasClass('hidden')) updateAbxDropdowns();
 };
 
-$(document).on('change', '#abx_start, #abx_end', function() { updateAbxDropdowns(); });
 $(document).on('change', '#abx_drug', function() { renderAbxChart(); });
 $(document).on('change', '#abx_metric_toggle', function() {
     if ($(this).is(':checked')) {
@@ -967,13 +1002,11 @@ $(document).on('change', '#abx_metric_toggle', function() {
 });
 
 function updateAbxDropdowns() {
-    const start = $('#abx_start').val();
-    const end = $('#abx_end').val();
+    let period = $('input[name="abx_period"]:checked').val() || 'all';
+    let drugSelect = $('#abx_drug');
+
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
-    records = records.filter(r => {
-        if(!start || !end) return true;
-        return r.Date >= start && r.Date <= end;
-    });
+    records = filterByPeriod(records, period);
     records = applyWardFilter(records, $('input[name="abx_ward"]:checked').val() || 'total');
 
     let abxs = new Set();
@@ -1001,10 +1034,9 @@ function renderAbxChart() {
         return;
     }
 
-    const start = $('#abx_start').val();
-    const end = $('#abx_end').val();
+    let period = $('input[name="abx_period"]:checked').val() || 'all';
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
-    if(start && end) records = records.filter(r => r.Date >= start && r.Date <= end);
+    records = filterByPeriod(records, period);
     records = applyWardFilter(records, $('input[name="abx_ward"]:checked').val() || 'total');
 
     let orgStats = {};
