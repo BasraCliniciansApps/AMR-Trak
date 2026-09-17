@@ -671,6 +671,11 @@ dateRecords = applyWardFilter(dateRecords, $('input[name="guided_ward"]:checked'
     generateGuidedAnalytics();
 }
 
+window.toggleGuidedSearch = function() {
+    $('#guided_content').toggleClass('hidden');
+    $('#guided_icon').toggleClass('rotate-180');
+};
+
 $(document).on('change', '#guided_start, #guided_end, #guided_sample', function() {
     loadAnalyticsFilters();
 });
@@ -1211,3 +1216,4 @@ function showInstallGuide() {
         width: '90%'
     });
 }
+
