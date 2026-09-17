@@ -85,14 +85,25 @@
                 </button>
                 
                 <div id="guided_content" class="p-4 space-y-3 bg-white">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 mb-1">From Date</label>
-                            <input type="month" id="guided_start" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-teal-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 mb-1">To Date</label>
-                            <input type="month" id="guided_end" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-teal-500 outline-none">
+                    <div class="mb-3">
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Time Period</label>
+                        <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-inner w-full">
+                            <label class="flex-1 text-center cursor-pointer mb-0">
+                                <input type="radio" name="guided_period" value="all" class="peer sr-only" checked>
+                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-teal-700 peer-checked:shadow-sm text-slate-500 transition-all">All Times</div>
+                            </label>
+                            <label class="flex-1 text-center cursor-pointer mb-0">
+                                <input type="radio" name="guided_period" value="year" class="peer sr-only">
+                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-teal-700 peer-checked:shadow-sm text-slate-500 transition-all">Last Year</div>
+                            </label>
+                            <label class="flex-1 text-center cursor-pointer mb-0">
+                                <input type="radio" name="guided_period" value="quarter" class="peer sr-only">
+                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-teal-700 peer-checked:shadow-sm text-slate-500 transition-all">Last Quarter</div>
+                            </label>
+                            <label class="flex-1 text-center cursor-pointer mb-0">
+                                <input type="radio" name="guided_period" value="month" class="peer sr-only">
+                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-teal-700 peer-checked:shadow-sm text-slate-500 transition-all">Last Month</div>
+                            </label>
                         </div>
                     </div>
                     <div>
@@ -184,14 +195,25 @@
                     <svg id="patho_icon" class="w-4 h-4 text-emerald-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 </button>
                 <div id="patho_content" class="hidden p-4 space-y-3 bg-white">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 mb-1">From</label>
-                            <input type="month" id="patho_start" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 mb-1">To</label>
-                            <input type="month" id="patho_end" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+                    <div class="mb-3">
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Time Period</label>
+                        <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-inner w-full">
+                            <label class="flex-1 text-center cursor-pointer mb-0">
+                                <input type="radio" name="patho_period" value="all" class="peer sr-only" checked>
+                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-emerald-700 peer-checked:shadow-sm text-slate-500 transition-all">All Times</div>
+                            </label>
+                            <label class="flex-1 text-center cursor-pointer mb-0">
+                                <input type="radio" name="patho_period" value="year" class="peer sr-only">
+                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-emerald-700 peer-checked:shadow-sm text-slate-500 transition-all">Last Year</div>
+                            </label>
+                            <label class="flex-1 text-center cursor-pointer mb-0">
+                                <input type="radio" name="patho_period" value="quarter" class="peer sr-only">
+                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-emerald-700 peer-checked:shadow-sm text-slate-500 transition-all">Last Quarter</div>
+                            </label>
+                            <label class="flex-1 text-center cursor-pointer mb-0">
+                                <input type="radio" name="patho_period" value="month" class="peer sr-only">
+                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-emerald-700 peer-checked:shadow-sm text-slate-500 transition-all">Last Month</div>
+                            </label>
                         </div>
                     </div>
                     <div>
@@ -242,14 +264,25 @@
                     <svg id="abx_icon" class="w-4 h-4 text-blue-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 </button>
                 <div id="abx_content" class="hidden p-4 space-y-3 bg-white">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 mb-1">From</label>
-                            <input type="month" id="abx_start" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 mb-1">To</label>
-                            <input type="month" id="abx_end" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    <div class="mb-3">
+                        <label class="block text-[10px] font-bold text-slate-500 mb-1">Time Period</label>
+                        <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-inner w-full">
+                            <label class="flex-1 text-center cursor-pointer mb-0">
+                                <input type="radio" name="abx_period" value="all" class="peer sr-only" checked>
+                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-blue-700 peer-checked:shadow-sm text-slate-500 transition-all">All Times</div>
+                            </label>
+                            <label class="flex-1 text-center cursor-pointer mb-0">
+                                <input type="radio" name="abx_period" value="year" class="peer sr-only">
+                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-blue-700 peer-checked:shadow-sm text-slate-500 transition-all">Last Year</div>
+                            </label>
+                            <label class="flex-1 text-center cursor-pointer mb-0">
+                                <input type="radio" name="abx_period" value="quarter" class="peer sr-only">
+                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-blue-700 peer-checked:shadow-sm text-slate-500 transition-all">Last Quarter</div>
+                            </label>
+                            <label class="flex-1 text-center cursor-pointer mb-0">
+                                <input type="radio" name="abx_period" value="month" class="peer sr-only">
+                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-blue-700 peer-checked:shadow-sm text-slate-500 transition-all">Last Month</div>
+                            </label>
                         </div>
                     </div>
                     <div>
