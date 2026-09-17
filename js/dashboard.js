@@ -51,8 +51,15 @@ function applyWardFilter(records, filterValue) {
 
 // Visual updates and re-renders for the segmented toggles
 $(document).on('change', 'input[name="guided_ward"]', function() {
+    let selectedVal = $(this).val();
+    
+    // Reset all guided ward buttons (both top and bottom)
     $('.guided-ward-btn').removeClass('bg-white text-indigo-700 shadow-sm').addClass('text-slate-500');
-    $(this).parent().removeClass('text-slate-500').addClass('bg-white text-indigo-700 shadow-sm');
+    
+    // Visually select BOTH toggles that match the clicked value
+    $('input[name="guided_ward"][value="' + selectedVal + '"]').prop('checked', true)
+        .parent().removeClass('text-slate-500').addClass('bg-white text-indigo-700 shadow-sm');
+        
     loadAnalyticsFilters();
 });
 $(document).on('change', 'input[name="patho_ward"]', function() {
