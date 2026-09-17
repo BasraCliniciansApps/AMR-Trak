@@ -685,7 +685,7 @@ function loadAnalyticsFilters() {
     
     // Force the "Select a Specimen" prompt
     $('#guided_sample').empty();
-    $('#guided_sample').append(new Option("Select a specimen first...", "none", true, true));
+    $('#guided_sample').append(new Option("Select a specimen...", "none", true, true));
     $('#guided_sample').append(new Option("All Specimens", "all"));
     
     Array.from(uniqueSamples).sort().forEach(s => {
@@ -756,14 +756,7 @@ function generateGuidedAnalytics() {
     // Block execution if no valid specimen is selected
     if (!targetSample || targetSample === "none") {
         $('#guidedContainer').addClass('hidden');
-        $('#guidedPlaceholder').removeClass('hidden').html(`
-            <div class="bg-teal-50 border border-teal-100 rounded-xl p-3 flex items-center gap-3 shadow-sm mx-1 w-full">
-                <div class="bg-white p-1.5 rounded-full shadow-sm text-teal-600 flex-shrink-0">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                </div>
-                <p class="text-xs font-bold text-teal-800 leading-tight">Please select a specimen from the dropdown above to view the Prevalence Profile.</p>
-            </div>
-        `);
+        $('#guidedPlaceholder').addClass('hidden');
         return;
     }
 
@@ -780,17 +773,12 @@ function generateGuidedAnalytics() {
     
     if (records.length === 0) {
         $('#guidedContainer').addClass('hidden');
-        $('#guidedPlaceholder').removeClass('hidden').html(`
-            <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-center gap-3 shadow-sm mx-1 w-full">
-                <p class="text-xs font-bold text-amber-800 leading-tight">No records found for the selected criteria.</p>
-            </div>
-        `);
+        $('#guidedPlaceholder').addClass('hidden');
         return;
     }
 
     $('#guidedPlaceholder').addClass('hidden');
     $('#guidedContainer').removeClass('hidden');
-
     let orgCounts = {};
     records.forEach(r => {
         let org = r['Selective organism'];
