@@ -1209,6 +1209,7 @@ window.generateAdvancedAnalytics = function() {
                 let p = Math.round((targetVal / cell.t) * 100);
                 let isLow = cell.t < 30;
                 let dangerScore = metric === 'R' ? p : (100 - p);
+                let ci = wilsonScoreCI(targetVal, cell.t); // Calculate the confidence interval
                 
                 let bgClass = 'bg-white', textClass = 'text-slate-700';
                 if (dangerScore <= 20) { bgClass = 'bg-emerald-100'; textClass = 'text-emerald-800'; }
@@ -1218,7 +1219,12 @@ window.generateAdvancedAnalytics = function() {
                 else { bgClass = 'bg-red-600'; textClass = 'text-white font-bold'; }
 
                 if (isLow) textClass += dangerScore > 60 ? ' text-red-100' : ' opacity-70';
-                hmHtml += `<td class="${bgClass} ${textClass}">${p}% ${isLow ? '<span class="text-red-500 font-bold">*</span>' : ''}</td>`;
+                
+                // Added a tiny div for the CI under the percentage
+                hmHtml += `<td class="${bgClass} ${textClass} align-middle">
+                    <div class="leading-none">${p}% ${isLow ? '<span class="text-red-500 font-bold">*</span>' : ''}</div>
+                    <div class="text-[8px] font-normal opacity-80 tracking-tighter mt-0.5">(${ci.lower}-${ci.upper})</div>
+                </td>`;
             }
         });
         hmHtml += '</tr>';
