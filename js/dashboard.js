@@ -1237,15 +1237,19 @@ function showAboutModal() {
     Swal.fire({
         html: `
             <div class="text-sm text-slate-600 leading-relaxed text-center space-y-4">
-                <div class="mx-auto w-20 h-20 bg-teal-50 text-teal-700 rounded-full flex items-center justify-center mb-4 border border-teal-100 shadow-sm overflow-hidden p-1">
-                    <img src="icon.png" alt="AMR Icon" class="w-full h-full object-contain">
+                <!-- تم تحديث هذا القسم: إزالة الخلفية والحدود لضمان الشفافية، وزيادة الحجم -->
+                <div class="mx-auto w-24 h-24 mb-4 flex items-center justify-center overflow-hidden">
+                    <img src="icon.png" alt="AMR Icon" class="w-full h-full object-contain filter drop-shadow-md">
                 </div>
+                
                 <h3 class="text-xl font-bold text-slate-800">AMR Tracker Dashboard</h3>
                 <p class="font-medium text-teal-700">Antimicrobial Resistance Surveillance System</p>
+                
                 <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-right text-sm leading-loose mt-4" dir="rtl">
                     تم تصميم وإعداد هذه المنصة البرمجية من قبل عضو لجنة المضادات الحيوية، <b>الصيدلاني السريري سعد نبيل الحمادي</b>، 
                     بالتعاون مع <b>وحدة الـ AMR</b> وكادر <b>مختبر المايكروبايولوجي</b> في <b>مستشفى الموانئ التعليمي</b>.
                 </div>
+                
                 <p class="text-[11px] text-slate-500 mt-4 leading-relaxed bg-amber-50 p-3 rounded-lg border border-amber-100 text-right" dir="rtl">
                     <b>الحقوق القانونية:</b> هذه الأداة مخصصة لتسهيل عمليات الرصد الوبائي وتوليد الإحصائيات السريرية الدقيقة، جميع الحقوق الفكرية والبرمجية محفوظة &copy; 2026.
                 </p>
@@ -1257,7 +1261,6 @@ function showAboutModal() {
         width: '90%'
     });
 }
-
 // --- Modal: Install Guide ---
 function showInstallGuide() {
     Swal.fire({
