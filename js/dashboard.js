@@ -1222,8 +1222,8 @@ window.generateAdvancedAnalytics = function() {
                 
                 // Added a tiny div for the CI under the percentage
                 hmHtml += `<td class="${bgClass} ${textClass} align-middle">
-                    <div class="leading-none">${p}% ${isLow ? '<span class="text-red-500 font-bold">*</span>' : ''}</div>
-                    <div class="text-[8px] font-normal opacity-80 tracking-tighter mt-0.5">(${ci.lower}-${ci.upper})</div>
+                    <div class="leading-none">${p}% ${isLow ? '<span class="text-black font-bold">*</span>' : ''}</div>
+                    <div class="text-[7.5px] font-medium opacity-80 tracking-tighter mt-1 whitespace-nowrap">95% CI (${ci.lower}% - ${ci.upper}%)</div>
                 </td>`;
             }
         });
