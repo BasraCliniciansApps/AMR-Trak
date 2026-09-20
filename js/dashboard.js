@@ -696,6 +696,11 @@ function loadAnalyticsFilters() {
     let uniqueSamples = new Set(dateRecords.map(r => r.Sample).filter(Boolean));
     let currentSample = $('#guided_sample').val();
     
+    // 💡 التعديل هنا: نحتفظ بالاختيار الحالي حتى لو كانت بياناته غير موجودة لتجنب تصفير الفلتر
+    if (currentSample && currentSample !== "none" && currentSample !== "all") {
+        uniqueSamples.add(currentSample);
+    }
+
     // Force the "Select a Specimen" prompt
     $('#guided_sample').empty();
     $('#guided_sample').append(new Option("Select a specimen...", "none", true, true));
@@ -705,8 +710,7 @@ function loadAnalyticsFilters() {
         $('#guided_sample').append(new Option(s, s));
     });
     
-    // Keep selection if valid, otherwise force "none"
-    if (currentSample && currentSample !== "none" && (uniqueSamples.has(currentSample) || currentSample === "all")) {
+    if (currentSample && currentSample !== "none") {
         $('#guided_sample').val(currentSample);
     } else {
         $('#guided_sample').val("none");
@@ -720,11 +724,16 @@ function loadAnalyticsFilters() {
         allPossibleAbxs.forEach(a => { if (r[a] && r[a] !== '-' && r[a] !== '') abxs.add(a); });
     });
 
+    // 💡 التعديل هنا: نحتفظ بالاختيارات الحالية في الهيتماب لتجنب تصفيرها
     let currentAdvOrgs = $('#adv_organism').val() || [];
+    currentAdvOrgs.forEach(o => orgs.add(o));
+    
     $('#adv_organism').empty();
     Array.from(orgs).sort().forEach(o => $('#adv_organism').append(new Option(o, o, currentAdvOrgs.includes(o), currentAdvOrgs.includes(o))));
 
     let currentAdvAbxs = $('#adv_antibiotic').val() || [];
+    currentAdvAbxs.forEach(a => abxs.add(a));
+
     $('#adv_antibiotic').empty();
     Array.from(abxs).sort().forEach(a => $('#adv_antibiotic').append(new Option(a, a, currentAdvAbxs.includes(a), currentAdvAbxs.includes(a))));
 
@@ -938,10 +947,14 @@ function updatePathoDropdowns() {
 
     let bugSelect = $('#patho_bug');
     let currentVal = bugSelect.val();
+    
+    // 💡 التعديل هنا: إضافة البكتيريا المختارة للقائمة إجبارياً لمنع التصفير
+    if (currentVal) orgs.add(currentVal);
+
     bugSelect.empty().append(new Option("Select a bacteria...", ""));
     Array.from(orgs).sort().forEach(o => bugSelect.append(new Option(formatScientificName(o), o)));
     
-    if(currentVal && orgs.has(currentVal)) bugSelect.val(currentVal);
+    if(currentVal) bugSelect.val(currentVal);
     bugSelect.trigger('change.select2');
     renderPathoChart();
 }
@@ -1001,7 +1014,14 @@ function renderPathoChart() {
     if (chartPathoAMR_instance) chartPathoAMR_instance.destroy();
 
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
-    $('#pathoAmrContainer').css('width', chartWidth);
+    // إعادة بناء الـ Canvas تحسباً لمسحها مسبقاً
+    $('#pathoAmrContainer').html('<canvas id="chartPathoAMR"></canvas>').css('width', chartWidth);
+
+    // 💡 التعديل هنا: إظهار رسالة في حال كانت البيانات صفر بدلاً من مساحة فارغة
+    if (labels.length === 0) {
+        $('#pathoAmrContainer').html('<div class="flex items-center justify-center h-full w-full text-slate-400 font-bold text-sm">No Data Available</div>');
+        return;
+    }
 
     chartPathoAMR_instance = new Chart(document.getElementById('chartPathoAMR'), {
         type: 'bar',
@@ -1051,10 +1071,14 @@ function updateAbxDropdowns() {
 
     let drugSelect = $('#abx_drug');
     let currentVal = drugSelect.val();
+    
+    // 💡 التعديل هنا: منع تصفير المضاد المختار
+    if (currentVal) abxs.add(currentVal);
+
     drugSelect.empty().append(new Option("Select an antimicrobial...", ""));
     Array.from(abxs).sort().forEach(a => drugSelect.append(new Option(a, a)));
     
-    if(currentVal && abxs.has(currentVal)) drugSelect.val(currentVal);
+    if(currentVal) drugSelect.val(currentVal);
     drugSelect.trigger('change.select2');
     renderAbxChart();
 }
@@ -1110,10 +1134,15 @@ function renderAbxChart() {
     if (chartAbxAMR_instance) chartAbxAMR_instance.destroy();
 
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
-    $('#abxAmrContainer').css('width', chartWidth);
+    $('#abxAmrContainer').html('<canvas id="chartAbxAMR"></canvas>').css('width', chartWidth);
+
+    // 💡 التعديل هنا: إظهار رسالة No Data Available
+    if (labels.length === 0) {
+        $('#abxAmrContainer').html('<div class="flex items-center justify-center h-full w-full text-slate-400 font-bold text-sm">No Data Available</div>');
+        return;
+    }
 
     chartAbxAMR_instance = new Chart(document.getElementById('chartAbxAMR'), {
-        type: 'bar',
         data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
         options: { 
             responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
@@ -1158,12 +1187,12 @@ window.generateAdvancedAnalytics = function() {
         targetAbxs = Array.from(document.getElementById('adv_antibiotic').options).map(o => o.value);
     }
 
-    // If there is literally zero data in the database matching the criteria
     if (targetOrgs.length === 0 || targetAbxs.length === 0) {
-        Swal.fire('No Data', 'No records match your selected criteria.', 'info');
+        $('#advContainer').removeClass('hidden');
+        $('#heatmapWrapper').html('<p class="text-center text-slate-400 py-10 font-bold">No Data Available for the selected criteria.</p>');
+        $('#heatmapLegend').html('');
         return;
     }
-
     $('#advContainer').removeClass('hidden');
     let hmLegend = metric === 'R' ? 
         `<span class="px-1 bg-emerald-100 text-emerald-800 rounded">0-20%</span><span class="px-1 bg-yellow-100 text-yellow-800 rounded">21-40%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">41-60%</span><span class="px-1 bg-red-400 text-white rounded">61-80%</span><span class="px-1 bg-red-600 text-white rounded">81-100%</span>` :
@@ -1230,7 +1259,14 @@ window.generateAdvancedAnalytics = function() {
         hmHtml += '</tr>';
     });
     hmHtml += '</tbody></table>';
-    $('#heatmapWrapper').html(hmHtml);
+    
+    // 💡 التعديل هنا: إذا كان الجدول فارغاً تماماً تظهر رسالة
+    let hasData = hmOrgs.some(o => hmAbxs.some(a => heatmapStats[o][a] && heatmapStats[o][a].t > 0));
+    if (hasData) {
+        $('#heatmapWrapper').html(hmHtml);
+    } else {
+        $('#heatmapWrapper').html('<p class="text-center text-slate-400 py-10 font-bold text-sm">No Data Available</p>');
+    }
 };
 // --- Modal: About App ---
 function showAboutModal() {
