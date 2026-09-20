@@ -1147,6 +1147,9 @@ window.generateAdvancedAnalytics = function() {
         records = records.filter(r => r.Sample === targetSample); 
     }
 
+    // Apply Ward Filter (All / Inpatient / Outpatient)
+    records = applyWardFilter(records, $('input[name="adv_ward"]:checked').val() || 'total');
+
     // --- NEW LOGIC: If left blank, automatically grab ALL available options ---
     if (targetOrgs.length === 0) {
         targetOrgs = Array.from(document.getElementById('adv_organism').options).map(o => o.value);
