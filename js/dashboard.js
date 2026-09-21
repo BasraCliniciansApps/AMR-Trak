@@ -781,7 +781,7 @@ function generateGuidedAnalytics() {
 
     if (!targetSample || targetSample === "none") {
         $('#guidedContainer').addClass('hidden');
-        $('#guidedPlaceholder').removeClass('hidden').html('<div class="text-sm font-bold text-slate-500 text-center py-4">Please select a specimen to generate analytics.</div>');
+        $('#guidedPlaceholder').addClass('hidden');
         return;
     }
 
