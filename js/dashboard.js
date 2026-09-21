@@ -690,9 +690,8 @@ function loadAnalyticsFilters() {
 
     let period = $('input[name="guided_period"]:checked').val() || 'all';
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    
-    // 1. الفلترة حسب التاريخ فقط (هنا نعزل قائمة العينات عن تأثير الردهة)
     let dateRecords = filterByPeriod(allRecords, period); 
+    dateRecords = applyWardFilter(dateRecords, $('input[name="guided_ward"]:checked').val() || 'total');
     
     let uniqueSamples = new Set(dateRecords.map(r => r.Sample).filter(Boolean));
     let currentSample = $('#guided_sample').val();
@@ -706,49 +705,28 @@ function loadAnalyticsFilters() {
         $('#guided_sample').append(new Option(s, s));
     });
     
-    // احترام نية المستخدم: الاحتفاظ بالاختيار حتى لو اختفت البيانات (يمنع تصفير القائمة المزعج)
-    if (currentSample && currentSample !== "none") {
-        if (currentSample !== "all" && !uniqueSamples.has(currentSample)) {
-            $('#guided_sample').append(new Option(currentSample, currentSample));
-        }
+    // Keep selection if valid, otherwise force "none"
+    if (currentSample && currentSample !== "none" && (uniqueSamples.has(currentSample) || currentSample === "all")) {
         $('#guided_sample').val(currentSample);
     } else {
         $('#guided_sample').val("none");
     }
 
-    // 2. الآن نطبق فلتر الردهة (Inpatient/Outpatient) لباقي التحليلات (البكتيريا والمضادات)
-    let fullyFilteredRecords = applyWardFilter(dateRecords, $('input[name="guided_ward"]:checked').val() || 'total');
-
     let orgs = new Set(), abxs = new Set();
-    let baseAbxList = typeof abxList !== 'undefined' ? abxList : [];
-    let allPossibleAbxs = [...baseAbxList, ...getCustomAntibiotics().map(a=>a.name)];
+    let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
     
-    fullyFilteredRecords.forEach(r => {
+    dateRecords.forEach(r => {
         if(r['Selective organism']) orgs.add(r['Selective organism']);
         allPossibleAbxs.forEach(a => { if (r[a] && r[a] !== '-' && r[a] !== '') abxs.add(a); });
     });
 
     let currentAdvOrgs = $('#adv_organism').val() || [];
     $('#adv_organism').empty();
-    Array.from(orgs).sort().forEach(o => {
-        let isSelected = currentAdvOrgs.includes(o);
-        $('#adv_organism').append(new Option(o, o, isSelected, isSelected));
-    });
-    // الاحتفاظ باختيارات البكتيريا السابقة لكي لا تختفي فجأة
-    currentAdvOrgs.forEach(o => {
-        if (!orgs.has(o)) $('#adv_organism').append(new Option(o, o, true, true));
-    });
+    Array.from(orgs).sort().forEach(o => $('#adv_organism').append(new Option(o, o, currentAdvOrgs.includes(o), currentAdvOrgs.includes(o))));
 
     let currentAdvAbxs = $('#adv_antibiotic').val() || [];
     $('#adv_antibiotic').empty();
-    Array.from(abxs).sort().forEach(a => {
-        let isSelected = currentAdvAbxs.includes(a);
-        $('#adv_antibiotic').append(new Option(a, a, isSelected, isSelected));
-    });
-    // الاحتفاظ باختيارات المضادات السابقة
-    currentAdvAbxs.forEach(a => {
-        if (!abxs.has(a)) $('#adv_antibiotic').append(new Option(a, a, true, true));
-    });
+    Array.from(abxs).sort().forEach(a => $('#adv_antibiotic').append(new Option(a, a, currentAdvAbxs.includes(a), currentAdvAbxs.includes(a))));
 
     $('#guided_sample, #adv_organism, #adv_antibiotic').trigger('change.select2');
     isUpdatingFilters = false;
@@ -756,6 +734,7 @@ function loadAnalyticsFilters() {
     // Trigger analysis
     generateGuidedAnalytics();
 }
+
 window.toggleGuidedSearch = function() {
     $('#guided_content').toggleClass('hidden');
     $('#guided_icon').toggleClass('rotate-180');
@@ -787,17 +766,10 @@ $(document).on('change', '#guided_bug_select', function() {
 function generateGuidedAnalytics() {
     const targetSample = $('#guided_sample').val();
 
-    // 1. رسالة احترافية عند عدم اختيار عينة
+    // Block execution if no valid specimen is selected
     if (!targetSample || targetSample === "none") {
         $('#guidedContainer').addClass('hidden');
-        $('#guidedPlaceholder').removeClass('hidden').html(`
-            <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 mb-4 flex items-center gap-3 shadow-sm mx-1 mt-2">
-                <div class="bg-white p-1.5 rounded-full shadow-sm text-indigo-600 flex-shrink-0">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                </div>
-                <p class="text-xs font-bold text-indigo-900 leading-tight">Please select a specimen to view analytics.</p>
-            </div>
-        `);
+        $('#guidedPlaceholder').addClass('hidden');
         return;
     }
 
@@ -809,26 +781,12 @@ function generateGuidedAnalytics() {
         records = records.filter(r => r.Sample === targetSample); 
     }
     
-    // تصحيح فلتر الردهة
+    records = applyWardFilter(records, $('input[name="adv_ward"]:checked').val() || 'total');
     records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
     
-    // 2. رسالة "No Data Available" احترافية عند عدم وجود بيانات مع الاحتفاظ بالفلاتر
     if (records.length === 0) {
         $('#guidedContainer').addClass('hidden');
-        let sampleName = targetSample === "all" ? "All Specimens" : targetSample;
-        $('#guidedPlaceholder').removeClass('hidden').html(`
-            <div class="bg-slate-50 border-dashed border-2 border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center opacity-90 mx-1 mt-4">
-                <svg class="w-12 h-12 mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
-                <h4 class="text-sm font-bold text-slate-600 mb-1">No Data Available</h4>
-                <p class="text-xs text-slate-400">There are no records for <b>${sampleName}</b> in the selected ward.</p>
-            </div>
-        `);
-        return;
-    }
-
-    // إخفاء رسائل التنبيه وإظهار المخططات إذا كانت البيانات موجودة
-    $('#guidedPlaceholder').addClass('hidden');
-    $('#guidedContainer').removeClass('hidden');
+        $('#guidedPlaceholder').addClass('hidden');
         return;
     }
 
