@@ -122,22 +122,23 @@ function syncCloudToLocal() {
             
             let localRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
 
-            // حماية البيانات المحلية: لا تقم أبداً بالكتابة الفوقية إذا كانت السحابة فارغة ومحلياً يوجد بيانات
-            if (cloudRecords.length > 0 || localRecords.length === 0) {
-                localStorage.setItem('amr_records', JSON.stringify(cloudRecords));
+            let localRecordsStr = localStorage.getItem('amr_records') || "[]";
+            let cloudRecordsStr = JSON.stringify(cloudRecords);
+
+            // Only overwrite and rebuild the UI if the cloud data is actually different
+            if (cloudRecordsStr !== localRecordsStr && cloudRecords.length > 0) {
+                localStorage.setItem('amr_records', cloudRecordsStr);
+                
+                if (typeof initDataTable === 'function') initDataTable();
+                if (!$('#viewAnalytics').hasClass('hidden') && typeof loadAnalyticsFilters === 'function') loadAnalyticsFilters();
+                if (!$('#viewLive').hasClass('hidden') && typeof generateLiveSurveillance === 'function') generateLiveSurveillance();
             } else if (localRecords.length > 0 && cloudRecords.length === 0) {
-                // إذا كانت السحابة فارغة والمحلي يحتوي على بيانات، قم برفع المحلي فوراً بدلاً من مسحه
                 if (typeof syncLocalToCloud === 'function') syncLocalToCloud();
             }
-            
+
             if (cloudSettings) {
                 localStorage.setItem('amr_live_settings', JSON.stringify(cloudSettings));
             }
-            
-            // تحديث الجداول والمخططات في الحاسبة فوراً لتعكس التحديثات الخارجية
-            if (typeof initDataTable === 'function') initDataTable();
-            if (!$('#viewAnalytics').hasClass('hidden') && typeof loadAnalyticsFilters === 'function') loadAnalyticsFilters();
-            if (!$('#viewLive').hasClass('hidden') && typeof generateLiveSurveillance === 'function') generateLiveSurveillance();
             
             console.log("Real-time sync: Data synchronized safely.");
         }
@@ -1075,12 +1076,14 @@ function initDataTable() {
 
     if ($.fn.DataTable.isDataTable('#recordsTable')) {
         $('#recordsTable').DataTable().destroy();
+        $('#recordsTable').empty(); // Clears old DOM elements from memory
     }
 
     dataTable = $('#recordsTable').DataTable({
         data: records,
         columns: cols,
         scrollX: true, 
+        deferRender: true, // Drastically speeds up rendering large datasets
         order: [[ 6, "desc" ]],
         stateSave: true,
         dom: '<"flex flex-col sm:flex-row justify-between items-center mb-4 gap-3"Bf>rt<"flex flex-col sm:flex-row justify-between items-center mt-4 gap-3"ip>',
