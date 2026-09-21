@@ -460,7 +460,23 @@
                     <h4 id="live_m_bar_title" class="text-[11px] font-bold text-center text-slate-700 mb-2">Top 5 Specimens</h4>
                     <div class="h-40 relative"><canvas id="chart_m_bar"></canvas></div>
                 </div>
-
+<!-- MDR & XDR Surveillance Card -->
+                <div class="bg-rose-50 border border-rose-200 rounded-xl p-4 shadow-sm mt-4 mb-4 print-full">
+                    <h4 class="text-xs font-bold text-rose-900 mb-3 flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-rose-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        MDR / XDR Epidemiological Burden
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Doughnut Chart -->
+                        <div class="bg-white border border-rose-100 p-2 rounded-lg shadow-inner">
+                            <div class="h-[180px] relative"><canvas id="chart_m_mdr_pie"></canvas></div>
+                        </div>
+                        <!-- Stacked Bar Chart -->
+                        <div class="bg-white border border-rose-100 p-2 rounded-lg shadow-inner">
+                            <div class="h-[180px] relative"><canvas id="chart_m_mdr_bar"></canvas></div>
+                        </div>
+                    </div>
+                </div>
                 <div id="live_m_top3_container" class="mt-4 space-y-2 hidden"></div>
                 <div id="live_m_profiles_wrapper" class="space-y-3 mt-4 pt-4 border-t border-slate-100 hidden">
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
@@ -522,7 +538,23 @@
                     <h4 id="live_q_bar_title" class="text-[11px] font-bold text-center text-slate-700 mb-2">Top 5 Specimens</h4>
                     <div class="h-40 relative"><canvas id="chart_q_bar"></canvas></div>
                 </div>
-
+<!-- MDR & XDR Surveillance Card -->
+                <div class="bg-rose-50 border border-rose-200 rounded-xl p-4 shadow-sm mt-4 mb-4 print-full">
+                    <h4 class="text-xs font-bold text-rose-900 mb-3 flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-rose-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        MDR / XDR Epidemiological Burden
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Doughnut Chart -->
+                        <div class="bg-white border border-rose-100 p-2 rounded-lg shadow-inner">
+                            <div class="h-[180px] relative"><canvas id="chart_m_mdr_pie"></canvas></div>
+                        </div>
+                        <!-- Stacked Bar Chart -->
+                        <div class="bg-white border border-rose-100 p-2 rounded-lg shadow-inner">
+                            <div class="h-[180px] relative"><canvas id="chart_m_mdr_bar"></canvas></div>
+                        </div>
+                    </div>
+                </div>
                 <div id="live_q_top3_container" class="mt-4 space-y-2 hidden"></div>
                 <div id="live_q_profiles_wrapper" class="space-y-3 mt-4 pt-4 border-t border-slate-100 hidden">
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
