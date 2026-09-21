@@ -807,11 +807,7 @@ function generateGuidedAnalytics() {
 
     $('#guidedPlaceholder').addClass('hidden');
     $('#guidedContainer').removeClass('hidden');
-        return;
-    }
 
-    $('#guidedPlaceholder').addClass('hidden');
-    $('#guidedContainer').removeClass('hidden');
     let orgCounts = {};
     records.forEach(r => {
         let org = r['Selective organism'];
