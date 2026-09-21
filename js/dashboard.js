@@ -632,7 +632,103 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
 
     let p1 = settings.profile1_abx || 'Meropenem';
     let p2 = settings.profile2_abx || 'Ceftriaxone';
+// --- 🚨 MDR / XDR Classification Algorithm ---
+    let mdrStats = { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0 };
+    let wardMdrStats = {};
 
+    records.forEach(r => {
+        let resistantGroups = new Set();
+        let org = r['Selective organism'] || "";
+        let ward = r['Ward'] || "Unknown";
+        
+        // استبعاد البكتيريا الطبيعية أو الملوثات من الحسابات
+        if (!org || org === '-') return;
+
+        // مطابقة المضادات الحيوية التي تظهر 'R' مع فئاتها الدوائية من القاموس
+        if (typeof abxGroups !== 'undefined') {
+            Object.keys(abxGroups).forEach(group => {
+                if (group === "Antifungals") return; // نستبعد مضادات الفطريات من تصنيف البكتيريا
+                
+                let abxsInGroup = abxGroups[group];
+                for (let abx of abxsInGroup) {
+                    if (r[abx] && r[abx] === 'R') {
+                        resistantGroups.add(group); // إضافة الفئة إذا كان هناك مضاد واحد على الأقل (R)
+                        break; 
+                    }
+                }
+            });
+        }
+
+        let count = resistantGroups.size;
+        let classification = 'Non-MDR';
+        if (count >= 5) classification = 'XDR'; // تقاوم 5 فئات فأكثر
+        else if (count >= 3) classification = 'MDR'; // تقاوم 3 فئات فأكثر
+
+        mdrStats[classification]++;
+        
+        // حساب التوزيع حسب الردهات
+        if (!wardMdrStats[ward]) {
+            wardMdrStats[ward] = { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0, total: 0 };
+        }
+        wardMdrStats[ward][classification]++;
+        wardMdrStats[ward].total++;
+    });
+
+    // 1. بناء مخطط الدونات (MDR/XDR Overall Burden)
+    let mdrData = [mdrStats['Non-MDR'], mdrStats['MDR'], mdrStats['XDR']];
+    let mdrLabels = ['Normal / Susceptible', 'MDR (≥3 Classes)', 'XDR (≥5 Classes)'];
+    let mdrColors = ['#10b981', '#f59e0b', '#e11d48'];
+
+    if (mdrData.reduce((a, b) => a + b, 0) === 0) {
+        mdrData = [1]; mdrLabels = ['No Valid Data']; mdrColors = ['#e2e8f0'];
+    }
+
+    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_mdr_pie`), {
+        type: 'doughnut',
+        data: { labels: mdrLabels, datasets: [{ data: mdrData, backgroundColor: mdrColors, borderWidth: 2 }] },
+        options: { 
+            responsive: true, maintainAspectRatio: false, 
+            cutout: '65%',
+            plugins: { 
+                legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9, weight: 'bold' } } },
+                title: { display: true, text: 'Overall Resistance Classification', font: { size: 10, weight: 'bold' }, padding: { bottom: 10 } }
+            } 
+        }
+    }));
+
+    // 2. بناء مخطط الأعمدة المتراكمة (Top Wards by MDR/XDR)
+    // فرز الردهات حسب عدد حالات (MDR + XDR) التراكمي
+    let sortedWards = Object.keys(wardMdrStats)
+        .sort((a, b) => (wardMdrStats[b]['MDR'] + wardMdrStats[b]['XDR']) - (wardMdrStats[a]['MDR'] + wardMdrStats[a]['XDR']))
+        .slice(0, 5); // أخذ أخطر 5 ردهات فقط
+
+    let stackLabels = sortedWards.map(w => w.length > 12 ? w.slice(0, 10) + '..' : w);
+    let stackNonMDR = sortedWards.map(w => wardMdrStats[w]['Non-MDR']);
+    let stackMDR = sortedWards.map(w => wardMdrStats[w]['MDR']);
+    let stackXDR = sortedWards.map(w => wardMdrStats[w]['XDR']);
+
+    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_mdr_bar`), {
+        type: 'bar',
+        data: {
+            labels: stackLabels,
+            datasets: [
+                { label: 'Non-MDR', data: stackNonMDR, backgroundColor: '#10b981', borderRadius: 2 },
+                { label: 'MDR', data: stackMDR, backgroundColor: '#f59e0b', borderRadius: 2 },
+                { label: 'XDR', data: stackXDR, backgroundColor: '#e11d48', borderRadius: 2 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { 
+                legend: { display: false }, // أخفينا اللجند لأن الدونات يوضحه
+                title: { display: true, text: 'Hotspots (Top 5 Wards)', font: { size: 10, weight: 'bold' }, padding: { bottom: 10 } }
+            },
+            scales: {
+                x: { stacked: true, ticks: { font: { size: 9, weight: 'bold' } }, grid: { display: false } },
+                y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { stepSize: 1 } }
+            }
+        }
+    }));
     $(`#live_${prefix}_profile1_title`).text(`${p1} Resistance (% R)`);
     $(`#live_${prefix}_profile2_title`).text(`${p2} Resistance (% R)`);
 
