@@ -690,13 +690,13 @@ function loadAnalyticsFilters() {
 
     let period = $('input[name="guided_period"]:checked').val() || 'all';
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    
-    // 1. الفلترة حسب التاريخ فقط لبناء قائمة العينات المستقلة
     let dateRecords = filterByPeriod(allRecords, period); 
+    dateRecords = applyWardFilter(dateRecords, $('input[name="guided_ward"]:checked').val() || 'total');
     
     let uniqueSamples = new Set(dateRecords.map(r => r.Sample).filter(Boolean));
     let currentSample = $('#guided_sample').val();
     
+    // Force the "Select a Specimen" prompt
     $('#guided_sample').empty();
     $('#guided_sample').append(new Option("Select a specimen...", "none", true, true));
     $('#guided_sample').append(new Option("All Specimens", "all"));
@@ -705,24 +705,17 @@ function loadAnalyticsFilters() {
         $('#guided_sample').append(new Option(s, s));
     });
     
-    // الاحتفاظ باختيار المستخدم دائماً حتى لو كانت نتيجته صفراً في الفلاتر القادمة
-    if (currentSample && currentSample !== "none") {
-        if (!uniqueSamples.has(currentSample) && currentSample !== "all") {
-            // إجبار النظام على إبقاء العينة ظاهرة في القائمة لكي لا يتصفر الفلتر
-            $('#guided_sample').append(new Option(currentSample, currentSample)); 
-        }
+    // Keep selection if valid, otherwise force "none"
+    if (currentSample && currentSample !== "none" && (uniqueSamples.has(currentSample) || currentSample === "all")) {
         $('#guided_sample').val(currentSample);
     } else {
         $('#guided_sample').val("none");
     }
 
-    // 2. الآن نطبق فلتر الردهة (Ward) لباقي العمليات الفرعية
-    let finalRecords = applyWardFilter(dateRecords, $('input[name="guided_ward"]:checked').val() || 'total');
-
     let orgs = new Set(), abxs = new Set();
     let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
     
-    finalRecords.forEach(r => {
+    dateRecords.forEach(r => {
         if(r['Selective organism']) orgs.add(r['Selective organism']);
         allPossibleAbxs.forEach(a => { if (r[a] && r[a] !== '-' && r[a] !== '') abxs.add(a); });
     });
@@ -738,9 +731,10 @@ function loadAnalyticsFilters() {
     $('#guided_sample, #adv_organism, #adv_antibiotic').trigger('change.select2');
     isUpdatingFilters = false;
     
-    // تفعيل التحليل
+    // Trigger analysis
     generateGuidedAnalytics();
 }
+
 window.toggleGuidedSearch = function() {
     $('#guided_content').toggleClass('hidden');
     $('#guided_icon').toggleClass('rotate-180');
@@ -772,10 +766,10 @@ $(document).on('change', '#guided_bug_select', function() {
 function generateGuidedAnalytics() {
     const targetSample = $('#guided_sample').val();
 
-    // إيقاف التنفيذ إذا لم يتم اختيار عينة
+    // Block execution if no valid specimen is selected
     if (!targetSample || targetSample === "none") {
         $('#guidedContainer').addClass('hidden');
-        $('#guidedPlaceholder').removeClass('hidden').html('<div class="text-center p-10 text-slate-400"><i class="fas fa-flask text-4xl mb-3 opacity-50"></i><p>Select a specimen to generate analytics</p></div>');
+        $('#guidedPlaceholder').addClass('hidden');
         return;
     }
 
@@ -787,25 +781,17 @@ function generateGuidedAnalytics() {
         records = records.filter(r => r.Sample === targetSample); 
     }
     
-    // تم إزالة فلتر adv_ward الخاطئ من هنا والإبقاء على guided_ward فقط
+    records = applyWardFilter(records, $('input[name="adv_ward"]:checked').val() || 'total');
     records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
     
-    // التعامل الأنيق مع البيانات الفارغة (No Data Available)
     if (records.length === 0) {
         $('#guidedContainer').addClass('hidden');
-        $('#guidedPlaceholder').removeClass('hidden').html(`
-            <div class="text-center p-10 text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-300 m-4">
-                <i class="fas fa-folder-open text-3xl mb-2 text-slate-300"></i>
-                <p class="font-bold text-slate-600">No Data Available</p>
-                <p class="text-xs mt-1">There are no isolates matching this specific combination (Specimen + Ward + Period).</p>
-            </div>
-        `);
+        $('#guidedPlaceholder').addClass('hidden');
         return;
     }
 
     $('#guidedPlaceholder').addClass('hidden');
     $('#guidedContainer').removeClass('hidden');
-    
     let orgCounts = {};
     records.forEach(r => {
         let org = r['Selective organism'];
@@ -832,20 +818,6 @@ function generateGuidedAnalytics() {
                     $('#guided_bug_select').val(currentGuidedBug); 
                     renderGuidedAST(); 
                 }
-            }
-        }
-    });
-
-    let bugSelect = $('#guided_bug_select');
-    bugSelect.empty();
-    currentGuidedOrgs.forEach(org => {
-        bugSelect.append(new Option(`${formatScientificName(org)} (n=${orgCounts[org]})`, org));
-    });
-
-    currentGuidedBug = currentGuidedOrgs[0];
-    bugSelect.val(currentGuidedBug);
-    renderGuidedAST();
-}
             }
         }
     });
