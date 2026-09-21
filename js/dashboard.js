@@ -33,6 +33,47 @@ let currentPathoMetric = 'S';
 let chartAbxAMR_instance = null;
 let currentAbxMetric = 'S';
 
+// --- دالة التنقيح المركزية (Deduplication) لمعايير CLSI ---
+function applyDeduplication(records) {
+    const seenPatientOrg = new Set();
+    return records.filter(r => {
+        const pName = (r['Name'] || '').trim().toLowerCase();
+        const orgName = (r['Selective organism'] || '').trim().toLowerCase();
+        
+        // عدم استبعاد السجلات إذا كان اسم المريض مفقوداً أو مجهولاً للحفاظ على البيانات
+        if (!pName || pName === 'unknown' || pName === 'unknown patient') return true;
+        
+        const key = `${pName}_${orgName}`;
+        if (seenPatientOrg.has(key)) return false;
+        
+        seenPatientOrg.add(key);
+        return true;
+    });
+}
+
+function applyDeduplication(records) {
+    const seenPatientOrg = new Set();
+    
+    return records.filter(r => {
+        // الاعتماد على Patient ID إن وُجد، وإلا نستخدم الاسم كبديل (يُفضل دمج العمر لتفادي تشابه الأسماء)
+        const patientIdentifier = (r['Patient ID'] || r['Name'] || '').trim().toLowerCase();
+        const orgName = (r['Selective organism'] || '').trim().toLowerCase();
+        
+        // إذا كان المريض مجهولاً، لا نحذف العينة للحفاظ على البيانات
+        if (!patientIdentifier || patientIdentifier === 'unknown' || patientIdentifier === 'unknown patient') {
+            return true;
+        }
+        
+        // إنشاء مفتاح فريد: (معرف المريض + اسم البكتيريا)
+        const key = `${patientIdentifier}_${orgName}`;
+        
+        // إذا تم حساب هذه البكتيريا لهذا المريض مسبقاً، نتجاهلها (نحذف التكرار)
+        if (seenPatientOrg.has(key)) return false;
+        
+        seenPatientOrg.add(key);
+        return true;
+    });
+}
 // --- WARD FILTER LOGIC (Inpatient / Outpatient) ---
 function applyWardFilter(records, filterValue) {
     if (filterValue === 'inpatient') {
@@ -694,6 +735,9 @@ function loadAnalyticsFilters() {
     // 1. الفلترة حسب الوقت فقط للقوائم المنسدلة (لا تتأثر بالـ Inpatient/Outpatient)
     let dateRecords = filterByPeriod(allRecords, period); 
     
+    // تطبيق التنقيح لمنع تكرار المرضى
+    dateRecords = applyDeduplication(dateRecords);
+    
     let uniqueSamples = new Set(dateRecords.map(r => r.Sample).filter(Boolean));
     let currentSample = $('#guided_sample').val();
     
@@ -794,6 +838,9 @@ function generateGuidedAnalytics() {
     }
     
     records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
+    
+    // تطبيق دالة منع التكرار (Deduplication)
+    records = applyDeduplication(records);
         
         // الإبقاء على الحاوية ظاهرة دائماً لكي لا تختفي أزرار الفلاتر (Inpatient/Outpatient)
         $('#guidedPlaceholder').addClass('hidden');
@@ -879,6 +926,9 @@ function renderGuidedAST() {
     }
     
     records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
+    
+    // تطبيق دالة منع التكرار (Deduplication)
+    records = applyDeduplication(records);
     
     let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
     let abxStats = {};
@@ -999,6 +1049,9 @@ function renderPathoChart() {
     records = filterByPeriod(records, period);
     records = records.filter(r => r['Selective organism'] === bug);
     records = applyWardFilter(records, $('input[name="patho_ward"]:checked').val() || 'total');
+
+    // تطبيق دالة منع التكرار (Deduplication)
+    records = applyDeduplication(records);
 
     let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
     let abxStats = {};
@@ -1125,6 +1178,9 @@ function renderAbxChart() {
     records = filterByPeriod(records, period);
     records = applyWardFilter(records, $('input[name="abx_ward"]:checked').val() || 'total');
 
+    // تطبيق دالة منع التكرار (Deduplication)
+    records = applyDeduplication(records);
+
     let orgStats = {};
     records.forEach(r => {
         let org = r['Selective organism'];
@@ -1209,6 +1265,9 @@ window.generateAdvancedAnalytics = function() {
 
     // Apply Ward Filter (All / Inpatient / Outpatient)
     records = applyWardFilter(records, $('input[name="adv_ward"]:checked').val() || 'total');
+
+    // تطبيق دالة منع التكرار (Deduplication)
+    records = applyDeduplication(records);
 
     // --- NEW LOGIC: If left blank, automatically grab ALL available options ---
     if (targetOrgs.length === 0) {
