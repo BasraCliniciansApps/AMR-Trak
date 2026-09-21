@@ -787,10 +787,17 @@ $(document).on('change', '#guided_bug_select', function() {
 function generateGuidedAnalytics() {
     const targetSample = $('#guided_sample').val();
 
-    // Block execution if no valid specimen is selected
+    // 1. رسالة احترافية عند عدم اختيار عينة
     if (!targetSample || targetSample === "none") {
         $('#guidedContainer').addClass('hidden');
-        $('#guidedPlaceholder').addClass('hidden');
+        $('#guidedPlaceholder').removeClass('hidden').html(`
+            <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 mb-4 flex items-center gap-3 shadow-sm mx-1 mt-2">
+                <div class="bg-white p-1.5 rounded-full shadow-sm text-indigo-600 flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                </div>
+                <p class="text-xs font-bold text-indigo-900 leading-tight">Please select a specimen to view analytics.</p>
+            </div>
+        `);
         return;
     }
 
@@ -802,12 +809,26 @@ function generateGuidedAnalytics() {
         records = records.filter(r => r.Sample === targetSample); 
     }
     
-    records = applyWardFilter(records, $('input[name="adv_ward"]:checked').val() || 'total');
+    // تصحيح فلتر الردهة
     records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
     
+    // 2. رسالة "No Data Available" احترافية عند عدم وجود بيانات مع الاحتفاظ بالفلاتر
     if (records.length === 0) {
         $('#guidedContainer').addClass('hidden');
-        $('#guidedPlaceholder').addClass('hidden');
+        let sampleName = targetSample === "all" ? "All Specimens" : targetSample;
+        $('#guidedPlaceholder').removeClass('hidden').html(`
+            <div class="bg-slate-50 border-dashed border-2 border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center opacity-90 mx-1 mt-4">
+                <svg class="w-12 h-12 mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                <h4 class="text-sm font-bold text-slate-600 mb-1">No Data Available</h4>
+                <p class="text-xs text-slate-400">There are no records for <b>${sampleName}</b> in the selected ward.</p>
+            </div>
+        `);
+        return;
+    }
+
+    // إخفاء رسائل التنبيه وإظهار المخططات إذا كانت البيانات موجودة
+    $('#guidedPlaceholder').addClass('hidden');
+    $('#guidedContainer').removeClass('hidden');
         return;
     }
 
