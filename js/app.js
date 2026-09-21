@@ -114,18 +114,16 @@ function syncCloudToLocal() {
     
     db.collection("amr_sync").doc("hospital_main").onSnapshot((doc) => {
         if (doc.exists) {
-            // منع التحديث العكسي المزعج إذا كانت حاسبتك الحالية هي من تقوم بالرفع الآن
             if (doc.metadata.hasPendingWrites) return;
 
             const cloudRecords = doc.data().records || [];
             const cloudSettings = doc.data().settings || null;
             
-            let localRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-
             let localRecordsStr = localStorage.getItem('amr_records') || "[]";
             let cloudRecordsStr = JSON.stringify(cloudRecords);
+            let localRecords = JSON.parse(localRecordsStr);
 
-            // Only overwrite and rebuild the UI if the cloud data is actually different
+            // التحديث الذكي: يتم إعادة رسم الجدول فقط إذا كانت البيانات السحابية تختلف فعلياً
             if (cloudRecordsStr !== localRecordsStr && cloudRecords.length > 0) {
                 localStorage.setItem('amr_records', cloudRecordsStr);
                 
@@ -1076,14 +1074,14 @@ function initDataTable() {
 
     if ($.fn.DataTable.isDataTable('#recordsTable')) {
         $('#recordsTable').DataTable().destroy();
-        $('#recordsTable').empty(); // Clears old DOM elements from memory
+        $('#recordsTable').empty(); // حل مشكلة الذاكرة القديمة
     }
 
     dataTable = $('#recordsTable').DataTable({
         data: records,
         columns: cols,
         scrollX: true, 
-        deferRender: true, // Drastically speeds up rendering large datasets
+        deferRender: true, // تسريع عرض البيانات الهائلة
         order: [[ 6, "desc" ]],
         stateSave: true,
         dom: '<"flex flex-col sm:flex-row justify-between items-center mb-4 gap-3"Bf>rt<"flex flex-col sm:flex-row justify-between items-center mt-4 gap-3"ip>',
