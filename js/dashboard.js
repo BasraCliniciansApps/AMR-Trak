@@ -794,31 +794,34 @@ function generateGuidedAnalytics() {
     }
     
     records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
-    
-    if (records.length === 0) {
-        $('#guidedContainer').addClass('hidden');
-        $('#guidedPlaceholder').removeClass('hidden').html(`
-            <div class="bg-slate-50 border-dashed border-2 border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center mx-1 mt-4">
-                <h4 class="text-sm font-bold text-slate-600">No Data Available</h4>
-            </div>
-        `);
-        return;
-    }
+        
+        // الإبقاء على الحاوية ظاهرة دائماً لكي لا تختفي أزرار الفلاتر (Inpatient/Outpatient)
+        $('#guidedPlaceholder').addClass('hidden');
+        $('#guidedContainer').removeClass('hidden');
 
-    $('#guidedPlaceholder').addClass('hidden');
-    $('#guidedContainer').removeClass('hidden');
-
-    let orgCounts = {};
+        let orgCounts = {};
     records.forEach(r => {
         let org = r['Selective organism'];
         if(org) orgCounts[org] = (orgCounts[org] || 0) + 1;
     });
 
     currentGuidedOrgs = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a]);
-    
-    if(chartGuidedPie_instance) chartGuidedPie_instance.destroy();
-    
-    let pieLabels = currentGuidedOrgs.map(o => formatScientificName(o));
+        
+        if(chartGuidedPie_instance) chartGuidedPie_instance.destroy();
+        
+        // تنظيف عبارة No Data إن وجدت واسترجاع الـ Canvas
+        if ($('#pie_nodata').length) $('#pie_nodata').replaceWith('<canvas id="chartGuidedPie"></canvas>');
+        
+        // في حال عدم وجود بيانات، نظهر No Data تتوسط الدائرة
+        if (currentGuidedOrgs.length === 0) {
+            $('#chartGuidedPie').replaceWith('<div id="pie_nodata" class="flex items-center justify-center h-full w-full text-slate-400 font-bold text-sm absolute inset-0">No Data Available</div>');
+            $('#guided_bug_select').empty().append(new Option("No Data Available", ""));
+            currentGuidedBug = ""; // تفريغ البكتيريا الحالية
+            renderGuidedAST(); 
+            return;
+        }
+        
+        let pieLabels = currentGuidedOrgs.map(o => formatScientificName(o));
     let pieData = currentGuidedOrgs.map(o => orgCounts[o]);
     let vibrantColors = ['#0ea5e9', '#ec4899', '#8b5cf6', '#14b8a6', '#f59e0b', '#ef4444', '#84cc16', '#06b6d4', '#d946ef', '#10b981'];
 
@@ -852,7 +855,17 @@ function generateGuidedAnalytics() {
 $(document).on('change', '#guided_hide_low', function() { renderGuidedAST(); });
 
 function renderGuidedAST() {
-    if (!currentGuidedBug) return;
+    if (chartGuidedAMR_instance) chartGuidedAMR_instance.destroy();
+    
+    // إذا لم تكن هناك بكتيريا متاحة، نعرض No Data تتوسط الشاشة
+    if (!currentGuidedBug || currentGuidedBug === "") {
+        $('#guidedAmrContainer').html('<div class="flex items-center justify-center h-full w-full text-slate-400 font-bold text-sm absolute inset-0">No Data Available</div>');
+        $('#guidedAmrContainer').css('width', '100%');
+        return;
+    }
+    
+    // استرجاع الكانفاس لمخطط المضادات الحيوية في حال وجود بيانات
+    $('#guidedAmrContainer').html('<canvas id="chartGuidedAMR"></canvas>');
 
     const targetSample = $('#guided_sample').val();
     let period = $('input[name="guided_period"]:checked').val() || 'all';
@@ -903,7 +916,11 @@ function renderGuidedAST() {
         nDataArr.push(s.tested);
     });
 
-    if (chartGuidedAMR_instance) chartGuidedAMR_instance.destroy();
+    if (labels.length === 0) {
+        $('#guidedAmrContainer').html('<div class="flex items-center justify-center h-full w-full text-slate-400 font-bold text-sm absolute inset-0">No Data Available</div>');
+        $('#guidedAmrContainer').css('width', '100%');
+        return;
+    }
 
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#guidedAmrContainer').css('width', chartWidth);
