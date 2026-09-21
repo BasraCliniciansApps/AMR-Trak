@@ -690,8 +690,9 @@ function loadAnalyticsFilters() {
 
     let period = $('input[name="guided_period"]:checked').val() || 'all';
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+    
+    // 1. الفلترة حسب التاريخ فقط (هنا نعزل قائمة العينات عن تأثير الردهة)
     let dateRecords = filterByPeriod(allRecords, period); 
-    dateRecords = applyWardFilter(dateRecords, $('input[name="guided_ward"]:checked').val() || 'total');
     
     let uniqueSamples = new Set(dateRecords.map(r => r.Sample).filter(Boolean));
     let currentSample = $('#guided_sample').val();
@@ -705,28 +706,49 @@ function loadAnalyticsFilters() {
         $('#guided_sample').append(new Option(s, s));
     });
     
-    // Keep selection if valid, otherwise force "none"
-    if (currentSample && currentSample !== "none" && (uniqueSamples.has(currentSample) || currentSample === "all")) {
+    // احترام نية المستخدم: الاحتفاظ بالاختيار حتى لو اختفت البيانات (يمنع تصفير القائمة المزعج)
+    if (currentSample && currentSample !== "none") {
+        if (currentSample !== "all" && !uniqueSamples.has(currentSample)) {
+            $('#guided_sample').append(new Option(currentSample, currentSample));
+        }
         $('#guided_sample').val(currentSample);
     } else {
         $('#guided_sample').val("none");
     }
 
+    // 2. الآن نطبق فلتر الردهة (Inpatient/Outpatient) لباقي التحليلات (البكتيريا والمضادات)
+    let fullyFilteredRecords = applyWardFilter(dateRecords, $('input[name="guided_ward"]:checked').val() || 'total');
+
     let orgs = new Set(), abxs = new Set();
-    let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
+    let baseAbxList = typeof abxList !== 'undefined' ? abxList : [];
+    let allPossibleAbxs = [...baseAbxList, ...getCustomAntibiotics().map(a=>a.name)];
     
-    dateRecords.forEach(r => {
+    fullyFilteredRecords.forEach(r => {
         if(r['Selective organism']) orgs.add(r['Selective organism']);
         allPossibleAbxs.forEach(a => { if (r[a] && r[a] !== '-' && r[a] !== '') abxs.add(a); });
     });
 
     let currentAdvOrgs = $('#adv_organism').val() || [];
     $('#adv_organism').empty();
-    Array.from(orgs).sort().forEach(o => $('#adv_organism').append(new Option(o, o, currentAdvOrgs.includes(o), currentAdvOrgs.includes(o))));
+    Array.from(orgs).sort().forEach(o => {
+        let isSelected = currentAdvOrgs.includes(o);
+        $('#adv_organism').append(new Option(o, o, isSelected, isSelected));
+    });
+    // الاحتفاظ باختيارات البكتيريا السابقة لكي لا تختفي فجأة
+    currentAdvOrgs.forEach(o => {
+        if (!orgs.has(o)) $('#adv_organism').append(new Option(o, o, true, true));
+    });
 
     let currentAdvAbxs = $('#adv_antibiotic').val() || [];
     $('#adv_antibiotic').empty();
-    Array.from(abxs).sort().forEach(a => $('#adv_antibiotic').append(new Option(a, a, currentAdvAbxs.includes(a), currentAdvAbxs.includes(a))));
+    Array.from(abxs).sort().forEach(a => {
+        let isSelected = currentAdvAbxs.includes(a);
+        $('#adv_antibiotic').append(new Option(a, a, isSelected, isSelected));
+    });
+    // الاحتفاظ باختيارات المضادات السابقة
+    currentAdvAbxs.forEach(a => {
+        if (!abxs.has(a)) $('#adv_antibiotic').append(new Option(a, a, true, true));
+    });
 
     $('#guided_sample, #adv_organism, #adv_antibiotic').trigger('change.select2');
     isUpdatingFilters = false;
@@ -734,7 +756,6 @@ function loadAnalyticsFilters() {
     // Trigger analysis
     generateGuidedAnalytics();
 }
-
 window.toggleGuidedSearch = function() {
     $('#guided_content').toggleClass('hidden');
     $('#guided_icon').toggleClass('rotate-180');
