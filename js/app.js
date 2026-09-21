@@ -30,7 +30,30 @@ auth.onAuthStateChanged((user) => {
         $('#mainAppContainer').addClass('hidden');
     }
 });
-
+        
+function applyDeduplication(records) {
+    const seenPatientOrg = new Set();
+    
+    return records.filter(r => {
+        // الاعتماد على Patient ID إن وُجد، وإلا نستخدم الاسم كبديل (يُفضل دمج العمر لتفادي تشابه الأسماء)
+        const patientIdentifier = (r['Patient ID'] || r['Name'] || '').trim().toLowerCase();
+        const orgName = (r['Selective organism'] || '').trim().toLowerCase();
+        
+        // إذا كان المريض مجهولاً، لا نحذف العينة للحفاظ على البيانات
+        if (!patientIdentifier || patientIdentifier === 'unknown' || patientIdentifier === 'unknown patient') {
+            return true;
+        }
+        
+        // إنشاء مفتاح فريد: (معرف المريض + اسم البكتيريا)
+        const key = `${patientIdentifier}_${orgName}`;
+        
+        // إذا تم حساب هذه البكتيريا لهذا المريض مسبقاً، نتجاهلها (نحذف التكرار)
+        if (seenPatientOrg.has(key)) return false;
+        
+        seenPatientOrg.add(key);
+        return true;
+    });
+}
 // دالة تسجيل الدخول (مرتبطة بالزر في شاشة الدخول)
 function loginUser() {
     const email = $('#loginEmail').val();
