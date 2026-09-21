@@ -690,13 +690,13 @@ function loadAnalyticsFilters() {
 
     let period = $('input[name="guided_period"]:checked').val() || 'all';
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+    
+    // 1. الفلترة حسب الوقت فقط للقوائم المنسدلة (لا تتأثر بالـ Inpatient/Outpatient)
     let dateRecords = filterByPeriod(allRecords, period); 
-    dateRecords = applyWardFilter(dateRecords, $('input[name="guided_ward"]:checked').val() || 'total');
     
     let uniqueSamples = new Set(dateRecords.map(r => r.Sample).filter(Boolean));
     let currentSample = $('#guided_sample').val();
     
-    // Force the "Select a Specimen" prompt
     $('#guided_sample').empty();
     $('#guided_sample').append(new Option("Select a specimen...", "none", true, true));
     $('#guided_sample').append(new Option("All Specimens", "all"));
@@ -705,8 +705,11 @@ function loadAnalyticsFilters() {
         $('#guided_sample').append(new Option(s, s));
     });
     
-    // Keep selection if valid, otherwise force "none"
-    if (currentSample && currentSample !== "none" && (uniqueSamples.has(currentSample) || currentSample === "all")) {
+    // الاحتفاظ بالاختيار حتى لو كانت نتيجته صفر بسبب الردهة
+    if (currentSample && currentSample !== "none") {
+        if (currentSample !== "all" && !uniqueSamples.has(currentSample)) {
+            $('#guided_sample').append(new Option(currentSample, currentSample));
+        }
         $('#guided_sample').val(currentSample);
     } else {
         $('#guided_sample').val("none");
@@ -722,19 +725,29 @@ function loadAnalyticsFilters() {
 
     let currentAdvOrgs = $('#adv_organism').val() || [];
     $('#adv_organism').empty();
-    Array.from(orgs).sort().forEach(o => $('#adv_organism').append(new Option(o, o, currentAdvOrgs.includes(o), currentAdvOrgs.includes(o))));
+    Array.from(orgs).sort().forEach(o => {
+        let isSelected = currentAdvOrgs.includes(o);
+        $('#adv_organism').append(new Option(o, o, isSelected, isSelected));
+    });
+    currentAdvOrgs.forEach(o => {
+        if (!orgs.has(o)) $('#adv_organism').append(new Option(o, o, true, true));
+    });
 
     let currentAdvAbxs = $('#adv_antibiotic').val() || [];
     $('#adv_antibiotic').empty();
-    Array.from(abxs).sort().forEach(a => $('#adv_antibiotic').append(new Option(a, a, currentAdvAbxs.includes(a), currentAdvAbxs.includes(a))));
+    Array.from(abxs).sort().forEach(a => {
+        let isSelected = currentAdvAbxs.includes(a);
+        $('#adv_antibiotic').append(new Option(a, a, isSelected, isSelected));
+    });
+    currentAdvAbxs.forEach(a => {
+        if (!abxs.has(a)) $('#adv_antibiotic').append(new Option(a, a, true, true));
+    });
 
     $('#guided_sample, #adv_organism, #adv_antibiotic').trigger('change.select2');
     isUpdatingFilters = false;
     
-    // Trigger analysis
     generateGuidedAnalytics();
 }
-
 window.toggleGuidedSearch = function() {
     $('#guided_content').toggleClass('hidden');
     $('#guided_icon').toggleClass('rotate-180');
@@ -766,10 +779,9 @@ $(document).on('change', '#guided_bug_select', function() {
 function generateGuidedAnalytics() {
     const targetSample = $('#guided_sample').val();
 
-    // Block execution if no valid specimen is selected
     if (!targetSample || targetSample === "none") {
         $('#guidedContainer').addClass('hidden');
-        $('#guidedPlaceholder').addClass('hidden');
+        $('#guidedPlaceholder').removeClass('hidden').html('<div class="text-sm font-bold text-slate-500 text-center py-4">Please select a specimen to generate analytics.</div>');
         return;
     }
 
@@ -781,12 +793,20 @@ function generateGuidedAnalytics() {
         records = records.filter(r => r.Sample === targetSample); 
     }
     
-    records = applyWardFilter(records, $('input[name="adv_ward"]:checked').val() || 'total');
     records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
     
     if (records.length === 0) {
         $('#guidedContainer').addClass('hidden');
-        $('#guidedPlaceholder').addClass('hidden');
+        $('#guidedPlaceholder').removeClass('hidden').html(`
+            <div class="bg-slate-50 border-dashed border-2 border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center text-center mx-1 mt-4">
+                <h4 class="text-sm font-bold text-slate-600">No Data Available</h4>
+            </div>
+        `);
+        return;
+    }
+
+    $('#guidedPlaceholder').addClass('hidden');
+    $('#guidedContainer').removeClass('hidden');
         return;
     }
 
@@ -931,17 +951,22 @@ function updatePathoDropdowns() {
 
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
     records = filterByPeriod(records, period);
-    records = applyWardFilter(records, $('input[name="patho_ward"]:checked').val() || 'total');
+    // فصلنا فلتر الردهة عن القائمة المنسدلة لتبقى ثابتة
 
     let orgs = new Set();
     records.forEach(r => { if(r['Selective organism']) orgs.add(r['Selective organism']); });
 
     let bugSelect = $('#patho_bug');
     let currentVal = bugSelect.val();
+    
+    if (currentVal && !orgs.has(currentVal)) {
+        orgs.add(currentVal);
+    }
+
     bugSelect.empty().append(new Option("Select a bacteria...", ""));
     Array.from(orgs).sort().forEach(o => bugSelect.append(new Option(formatScientificName(o), o)));
     
-    if(currentVal && orgs.has(currentVal)) bugSelect.val(currentVal);
+    if(currentVal) bugSelect.val(currentVal);
     bugSelect.trigger('change.select2');
     renderPathoChart();
 }
@@ -952,6 +977,7 @@ function renderPathoChart() {
     const bug = $('#patho_bug').val();
     if(!bug) {
         if (chartPathoAMR_instance) chartPathoAMR_instance.destroy();
+        $('#pathoAmrContainer').html('<canvas id="chartPathoAMR"></canvas>');
         return;
     }
 
@@ -960,7 +986,6 @@ function renderPathoChart() {
     records = filterByPeriod(records, period);
     records = records.filter(r => r['Selective organism'] === bug);
     records = applyWardFilter(records, $('input[name="patho_ward"]:checked').val() || 'total');
-    
 
     let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
     let abxStats = {};
@@ -978,6 +1003,16 @@ function renderPathoChart() {
     });
 
     let testedAbxs = Object.keys(abxStats).sort();
+    
+    if (chartPathoAMR_instance) chartPathoAMR_instance.destroy();
+    
+    if (testedAbxs.length === 0) {
+        $('#pathoAmrContainer').html('<div class="flex items-center justify-center h-[200px] w-full text-slate-400 font-bold text-sm">No Data Available</div>');
+        return;
+    }
+    
+    $('#pathoAmrContainer').html('<canvas id="chartPathoAMR"></canvas>');
+
     let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
     let baseColor = currentPathoMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : 'rgba(225, 29, 72, 0.9)'; 
     let hideLowN = $('#patho_hide_low').is(':checked');
@@ -997,8 +1032,6 @@ function renderPathoChart() {
         ciData.push(wilsonScoreCI(targetVal, s.tested));
         nDataArr.push(s.tested);
     });
-
-    if (chartPathoAMR_instance) chartPathoAMR_instance.destroy();
 
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#pathoAmrContainer').css('width', chartWidth);
@@ -1041,7 +1074,7 @@ function updateAbxDropdowns() {
 
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
     records = filterByPeriod(records, period);
-    records = applyWardFilter(records, $('input[name="abx_ward"]:checked').val() || 'total');
+    // تم فصل فلتر الردهة للحفاظ على قائمة المضادات
 
     let abxs = new Set();
     let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
@@ -1051,10 +1084,15 @@ function updateAbxDropdowns() {
 
     let drugSelect = $('#abx_drug');
     let currentVal = drugSelect.val();
+    
+    if (currentVal && !abxs.has(currentVal)) {
+        abxs.add(currentVal);
+    }
+
     drugSelect.empty().append(new Option("Select an antimicrobial...", ""));
     Array.from(abxs).sort().forEach(a => drugSelect.append(new Option(a, a)));
     
-    if(currentVal && abxs.has(currentVal)) drugSelect.val(currentVal);
+    if(currentVal) drugSelect.val(currentVal);
     drugSelect.trigger('change.select2');
     renderAbxChart();
 }
@@ -1065,6 +1103,7 @@ function renderAbxChart() {
     const drug = $('#abx_drug').val();
     if(!drug) {
         if (chartAbxAMR_instance) chartAbxAMR_instance.destroy();
+        $('#abxAmrContainer').html('<canvas id="chartAbxAMR"></canvas>');
         return;
     }
 
@@ -1086,6 +1125,16 @@ function renderAbxChart() {
     });
 
     let testedOrgs = Object.keys(orgStats).sort();
+    
+    if (chartAbxAMR_instance) chartAbxAMR_instance.destroy();
+
+    if (testedOrgs.length === 0) {
+        $('#abxAmrContainer').html('<div class="flex items-center justify-center h-[200px] w-full text-slate-400 font-bold text-sm">No Data Available</div>');
+        return;
+    }
+    
+    $('#abxAmrContainer').html('<canvas id="chartAbxAMR"></canvas>');
+
     let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
     let baseColor = currentAbxMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : 'rgba(225, 29, 72, 0.9)'; 
     let hideLowN = $('#abx_hide_low').is(':checked');
@@ -1106,8 +1155,6 @@ function renderAbxChart() {
         ciData.push(wilsonScoreCI(targetVal, s.tested));
         nDataArr.push(s.tested);
     });
-
-    if (chartAbxAMR_instance) chartAbxAMR_instance.destroy();
 
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#abxAmrContainer').css('width', chartWidth);
@@ -1192,6 +1239,13 @@ window.generateAdvancedAnalytics = function() {
     let hmOrgs = Object.keys(heatmapStats).sort();
     let hmAbxs = targetAbxs.sort();
 
+    let hasData = hmOrgs.some(o => hmAbxs.some(a => heatmapStats[o][a] && heatmapStats[o][a].t > 0));
+
+    if (!hasData) {
+        $('#heatmapWrapper').html('<div class="flex items-center justify-center h-[100px] w-full text-slate-400 font-bold text-sm">No Data Available</div>');
+        return;
+    }
+
     let hmHtml = '<table class="heatmap-table"><thead><tr><th>Org (n)</th>';
     hmAbxs.forEach(a => { hmHtml += `<th><div class="w-16 truncate text-[10px]" title="${a}">${a}</div></th>`; });
     hmHtml += '</tr></thead><tbody>';
@@ -1220,7 +1274,6 @@ window.generateAdvancedAnalytics = function() {
 
                 if (isLow) textClass += dangerScore > 60 ? ' text-red-100' : ' opacity-70';
                 
-                // Added a tiny div for the CI under the percentage
                 hmHtml += `<td class="${bgClass} ${textClass} align-middle">
                     <div class="leading-none">${p}% ${isLow ? '<span class="text-black font-bold">*</span>' : ''}</div>
                     <div class="text-[7.5px] font-medium opacity-80 tracking-tighter mt-1 whitespace-nowrap">95% CI (${ci.lower}% - ${ci.upper}%)</div>
