@@ -1,5 +1,5 @@
 {
-  "name": "AMR Trak",
+  "name": "AMR Tracker",
   "short_name": "AMR Trak",
   "start_url": "./dashboard.html",
   "display": "standalone",
@@ -7,14 +7,16 @@
   "theme_color": "#0d9488",
   "icons": [
     {
-      "src": "icon.png",
+      "src": "./icon.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "icon.png",
+      "src": "./icon.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
