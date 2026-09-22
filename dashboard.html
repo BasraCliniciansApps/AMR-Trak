@@ -590,12 +590,47 @@
     <script src="js/data.js"></script>
     <script src="js/dashboard.js?v=2.0"></script>
 
-    <!-- تسجيل Service Worker لعمل التطبيق أوفلاين -->
+    <!-- تسجيل Service Worker مع إشعار اكتمال التحميل -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Service Worker registered successfully!', reg.scope))
+                    .then(reg => {
+                        // مراقبة حالة تثبيت ملفات الأوفلاين
+                        reg.onupdatefound = () => {
+                            const installingWorker = reg.installing;
+                            if (installingWorker == null) return;
+                            
+                            installingWorker.onstatechange = () => {
+                                if (installingWorker.state === 'installed') {
+                                    if (!navigator.serviceWorker.controller) {
+                                        // هذه الرسالة تظهر في المرة الأولى التي يفتح فيها التطبيق ويحمل ملفاته
+                                        Swal.fire({
+                                            toast: true,
+                                            position: 'top',
+                                            icon: 'success',
+                                            title: 'جاهز للعمل أوفلاين 📱',
+                                            text: 'تم تحميل جميع الملفات والمكتبات بنجاح، يمكنك الآن استخدام التطبيق بدون إنترنت.',
+                                            showConfirmButton: false,
+                                            timer: 5000,
+                                            timerProgressBar: true
+                                        });
+                                    } else {
+                                        // هذه الرسالة تظهر إذا قمت أنت برفع تحديث جديد للكود
+                                        Swal.fire({
+                                            toast: true,
+                                            position: 'top',
+                                            icon: 'info',
+                                            title: 'تم تحديث التطبيق 🔄',
+                                            text: 'تم تنزيل إصدار جديد في الخلفية. سيتم تطبيقه في المرة القادمة التي تفتح فيها التطبيق.',
+                                            showConfirmButton: false,
+                                            timer: 4000
+                                        });
+                                    }
+                                }
+                            };
+                        };
+                    })
                     .catch(err => console.error('Service Worker registration failed:', err));
             });
         }
