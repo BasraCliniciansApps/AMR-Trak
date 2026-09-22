@@ -590,7 +590,7 @@
     <script src="js/data.js"></script>
     <script src="js/dashboard.js?v=2.0"></script>
 
-    <!-- تسجيل Service Worker مع مؤشرات التحميل المرئية -->
+    <!-- Service Worker Registration with Progress Bar -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -600,39 +600,77 @@
                             const installingWorker = reg.installing;
                             if (installingWorker == null) return;
 
-                            // إظهار نافذة التحميل بمجرد بدء سحب الملفات
+                            let progressInterval;
+                            let currentProgress = 0;
+
+                            // إظهار نافذة التحميل مع شريط تقدم ونسبة مئوية باللغة الإنجليزية
                             Swal.fire({
-                                title: 'جاري تهيئة النظام...',
-                                html: 'يتم الآن تحميل الملفات للعمل أوفلاين، يرجى عدم إغلاق الصفحة.',
+                                title: 'Initializing System...',
+                                html: `
+                                    <p class="text-sm text-slate-500 mb-4">Downloading files for offline use, please wait...</p>
+                                    <div class="w-full bg-slate-200 rounded-full h-2.5 mb-1">
+                                        <div id="sw-progress" class="bg-teal-600 h-2.5 rounded-full" style="width: 0%; transition: width 0.4s ease;"></div>
+                                    </div>
+                                    <p id="sw-progress-text" class="text-xs text-slate-600 font-bold text-right">0%</p>
+                                `,
                                 allowOutsideClick: false,
+                                showConfirmButton: false,
                                 didOpen: () => {
-                                    Swal.showLoading();
+                                    // محاكاة تقدم التحميل بذكاء
+                                    progressInterval = setInterval(() => {
+                                        if (currentProgress < 90) {
+                                            currentProgress += Math.floor(Math.random() * 10) + 5;
+                                            if (currentProgress > 90) currentProgress = 90;
+                                            
+                                            const progressBar = document.getElementById('sw-progress');
+                                            const progressText = document.getElementById('sw-progress-text');
+                                            
+                                            if (progressBar && progressText) {
+                                                progressBar.style.width = currentProgress + '%';
+                                                progressText.innerText = currentProgress + '%';
+                                            }
+                                        }
+                                    }, 300);
                                 }
                             });
                             
                             installingWorker.onstatechange = () => {
                                 if (installingWorker.state === 'installed') {
-                                    if (!navigator.serviceWorker.controller) {
-                                        // اكتمال التحميل للمرة الأولى
-                                        Swal.fire({
-                                            icon: 'success',
-                                            title: 'جاهز للعمل أوفلاين 📱',
-                                            text: 'تم خزن جميع الملفات بنجاح. يمكنك الآن فصل الإنترنت واستخدام التطبيق بأمان.',
-                                            showConfirmButton: true,
-                                            confirmButtonColor: '#0d9488'
-                                        });
-                                    } else {
-                                        // اكتمال تحميل تحديث جديد في الخلفية
-                                        Swal.fire({
-                                            toast: true,
-                                            position: 'top',
-                                            icon: 'info',
-                                            title: 'تم تحديث التطبيق 🔄',
-                                            text: 'سيتم تطبيق التحديثات في المرة القادمة التي تفتح فيها التطبيق.',
-                                            showConfirmButton: false,
-                                            timer: 4000
-                                        });
+                                    // عند الاكتمال الفعلي، نوقف العداد ونجعله 100%
+                                    clearInterval(progressInterval);
+                                    const progressBar = document.getElementById('sw-progress');
+                                    const progressText = document.getElementById('sw-progress-text');
+                                    
+                                    if (progressBar && progressText) {
+                                        progressBar.style.width = '100%';
+                                        progressText.innerText = '100%';
                                     }
+                                    
+                                    // تأخير بسيط جداً لإظهار نسبة 100% بوضوح للمستخدم قبل إغلاق النافذة
+                                    setTimeout(() => {
+                                        if (!navigator.serviceWorker.controller) {
+                                            // رسالة الاكتمال للمرة الأولى
+                                            Swal.fire({
+                                                icon: 'success',
+                                                title: 'Ready for Offline Use 📱',
+                                                text: 'Download complete, the application can be used offline.',
+                                                showConfirmButton: true,
+                                                confirmButtonText: 'OK',
+                                                confirmButtonColor: '#0d9488'
+                                            });
+                                        } else {
+                                            // رسالة تحديث التطبيق في الخلفية
+                                            Swal.fire({
+                                                toast: true,
+                                                position: 'top',
+                                                icon: 'info',
+                                                title: 'App Updated 🔄',
+                                                text: 'New updates have been downloaded and will be applied next time.',
+                                                showConfirmButton: false,
+                                                timer: 4000
+                                            });
+                                        }
+                                    }, 600);
                                 }
                             };
                         };
