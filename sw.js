@@ -1,43 +1,29 @@
-const CACHE_NAME = 'amr-tracker-cache-v1';
+const CACHE_NAME = 'amr-dashboard-cache-v1';
 
+// قائمة بالملفات والروابط الخارجية التي يعتمد عليها تطبيق الهاتف
 const PRECACHE_URLS = [
     './',
-    './index.html',
     './dashboard.html',
-    './css/style.css',
-    './css/jquery.dataTables.min.css',
-    './css/buttons.dataTables.min.css',
-    './css/select2.min.css',
-    './js/tailwindcss.js',
-    './js/jquery.min.js',
-    './js/jquery.dataTables.min.js',
-    './js/dataTables.buttons.min.js',
-    './js/jszip.min.js',
-    './js/buttons.html5.min.js',
-    './js/buttons.print.min.js',
-    './js/select2.min.js',
-    './js/sweetalert2.min.js',
-    './js/chart.min.js',
-    './js/xlsx-populate.min.js',
-    './js/FileSaver.min.js',
-    './js/xlsx.full.min.js',
-    './js/firebase-app-compat.js',
-    './js/firebase-auth-compat.js',
-    './js/firebase-firestore-compat.js',
     './js/data.js',
-    './js/app.js',
-    './js/dashboard.js',
+    './js/dashboard.js?v=2.0',
     './manifest.json',
     './icon.png',
-    './organisms_dictionary.json',
-    './specimens_dictionary.json',
-    './Antibiogram_5.xlsx'
+    'https://cdn.tailwindcss.com',
+    'https://code.jquery.com/jquery-3.7.0.min.js',
+    'https://cdn.jsdelivr.net/npm/chart.js',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
+    'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
+    'https://cdn.jsdelivr.net/npm/sweetalert2@11',
+    'https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js',
+    'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js'
 ];
 
 self.addEventListener('install', event => {
     self.skipWaiting();
     event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS))
+        caches.open(CACHE_NAME).then(cache => {
+            return cache.addAll(PRECACHE_URLS);
+        })
     );
 });
 
@@ -54,17 +40,22 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+    // تخطي طلبات فايربيس (لكي لا تتعارض المزامنة الحية مع الكاش)
     if (event.request.url.includes('firestore.googleapis.com')) return;
 
     event.respondWith(
         fetch(event.request)
             .then(response => {
-                if (response && response.status === 200 && response.type === 'basic') {
+                // تحديث الكاش بالملفات الجديدة بصمت عند توفر الانترنت
+                if (response && response.status === 200) {
                     const responseClone = response.clone();
                     caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
                 }
                 return response;
             })
-            .catch(() => caches.match(event.request))
+            .catch(() => {
+                // في حال غياب الإنترنت، اجلب الملفات من الكاش
+                return caches.match(event.request);
+            })
     );
 });
