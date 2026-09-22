@@ -590,39 +590,45 @@
     <script src="js/data.js"></script>
     <script src="js/dashboard.js?v=2.0"></script>
 
-    <!-- تسجيل Service Worker مع إشعار اكتمال التحميل -->
+    <!-- تسجيل Service Worker مع مؤشرات التحميل المرئية -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
                     .then(reg => {
-                        // مراقبة حالة تثبيت ملفات الأوفلاين
                         reg.onupdatefound = () => {
                             const installingWorker = reg.installing;
                             if (installingWorker == null) return;
+
+                            // إظهار نافذة التحميل بمجرد بدء سحب الملفات
+                            Swal.fire({
+                                title: 'جاري تهيئة النظام...',
+                                html: 'يتم الآن تحميل الملفات للعمل أوفلاين، يرجى عدم إغلاق الصفحة.',
+                                allowOutsideClick: false,
+                                didOpen: () => {
+                                    Swal.showLoading();
+                                }
+                            });
                             
                             installingWorker.onstatechange = () => {
                                 if (installingWorker.state === 'installed') {
                                     if (!navigator.serviceWorker.controller) {
-                                        // هذه الرسالة تظهر في المرة الأولى التي يفتح فيها التطبيق ويحمل ملفاته
+                                        // اكتمال التحميل للمرة الأولى
                                         Swal.fire({
-                                            toast: true,
-                                            position: 'top',
                                             icon: 'success',
                                             title: 'جاهز للعمل أوفلاين 📱',
-                                            text: 'تم تحميل جميع الملفات والمكتبات بنجاح، يمكنك الآن استخدام التطبيق بدون إنترنت.',
-                                            showConfirmButton: false,
-                                            timer: 5000,
-                                            timerProgressBar: true
+                                            text: 'تم خزن جميع الملفات بنجاح. يمكنك الآن فصل الإنترنت واستخدام التطبيق بأمان.',
+                                            showConfirmButton: true,
+                                            confirmButtonColor: '#0d9488'
                                         });
                                     } else {
-                                        // هذه الرسالة تظهر إذا قمت أنت برفع تحديث جديد للكود
+                                        // اكتمال تحميل تحديث جديد في الخلفية
                                         Swal.fire({
                                             toast: true,
                                             position: 'top',
                                             icon: 'info',
                                             title: 'تم تحديث التطبيق 🔄',
-                                            text: 'تم تنزيل إصدار جديد في الخلفية. سيتم تطبيقه في المرة القادمة التي تفتح فيها التطبيق.',
+                                            text: 'سيتم تطبيق التحديثات في المرة القادمة التي تفتح فيها التطبيق.',
                                             showConfirmButton: false,
                                             timer: 4000
                                         });
@@ -631,7 +637,10 @@
                             };
                         };
                     })
-                    .catch(err => console.error('Service Worker registration failed:', err));
+                    .catch(err => {
+                        console.error('Service Worker registration failed:', err);
+                        Swal.close();
+                    });
             });
         }
     </script>
