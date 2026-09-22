@@ -589,5 +589,16 @@
 
     <script src="js/data.js"></script>
     <script src="js/dashboard.js?v=2.0"></script>
+
+    <!-- تسجيل Service Worker لعمل التطبيق أوفلاين -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registered successfully!', reg.scope))
+                    .catch(err => console.error('Service Worker registration failed:', err));
+            });
+        }
+    </script>
 </body>
 </html>
