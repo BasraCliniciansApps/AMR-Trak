@@ -539,6 +539,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
         if (!hasSRIData) { skippedCount++; continue; }
 
         let pId = idxID > -1 && cols[idxID] ? String(cols[idxID]).trim() : "Unknown";
+        let patientID = idxPatientID > -1 && cols[idxPatientID] ? String(cols[idxPatientID]).trim() : "";
         let fName = idxFName > -1 && cols[idxFName] ? cols[idxFName] : "";
         let lName = idxLName > -1 && cols[idxLName] ? cols[idxLName] : "";
         let name = (fName + " " + lName).trim() || "Unknown Patient";
@@ -595,7 +596,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
         if (orgNameCleanup[fullOrgName]) fullOrgName = orgNameCleanup[fullOrgName];
 
         let record = {
-            'Patient ID': pId,
+            'Patient ID': patientID,
             'Name': name, 'Age': ageNum, 'Age Unit': ageUnit, 'Sex': sex,
             'Ward': ward, 'Sample': sample, 'Date': formattedDate,
             'Selective organism': fullOrgName, 'Antibiogram organism': fullOrgName 
