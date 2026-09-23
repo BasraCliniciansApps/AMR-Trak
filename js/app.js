@@ -386,8 +386,8 @@ async function processDataExtraction(event) {
                 const workbook = await XlsxPopulate.fromDataAsync(arrayBuffer);
                 const values = workbook.sheet(0).usedRange().value();
                 
-                // Convert 2D Excel array to standardized string array (handling empty cells)
-                const rawData = values.map(row => row.map(cell => cell != null ? String(cell).trim() : ""));
+                // Convert 2D Excel array to standardized string array (handling empty rows and cells safely)
+                const rawData = values.map(row => row ? row.map(cell => cell != null ? String(cell).trim() : "") : []);
                 parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event);
             } catch (err) {
                 console.error(err);
@@ -421,12 +421,12 @@ async function processDataExtraction(event) {
 
 // --- UNIFIED INJECTION LOGIC ---
 function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event) {
-    if (!rawData || rawData.length < 2) {
+    if (!rawData || rawData.length < 2 || !rawData[0]) {
         Swal.fire('Error', 'No valid data found to extract.', 'error');
         event.target.value = ''; return;
     }
 
-    const actualHeaders = rawData[0].map(h => h.toLowerCase());
+    const actualHeaders = rawData[0].map(h => h ? h.toLowerCase() : "");
     const idxID = actualHeaders.findIndex(h => h === 'patient_id' || h === 'id' || h === 'patient id' || h === 'record no');
     const idxFName = actualHeaders.findIndex(h => h === 'first_name' || h === 'first name' || h === 'patient_name');
     const idxLName = actualHeaders.findIndex(h => h === 'last_name' || h === 'last name');
@@ -513,6 +513,9 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
 
     for(let i = 1; i < rawData.length; i++) {
         const cols = rawData[i];
+        
+        // تخطي الصفوف الفارغة لمنع انهيار الأكستراكتر
+        if (!cols || cols.length === 0) continue;
 
         let orgCode = idxOrg > -1 && cols[idxOrg] ? cols[idxOrg].toLowerCase() : "";
         if(!orgCode || orgCode === 'xxx' || orgCode === 'con' || orgCode === 'no growth') {
@@ -558,28 +561,31 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
         let formattedDate = ""; 
         
         if(rawDate) {
-            // Excel Date Fix: Converts Excel serial dates (e.g. 45293) to JS format natively
-            if (!isNaN(rawDate) && Number(rawDate) > 10000 && !rawDate.includes('-') && !rawDate.includes('/')) {
-                let d = new Date((Number(rawDate) - 25569) * 86400 * 1000);
-                formattedDate = d.toISOString().slice(0, 7);
-            } else {
-                let dateParts = rawDate.split(/[\/\-]/);
-                if(dateParts.length >= 3) {
-                    let part1 = dateParts[0];
-                    let part2 = dateParts[1].padStart(2, '0');
-                    let part3 = dateParts[2].split(' ')[0]; 
-                    
-                    let year = part1.length === 4 ? part1 : (part3.length === 2 ? "20" + part3 : part3);
-                    formattedDate = `${year}-${part2}`;
+            try {
+                // Excel Date Fix: Converts Excel serial dates (e.g. 45293) to JS format natively
+                if (!isNaN(rawDate) && Number(rawDate) > 10000 && !rawDate.includes('-') && !rawDate.includes('/')) {
+                    let d = new Date((Number(rawDate) - 25569) * 86400 * 1000);
+                    if (!isNaN(d)) formattedDate = d.toISOString().slice(0, 7);
                 } else {
-                    let d = new Date(rawDate);
-                    if(!isNaN(d)) formattedDate = d.toISOString().slice(0, 7);
+                    let dateParts = rawDate.split(/[\/\-]/);
+                    if(dateParts.length >= 3) {
+                        let part1 = dateParts[0];
+                        let part2 = dateParts[1].padStart(2, '0');
+                        let part3 = dateParts[2].split(' ')[0]; 
+                        
+                        let year = part1.length === 4 ? part1 : (part3.length === 2 ? "20" + part3 : part3);
+                        formattedDate = `${year}-${part2}`;
+                    } else {
+                        let d = new Date(rawDate);
+                        if(!isNaN(d)) formattedDate = d.toISOString().slice(0, 7);
+                    }
                 }
+            } catch (e) {
+                console.warn("Skipping invalid date:", rawDate);
             }
         }
 
         if(!formattedDate) { skippedCount++; continue; }
-
         let fullOrgName = externalOrgMap[orgCode] || whonetOrgMap[orgCode] || (orgCode.charAt(0).toUpperCase() + orgCode.slice(1));
         const orgNameCleanup = {
             "Escherichia coli (E.coli)": "Escherichia coli", "Klebsiella pneumoniae ss. pneumoniae": "Klebsiella pneumoniae",
