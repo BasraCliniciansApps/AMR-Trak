@@ -427,7 +427,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
     }
 
     const actualHeaders = rawData[0].map(h => h ? h.toLowerCase() : "");
-    const idxID = actualHeaders.findIndex(h => h === 'patient_id' || h === 'id' || h === 'patient id' || h === 'record no');
+    const idxPatientID = actualHeaders.findIndex(h => h === 'patient_id' || h === 'patient id' || h === 'identification number' || h === 'id');
     const idxFName = actualHeaders.findIndex(h => h === 'first_name' || h === 'first name' || h === 'patient_name');
     const idxLName = actualHeaders.findIndex(h => h === 'last_name' || h === 'last name');
     const idxAge = actualHeaders.findIndex(h => h === 'age');
