@@ -95,14 +95,22 @@ async function syncLocalToCloud() {
     if (!db) return;
     try {
         let localRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+        
+        // 🔒 استقطاع الأسماء لحماية خصوصية المرضى قبل رفع البيانات للسحابة
+        let cloudReadyRecords = localRecords.map(r => {
+            let recordCopy = { ...r };
+            delete recordCopy['Name']; 
+            return recordCopy;
+        });
+
         let liveSettings = JSON.parse(localStorage.getItem('amr_live_settings')) || { profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
         
         await db.collection("amr_sync").doc("hospital_main").set({
-            records: localRecords,
+            records: cloudReadyRecords,
             settings: liveSettings,
             last_updated: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true }); // استخدام merge لحماية أي بيانات أخرى في السحابة
-        console.log("Data synced to cloud successfully.");
+        }, { merge: true }); 
+        console.log("Data synced to cloud successfully (Names excluded).");
     } catch(e) {
         console.error("Error syncing to cloud:", e);
     }
@@ -114,20 +122,33 @@ function syncCloudToLocal() {
     
     db.collection("amr_sync").doc("hospital_main").onSnapshot((doc) => {
         if (doc.exists) {
-            // منع التحديث العكسي المزعج إذا كانت حاسبتك الحالية هي من تقوم بالرفع الآن
             if (doc.metadata.hasPendingWrites) return;
 
             const cloudRecords = doc.data().records || [];
             const cloudSettings = doc.data().settings || null;
             
-            let localRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-
             let localRecordsStr = localStorage.getItem('amr_records') || "[]";
-            let cloudRecordsStr = JSON.stringify(cloudRecords);
+            let localRecords = JSON.parse(localRecordsStr);
 
-            // Only overwrite and rebuild the UI if the cloud data is actually different
-            if (cloudRecordsStr !== localRecordsStr && cloudRecords.length > 0) {
-                localStorage.setItem('amr_records', cloudRecordsStr);
+            // 🔄 دمج واستعادة أسماء المرضى من الحاسبة باستخدام معرف المريض (Patient ID)
+            let mergedRecords = cloudRecords.map(cr => {
+                let match = localRecords.find(lr => 
+                    lr['Patient ID'] === cr['Patient ID'] && 
+                    lr['Selective organism'] === cr['Selective organism'] && 
+                    lr['Date'] === cr['Date']
+                );
+                if (match && match['Name']) {
+                    cr['Name'] = match['Name'];
+                } else {
+                    cr['Name'] = "Unknown Patient"; // إذا كان المريض جديداً مدخلاً من حاسبة أخرى
+                }
+                return cr;
+            });
+
+            let mergedRecordsStr = JSON.stringify(mergedRecords);
+
+            if (mergedRecordsStr !== localRecordsStr && cloudRecords.length > 0) {
+                localStorage.setItem('amr_records', mergedRecordsStr);
                 
                 if (typeof initDataTable === 'function') initDataTable();
                 if (!$('#viewAnalytics').hasClass('hidden') && typeof loadAnalyticsFilters === 'function') loadAnalyticsFilters();
@@ -140,7 +161,7 @@ function syncCloudToLocal() {
                 localStorage.setItem('amr_live_settings', JSON.stringify(cloudSettings));
             }
             
-            console.log("Real-time sync: Data synchronized safely.");
+            console.log("Real-time sync: Data synchronized and names restored locally.");
         }
     }, (error) => {
         console.error("Error fetching live data from cloud:", error);
@@ -406,7 +427,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
     }
 
     const actualHeaders = rawData[0].map(h => h.toLowerCase());
-
+    const idxID = actualHeaders.findIndex(h => h === 'patient_id' || h === 'id' || h === 'patient id' || h === 'record no');
     const idxFName = actualHeaders.findIndex(h => h === 'first_name' || h === 'first name' || h === 'patient_name');
     const idxLName = actualHeaders.findIndex(h => h === 'last_name' || h === 'last name');
     const idxAge = actualHeaders.findIndex(h => h === 'age');
@@ -514,10 +535,10 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
 
         if (!hasSRIData) { skippedCount++; continue; }
 
+        let pId = idxID > -1 && cols[idxID] ? String(cols[idxID]).trim() : "Unknown";
         let fName = idxFName > -1 && cols[idxFName] ? cols[idxFName] : "";
         let lName = idxLName > -1 && cols[idxLName] ? cols[idxLName] : "";
         let name = (fName + " " + lName).trim() || "Unknown Patient";
-
         let rawAge = idxAge > -1 && cols[idxAge] ? String(cols[idxAge]) : "";
         let ageNum = parseInt(rawAge) || "";
         let ageUnit = "Years";
@@ -568,6 +589,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
         if (orgNameCleanup[fullOrgName]) fullOrgName = orgNameCleanup[fullOrgName];
 
         let record = {
+            'Patient ID': pId,
             'Name': name, 'Age': ageNum, 'Age Unit': ageUnit, 'Sex': sex,
             'Ward': ward, 'Sample': sample, 'Date': formattedDate,
             'Selective organism': fullOrgName, 'Antibiogram organism': fullOrgName 
@@ -1059,7 +1081,9 @@ function initDataTable() {
                 <button onclick="deleteRecord(${meta.row})" class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm transition-colors">Delete</button>
             </div>`;
         }},
-        { data: 'Name', title: 'Name' },
+        { data: null, title: 'Name / ID', render: function(data, type, row) { 
+            return `<div class="leading-tight"><span class="font-bold text-slate-700">${row['Name'] || '-'}</span><br><span class="text-[10px] text-slate-500">ID: ${row['Patient ID'] || 'Unknown'}</span></div>`; 
+        }},
         { data: null, title: 'Age', render: function(data, type, row) { 
             return row['Age'] ? row['Age'] + ' ' + (row['Age Unit'] || '') : '-'; 
         }},
@@ -1120,6 +1144,7 @@ function initDataTable() {
 function openModal() {
     $('#entryForm')[0].reset();
     $('#editIndex').val('-1');
+    $('#p_id').val('');
     $('#p_date').val(new Date().toISOString().slice(0, 7));
     $('#active_abx_container').empty();
     selectedAbxMap = {};
@@ -1215,6 +1240,7 @@ $('#entryForm').submit(function(e) {
     }
 
     let record = {
+        'Patient ID': $('#p_id').val() || "Unknown",
         'Name': $('#p_name').val(),
         'Age': $('#p_age').val(),
         'Age Unit': $('#p_age_unit').val(),
@@ -1271,6 +1297,7 @@ function editRecord(index) {
     $('#modalTitle').text('Edit Patient Record');
     $('#editIndex').val(index);
     
+    $('#p_id').val(record['Patient ID'] || '');
     $('#p_name').val(record['Name']);
     $('#p_age').val(record['Age']);
     $('#p_age_unit').val(record['Age Unit'] || 'Years');
