@@ -538,7 +538,6 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
 
         if (!hasSRIData) { skippedCount++; continue; }
 
-        let pId = idxID > -1 && cols[idxID] ? String(cols[idxID]).trim() : "Unknown";
         let patientID = idxPatientID > -1 && cols[idxPatientID] ? String(cols[idxPatientID]).trim() : "";
         let fName = idxFName > -1 && cols[idxFName] ? cols[idxFName] : "";
         let lName = idxLName > -1 && cols[idxLName] ? cols[idxLName] : "";
