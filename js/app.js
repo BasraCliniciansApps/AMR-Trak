@@ -432,9 +432,16 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
     const idxLName = actualHeaders.findIndex(h => h === 'last_name' || h === 'last name');
     const idxAge = actualHeaders.findIndex(h => h === 'age');
     const idxSex = actualHeaders.findIndex(h => h === 'sex' || h === 'gender');
-    let idxWard = actualHeaders.findIndex(h => h === 'department');
+    
+    // إعطاء الأولوية القصوى لعمود Department بشكل صارم حتى لو احتوى على مسافات
+    let idxWard = actualHeaders.findIndex(h => h === 'department' || h.includes('department'));
+    
+    // تحديد البدائل في حال عدم وجود عمود Department
     if (idxWard === -1) {
-        idxWard = actualHeaders.findIndex(h => h === 'ward' || h === 'location');
+        idxWard = actualHeaders.findIndex(h => h === 'location');
+    }
+    if (idxWard === -1) {
+        idxWard = actualHeaders.findIndex(h => h === 'ward');
     }
 
     const idxSample = actualHeaders.findIndex(h => h === 'specimen' || h === 'sample' || h === 'spec_type' || h === 'specimen type');
