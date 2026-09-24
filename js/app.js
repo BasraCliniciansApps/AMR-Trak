@@ -432,7 +432,11 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
     const idxLName = actualHeaders.findIndex(h => h === 'last_name' || h === 'last name');
     const idxAge = actualHeaders.findIndex(h => h === 'age');
     const idxSex = actualHeaders.findIndex(h => h === 'sex' || h === 'gender');
-    const idxWard = actualHeaders.findIndex(h => h === 'ward' || h === 'location' || h === 'department');
+    let idxWard = actualHeaders.findIndex(h => h === 'department');
+    if (idxWard === -1) {
+        idxWard = actualHeaders.findIndex(h => h === 'ward' || h === 'location');
+    }
+
     const idxSample = actualHeaders.findIndex(h => h === 'specimen' || h === 'sample' || h === 'spec_type' || h === 'specimen type');
     const idxDate = actualHeaders.findIndex(h => h === 'spec_date' || h === 'specimen date' || h === 'date');
     const idxOrg = actualHeaders.findIndex(h => h === 'organism' || h === 'org');
