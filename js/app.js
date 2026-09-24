@@ -1125,39 +1125,32 @@ function initDataTable() {
         }); 
     });
 
-    // 💡 الحل الجذري: الذاكرة اليدوية لالتقاط الفلاتر والصفحات قبل تدمير الجدول
-    let savedPage = 0;
-    let savedSearch = "";
-    let savedColFilters = {};
-
+    // 💡 التحديث الذكي: تجنب تدمير الجدول إذا لم تتغير الأعمدة
     if ($.fn.DataTable.isDataTable('#recordsTable')) {
         let table = $('#recordsTable').DataTable();
         
-        // 1. حفظ الصفحة الحالية وكلمة البحث
-        savedPage = table.page();
-        savedSearch = table.search();
-        
-        // 2. حفظ الخيارات المحددة من القوائم المنسدلة
-        $('#recordsTable thead select').each(function() {
-            let val = $(this).val();
-            if (val) {
-                let colIdx = table.column($(this).parent()).index();
-                savedColFilters[colIdx] = val;
-            }
-        });
-
-        table.destroy();
-        $('#recordsTable').empty();
+        // التحقق إذا تم إضافة عمود جديد (مضاد حيوي مخصص)
+        if (table.columns().count() === cols.length) {
+            // تحديث البيانات بصمت تام مع الاحتفاظ بالفلاتر والصفحة والترتيب
+            table.clear();
+            table.rows.add(records);
+            table.draw(false); 
+            return; // الخروج من الدالة لعدم إعادة البناء
+        } else {
+            // تدمير وبناء الجدول يحدث حصراً عند تغيير هيكلية الأعمدة
+            table.destroy();
+            $('#recordsTable').empty();
+        }
     }
 
+    // بناء الجدول (يتم مرة واحدة عند فتح التطبيق، أو عند تغيير الأعمدة)
     dataTable = $('#recordsTable').DataTable({
         data: records,
         columns: cols,
         scrollX: true, 
         deferRender: true,
         order: [[ 6, "desc" ]],
-        stateSave: false, // 🔴 يجب أن يبقى false لمنع تضارب الأعمدة الديناميكية
-        search: { search: savedSearch }, // 3. استعادة البحث العام فوراً
+        stateSave: true, // 🔴 تفعيل الذاكرة المؤقتة للجدول
         dom: '<"flex flex-col md:flex-row justify-between items-center mb-4 gap-4"l fB>rt<"flex flex-col md:flex-row justify-between items-center mt-4 gap-4"ip>',
         buttons: [
             { extend: 'excelHtml5', text: 'Export Basic List', className: 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg px-4 py-2 text-sm font-bold shadow-sm transition-colors' }
@@ -1170,12 +1163,8 @@ function initDataTable() {
             lengthMenu: "Show _MENU_ entries"
         },
         initComplete: function () {
-            let api = this.api();
-            
-            api.columns([3, 4, 5, 6, 7]).every(function () {
+            this.api().columns([3, 4, 5, 6, 7]).every(function () {
                 let column = this;
-                let colIdx = column.index();
-                
                 let select = $('<select class="mt-2 block w-full text-xs border-slate-300 rounded shadow-sm focus:ring-blue-500 font-normal outline-none"><option value="">All</option></select>')
                     .appendTo($(column.header()))
                     .on('change', function () {
@@ -1190,20 +1179,14 @@ function initDataTable() {
                     }
                 });
                 
-                // 4. استعادة الفلتر الخاص بهذا العمود إن كان موجوداً قبل التعديل
-                if (savedColFilters[colIdx]) {
-                    select.val(savedColFilters[colIdx]);
-                    let escapedVal = $.fn.dataTable.util.escapeRegex(savedColFilters[colIdx]);
-                    column.search('^' + escapedVal + '$', true, false); 
+                // استعادة القيم المفلترة إن وجدت في الذاكرة (stateSave)
+                let state = column.state.loaded();
+                if (state && state.search.search) {
+                    let searchVal = state.search.search.replace(/^\^|\$$/g, ''); // تنظيف القيمة المفلترة
+                    select.val(searchVal);
                 }
             });
-
             $('.dataTables_filter input').addClass('w-64 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm');$('.dataTables_length select').addClass('border border-slate-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm mx-2');
-            
-            // 5. رسم الجدول مع استعادة الصفحة الحالية
-            if (savedPage > 0 || Object.keys(savedColFilters).length > 0) {
-                api.page(savedPage).draw(false);
-            }
         }
     });
 }
