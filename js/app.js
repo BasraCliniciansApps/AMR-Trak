@@ -1117,14 +1117,14 @@ function initDataTable() {
     if ($.fn.DataTable.isDataTable('#recordsTable')) {
         let table = $('#recordsTable').DataTable();
         
-        // إذا كان عدد الأعمدة لم يتغير (لم تقم بإضافة مضاد حيوي جديد لقاعدة البيانات)
+        // إذا كان عدد الأعمدة لم يتغير
         if (table.columns().count() === cols.length) {
             table.clear(); // مسح البيانات القديمة بصمت
             table.rows.add(records); // حقن البيانات المحدثة
-            table.draw(false); // (false) تعني: حافظ على الصفحة الحالية، الفلاتر، والبحث ولا تعد للبداية!
-            return; // الخروج من الدالة (توقف هنا ولا تعد بناء الجدول)
+            table.draw(false); // (false) تعني: حافظ على الصفحة الحالية والفلاتر والبحث!
+            return; // توقف هنا ولا تعد بناء الجدول
         } else {
-            // تدمير الجدول وإعادة بنائه تحدث فقط في حالة إضافة مضاد حيوي جديد يحتاج لعمود جديد
+            // تدمير الجدول يحدث فقط عند إضافة مضاد حيوي جديد
             table.destroy();
             $('#recordsTable').empty();
         }
@@ -1143,13 +1143,12 @@ function initDataTable() {
             { extend: 'print', text: 'Print Records', className: 'rounded shadow' }
         ],
         pageLength: 15,
-        language: { search: "", searchPlaceholder: "Search records..." }
-    });
-},
+        language: { search: "", searchPlaceholder: "Search records..." },
         initComplete: function () {
             this.api().columns([3, 4, 5, 6, 7]).every(function () {
                 let column = this;
-                let select = $('<select class="mt-2 block w-full text-xs border-slate-300 rounded shadow-sm focus:ring-blue-500 font-normal outline-none"><option value="">All</option></select>')
+                
+                let select = $('<select class="mt-2 block w-full text-xs border-slate-300 rounded shadow-sm focus:ring-teal-500 font-normal outline-none"><option value="">All</option></select>')
                     .appendTo($(column.header()))
                     .on('change', function () {
                         let val = $.fn.dataTable.util.escapeRegex($(this).val());
@@ -1163,7 +1162,7 @@ function initDataTable() {
                     }
                 });
             });
-            $('.dataTables_filter input').addClass('w-64 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm');$('.dataTables_length select').addClass('border border-slate-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm mx-2');
+            $('.dataTables_filter input').addClass('w-64 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none shadow-sm');
         }
     });
 }
