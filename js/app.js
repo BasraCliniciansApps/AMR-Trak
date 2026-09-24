@@ -1091,64 +1091,77 @@ function initDataTable() {
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
     
     let cols = [
-        { data: null, title: 'Action', orderable: false, render: function(data, type, row, meta) {
+        { data: null, title: 'Action', orderable: false, className: 'text-center', render: function(data, type, row, meta) {
             return `
-            <div class="flex gap-2">
-                <button onclick="editRecord(${meta.row})" class="bg-amber-400 hover:bg-amber-500 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm transition-colors">Edit</button>
-                <button onclick="deleteRecord(${meta.row})" class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm transition-colors">Delete</button>
+            <div class="flex justify-center gap-2">
+                <button onclick="editRecord(${meta.row})" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-colors">Edit</button>
+                <button onclick="deleteRecord(${meta.row})" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-colors">Delete</button>
             </div>`;
         }},
-        { data: 'Name', title: 'Name' },
+        { data: 'Name', title: 'Patient Name / ID', className: 'font-semibold text-slate-700', defaultContent: 'Unknown' },
         { data: null, title: 'Age', render: function(data, type, row) { 
             return row['Age'] ? row['Age'] + ' ' + (row['Age Unit'] || '') : '-'; 
         }},
-        { data: 'Sex', title: 'Sex' },
-        { data: 'Ward', title: 'Ward' },
-        { data: 'Sample', title: 'Sample' },
-        { data: 'Date', title: 'Date' },
-        { data: 'Selective organism', title: 'Selective organism' }
+        { data: 'Sex', title: 'Gender', defaultContent: '-' },
+        { data: 'Ward', title: 'Ward / Dept', defaultContent: '-' },
+        { data: 'Sample', title: 'Specimen', defaultContent: '-' },
+        { data: 'Date', title: 'Collection Date', defaultContent: '-' },
+        { data: 'Selective organism', title: 'Isolated Organism', className: 'font-semibold text-slate-700', defaultContent: '-' }
     ];
 
     let customAbx = getCustomAntibiotics();
     let allAbxColumns = [...abxList, ...customAbx.map(a=>a.name)];
-    allAbxColumns.forEach(abx => { cols.push({ data: abx, title: abx, defaultContent: '-' }); });
+    allAbxColumns.forEach(abx => { 
+        cols.push({ 
+            data: abx, 
+            title: abx, 
+            defaultContent: '-',
+            render: function(data) {
+                if (data === 'S') return `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800">S</span>`;
+                if (data === 'I') return `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800">I</span>`;
+                if (data === 'R') return `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-red-100 text-red-800">R</span>`;
+                return data;
+            }
+        }); 
+    });
 
-    // 💡 الحل الذكي: التحقق مما إذا كان الجدول مبنياً مسبقاً لتحديث البيانات فقط بدون تدميره
+    // 💡 الحل الذكي: تحديث البيانات بصمت دون تدمير الجدول للحفاظ على الصفحة والفلاتر
     if ($.fn.DataTable.isDataTable('#recordsTable')) {
         let table = $('#recordsTable').DataTable();
         
-        // إذا كان عدد الأعمدة لم يتغير
         if (table.columns().count() === cols.length) {
-            table.clear(); // مسح البيانات القديمة بصمت
-            table.rows.add(records); // حقن البيانات المحدثة
-            table.draw(false); // (false) تعني: حافظ على الصفحة الحالية والفلاتر والبحث!
-            return; // توقف هنا ولا تعد بناء الجدول
+            table.clear();
+            table.rows.add(records);
+            table.draw(false); // (false) هي المسؤولة عن تثبيت الصفحة والبحث عند الحفظ
+            return; 
         } else {
-            // تدمير الجدول يحدث فقط عند إضافة مضاد حيوي جديد
             table.destroy();
             $('#recordsTable').empty();
         }
     }
 
-    // بناء الجدول (يحدث للمرة الأولى فقط عند فتح التطبيق)
     dataTable = $('#recordsTable').DataTable({
         data: records,
         columns: cols,
         scrollX: true, 
-        order: [[ 6, "desc" ]], 
-        stateSave: true, // يحفظ حالة الجدول حتى لو قمت بعمل Refresh للصفحة
-        dom: '<"flex flex-col sm:flex-row justify-between items-center mb-4 gap-3"Bf>rt<"flex flex-col sm:flex-row justify-between items-center mt-4 gap-3"ip>',
+        deferRender: true,
+        order: [[ 6, "desc" ]],
+        stateSave: true, // 🔴 تم تفعيل الذاكرة المؤقتة (true) للحفاظ على الفلاتر عند تحديث المتصفح
+        dom: '<"flex flex-col md:flex-row justify-between items-center mb-4 gap-4"l fB>rt<"flex flex-col md:flex-row justify-between items-center mt-4 gap-4"ip>',
         buttons: [
-            { extend: 'excelHtml5', text: 'Export to Excel', className: 'mr-2 rounded shadow' },
-            { extend: 'print', text: 'Print Records', className: 'rounded shadow' }
+            { extend: 'excelHtml5', text: 'Export Basic List', className: 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg px-4 py-2 text-sm font-bold shadow-sm transition-colors' }
         ],
-        pageLength: 15,
-        language: { search: "", searchPlaceholder: "Search records..." },
+        pageLength: 10, 
+        lengthMenu: [[10, 15, 25, 50, -1], [10, 15, 25, 50, "All"]],
+        language: { 
+            search: "", 
+            searchPlaceholder: "Search Records...",
+            lengthMenu: "Show _MENU_ entries"
+        },
         initComplete: function () {
             this.api().columns([3, 4, 5, 6, 7]).every(function () {
                 let column = this;
-                
-                let select = $('<select class="mt-2 block w-full text-xs border-slate-300 rounded shadow-sm focus:ring-teal-500 font-normal outline-none"><option value="">All</option></select>')
+                let select = $('<select class="mt-2 block w-full text-xs border-slate-300 rounded shadow-sm focus:ring-blue-500 font-normal outline-none"><option value="">All</option></select>')
                     .appendTo($(column.header()))
                     .on('change', function () {
                         let val = $.fn.dataTable.util.escapeRegex($(this).val());
@@ -1162,7 +1175,7 @@ function initDataTable() {
                     }
                 });
             });
-            $('.dataTables_filter input').addClass('w-64 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none shadow-sm');
+            $('.dataTables_filter input').addClass('w-64 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm');$('.dataTables_length select').addClass('border border-slate-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm mx-2');
         }
     });
 }
