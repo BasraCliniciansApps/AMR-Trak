@@ -786,18 +786,19 @@ window.downloadBackup = function() {
     const type = document.getElementById('backupRangeType').value;
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
     
+    // Apply Selective Filtering safely
     if (type === 'month') {
         const m = document.getElementById('backupMonth').value;
-        if (!m) { Swal.showValidationMessage('Please select a month.'); return; }
+        if (!m) { Swal.fire('Required', 'Please select a month.', 'warning'); return; }
         allRecords = allRecords.filter(r => r.Date && r.Date.startsWith(m));
     } else if (type === 'year') {
         const y = document.getElementById('backupYear').value;
-        if (!y) { Swal.showValidationMessage('Please enter a year.'); return; }
+        if (!y) { Swal.fire('Required', 'Please enter a year.', 'warning'); return; }
         allRecords = allRecords.filter(r => r.Date && r.Date.startsWith(y));
     } else if (type === 'range') {
         const s = document.getElementById('backupStart').value;
         const e = document.getElementById('backupEnd').value;
-        if (!s || !e) { Swal.showValidationMessage('Please select start and end dates.'); return; }
+        if (!s || !e) { Swal.fire('Required', 'Please select start and end dates.', 'warning'); return; }
         allRecords = allRecords.filter(r => r.Date && r.Date >= s && r.Date <= e);
     }
 
@@ -819,6 +820,7 @@ window.downloadBackup = function() {
     const blob = new Blob([dataStr], { type: "application/json" });
     const dateSuffix = type === 'all' ? 'All_Data' : (type === 'month' ? document.getElementById('backupMonth').value : (type === 'year' ? document.getElementById('backupYear').value : 'Date_Range'));
     
+    // Fail-safe download execution
     if (typeof saveAs !== 'undefined') {
         saveAs(blob, `AMR_Tracker_Backup_${dateSuffix}.json`);
     } else {
