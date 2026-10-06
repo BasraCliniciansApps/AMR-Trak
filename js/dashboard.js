@@ -355,10 +355,11 @@ function generateLiveSurveillance() {
     let [lYear, lMonth] = targetMonthPrefix.split('-').map(Number);
     let qYear = lYear, qMonths = [], qLabel = "";
 
-    if (lMonth <= 3) { qYear -= 1; qMonths = ["10","11","12"]; qLabel = `Q4 ${qYear}`; }
-    else if (lMonth <= 6) { qMonths = ["01","02","03"]; qLabel = `Q1 ${qYear}`; }
-    else if (lMonth <= 9) { qMonths = ["04","05","06"]; qLabel = `Q2 ${qYear}`; }
-    else { qMonths = ["07","08","09"]; qLabel = `Q3 ${qYear}`; }
+    // Updated to align with the current quarter of the latest data instead of stepping backward
+    if (lMonth <= 3) { qMonths = ["01","02","03"]; qLabel = `Q1 ${qYear}`; }
+    else if (lMonth <= 6) { qMonths = ["04","05","06"]; qLabel = `Q2 ${qYear}`; }
+    else if (lMonth <= 9) { qMonths = ["07","08","09"]; qLabel = `Q3 ${qYear}`; }
+    else { qMonths = ["10","11","12"]; qLabel = `Q4 ${qYear}`; }
 
     let monthRecords = cleanRecords.filter(r => r.Date && r.Date.startsWith(targetMonthPrefix));
     let quarterRecords = cleanRecords.filter(r => {
