@@ -130,12 +130,11 @@ function syncCloudToLocal() {
             let localRecordsStr = localStorage.getItem('amr_records') || "[]";
             let localRecords = JSON.parse(localRecordsStr);
 
-            // 🔄 دمج واستعادة أسماء المرضى من الحاسبة باستخدام معرف المريض (Patient ID)
+            // 🔄 دمج واستعادة أسماء المرضى بدقة باستخدام المعرف الفريد السري
             let mergedRecords = cloudRecords.map(cr => {
                 let match = localRecords.find(lr => 
-                    lr['Patient ID'] === cr['Patient ID'] && 
-                    lr['Selective organism'] === cr['Selective organism'] && 
-                    lr['Date'] === cr['Date']
+                    (lr['_uid'] && cr['_uid'] && lr['_uid'] === cr['_uid']) || 
+                    (!lr['_uid'] && lr['Patient ID'] === cr['Patient ID'] && lr['Selective organism'] === cr['Selective organism'] && lr['Date'] === cr['Date'])
                 );
                 if (match && match['Name']) {
                     cr['Name'] = match['Name'];
@@ -1306,6 +1305,7 @@ $('#entryForm').submit(function(e) {
     }
 
     let record = {
+        '_uid': editIndex > -1 ? (records[editIndex]['_uid'] || Date.now().toString() + Math.random().toString(36).substr(2, 5)) : Date.now().toString() + Math.random().toString(36).substr(2, 5),
         'Patient ID': $('#p_id').val() || "Unknown",
         'Name': $('#p_name').val(),
         'Age': $('#p_age').val(),
