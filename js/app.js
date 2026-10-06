@@ -862,7 +862,7 @@ window.processRestore = function() {
 
             Swal.fire({
                 title: 'Smart Merge Confirmation',
-                text: "Your current data will be kept safe. New records from the file will be added, and existing matches will be updated safely.",
+                text: "Your current data will be kept safe. New records from the file will be added, and existing matches will be updated.",
                 icon: 'info',
                 showCancelButton: true,
                 confirmButtonColor: '#10b981',
@@ -872,7 +872,10 @@ window.processRestore = function() {
                 if (result.isConfirmed) {
                     let currentRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
                     let importedRecords = importedData.amr_records || [];
-                    
+                    let addedCount = 0;
+                    let updatedCount = 0;
+
+                    // Apply the Date Range Filter if selected on the UI
                     const typeEl = document.getElementById('restoreRangeType');
                     if (typeEl) {
                         const type = typeEl.value;
@@ -889,19 +892,33 @@ window.processRestore = function() {
                         }
                     }
 
-                    let addedCount = 0;
-                    let updatedCount = 0;
-
                     importedRecords.forEach(importedRecord => {
-                        let matchIndex = currentRecords.findIndex(r => 
-                            (r['_uid'] && importedRecord['_uid'] && r['_uid'] === importedRecord['_uid']) || 
-                            (!r['_uid'] && r['Patient ID'] === importedRecord['Patient ID'] && r['Selective organism'] === importedRecord['Selective organism'] && r['Date'] === importedRecord['Date'])
-                        );
+                        let matchIndex = currentRecords.findIndex(r => {
+                            // 1. Exact match using hidden _uid (Safe Update for edited records)
+                            if (r['_uid'] && importedRecord['_uid'] && r['_uid'] === importedRecord['_uid']) {
+                                return true;
+                            }
+                            
+                            // 2. Fallback match: ONLY merge if Patient ID is NOT "Unknown". 
+                            // If it's "Unknown", treat it as a separate patient and do not merge.
+                            let validLocalId = r['Patient ID'] && r['Patient ID'].toLowerCase() !== 'unknown';
+                            let validImportId = importedRecord['Patient ID'] && importedRecord['Patient ID'].toLowerCase() !== 'unknown';
+                            
+                            if (!r['_uid'] && validLocalId && validImportId && r['Patient ID'] === importedRecord['Patient ID'] && r['Selective organism'] === importedRecord['Selective organism'] && r['Date'] === importedRecord['Date']) {
+                                return true;
+                            }
+                            return false;
+                        });
 
                         if (matchIndex > -1) {
+                            // Update existing record
                             currentRecords[matchIndex] = { ...currentRecords[matchIndex], ...importedRecord };
                             updatedCount++;
                         } else {
+                            // Append new record - and assign a _uid if it's missing to prevent future conflicts
+                            if (!importedRecord['_uid']) {
+                                importedRecord['_uid'] = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+                            }
                             currentRecords.push(importedRecord);
                             addedCount++;
                         }
