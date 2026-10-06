@@ -717,19 +717,50 @@ function showTab(tabName) {
 // --- BACKUP AND RESTORE LOGIC ---
 function showBackupModal() {
     Swal.fire({
-        title: '💾 Backup & Restore',
+        title: '💾 Selective Backup & Smart Restore',
         html: `
             <div class="text-left space-y-4 mt-2">
                 <div class="bg-teal-50 p-4 rounded-xl border border-teal-100">
                     <h4 class="font-bold text-teal-900 mb-2">1. Backup Data</h4>
-                    <p class="text-xs text-slate-600 mb-3">Download all your patient records, custom antibiotics, and settings to a secure file on your computer.</p>
+                    <p class="text-xs text-slate-600 mb-3">Select a specific time range to backup your patient records.</p>
+                    
+                    <select id="backupRangeType" class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 text-sm focus:ring-teal-500 outline-none" onchange="toggleBackupDates('backup')">
+                        <option value="all">All Records</option>
+                        <option value="month">Specific Month</option>
+                        <option value="year">Specific Year</option>
+                        <option value="range">Date Range</option>
+                    </select>
+                    
+                    <input type="month" id="backupMonth" class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 text-sm hidden focus:ring-teal-500 outline-none">
+                    <input type="number" id="backupYear" placeholder="Enter Year (e.g., 2026)" class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 text-sm hidden focus:ring-teal-500 outline-none">
+                    <div id="backupRange" class="hidden flex gap-2 mb-3">
+                        <input type="month" id="backupStart" class="w-full border border-slate-300 p-2.5 rounded-lg text-sm focus:ring-teal-500 outline-none">
+                        <input type="month" id="backupEnd" class="w-full border border-slate-300 p-2.5 rounded-lg text-sm focus:ring-teal-500 outline-none">
+                    </div>
+                    
                     <button onclick="downloadBackup()" class="w-full bg-teal-600 text-white font-bold py-2 rounded-lg shadow hover:bg-teal-700 transition-colors">📥 Download Backup</button>
                 </div>
+                
                 <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
-                    <h4 class="font-bold text-amber-900 mb-2">2. Restore Data</h4>
-                    <p class="text-xs text-slate-600 mb-3">Upload a previously saved backup file. <b class="text-red-500">Warning:</b> This will replace all current data.</p>
+                    <h4 class="font-bold text-amber-900 mb-2">2. Smart Restore Data</h4>
+                    <p class="text-xs text-slate-600 mb-3">Upload a backup file. <b class="text-emerald-600">Safe Merge:</b> New records will be added, existing ones updated. Nothing will be deleted.</p>
+                    
+                    <select id="restoreRangeType" class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 text-sm focus:ring-amber-500 outline-none" onchange="toggleBackupDates('restore')">
+                        <option value="all">Restore All Records from File</option>
+                        <option value="month">Restore Specific Month Only</option>
+                        <option value="year">Restore Specific Year Only</option>
+                        <option value="range">Restore Date Range Only</option>
+                    </select>
+                    
+                    <input type="month" id="restoreMonth" class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 text-sm hidden focus:ring-amber-500 outline-none">
+                    <input type="number" id="restoreYear" placeholder="Enter Year (e.g., 2026)" class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 text-sm hidden focus:ring-amber-500 outline-none">
+                    <div id="restoreRange" class="hidden flex gap-2 mb-3">
+                        <input type="month" id="restoreStart" class="w-full border border-slate-300 p-2.5 rounded-lg text-sm focus:ring-amber-500 outline-none">
+                        <input type="month" id="restoreEnd" class="w-full border border-slate-300 p-2.5 rounded-lg text-sm focus:ring-amber-500 outline-none">
+                    </div>
+                    
                     <input type="file" id="backupFileInput" accept=".json" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-100 file:text-amber-700 hover:file:bg-amber-200 mb-3" />
-                    <button onclick="processRestore()" class="w-full bg-amber-600 text-white font-bold py-2 rounded-lg shadow hover:bg-amber-700 transition-colors">📤 Restore Backup</button>
+                    <button onclick="processRestore()" class="w-full bg-amber-600 text-white font-bold py-2 rounded-lg shadow hover:bg-amber-700 transition-colors">📤 Smart Restore</button>
                 </div>
             </div>
         `,
@@ -739,11 +770,46 @@ function showBackupModal() {
     });
 }
 
+window.toggleBackupDates = function(mode) {
+    const type = document.getElementById(`${mode}RangeType`).value;
+    document.getElementById(`${mode}Month`).classList.add('hidden');
+    document.getElementById(`${mode}Year`).classList.add('hidden');
+    document.getElementById(`${mode}Range`).classList.add('hidden');
+    
+    if (type === 'month') document.getElementById(`${mode}Month`).classList.remove('hidden');
+    if (type === 'year') document.getElementById(`${mode}Year`).classList.remove('hidden');
+    if (type === 'range') document.getElementById(`${mode}Range`).classList.remove('hidden');
+    if (type === 'range') document.getElementById(`${mode}Range`).classList.add('flex');
+};
+
 window.downloadBackup = function() {
+    const type = document.getElementById('backupRangeType').value;
+    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+    
+    if (type === 'month') {
+        const m = document.getElementById('backupMonth').value;
+        if (!m) { Swal.showValidationMessage('Please select a month.'); return; }
+        allRecords = allRecords.filter(r => r.Date && r.Date.startsWith(m));
+    } else if (type === 'year') {
+        const y = document.getElementById('backupYear').value;
+        if (!y) { Swal.showValidationMessage('Please enter a year.'); return; }
+        allRecords = allRecords.filter(r => r.Date && r.Date.startsWith(y));
+    } else if (type === 'range') {
+        const s = document.getElementById('backupStart').value;
+        const e = document.getElementById('backupEnd').value;
+        if (!s || !e) { Swal.showValidationMessage('Please select start and end dates.'); return; }
+        allRecords = allRecords.filter(r => r.Date && r.Date >= s && r.Date <= e);
+    }
+
+    if (allRecords.length === 0) {
+        Swal.fire('No Data', 'There are no records matching your selected timeframe.', 'info');
+        return;
+    }
+
     const data = {
-        amr_records: JSON.parse(localStorage.getItem('amr_records')) || [],
-        amr_samples: JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples,
-        amr_wards: JSON.parse(localStorage.getItem('amr_wards')) || defaultWards,
+        amr_records: allRecords,
+        amr_samples: JSON.parse(localStorage.getItem('amr_samples')) || (typeof defaultSamples !== 'undefined' ? defaultSamples : []),
+        amr_wards: JSON.parse(localStorage.getItem('amr_wards')) || (typeof defaultWards !== 'undefined' ? defaultWards : []),
         amr_organisms: JSON.parse(localStorage.getItem('amr_organisms')) || [],
         amr_custom_abx_v2: JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [],
         amr_live_settings: JSON.parse(localStorage.getItem('amr_live_settings')) || null
@@ -751,16 +817,28 @@ window.downloadBackup = function() {
 
     const dataStr = JSON.stringify(data, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
-    const dateStr = new Date().toISOString().split('T')[0];
-    saveAs(blob, `AMR_Tracker_Backup_${dateStr}.json`);
+    const dateSuffix = type === 'all' ? 'All_Data' : (type === 'month' ? document.getElementById('backupMonth').value : (type === 'year' ? document.getElementById('backupYear').value : 'Date_Range'));
     
-    Swal.fire('Success!', 'Backup downloaded successfully.', 'success');
+    if (typeof saveAs !== 'undefined') {
+        saveAs(blob, `AMR_Tracker_Backup_${dateSuffix}.json`);
+    } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `AMR_Tracker_Backup_${dateSuffix}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    
+    Swal.fire('Success!', `Backup downloaded containing ${allRecords.length} records.`, 'success');
 };
 
 window.processRestore = function() {
     const fileInput = document.getElementById('backupFileInput');
     if (!fileInput.files.length) {
-        Swal.showValidationMessage('Please select a backup file first.');
+        Swal.fire('Required', 'Please select a backup file first.', 'warning');
         return;
     }
 
@@ -773,31 +851,85 @@ window.processRestore = function() {
             if (!importedData.amr_records) throw new Error("Invalid backup file structure.");
 
             Swal.fire({
-                title: 'Are you sure?',
-                text: "This will overwrite all existing data. Make sure you have backed up your current work!",
-                icon: 'warning',
+                title: 'Smart Merge Confirmation',
+                text: "Your current data will be kept safe. New records from the file will be added, and existing matches will be updated safely.",
+                icon: 'info',
                 showCancelButton: true,
-                confirmButtonColor: '#e11d48',
+                confirmButtonColor: '#10b981',
                 cancelButtonColor: '#64748b',
-                confirmButtonText: 'Yes, Restore it!'
+                confirmButtonText: 'Yes, Merge Safely!'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    localStorage.setItem('amr_records', JSON.stringify(importedData.amr_records));
-                    if (importedData.amr_samples) localStorage.setItem('amr_samples', JSON.stringify(importedData.amr_samples));
-                    if (importedData.amr_wards) localStorage.setItem('amr_wards', JSON.stringify(importedData.amr_wards));
-                    if (importedData.amr_organisms) localStorage.setItem('amr_organisms', JSON.stringify(importedData.amr_organisms));
-                    if (importedData.amr_custom_abx_v2) localStorage.setItem('amr_custom_abx_v2', JSON.stringify(importedData.amr_custom_abx_v2));
-                    if (importedData.amr_live_settings) localStorage.setItem('amr_live_settings', JSON.stringify(importedData.amr_live_settings));
+                    let currentRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+                    let importedRecords = importedData.amr_records || [];
+                    
+                    const type = document.getElementById('restoreRangeType').value;
+                    if (type === 'month') {
+                        const m = document.getElementById('restoreMonth').value;
+                        importedRecords = importedRecords.filter(r => r.Date && r.Date.startsWith(m));
+                    } else if (type === 'year') {
+                        const y = document.getElementById('restoreYear').value;
+                        importedRecords = importedRecords.filter(r => r.Date && r.Date.startsWith(y));
+                    } else if (type === 'range') {
+                        const s = document.getElementById('restoreStart').value;
+                        const e = document.getElementById('restoreEnd').value;
+                        importedRecords = importedRecords.filter(r => r.Date && r.Date >= s && r.Date <= e);
+                    }
 
-                    loadBacteriaOptions();
-                    loadSampleOptions();
-                    loadWardOptions();
-                    renderDefaultAntibiotics();
-                    initDataTable();
-                    if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
-                    if(!$('#viewLive').hasClass('hidden')) generateLiveSurveillance();
+                    let addedCount = 0;
+                    let updatedCount = 0;
 
-                    Swal.fire('Restored!', 'Your data has been restored successfully.', 'success');
+                    importedRecords.forEach(importedRecord => {
+                        let matchIndex = currentRecords.findIndex(r => 
+                            (r['_uid'] && importedRecord['_uid'] && r['_uid'] === importedRecord['_uid']) || 
+                            (!r['_uid'] && r['Patient ID'] === importedRecord['Patient ID'] && r['Selective organism'] === importedRecord['Selective organism'] && r['Date'] === importedRecord['Date'])
+                        );
+
+                        if (matchIndex > -1) {
+                            currentRecords[matchIndex] = { ...currentRecords[matchIndex], ...importedRecord };
+                            updatedCount++;
+                        } else {
+                            currentRecords.push(importedRecord);
+                            addedCount++;
+                        }
+                    });
+
+                    localStorage.setItem('amr_records', JSON.stringify(currentRecords));
+
+                    const mergeArray = (localKey, importedArr) => {
+                        if (!importedArr) return;
+                        let localArr = JSON.parse(localStorage.getItem(localKey)) || [];
+                        let combined = [...new Set([...localArr, ...importedArr])];
+                        localStorage.setItem(localKey, JSON.stringify(combined));
+                    };
+
+                    mergeArray('amr_samples', importedData.amr_samples);
+                    mergeArray('amr_wards', importedData.amr_wards);
+                    mergeArray('amr_organisms', importedData.amr_organisms);
+
+                    if (importedData.amr_custom_abx_v2) {
+                        let localAbx = JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [];
+                        importedData.amr_custom_abx_v2.forEach(impAbx => {
+                            if (!localAbx.some(l => l.name === impAbx.name)) {
+                                localAbx.push(impAbx);
+                            }
+                        });
+                        localStorage.setItem('amr_custom_abx_v2', JSON.stringify(localAbx));
+                    }
+
+                    if (typeof loadBacteriaOptions === 'function') loadBacteriaOptions();
+                    if (typeof loadSampleOptions === 'function') loadSampleOptions();
+                    if (typeof loadWardOptions === 'function') loadWardOptions();
+                    if (typeof renderDefaultAntibiotics === 'function') renderDefaultAntibiotics();
+                    if (typeof initDataTable === 'function') initDataTable();
+                    if (!$('#viewAnalytics').hasClass('hidden') && typeof loadAnalyticsFilters === 'function') loadAnalyticsFilters();
+                    if (!$('#viewLive').hasClass('hidden') && typeof generateLiveSurveillance === 'function') generateLiveSurveillance();
+
+                    if (typeof syncLocalToCloud === "function" && navigator.onLine) {
+                        syncLocalToCloud();
+                    }
+
+                    Swal.fire('Restored Successfully!', `Merged data safely:<br>+ ${addedCount} New Records<br>🔄 ${updatedCount} Updated Records`, 'success');
                 }
             });
         } catch (error) {
