@@ -784,11 +784,9 @@ window.toggleBackupDates = function(mode) {
 
 window.downloadBackup = function() {
     try {
-        // We put the entire logic inside this 'try' block to detect any hidden crashes
         const type = document.getElementById('backupRangeType').value;
         let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
         
-        // Apply Selective Filtering safely
         if (type === 'month') {
             const m = document.getElementById('backupMonth').value;
             if (!m) { Swal.fire('Required', 'Please select a month.', 'warning'); return; }
@@ -822,7 +820,6 @@ window.downloadBackup = function() {
         const blob = new Blob([dataStr], { type: "application/json" });
         const dateSuffix = type === 'all' ? 'All_Data' : (type === 'month' ? document.getElementById('backupMonth').value : (type === 'year' ? document.getElementById('backupYear').value : 'Date_Range'));
         
-        // Fail-safe download execution
         if (typeof saveAs !== 'undefined') {
             saveAs(blob, `AMR_Tracker_Backup_${dateSuffix}.json`);
         } else {
@@ -839,7 +836,6 @@ window.downloadBackup = function() {
         Swal.fire('Success!', `Backup downloaded containing ${allRecords.length} records.`, 'success');
 
     } catch (error) {
-        // ERROR DETECTOR: If anything crashes above, this block catches it and shows us why!
         console.error("Exact Backup Error:", error);
         Swal.fire({
             icon: 'error',
@@ -877,17 +873,20 @@ window.processRestore = function() {
                     let currentRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
                     let importedRecords = importedData.amr_records || [];
                     
-                    const type = document.getElementById('restoreRangeType').value;
-                    if (type === 'month') {
-                        const m = document.getElementById('restoreMonth').value;
-                        importedRecords = importedRecords.filter(r => r.Date && r.Date.startsWith(m));
-                    } else if (type === 'year') {
-                        const y = document.getElementById('restoreYear').value;
-                        importedRecords = importedRecords.filter(r => r.Date && r.Date.startsWith(y));
-                    } else if (type === 'range') {
-                        const s = document.getElementById('restoreStart').value;
-                        const e = document.getElementById('restoreEnd').value;
-                        importedRecords = importedRecords.filter(r => r.Date && r.Date >= s && r.Date <= e);
+                    const typeEl = document.getElementById('restoreRangeType');
+                    if (typeEl) {
+                        const type = typeEl.value;
+                        if (type === 'month') {
+                            const m = document.getElementById('restoreMonth').value;
+                            importedRecords = importedRecords.filter(r => r.Date && r.Date.startsWith(m));
+                        } else if (type === 'year') {
+                            const y = document.getElementById('restoreYear').value;
+                            importedRecords = importedRecords.filter(r => r.Date && r.Date.startsWith(y));
+                        } else if (type === 'range') {
+                            const s = document.getElementById('restoreStart').value;
+                            const e = document.getElementById('restoreEnd').value;
+                            importedRecords = importedRecords.filter(r => r.Date && r.Date >= s && r.Date <= e);
+                        }
                     }
 
                     let addedCount = 0;
