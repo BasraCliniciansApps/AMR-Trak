@@ -717,19 +717,29 @@ function showTab(tabName) {
 // --- BACKUP AND RESTORE LOGIC ---
 function showBackupModal() {
     Swal.fire({
-        title: '💾 Backup & Restore',
+        title: '💾 Selective Backup & Smart Restore',
         html: `
             <div class="text-left space-y-4 mt-2">
                 <div class="bg-teal-50 p-4 rounded-xl border border-teal-100">
                     <h4 class="font-bold text-teal-900 mb-2">1. Backup Data</h4>
-                    <p class="text-xs text-slate-600 mb-3">Download all your patient records, custom antibiotics, and settings to a secure file on your computer.</p>
+                    <p class="text-xs text-slate-600 mb-3">Select a specific time range to backup your patient records.</p>
+                    
+                    <select id="backupRangeType" class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 text-sm focus:ring-teal-500 outline-none" onchange="toggleBackupDates()">
+                        <option value="all">All Records</option>
+                        <option value="month">Specific Month</option>
+                        <option value="year">Specific Year</option>
+                    </select>
+                    
+                    <input type="month" id="backupMonth" class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 text-sm hidden focus:ring-teal-500 outline-none">
+                    <input type="number" id="backupYear" placeholder="Enter Year (e.g., 2026)" class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 text-sm hidden focus:ring-teal-500 outline-none">
+                    
                     <button onclick="downloadBackup()" class="w-full bg-teal-600 text-white font-bold py-2 rounded-lg shadow hover:bg-teal-700 transition-colors">📥 Download Backup</button>
                 </div>
                 <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
-                    <h4 class="font-bold text-amber-900 mb-2">2. Restore Data</h4>
-                    <p class="text-xs text-slate-600 mb-3">Upload a previously saved backup file. <b class="text-red-500">Warning:</b> This will replace all current data.</p>
+                    <h4 class="font-bold text-amber-900 mb-2">2. Smart Restore Data</h4>
+                    <p class="text-xs text-slate-600 mb-3">Upload a backup file. <b class="text-emerald-600">Safe Merge:</b> New records will be added, existing ones updated. Nothing will be deleted.</p>
                     <input type="file" id="backupFileInput" accept=".json" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-100 file:text-amber-700 hover:file:bg-amber-200 mb-3" />
-                    <button onclick="processRestore()" class="w-full bg-amber-600 text-white font-bold py-2 rounded-lg shadow hover:bg-amber-700 transition-colors">📤 Restore Backup</button>
+                    <button onclick="processRestore()" class="w-full bg-amber-600 text-white font-bold py-2 rounded-lg shadow hover:bg-amber-700 transition-colors">📤 Smart Restore</button>
                 </div>
             </div>
         `,
@@ -739,9 +749,38 @@ function showBackupModal() {
     });
 }
 
+// Helper function for the dropdown toggle
+window.toggleBackupDates = function() {
+    const type = document.getElementById('backupRangeType').value;
+    document.getElementById('backupMonth').classList.add('hidden');
+    document.getElementById('backupYear').classList.add('hidden');
+    
+    if(type === 'month') document.getElementById('backupMonth').classList.remove('hidden');
+    if(type === 'year') document.getElementById('backupYear').classList.remove('hidden');
+};
+
 window.downloadBackup = function() {
+    const type = document.getElementById('backupRangeType').value;
+    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+    
+    // Apply Selective Filtering
+    if (type === 'month') {
+        const m = document.getElementById('backupMonth').value;
+        if (!m) { Swal.showValidationMessage('Please select a month.'); return; }
+        allRecords = allRecords.filter(r => r.Date && r.Date.startsWith(m));
+    } else if (type === 'year') {
+        const y = document.getElementById('backupYear').value;
+        if (!y) { Swal.showValidationMessage('Please enter a year.'); return; }
+        allRecords = allRecords.filter(r => r.Date && r.Date.startsWith(y));
+    }
+
+    if (allRecords.length === 0) {
+        Swal.fire('No Data', 'There are no records matching your selected timeframe.', 'info');
+        return;
+    }
+
     const data = {
-        amr_records: JSON.parse(localStorage.getItem('amr_records')) || [],
+        amr_records: allRecords,
         amr_samples: JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples,
         amr_wards: JSON.parse(localStorage.getItem('amr_wards')) || defaultWards,
         amr_organisms: JSON.parse(localStorage.getItem('amr_organisms')) || [],
@@ -751,10 +790,10 @@ window.downloadBackup = function() {
 
     const dataStr = JSON.stringify(data, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
-    const dateStr = new Date().toISOString().split('T')[0];
-    saveAs(blob, `AMR_Tracker_Backup_${dateStr}.json`);
+    const dateSuffix = type === 'all' ? 'All_Data' : (type === 'month' ? document.getElementById('backupMonth').value : document.getElementById('backupYear').value);
     
-    Swal.fire('Success!', 'Backup downloaded successfully.', 'success');
+    saveAs(blob, `AMR_Tracker_Backup_${dateSuffix}.json`);
+    Swal.fire('Success!', `Backup downloaded containing ${allRecords.length} records.`, 'success');
 };
 
 window.processRestore = function() {
