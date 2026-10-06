@@ -715,18 +715,13 @@
 </div>
 
                 <!-- Backup & Restore -->
-                <div class="border border-slate-200 rounded-xl p-5 bg-slate-50/50">
-                    <h4 class="font-bold text-slate-800 mb-1 flex items-center gap-2 text-lg">💾 Database Backup & Restore</h4>
-                    <p class="text-xs text-slate-500 mb-4">Save all your local data securely or restore a previous state to prevent data loss.</p>
-                    <div class="flex flex-col sm:flex-row gap-4">
-                        <button onclick="downloadBackup()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm transition flex justify-center items-center gap-2">Download Local Backup</button>
-                        <div class="relative flex-1">
-                            <input type="file" id="backupFileInput" accept=".json" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="processRestore()" title="Upload Backup File">
-                            <button class="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm transition flex justify-center items-center gap-2">Upload & Restore</button>
-                        </div>
-                    </div>
-                </div>
-
+<div class="border border-slate-200 rounded-xl p-5 bg-slate-50/50">
+    <h4 class="font-bold text-slate-800 mb-1 flex items-center gap-2 text-lg">💾 Database Backup & Restore</h4>
+    <p class="text-xs text-slate-500 mb-4">Selectively save your local data securely or use Smart Merge to restore records.</p>
+    <button onclick="showBackupModal()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-3 rounded-lg text-sm font-bold shadow-sm transition flex justify-center items-center gap-2">
+        Open Backup & Restore Manager
+    </button>
+</div>
                 <!-- Abbreviations Manager -->
                 <div class="border border-slate-200 rounded-xl p-5 bg-slate-50/50">
                     <div class="flex justify-between items-start mb-4">
