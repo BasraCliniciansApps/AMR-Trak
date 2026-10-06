@@ -733,6 +733,8 @@ function showBackupModal() {
                     <input type="month" id="backupMonth" class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 text-sm hidden focus:ring-teal-500 outline-none">
                     <input type="number" id="backupYear" placeholder="Enter Year (e.g., 2026)" class="w-full border border-slate-300 p-2.5 rounded-lg mb-3 text-sm hidden focus:ring-teal-500 outline-none">
                     
+                    <p id="backupError" class="text-rose-600 text-xs font-bold mb-3 hidden"></p>
+                    
                     <button onclick="downloadBackup()" class="w-full bg-teal-600 text-white font-bold py-2 rounded-lg shadow hover:bg-teal-700 transition-colors">📥 Download Backup</button>
                 </div>
                 <div class="bg-amber-50 p-4 rounded-xl border border-amber-100">
@@ -749,7 +751,6 @@ function showBackupModal() {
     });
 }
 
-// Helper function for the dropdown toggle
 window.toggleBackupDates = function() {
     const type = document.getElementById('backupRangeType').value;
     document.getElementById('backupMonth').classList.add('hidden');
@@ -762,15 +763,23 @@ window.toggleBackupDates = function() {
 window.downloadBackup = function() {
     const type = document.getElementById('backupRangeType').value;
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let errEl = document.getElementById('backupError');
+    if (errEl) errEl.classList.add('hidden');
     
-    // Apply Selective Filtering
+    // Apply Selective Filtering securely
     if (type === 'month') {
         const m = document.getElementById('backupMonth').value;
-        if (!m) { Swal.showValidationMessage('Please select a month.'); return; }
+        if (!m) { 
+            if (errEl) { errEl.innerText = '⚠️ Please select a month.'; errEl.classList.remove('hidden'); }
+            return; 
+        }
         allRecords = allRecords.filter(r => r.Date && r.Date.startsWith(m));
     } else if (type === 'year') {
         const y = document.getElementById('backupYear').value;
-        if (!y) { Swal.showValidationMessage('Please enter a year.'); return; }
+        if (!y) { 
+            if (errEl) { errEl.innerText = '⚠️ Please enter a year.'; errEl.classList.remove('hidden'); }
+            return; 
+        }
         allRecords = allRecords.filter(r => r.Date && r.Date.startsWith(y));
     }
 
@@ -781,8 +790,8 @@ window.downloadBackup = function() {
 
     const data = {
         amr_records: allRecords,
-        amr_samples: JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples,
-        amr_wards: JSON.parse(localStorage.getItem('amr_wards')) || defaultWards,
+        amr_samples: JSON.parse(localStorage.getItem('amr_samples')) || (typeof defaultSamples !== 'undefined' ? defaultSamples : []),
+        amr_wards: JSON.parse(localStorage.getItem('amr_wards')) || (typeof defaultWards !== 'undefined' ? defaultWards : []),
         amr_organisms: JSON.parse(localStorage.getItem('amr_organisms')) || [],
         amr_custom_abx_v2: JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [],
         amr_live_settings: JSON.parse(localStorage.getItem('amr_live_settings')) || null
@@ -791,15 +800,29 @@ window.downloadBackup = function() {
     const dataStr = JSON.stringify(data, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
     const dateSuffix = type === 'all' ? 'All_Data' : (type === 'month' ? document.getElementById('backupMonth').value : document.getElementById('backupYear').value);
+    const filename = `AMR_Tracker_Backup_${dateSuffix}.json`;
+
+    // Fail-safe download execution
+    if (typeof saveAs !== 'undefined') {
+        saveAs(blob, filename);
+    } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
     
-    saveAs(blob, `AMR_Tracker_Backup_${dateSuffix}.json`);
     Swal.fire('Success!', `Backup downloaded containing ${allRecords.length} records.`, 'success');
 };
 
 window.processRestore = function() {
     const fileInput = document.getElementById('backupFileInput');
     if (!fileInput.files.length) {
-        Swal.showValidationMessage('Please select a backup file first.');
+        Swal.fire('Missing File', 'Please select a backup file first.', 'warning');
         return;
     }
 
@@ -821,25 +844,21 @@ window.processRestore = function() {
                 confirmButtonText: 'Yes, Merge Safely!'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // 1. Merge Records Logic
                     let currentRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
                     let importedRecords = importedData.amr_records || [];
                     let addedCount = 0;
                     let updatedCount = 0;
 
                     importedRecords.forEach(importedRecord => {
-                        // Locate matching existing record
                         let matchIndex = currentRecords.findIndex(r => 
                             (r['_uid'] && importedRecord['_uid'] && r['_uid'] === importedRecord['_uid']) || 
                             (!r['_uid'] && r['Patient ID'] === importedRecord['Patient ID'] && r['Selective organism'] === importedRecord['Selective organism'] && r['Date'] === importedRecord['Date'])
                         );
 
                         if (matchIndex > -1) {
-                            // Update existing record
                             currentRecords[matchIndex] = { ...currentRecords[matchIndex], ...importedRecord };
                             updatedCount++;
                         } else {
-                            // Append new record
                             currentRecords.push(importedRecord);
                             addedCount++;
                         }
@@ -847,7 +866,6 @@ window.processRestore = function() {
 
                     localStorage.setItem('amr_records', JSON.stringify(currentRecords));
 
-                    // 2. Merge Dictionaries safely (preventing duplicates using Sets)
                     const mergeArray = (localKey, importedArr) => {
                         if (!importedArr) return;
                         let localArr = JSON.parse(localStorage.getItem(localKey)) || [];
@@ -859,7 +877,6 @@ window.processRestore = function() {
                     mergeArray('amr_wards', importedData.amr_wards);
                     mergeArray('amr_organisms', importedData.amr_organisms);
 
-                    // 3. Merge Custom Antibiotics
                     if (importedData.amr_custom_abx_v2) {
                         let localAbx = JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [];
                         importedData.amr_custom_abx_v2.forEach(impAbx => {
@@ -870,16 +887,14 @@ window.processRestore = function() {
                         localStorage.setItem('amr_custom_abx_v2', JSON.stringify(localAbx));
                     }
 
-                    // 4. Refresh System UI
-                    loadBacteriaOptions();
-                    loadSampleOptions();
-                    loadWardOptions();
-                    renderDefaultAntibiotics();
-                    initDataTable();
-                    if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
-                    if(!$('#viewLive').hasClass('hidden')) generateLiveSurveillance();
+                    if (typeof loadBacteriaOptions === 'function') loadBacteriaOptions();
+                    if (typeof loadSampleOptions === 'function') loadSampleOptions();
+                    if (typeof loadWardOptions === 'function') loadWardOptions();
+                    if (typeof renderDefaultAntibiotics === 'function') renderDefaultAntibiotics();
+                    if (typeof initDataTable === 'function') initDataTable();
+                    if (!$('#viewAnalytics').hasClass('hidden') && typeof loadAnalyticsFilters === 'function') loadAnalyticsFilters();
+                    if (!$('#viewLive').hasClass('hidden') && typeof generateLiveSurveillance === 'function') generateLiveSurveillance();
 
-                    // Push combined dataset to cloud
                     if (typeof syncLocalToCloud === "function" && navigator.onLine) {
                         syncLocalToCloud();
                     }
