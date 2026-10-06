@@ -812,22 +812,65 @@ window.processRestore = function() {
             if (!importedData.amr_records) throw new Error("Invalid backup file structure.");
 
             Swal.fire({
-                title: 'Are you sure?',
-                text: "This will overwrite all existing data. Make sure you have backed up your current work!",
-                icon: 'warning',
+                title: 'Smart Merge Confirmation',
+                text: "Your current data will be kept safe. New records from the file will be added, and existing matches will be updated.",
+                icon: 'info',
                 showCancelButton: true,
-                confirmButtonColor: '#e11d48',
+                confirmButtonColor: '#10b981',
                 cancelButtonColor: '#64748b',
-                confirmButtonText: 'Yes, Restore it!'
+                confirmButtonText: 'Yes, Merge Safely!'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    localStorage.setItem('amr_records', JSON.stringify(importedData.amr_records));
-                    if (importedData.amr_samples) localStorage.setItem('amr_samples', JSON.stringify(importedData.amr_samples));
-                    if (importedData.amr_wards) localStorage.setItem('amr_wards', JSON.stringify(importedData.amr_wards));
-                    if (importedData.amr_organisms) localStorage.setItem('amr_organisms', JSON.stringify(importedData.amr_organisms));
-                    if (importedData.amr_custom_abx_v2) localStorage.setItem('amr_custom_abx_v2', JSON.stringify(importedData.amr_custom_abx_v2));
-                    if (importedData.amr_live_settings) localStorage.setItem('amr_live_settings', JSON.stringify(importedData.amr_live_settings));
+                    // 1. Merge Records Logic
+                    let currentRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+                    let importedRecords = importedData.amr_records || [];
+                    let addedCount = 0;
+                    let updatedCount = 0;
 
+                    importedRecords.forEach(importedRecord => {
+                        // Locate matching existing record
+                        let matchIndex = currentRecords.findIndex(r => 
+                            (r['_uid'] && importedRecord['_uid'] && r['_uid'] === importedRecord['_uid']) || 
+                            (!r['_uid'] && r['Patient ID'] === importedRecord['Patient ID'] && r['Selective organism'] === importedRecord['Selective organism'] && r['Date'] === importedRecord['Date'])
+                        );
+
+                        if (matchIndex > -1) {
+                            // Update existing record
+                            currentRecords[matchIndex] = { ...currentRecords[matchIndex], ...importedRecord };
+                            updatedCount++;
+                        } else {
+                            // Append new record
+                            currentRecords.push(importedRecord);
+                            addedCount++;
+                        }
+                    });
+
+                    localStorage.setItem('amr_records', JSON.stringify(currentRecords));
+
+                    // 2. Merge Dictionaries safely (preventing duplicates using Sets)
+                    const mergeArray = (localKey, importedArr) => {
+                        if (!importedArr) return;
+                        let localArr = JSON.parse(localStorage.getItem(localKey)) || [];
+                        let combined = [...new Set([...localArr, ...importedArr])];
+                        localStorage.setItem(localKey, JSON.stringify(combined));
+                    };
+
+                    mergeArray('amr_samples', importedData.amr_samples);
+                    mergeArray('amr_wards', importedData.amr_wards);
+                    mergeArray('amr_organisms', importedData.amr_organisms);
+
+                    // 3. Merge Custom Antibiotics
+                    if (importedData.amr_custom_abx_v2) {
+                        let localAbx = JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [];
+                        importedData.amr_custom_abx_v2.forEach(impAbx => {
+                            if (!localAbx.some(l => l.name === impAbx.name)) {
+                                localAbx.push(impAbx);
+                            }
+                        });
+                        localStorage.setItem('amr_custom_abx_v2', JSON.stringify(localAbx));
+                    }
+
+                    // 4. Refresh System UI
                     loadBacteriaOptions();
                     loadSampleOptions();
                     loadWardOptions();
@@ -836,7 +879,12 @@ window.processRestore = function() {
                     if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
                     if(!$('#viewLive').hasClass('hidden')) generateLiveSurveillance();
 
-                    Swal.fire('Restored!', 'Your data has been restored successfully.', 'success');
+                    // Push combined dataset to cloud
+                    if (typeof syncLocalToCloud === "function" && navigator.onLine) {
+                        syncLocalToCloud();
+                    }
+
+                    Swal.fire('Restored Successfully!', `Merged data safely:<br>+ ${addedCount} New Records<br>🔄 ${updatedCount} Updated Records`, 'success');
                 }
             });
         } catch (error) {
@@ -845,7 +893,6 @@ window.processRestore = function() {
     };
     reader.readAsText(file);
 };
-
 // --- APP MODALS ---
 function showSettingsModal() {
     loadAbbreviations();
