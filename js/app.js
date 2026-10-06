@@ -783,58 +783,70 @@ window.toggleBackupDates = function(mode) {
 };
 
 window.downloadBackup = function() {
-    const type = document.getElementById('backupRangeType').value;
-    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    
-    // Apply Selective Filtering safely
-    if (type === 'month') {
-        const m = document.getElementById('backupMonth').value;
-        if (!m) { Swal.fire('Required', 'Please select a month.', 'warning'); return; }
-        allRecords = allRecords.filter(r => r.Date && r.Date.startsWith(m));
-    } else if (type === 'year') {
-        const y = document.getElementById('backupYear').value;
-        if (!y) { Swal.fire('Required', 'Please enter a year.', 'warning'); return; }
-        allRecords = allRecords.filter(r => r.Date && r.Date.startsWith(y));
-    } else if (type === 'range') {
-        const s = document.getElementById('backupStart').value;
-        const e = document.getElementById('backupEnd').value;
-        if (!s || !e) { Swal.fire('Required', 'Please select start and end dates.', 'warning'); return; }
-        allRecords = allRecords.filter(r => r.Date && r.Date >= s && r.Date <= e);
-    }
+    try {
+        // We put the entire logic inside this 'try' block to detect any hidden crashes
+        const type = document.getElementById('backupRangeType').value;
+        let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+        
+        // Apply Selective Filtering safely
+        if (type === 'month') {
+            const m = document.getElementById('backupMonth').value;
+            if (!m) { Swal.fire('Required', 'Please select a month.', 'warning'); return; }
+            allRecords = allRecords.filter(r => r.Date && r.Date.startsWith(m));
+        } else if (type === 'year') {
+            const y = document.getElementById('backupYear').value;
+            if (!y) { Swal.fire('Required', 'Please enter a year.', 'warning'); return; }
+            allRecords = allRecords.filter(r => r.Date && r.Date.startsWith(y));
+        } else if (type === 'range') {
+            const s = document.getElementById('backupStart').value;
+            const e = document.getElementById('backupEnd').value;
+            if (!s || !e) { Swal.fire('Required', 'Please select start and end dates.', 'warning'); return; }
+            allRecords = allRecords.filter(r => r.Date && r.Date >= s && r.Date <= e);
+        }
 
-    if (allRecords.length === 0) {
-        Swal.fire('No Data', 'There are no records matching your selected timeframe.', 'info');
-        return;
-    }
+        if (allRecords.length === 0) {
+            Swal.fire('No Data', 'There are no records matching your selected timeframe.', 'info');
+            return;
+        }
 
-    const data = {
-        amr_records: allRecords,
-        amr_samples: JSON.parse(localStorage.getItem('amr_samples')) || (typeof defaultSamples !== 'undefined' ? defaultSamples : []),
-        amr_wards: JSON.parse(localStorage.getItem('amr_wards')) || (typeof defaultWards !== 'undefined' ? defaultWards : []),
-        amr_organisms: JSON.parse(localStorage.getItem('amr_organisms')) || [],
-        amr_custom_abx_v2: JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [],
-        amr_live_settings: JSON.parse(localStorage.getItem('amr_live_settings')) || null
-    };
+        const data = {
+            amr_records: allRecords,
+            amr_samples: JSON.parse(localStorage.getItem('amr_samples')) || (typeof defaultSamples !== 'undefined' ? defaultSamples : []),
+            amr_wards: JSON.parse(localStorage.getItem('amr_wards')) || (typeof defaultWards !== 'undefined' ? defaultWards : []),
+            amr_organisms: JSON.parse(localStorage.getItem('amr_organisms')) || [],
+            amr_custom_abx_v2: JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [],
+            amr_live_settings: JSON.parse(localStorage.getItem('amr_live_settings')) || null
+        };
 
-    const dataStr = JSON.stringify(data, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const dateSuffix = type === 'all' ? 'All_Data' : (type === 'month' ? document.getElementById('backupMonth').value : (type === 'year' ? document.getElementById('backupYear').value : 'Date_Range'));
-    
-    // Fail-safe download execution
-    if (typeof saveAs !== 'undefined') {
-        saveAs(blob, `AMR_Tracker_Backup_${dateSuffix}.json`);
-    } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `AMR_Tracker_Backup_${dateSuffix}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        const dataStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const dateSuffix = type === 'all' ? 'All_Data' : (type === 'month' ? document.getElementById('backupMonth').value : (type === 'year' ? document.getElementById('backupYear').value : 'Date_Range'));
+        
+        // Fail-safe download execution
+        if (typeof saveAs !== 'undefined') {
+            saveAs(blob, `AMR_Tracker_Backup_${dateSuffix}.json`);
+        } else {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `AMR_Tracker_Backup_${dateSuffix}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        Swal.fire('Success!', `Backup downloaded containing ${allRecords.length} records.`, 'success');
+
+    } catch (error) {
+        // ERROR DETECTOR: If anything crashes above, this block catches it and shows us why!
+        console.error("Exact Backup Error:", error);
+        Swal.fire({
+            icon: 'error',
+            title: 'System Error Detected',
+            html: `We found the exact issue causing the button to stop. Please tell me this error message:<br><br><b class="text-red-600 text-sm">${error.message}</b>`
+        });
     }
-    
-    Swal.fire('Success!', `Backup downloaded containing ${allRecords.length} records.`, 'success');
 };
 
 window.processRestore = function() {
