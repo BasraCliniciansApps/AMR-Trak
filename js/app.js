@@ -749,6 +749,7 @@ function showBackupModal() {
     });
 }
 
+// Helper function for the dropdown toggle
 window.toggleBackupDates = function() {
     const type = document.getElementById('backupRangeType').value;
     document.getElementById('backupMonth').classList.add('hidden');
@@ -780,8 +781,8 @@ window.downloadBackup = function() {
 
     const data = {
         amr_records: allRecords,
-        amr_samples: JSON.parse(localStorage.getItem('amr_samples')) || (typeof defaultSamples !== 'undefined' ? defaultSamples : []),
-        amr_wards: JSON.parse(localStorage.getItem('amr_wards')) || (typeof defaultWards !== 'undefined' ? defaultWards : []),
+        amr_samples: JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples,
+        amr_wards: JSON.parse(localStorage.getItem('amr_wards')) || defaultWards,
         amr_organisms: JSON.parse(localStorage.getItem('amr_organisms')) || [],
         amr_custom_abx_v2: JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [],
         amr_live_settings: JSON.parse(localStorage.getItem('amr_live_settings')) || null
@@ -820,21 +821,25 @@ window.processRestore = function() {
                 confirmButtonText: 'Yes, Merge Safely!'
             }).then((result) => {
                 if (result.isConfirmed) {
+                    // 1. Merge Records Logic
                     let currentRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
                     let importedRecords = importedData.amr_records || [];
                     let addedCount = 0;
                     let updatedCount = 0;
 
                     importedRecords.forEach(importedRecord => {
+                        // Locate matching existing record
                         let matchIndex = currentRecords.findIndex(r => 
                             (r['_uid'] && importedRecord['_uid'] && r['_uid'] === importedRecord['_uid']) || 
                             (!r['_uid'] && r['Patient ID'] === importedRecord['Patient ID'] && r['Selective organism'] === importedRecord['Selective organism'] && r['Date'] === importedRecord['Date'])
                         );
 
                         if (matchIndex > -1) {
+                            // Update existing record
                             currentRecords[matchIndex] = { ...currentRecords[matchIndex], ...importedRecord };
                             updatedCount++;
                         } else {
+                            // Append new record
                             currentRecords.push(importedRecord);
                             addedCount++;
                         }
@@ -842,6 +847,7 @@ window.processRestore = function() {
 
                     localStorage.setItem('amr_records', JSON.stringify(currentRecords));
 
+                    // 2. Merge Dictionaries safely (preventing duplicates using Sets)
                     const mergeArray = (localKey, importedArr) => {
                         if (!importedArr) return;
                         let localArr = JSON.parse(localStorage.getItem(localKey)) || [];
@@ -853,6 +859,7 @@ window.processRestore = function() {
                     mergeArray('amr_wards', importedData.amr_wards);
                     mergeArray('amr_organisms', importedData.amr_organisms);
 
+                    // 3. Merge Custom Antibiotics
                     if (importedData.amr_custom_abx_v2) {
                         let localAbx = JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [];
                         importedData.amr_custom_abx_v2.forEach(impAbx => {
@@ -863,6 +870,7 @@ window.processRestore = function() {
                         localStorage.setItem('amr_custom_abx_v2', JSON.stringify(localAbx));
                     }
 
+                    // 4. Refresh System UI
                     loadBacteriaOptions();
                     loadSampleOptions();
                     loadWardOptions();
@@ -871,6 +879,7 @@ window.processRestore = function() {
                     if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
                     if(!$('#viewLive').hasClass('hidden')) generateLiveSurveillance();
 
+                    // Push combined dataset to cloud
                     if (typeof syncLocalToCloud === "function" && navigator.onLine) {
                         syncLocalToCloud();
                     }
@@ -884,7 +893,6 @@ window.processRestore = function() {
     };
     reader.readAsText(file);
 };
-
 // --- APP MODALS ---
 function showSettingsModal() {
     loadAbbreviations();
@@ -954,11 +962,17 @@ function clearAllDatabase() {
         confirmButtonText: 'Yes, DELETE ALL RECORDS'
     }).then((result) => {
         if (result.isConfirmed) {
+            // Delete ONLY the records key from local storage
             localStorage.removeItem('amr_records');
+            
+            // Refresh the data table to show it is empty
             initDataTable();
+            
+            // Sync the empty table to the cloud to overwrite old data
             if (typeof syncLocalToCloud === "function" && navigator.onLine) {
                 syncLocalToCloud();
             }
+
             Swal.fire('Cleared!', 'All patient records have been successfully deleted.', 'success');
         }
     });
@@ -1004,7 +1018,7 @@ function deleteAbbreviation(code) {
 
 // --- 4. Data Entry UI Functions ---
 function renderDefaultAntibiotics() {
-    let currentGroups = JSON.parse(JSON.stringify(typeof abxGroups !== 'undefined' ? abxGroups : {}));
+    let currentGroups = JSON.parse(JSON.stringify(abxGroups));
     let customAbx = getCustomAntibiotics();
     customAbx.forEach(c => {
         if(currentGroups[c.group]) {
@@ -1048,18 +1062,19 @@ function loadBacteriaOptions() {
 
     const groups = { "Gram-Negative": [], "Gram-Positive": [], "Others": [], "Fungi": [], "Custom": [] };
     
-    if (typeof bacteriaLibrary !== 'undefined') {
-        bacteriaLibrary.forEach(bact => {
-            const optionText = `${bact.name} (${bact.code})`;
-            groups[bact.group].push(new Option(optionText, bact.name));
-        });
-    }
+    // جلب البكتيريا من المكتبة
+    bacteriaLibrary.forEach(bact => {
+        const optionText = `${bact.name} (${bact.code})`;
+        groups[bact.group].push(new Option(optionText, bact.name));
+    });
 
+    // جلب البكتيريا المضافة يدوياً (Custom)
     let savedOrgs = JSON.parse(localStorage.getItem('amr_organisms')) || [];
     savedOrgs.forEach(org => {
         groups["Custom"].push(new Option(org, org));
     });
 
+    // إضافة البكتيريا إلى القائمة المنسدلة
     for (const [groupName, options] of Object.entries(groups)) {
         if (options.length > 0) {
             const optgroup = $(`<optgroup label="${groupName}"></optgroup>`);
@@ -1070,7 +1085,7 @@ function loadBacteriaOptions() {
 }
 
 function loadSampleOptions() {
-    let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || (typeof defaultSamples !== 'undefined' ? defaultSamples : []);
+    let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
     const sampleSelect = $('#p_sample');
     sampleSelect.empty(); 
     savedSamples.forEach(sample => {
@@ -1079,7 +1094,7 @@ function loadSampleOptions() {
 }
 
 function loadWardOptions() {
-    let savedWards = JSON.parse(localStorage.getItem('amr_wards')) || (typeof defaultWards !== 'undefined' ? defaultWards : []);
+    let savedWards = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
     const wardSelect = $('#p_ward');
     wardSelect.empty(); 
     wardSelect.append(new Option("Select Ward (Optional)...", ""));
@@ -1087,15 +1102,19 @@ function loadWardOptions() {
 }
 
 function loadAnalyticsFilters() {
+    // 1. منع التحديث المزدوج
     if (isUpdatingFilters) return;
     isUpdatingFilters = true;
 
+    // 2. جلب القيم الحالية من الفلاتر
     const startDate = $('#ana_start').val();
     const endDate = $('#ana_end').val();
     const targetSample = $('#ana_sample').val();
 
+    // 3. جلب كل السجلات من قاعدة البيانات
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
     
+    // المرحلة الأولى: الفلترة حسب التاريخ فقط
     let dateFilteredRecords = allRecords.filter(r => {
         if(!startDate || !endDate) return true;
         return r.Date >= startDate && r.Date <= endDate;
@@ -1113,6 +1132,7 @@ function loadAnalyticsFilters() {
         $('#ana_sample').val(currentSample);
     }
 
+    // المرحلة الثانية: تطبيق فلتر العينة 
     let finalRecords = dateFilteredRecords;
     if (targetSample) {
         finalRecords = finalRecords.filter(r => r.Sample === targetSample);
@@ -1120,7 +1140,7 @@ function loadAnalyticsFilters() {
 
     let orgs = new Set();
     let abxs = new Set();
-    let allPossibleAbxs = typeof abxList !== 'undefined' ? [...abxList, ...getCustomAntibiotics().map(a=>a.name)] : getCustomAntibiotics().map(a=>a.name);
+    let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
 
     finalRecords.forEach(r => {
         let org = r['Selective organism'];
@@ -1175,7 +1195,7 @@ function initDataTable() {
     ];
 
     let customAbx = getCustomAntibiotics();
-    let allAbxColumns = typeof abxList !== 'undefined' ? [...abxList, ...customAbx.map(a=>a.name)] : customAbx.map(a=>a.name);
+    let allAbxColumns = [...abxList, ...customAbx.map(a=>a.name)];
     allAbxColumns.forEach(abx => { 
         cols.push({ 
             data: abx, 
@@ -1190,14 +1210,19 @@ function initDataTable() {
         }); 
     });
 
+    // 💡 الحل الجذري: الذاكرة اليدوية لالتقاط الفلاتر والصفحات قبل تدمير الجدول
     let savedPage = 0;
     let savedSearch = "";
     let savedColFilters = {};
 
     if ($.fn.DataTable.isDataTable('#recordsTable')) {
         let table = $('#recordsTable').DataTable();
+        
+        // 1. حفظ الصفحة الحالية وكلمة البحث
         savedPage = table.page();
         savedSearch = table.search();
+        
+        // 2. حفظ الخيارات المحددة من القوائم المنسدلة
         $('#recordsTable thead select').each(function() {
             let val = $(this).val();
             if (val) {
@@ -1205,6 +1230,7 @@ function initDataTable() {
                 savedColFilters[colIdx] = val;
             }
         });
+
         table.destroy();
         $('#recordsTable').empty();
     }
@@ -1215,8 +1241,8 @@ function initDataTable() {
         scrollX: true, 
         deferRender: true,
         order: [[ 6, "desc" ]],
-        stateSave: false,
-        search: { search: savedSearch },
+        stateSave: false, // 🔴 يجب أن يبقى false لمنع تضارب الأعمدة الديناميكية
+        search: { search: savedSearch }, // 3. استعادة البحث العام فوراً
         dom: '<"flex flex-col md:flex-row justify-between items-center mb-4 gap-4"l fB>rt<"flex flex-col md:flex-row justify-between items-center mt-4 gap-4"ip>',
         buttons: [
             { extend: 'excelHtml5', text: 'Export Basic List', className: 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg px-4 py-2 text-sm font-bold shadow-sm transition-colors' }
@@ -1230,9 +1256,11 @@ function initDataTable() {
         },
         initComplete: function () {
             let api = this.api();
+            
             api.columns([3, 4, 5, 6, 7]).every(function () {
                 let column = this;
                 let colIdx = column.index();
+                
                 let select = $('<select class="mt-2 block w-full text-xs border-slate-300 rounded shadow-sm focus:ring-blue-500 font-normal outline-none"><option value="">All</option></select>')
                     .appendTo($(column.header()))
                     .on('change', function () {
@@ -1246,6 +1274,8 @@ function initDataTable() {
                         select.append('<option value="' + d + '">' + d + '</option>');
                     }
                 });
+                
+                // 4. استعادة الفلتر الخاص بهذا العمود إن كان موجوداً قبل التعديل
                 if (savedColFilters[colIdx]) {
                     select.val(savedColFilters[colIdx]);
                     let escapedVal = $.fn.dataTable.util.escapeRegex(savedColFilters[colIdx]);
@@ -1255,13 +1285,13 @@ function initDataTable() {
 
             $('.dataTables_filter input').addClass('w-64 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm');$('.dataTables_length select').addClass('border border-slate-300 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm mx-2');
             
+            // 5. رسم الجدول مع استعادة الصفحة الحالية
             if (savedPage > 0 || Object.keys(savedColFilters).length > 0) {
                 api.page(savedPage).draw(false);
             }
         }
     });
 }
-
 function openModal() {
     $('#entryForm')[0].reset();
     $('#editIndex').val('-1');
@@ -1276,7 +1306,8 @@ function openModal() {
     $('#p_organism').val(null).trigger('change');
     $('#p_antibiogram_org').val('').trigger('change');
     
-    $('.default-abx-select').each(function() {$(this).val('').trigger('change');
+    $('.default-abx-select').each(function() {
+        $(this).val('').trigger('change');
         updateAbxColor(this);
     });
     
@@ -1334,7 +1365,7 @@ $('#entryForm').submit(function(e) {
     e.preventDefault();
     
     let currentSample = $('#p_sample').val();
-    let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || (typeof defaultSamples !== 'undefined' ? defaultSamples : []);
+    let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
 
     if (currentSample && !savedSamples.includes(currentSample)) {
         savedSamples.push(currentSample);
@@ -1343,7 +1374,7 @@ $('#entryForm').submit(function(e) {
     }
     
     let currentWard = $('#p_ward').val();
-    let savedWards = JSON.parse(localStorage.getItem('amr_wards')) || (typeof defaultWards !== 'undefined' ? defaultWards : []);
+    let savedWards = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
     if (currentWard && !savedWards.includes(currentWard)) {
         savedWards.push(currentWard); localStorage.setItem('amr_wards', JSON.stringify(savedWards));
         $('#p_ward').append(new Option(currentWard, currentWard, true, true)).trigger('change');
@@ -1351,16 +1382,13 @@ $('#entryForm').submit(function(e) {
 
     let currentOrganism = $('#p_organism').val();
     let savedOrgs = JSON.parse(localStorage.getItem('amr_organisms')) || [];
-    let isDefaultOrg = typeof bacteriaLibrary !== 'undefined' ? bacteriaLibrary.some(b => b.name === currentOrganism) : false;
+    let isDefaultOrg = bacteriaLibrary.some(b => b.name === currentOrganism);
 
     if (currentOrganism && !isDefaultOrg && !savedOrgs.includes(currentOrganism)) {
         savedOrgs.push(currentOrganism);
         localStorage.setItem('amr_organisms', JSON.stringify(savedOrgs));
         $('#p_organism').append(new Option(currentOrganism, currentOrganism, true, true)).trigger('change');
     }
-
-    let editIndex = $('#editIndex').val();
-    let records = JSON.parse(localStorage.getItem('amr_records')) || [];
 
     let record = {
         '_uid': editIndex > -1 ? (records[editIndex]['_uid'] || Date.now().toString() + Math.random().toString(36).substr(2, 5)) : Date.now().toString() + Math.random().toString(36).substr(2, 5),
@@ -1390,7 +1418,10 @@ $('#entryForm').submit(function(e) {
         if (val && val !== "") { record[$(this).attr('data-abx')] = val; }
     });
 
-    if (editIndex > -1) {
+    let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let editIndex = $('#editIndex').val();
+
+if (editIndex > -1) {
         records[editIndex] = record; 
     } else {
         records.push(record); 
@@ -1402,6 +1433,7 @@ $('#entryForm').submit(function(e) {
     
     if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
 
+    // السطور التي يجب إضافتها لرفع السجل الجديد فوراً للسحابة
     if (typeof syncLocalToCloud === "function" && navigator.onLine) {
         syncLocalToCloud();
     }
@@ -1455,7 +1487,7 @@ function editRecord(index) {
         $('#p_antibiogram_org').val('').trigger('change');
     }
 
-    const standardProps = ['_uid', 'Name', 'Age', 'Age Unit', 'Sex', 'Ward', 'Sample', 'Date', 'Selective organism', 'Antibiogram organism', 'Patient ID'];
+    const standardProps = ['Name', 'Age', 'Age Unit', 'Sex', 'Ward', 'Sample', 'Date', 'Selective organism', 'Antibiogram organism'];
     
     Object.keys(record).forEach(key => {
         if (!standardProps.includes(key)) {
@@ -1483,12 +1515,19 @@ function deleteRecord(index) {
     .then((result) => {
         if (result.isConfirmed) {
             let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+            
+            // 1. حذف القيد من السجلات المحلية
             records.splice(index, 1); 
             localStorage.setItem('amr_records', JSON.stringify(records));
+            
+            // 2. تحديث الجدول أمام المستخدم
             initDataTable(); 
+            
+            // 3. الإضافة الجديدة: رفع التحديث (بعد الحذف) إلى السحابة إذا كان الإنترنت متوفراً
             if (typeof syncLocalToCloud === "function" && navigator.onLine) {
                 syncLocalToCloud();
             }
+
             Swal.fire('Deleted!', '', 'success');
         }
     });
@@ -1496,8 +1535,8 @@ function deleteRecord(index) {
 
 // --- Manage Dictionaries ---
 function manageSamples() {
-    let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || (typeof defaultSamples !== 'undefined' ? defaultSamples : []);
-    let customSamples = savedSamples.filter(s => typeof defaultSamples !== 'undefined' ? !defaultSamples.includes(s) : true);
+    let savedSamples = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
+    let customSamples = savedSamples.filter(s => !defaultSamples.includes(s));
     if (customSamples.length === 0) { Swal.fire({ icon: 'info', title: 'No Custom Samples' }); return; }
     let html = '<div class="text-left space-y-2 mt-4">';
     customSamples.forEach(sample => {
@@ -1510,7 +1549,7 @@ function manageSamples() {
 }
 
 window.deleteCustomSample = function(sample) {
-    let s = JSON.parse(localStorage.getItem('amr_samples')) || (typeof defaultSamples !== 'undefined' ? defaultSamples : []);
+    let s = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
     localStorage.setItem('amr_samples', JSON.stringify(s.filter(x => x !== sample)));
     loadSampleOptions(); 
     if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters(); 
@@ -1518,8 +1557,8 @@ window.deleteCustomSample = function(sample) {
 };
 
 function manageWards() {
-    let savedWards = JSON.parse(localStorage.getItem('amr_wards')) || (typeof defaultWards !== 'undefined' ? defaultWards : []);
-    let customWards = savedWards.filter(w => typeof defaultWards !== 'undefined' ? !defaultWards.includes(w) : true);
+    let savedWards = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
+    let customWards = savedWards.filter(w => !defaultWards.includes(w));
     if (customWards.length === 0) { Swal.fire({ icon: 'info', title: 'No Custom Wards' }); return; }
     let html = '<div class="text-left space-y-2 mt-4">';
     customWards.forEach(ward => {
@@ -1532,7 +1571,7 @@ function manageWards() {
 }
 
 window.deleteCustomWard = function(ward) {
-    let w = JSON.parse(localStorage.getItem('amr_wards')) || (typeof defaultWards !== 'undefined' ? defaultWards : []);
+    let w = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;
     localStorage.setItem('amr_wards', JSON.stringify(w.filter(x => x !== ward)));
     loadWardOptions(); 
     manageWards();
@@ -1561,7 +1600,7 @@ window.deleteCustomOrganism = function(org) {
 
 function manageAntibioticsDB() {
     let customAbx = getCustomAntibiotics();
-    let groupsArr = typeof abxGroups !== 'undefined' ? Object.keys(abxGroups) : [];
+    let groupsArr = Object.keys(abxGroups);
     if (!groupsArr.includes("Others")) groupsArr.push("Others");
 
     let groupsOptions = groupsArr.map(g => `<option value="${g}">${g}</option>`).join('');
@@ -1626,7 +1665,7 @@ window.addNewAbxToDB = function() {
         return; 
     }
     
-    let allCurrent = typeof abxList !== 'undefined' ? [...abxList, ...getCustomAntibiotics().map(a=>a.name)] : getCustomAntibiotics().map(a=>a.name);
+    let allCurrent = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
     if(allCurrent.map(a=>a.toLowerCase()).includes(name.toLowerCase())) {
         errorEl.innerText = 'Item already exists!';
         errorEl.classList.remove('hidden');
