@@ -337,30 +337,32 @@ window.switchTab = function(tab) {
 
 function generateLiveSurveillance() {
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    let settings = JSON.parse(localStorage.getItem('amr_live_settings')) || { profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
-
+    let settings = JSON.parse(localStorage.getItem('amr_live_settings')) || {};
+    
     const blacklist = ["xxx", "con", "no growth", "contaminated", "normal flora", "mixed flora", "no significant growth"];
     let cleanRecords = allRecords.filter(r => {
         let org = (r['Selective organism'] || "").toLowerCase();
         return org !== "" && !blacklist.some(b => org.includes(b));
     });
 
-    if (cleanRecords.length === 0) return;
+    if (cleanRecords.length === 0) {
+        $('#live_month_title').text('Target Month (No Data)');
+        $('#live_q_title').text('Target Quarter (No Data)');
+        liveCharts.forEach(c => c.destroy());
+        liveCharts = [];
+        return;
+    }
 
-    let allDates = cleanRecords.map(r => r.Date).filter(Boolean).sort();
-    if(allDates.length === 0) return; 
+    // Apply strict manual overrides mapped from Mobile Dash Settings
+    let targetMonthPrefix = settings.mobile_dash_month || new Date().toISOString().slice(0, 7);
+    let qLabel = settings.mobile_dash_quarter || "Q1";
+    let qYear = parseInt(settings.mobile_dash_year) || new Date().getFullYear();
+    let qMonths = [];
 
-    let latestDateStr = allDates[allDates.length - 1]; 
-    let targetMonthPrefix = latestDateStr.substring(0, 7);
-
-    let [lYear, lMonth] = targetMonthPrefix.split('-').map(Number);
-    let qYear = lYear, qMonths = [], qLabel = "";
-
-    // Updated to align with the current quarter of the latest data instead of stepping backward
-    if (lMonth <= 3) { qMonths = ["01","02","03"]; qLabel = `Q1 ${qYear}`; }
-    else if (lMonth <= 6) { qMonths = ["04","05","06"]; qLabel = `Q2 ${qYear}`; }
-    else if (lMonth <= 9) { qMonths = ["07","08","09"]; qLabel = `Q3 ${qYear}`; }
-    else { qMonths = ["10","11","12"]; qLabel = `Q4 ${qYear}`; }
+    if (qLabel === "Q1") qMonths = ["01","02","03"];
+    else if (qLabel === "Q2") qMonths = ["04","05","06"];
+    else if (qLabel === "Q3") qMonths = ["07","08","09"];
+    else if (qLabel === "Q4") qMonths = ["10","11","12"];
 
     let monthRecords = cleanRecords.filter(r => r.Date && r.Date.startsWith(targetMonthPrefix));
     let quarterRecords = cleanRecords.filter(r => {
@@ -370,11 +372,13 @@ function generateLiveSurveillance() {
     });
 
     $('#live_month_title').text(`Surveillance Overview (${targetMonthPrefix})`);
-    $('#live_q_title').text(`Surveillance Overview (${qLabel})`);
+    $('#live_q_title').text(`Surveillance Overview (${qLabel} ${qYear})`);
 
-    liveCharts.forEach(c => c.destroy()); liveCharts = [];
+    liveCharts.forEach(c => c.destroy());
+    liveCharts = [];
+
     buildMobileLiveSection(monthRecords, 'm', settings, targetMonthPrefix);
-    buildMobileLiveSection(quarterRecords, 'q', settings, qLabel);
+    buildMobileLiveSection(quarterRecords, 'q', settings, `${qLabel} ${qYear}`);
 }
 
 function buildMobileLiveSection(records, prefix, settings, timeLabel) {
