@@ -237,6 +237,12 @@ function runDatabaseMigration() {
     let migrated = false;
     
     records.forEach(r => {
+        // 🛠️ AUTO-REPAIR: Fix corrupted _uid caused by the S/I/R dropdown bug
+        if (r['_uid'] === 'S' || r['_uid'] === 'I' || r['_uid'] === 'R' || !r['_uid']) {
+            r['_uid'] = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+            migrated = true;
+        }
+
         if (r['Selective organism'] === "Escherichia coli (E.coli)") {
             r['Selective organism'] = "Escherichia coli";
             migrated = true;
@@ -1565,6 +1571,7 @@ function editRecord(index) {
         $('#p_antibiogram_org').val('').trigger('change');
     }
 
+    // 🔒 Fixed: Added _uid and Patient ID so they never become antibiotic dropdowns again
     const standardProps = ['_uid', 'Patient ID', 'Name', 'Age', 'Age Unit', 'Sex', 'Ward', 'Sample', 'Date', 'Selective organism', 'Antibiogram organism'];
     
     Object.keys(record).forEach(key => {
