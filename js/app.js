@@ -1466,6 +1466,10 @@ $('#entryForm').submit(function(e) {
         $('#p_organism').append(new Option(currentOrganism, currentOrganism, true, true)).trigger('change');
     }
 
+    // Retrieve records and index FIRST before building the record
+    let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let editIndex = $('#editIndex').val();
+
     let record = {
         '_uid': editIndex > -1 ? (records[editIndex]['_uid'] || Date.now().toString() + Math.random().toString(36).substr(2, 5)) : Date.now().toString() + Math.random().toString(36).substr(2, 5),
         'Patient ID': $('#p_id').val() || "Unknown",
@@ -1494,8 +1498,6 @@ $('#entryForm').submit(function(e) {
         if (val && val !== "") { record[$(this).attr('data-abx')] = val; }
     });
 
-    let records = JSON.parse(localStorage.getItem('amr_records')) || [];
-    let editIndex = $('#editIndex').val();
 
 if (editIndex > -1) {
         records[editIndex] = record; 
