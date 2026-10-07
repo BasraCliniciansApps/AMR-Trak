@@ -130,17 +130,42 @@ function syncCloudToLocal() {
             let localRecordsStr = localStorage.getItem('amr_records') || "[]";
             let localRecords = JSON.parse(localRecordsStr);
 
-            // 🔄 دمج واستعادة أسماء المرضى بدقة باستخدام المعرف الفريد السري
-            let mergedRecords = cloudRecords.map(cr => {
-                let match = localRecords.find(lr => 
-                    (lr['_uid'] && cr['_uid'] && lr['_uid'] === cr['_uid']) || 
-                    (!lr['_uid'] && lr['Patient ID'] === cr['Patient ID'] && lr['Selective organism'] === cr['Selective organism'] && lr['Date'] === cr['Date'])
-                );
-                if (match && match['Name']) {
-                    cr['Name'] = match['Name'];
-                } else {
-                    cr['Name'] = "Unknown Patient"; // إذا كان المريض جديداً مدخلاً من حاسبة أخرى
+            // 🔄 Bulletproof Memory Bank: Safely restores names sequentially 
+            let nameDictionary = {};
+            let compositeDictionary = {};
+            let compositeTracker = {};
+
+            localRecords.forEach(lr => {
+                if (lr['_uid'] && lr['Name']) {
+                    nameDictionary[lr['_uid']] = lr['Name'];
                 }
+                if (lr['Name']) {
+                    let key = `${lr['Patient ID']}_${lr['Selective organism']}_${lr['Date']}`;
+                    if (!compositeDictionary[key]) compositeDictionary[key] = [];
+                    compositeDictionary[key].push(lr['Name']);
+                }
+            });
+
+            let mergedRecords = cloudRecords.map(cr => {
+                let restoredName = "Unknown Patient";
+                
+                if (cr['_uid'] && nameDictionary[cr['_uid']]) {
+                    restoredName = nameDictionary[cr['_uid']];
+                } else {
+                    let key = `${cr['Patient ID']}_${cr['Selective organism']}_${cr['Date']}`;
+                    if (compositeDictionary[key] && compositeDictionary[key].length > 0) {
+                        if (!compositeTracker[key]) compositeTracker[key] = 0;
+                        let idx = compositeTracker[key];
+                        if (idx < compositeDictionary[key].length) {
+                            restoredName = compositeDictionary[key][idx];
+                            compositeTracker[key]++;
+                        } else {
+                            restoredName = compositeDictionary[key][0];
+                        }
+                    }
+                }
+                
+                cr['Name'] = restoredName;
                 return cr;
             });
 
@@ -311,6 +336,10 @@ function runDatabaseMigration() {
 
     if (migrated) {
         localStorage.setItem('amr_records', JSON.stringify(records));
+        // Instantly push repaired IDs to the cloud to prevent refresh mismatch
+        if (typeof syncLocalToCloud === 'function' && navigator.onLine) {
+            syncLocalToCloud();
+        }
     }
 }
 
@@ -611,6 +640,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
         if (orgNameCleanup[fullOrgName]) fullOrgName = orgNameCleanup[fullOrgName];
 
         let record = {
+            '_uid': Date.now().toString(36) + Math.random().toString(36).substr(2, 5) + i,
             'Patient ID': patientID,
             'Name': name, 'Age': ageNum, 'Age Unit': ageUnit, 'Sex': sex,
             'Ward': ward, 'Sample': sample, 'Date': formattedDate,
