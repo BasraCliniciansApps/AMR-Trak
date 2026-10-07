@@ -2447,10 +2447,11 @@ function generateLiveSurveillance() {
     let currentMonthNum = parseInt(qMonthStr);
     let qMonths = []; let qLabel = "";
     
-    // Updated to display the quarter matching the active month
-    if (currentMonthNum <= 3) { qMonths = ["01","02","03"]; qLabel = `Q1 ${qYear}`; }
-    else if (currentMonthNum <= 6) { qMonths = ["04","05","06"]; qLabel = `Q2 ${qYear}`; }
-    else if (currentMonthNum <= 9) { qMonths = ["07","08","09"]; qLabel = `Q3 ${qYear}`; }
+    // Jump to next quarter only when its 3rd month is reached
+    if (currentMonthNum < 3) { qYear -= 1; qMonths = ["10","11","12"]; qLabel = `Q4 ${qYear}`; }
+    else if (currentMonthNum < 6) { qMonths = ["01","02","03"]; qLabel = `Q1 ${qYear}`; }
+    else if (currentMonthNum < 9) { qMonths = ["04","05","06"]; qLabel = `Q2 ${qYear}`; }
+    else if (currentMonthNum < 12) { qMonths = ["07","08","09"]; qLabel = `Q3 ${qYear}`; }
     else { qMonths = ["10","11","12"]; qLabel = `Q4 ${qYear}`; }
 
     let monthRecords = cleanRecords.filter(r => r.Date && r.Date.startsWith(targetMonthPrefix));
