@@ -145,10 +145,11 @@ function filterByPeriod(records, periodType) {
         let [lYear, lMonth] = targetMonthPrefix.split('-').map(Number);
         let qYear = lYear, qMonths = [];
 
-        // Updated to align with the current quarter of the latest data
-        if (lMonth <= 3) { qMonths = ["01","02","03"]; }
-        else if (lMonth <= 6) { qMonths = ["04","05","06"]; }
-        else if (lMonth <= 9) { qMonths = ["07","08","09"]; }
+        // Jump to next quarter only when its 3rd month is reached
+        if (lMonth < 3) { qYear -= 1; qMonths = ["10","11","12"]; }
+        else if (lMonth < 6) { qMonths = ["01","02","03"]; }
+        else if (lMonth < 9) { qMonths = ["04","05","06"]; }
+        else if (lMonth < 12) { qMonths = ["07","08","09"]; }
         else { qMonths = ["10","11","12"]; }
 
         return validRecords.filter(r => {
