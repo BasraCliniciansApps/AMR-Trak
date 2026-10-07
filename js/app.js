@@ -2338,49 +2338,50 @@ async function processAntibiogramExport(year, quarter) {
 }
 
 // --- Live Settings Logic ---
+// --- Live Settings Logic ---
 function loadLiveSettings() {
-    let s = JSON.parse(localStorage.getItem('amr_live_settings')) || {
-        calc_mode: 'auto',
-        manual_month: '',
-        cutoff_day: '',
-        show_amr: true,
-        show_top3: true,
-        profile1_abx: 'Meropenem',
-        profile2_abx: 'Ceftriaxone'
-    };
-    $('#live_calc_mode').val(s.calc_mode);
-    $('#live_manual_month').val(s.manual_month);
-    $('#live_cutoff_day').val(s.cutoff_day || '');
-    $('#live_toggle_amr').prop('checked', s.show_amr);
-    $('#live_toggle_top3').prop('checked', s.show_top3);
+    let currentYear = new Date().getFullYear();
+    let currentMonth = new Date().toISOString().slice(0, 7);
+    let s = JSON.parse(localStorage.getItem('amr_live_settings')) || {};
+    
+    $('#pc_live_month').val(s.pc_live_month || currentMonth);
+    $('#pc_live_quarter').val(s.pc_live_quarter || 'Q1');
+    $('#pc_live_year').val(s.pc_live_year || currentYear);
+    
+    $('#mobile_dash_month').val(s.mobile_dash_month || currentMonth);
+    $('#mobile_dash_quarter').val(s.mobile_dash_quarter || 'Q1');
+    $('#mobile_dash_year').val(s.mobile_dash_year || currentYear);
+
+    $('#live_toggle_amr').prop('checked', s.show_amr !== false);
+    $('#live_toggle_top3').prop('checked', s.show_top3 !== false);
 
     // 1. جلب قائمة كل المضادات (الأساسية + المضافة يدوياً) وترتيبها أبجدياً
     let allAbx = [...abxList, ...getCustomAntibiotics().map(a => a.name)].sort();
     
     // 2. بناء نص HTML متكامل للخيارات دفعة واحدة (أسرع وأكثر استقراراً)
     let optionsHtml = '';
-    allAbx.forEach(a => {
-        optionsHtml += `<option value="${a}">${a}</option>`;
-    });
-
-    // 3. حقن الخيارات داخل القوائم، ثم تحديد القيمة المحفوظة أو القيمة الافتراضية
+    allAbx.forEach(a => { optionsHtml += `<option value="${a}">${a}</option>`; });
+    
     $('#live_profile1_abx').html(optionsHtml).val(s.profile1_abx || 'Meropenem');
     $('#live_profile2_abx').html(optionsHtml).val(s.profile2_abx || 'Ceftriaxone');
-
-    toggleManualMonthInput();
 }
 
 function saveLiveSettings() {
     let s = {
-        calc_mode: $('#live_calc_mode').val(),
-        manual_month: $('#live_manual_month').val(),
-        cutoff_day: $('#live_cutoff_day').val(),
+        pc_live_month: $('#pc_live_month').val(),
+        pc_live_quarter: $('#pc_live_quarter').val(),
+        pc_live_year: $('#pc_live_year').val(),
+        mobile_dash_month: $('#mobile_dash_month').val(),
+        mobile_dash_quarter: $('#mobile_dash_quarter').val(),
+        mobile_dash_year: $('#mobile_dash_year').val(),
         show_amr: $('#live_toggle_amr').is(':checked'),
         show_top3: $('#live_toggle_top3').is(':checked'),
         profile1_abx: $('#live_profile1_abx').val(),
         profile2_abx: $('#live_profile2_abx').val()
     };
+    
     localStorage.setItem('amr_live_settings', JSON.stringify(s));
+    
     if(!$('#viewLive').hasClass('hidden')) generateLiveSurveillance();
     
     if (typeof syncLocalToCloud === "function" && navigator.onLine) {
@@ -2390,16 +2391,11 @@ function saveLiveSettings() {
     Swal.fire({icon:'success', title:'Saved', timer:1000, showConfirmButton:false});
 }
 
-function toggleManualMonthInput() {
-    if($('#live_calc_mode').val() === 'manual') $('#live_manual_month_container').removeClass('hidden');
-    else $('#live_manual_month_container').addClass('hidden');
-}
-
-// --- 🔴 LIVE SURVEILLANCE LOGIC ---
+// --- 🔴 LIVE SURVEILLANCE LOGIC (PC WEBAPP) ---
 function generateLiveSurveillance() {
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-    let s = JSON.parse(localStorage.getItem('amr_live_settings')) || { calc_mode: 'auto', manual_month: '', cutoff_day: '', show_amr: true, show_top3: true, profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
-    
+    let s = JSON.parse(localStorage.getItem('amr_live_settings')) || {};
+
     // 1. Strict Blacklist Filter
     const blacklist = ["xxx", "con", "no growth", "contaminated", "normal flora", "mixed flora", "no significant growth"];
     let cleanRecords = allRecords.filter(r => {
@@ -2407,54 +2403,18 @@ function generateLiveSurveillance() {
         return org !== "" && !blacklist.some(b => org.includes(b));
     });
 
-    // 2. Logic for Date Calculation
-    let targetMonthPrefix = "";
-    if (s.calc_mode === 'manual' && s.manual_month) {
-        targetMonthPrefix = s.manual_month;
-    } else {
-        let cutoffDay = parseInt(s.cutoff_day);
-        
-        if (!isNaN(cutoffDay) && cutoffDay > 0 && cutoffDay <= 31) {
-            let now = new Date();
-            let currentYear = now.getFullYear();
-            let currentMonth = now.getMonth() + 1;
-            let currentDay = now.getDate();
-            
-            let targetY = currentYear;
-            let targetM = currentMonth;
-            
-            if (currentDay < cutoffDay) {
-                targetM -= 2;
-            } else {
-                targetM -= 1;
-            }
-            
-            while (targetM < 1) {
-                targetM += 12;
-                targetY -= 1;
-            }
-            targetMonthPrefix = `${targetY}-${String(targetM).padStart(2, '0')}`;
-        } else {
-            let allMonths = [...new Set(cleanRecords.map(r => r.Date ? r.Date.substring(0,7) : "").filter(Boolean))].sort().reverse();
-            if(allMonths.length > 0) {
-                targetMonthPrefix = allMonths[0]; // Latest
-            } else {
-                targetMonthPrefix = new Date().toISOString().slice(0, 7); // Fallback to current
-            }
-        }
-    }
+    if (cleanRecords.length === 0) return;
 
-    let [qYear, qMonthStr] = targetMonthPrefix.split('-');
-    qYear = parseInt(qYear);
-    let currentMonthNum = parseInt(qMonthStr);
-    let qMonths = []; let qLabel = "";
-    
-    // Jump to next quarter only when its 3rd month is reached
-    if (currentMonthNum < 3) { qYear -= 1; qMonths = ["10","11","12"]; qLabel = `Q4 ${qYear}`; }
-    else if (currentMonthNum < 6) { qMonths = ["01","02","03"]; qLabel = `Q1 ${qYear}`; }
-    else if (currentMonthNum < 9) { qMonths = ["04","05","06"]; qLabel = `Q2 ${qYear}`; }
-    else if (currentMonthNum < 12) { qMonths = ["07","08","09"]; qLabel = `Q3 ${qYear}`; }
-    else { qMonths = ["10","11","12"]; qLabel = `Q4 ${qYear}`; }
+    // 2. Apply strict manual overrides mapped from PC Settings
+    let targetMonthPrefix = s.pc_live_month || new Date().toISOString().slice(0, 7);
+    let qLabel = s.pc_live_quarter || "Q1";
+    let qYear = parseInt(s.pc_live_year) || new Date().getFullYear();
+    let qMonths = [];
+
+    if (qLabel === "Q1") qMonths = ["01","02","03"];
+    else if (qLabel === "Q2") qMonths = ["04","05","06"];
+    else if (qLabel === "Q3") qMonths = ["07","08","09"];
+    else if (qLabel === "Q4") qMonths = ["10","11","12"];
 
     let monthRecords = cleanRecords.filter(r => r.Date && r.Date.startsWith(targetMonthPrefix));
     let quarterRecords = cleanRecords.filter(r => {
@@ -2463,8 +2423,8 @@ function generateLiveSurveillance() {
         return parseInt(parts[0]) === qYear && qMonths.includes(parts[1]);
     });
 
-    $('#live_month_title').text(`Target Month (${targetMonthPrefix})`);
-    $('#live_q_title').text(`Last Completed Quarter (${qLabel})`);
+    $('#live_month_title').text(`Surveillance Overview (${targetMonthPrefix})`);
+    $('#live_q_title').text(`Surveillance Overview (${qLabel} ${qYear})`);
 
     liveCharts.forEach(c => c.destroy());
     liveCharts = [];
@@ -2472,7 +2432,6 @@ function generateLiveSurveillance() {
     buildLiveSection(monthRecords, 'm', s);
     buildLiveSection(quarterRecords, 'q', s);
 }
-
 function buildLiveSection(records, prefix, settings) {
     let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
     
