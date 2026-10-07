@@ -1565,7 +1565,7 @@ function editRecord(index) {
         $('#p_antibiogram_org').val('').trigger('change');
     }
 
-    const standardProps = ['Name', 'Age', 'Age Unit', 'Sex', 'Ward', 'Sample', 'Date', 'Selective organism', 'Antibiogram organism'];
+    const standardProps = ['_uid', 'Patient ID', 'Name', 'Age', 'Age Unit', 'Sex', 'Ward', 'Sample', 'Date', 'Selective organism', 'Antibiogram organism'];
     
     Object.keys(record).forEach(key => {
         if (!standardProps.includes(key)) {
