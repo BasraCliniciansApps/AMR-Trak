@@ -133,11 +133,12 @@ function syncCloudToLocal() {
             // 🔄 Bulletproof Name Restoration (Index-Preserving)
             let needsCloudFix = false;
             let mergedRecords = cloudRecords.map((cr, index) => {
+                let mutableCr = { ...cr }; // 🛡️ Unfreeze the Firebase object by cloning it
                 let restoredName = "Unknown Patient";
                 
                 // 1. Try to match by _uid (Most precise)
-                if (cr['_uid']) {
-                    let exactMatch = localRecords.find(lr => lr['_uid'] === cr['_uid']);
+                if (mutableCr['_uid']) {
+                    let exactMatch = localRecords.find(lr => lr['_uid'] === mutableCr['_uid']);
                     if (exactMatch && exactMatch['Name']) restoredName = exactMatch['Name'];
                 } 
                 else {
@@ -147,29 +148,29 @@ function syncCloudToLocal() {
                     // 2. Strict Index-Based Matching (Prevents name mixing for identical bacteria)
                     let indexMatch = localRecords[index];
                     if (indexMatch && 
-                        indexMatch['Patient ID'] === cr['Patient ID'] && 
-                        indexMatch['Selective organism'] === cr['Selective organism'] && 
-                        indexMatch['Date'] === cr['Date']) {
+                        indexMatch['Patient ID'] === mutableCr['Patient ID'] && 
+                        indexMatch['Selective organism'] === mutableCr['Selective organism'] && 
+                        indexMatch['Date'] === mutableCr['Date']) {
                         
                         restoredName = indexMatch['Name'] || "Unknown Patient";
-                        if (indexMatch['_uid']) cr['_uid'] = indexMatch['_uid'];
+                        if (indexMatch['_uid']) mutableCr['_uid'] = indexMatch['_uid'];
                         
                     } else {
                         // 3. Fallback if array order changed
                         let fallbackMatch = localRecords.find(lr => 
-                            lr['Patient ID'] === cr['Patient ID'] && 
-                            lr['Selective organism'] === cr['Selective organism'] && 
-                            lr['Date'] === cr['Date']
+                            lr['Patient ID'] === mutableCr['Patient ID'] && 
+                            lr['Selective organism'] === mutableCr['Selective organism'] && 
+                            lr['Date'] === mutableCr['Date']
                         );
                         if (fallbackMatch && fallbackMatch['Name']) restoredName = fallbackMatch['Name'];
                     }
                     
                     // Guarantee a _uid exists moving forward
-                    if (!cr['_uid']) cr['_uid'] = Date.now().toString(36) + Math.random().toString(36).substr(2, 5) + index;
+                    if (!mutableCr['_uid']) mutableCr['_uid'] = Date.now().toString(36) + Math.random().toString(36).substr(2, 5) + index;
                 }
                 
-                cr['Name'] = restoredName;
-                return cr;
+                mutableCr['Name'] = restoredName; // Now this assignment will succeed permanently
+                return mutableCr;
             });
 
             let mergedRecordsStr = JSON.stringify(mergedRecords);
