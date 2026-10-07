@@ -130,22 +130,36 @@ function syncCloudToLocal() {
             let localRecordsStr = localStorage.getItem('amr_records') || "[]";
             let localRecords = JSON.parse(localRecordsStr);
 
-            // 🔄 Bulletproof Name Restoration (Index-Preserving)
+            // 🛡️ خزنة الأسماء المستقلة (Name Vault): لحماية الأسماء بشكل دائم ومستقل عن تحديثات السحابة
+            let nameVault = JSON.parse(localStorage.getItem('amr_name_vault')) || {};
+            let vaultUpdated = false;
+            
+            // استخراج الأسماء الحالية وحفظها في الخزنة فوراً
+            localRecords.forEach(lr => {
+                if (lr['_uid'] && lr['Name'] && lr['Name'] !== 'Unknown Patient') {
+                    if (nameVault[lr['_uid']] !== lr['Name']) {
+                        nameVault[lr['_uid']] = lr['Name'];
+                        vaultUpdated = true;
+                    }
+                }
+            });
+            
+            if (vaultUpdated) {
+                localStorage.setItem('amr_name_vault', JSON.stringify(nameVault));
+            }
+
+            // 🔄 دمج البيانات القادمة من السحابة مع الأسماء الموجودة في الخزنة
             let needsCloudFix = false;
             let mergedRecords = cloudRecords.map((cr, index) => {
-                let mutableCr = { ...cr }; // 🛡️ Unfreeze the Firebase object by cloning it
+                let mutableCr = Object.assign({}, cr); // فك التجميد بأمان تام
                 let restoredName = "Unknown Patient";
                 
-                // 1. Try to match by _uid (Most precise)
-                if (mutableCr['_uid']) {
-                    let exactMatch = localRecords.find(lr => lr['_uid'] === mutableCr['_uid']);
-                    if (exactMatch && exactMatch['Name']) restoredName = exactMatch['Name'];
+                // 1. الأولوية المطلقة: استرجاع الاسم من الخزنة المحمية (لا تتأثر بالإنترنت)
+                if (mutableCr['_uid'] && nameVault[mutableCr['_uid']]) {
+                    restoredName = nameVault[mutableCr['_uid']];
                 } 
                 else {
-                    // Cloud record is missing an ID (old format or backup restore).
-                    needsCloudFix = true; 
-                    
-                    // 2. Strict Index-Based Matching (Prevents name mixing for identical bacteria)
+                    // 2. المطابقة عبر الفهرس (كخط دفاع أخير للسجلات القديمة جداً)
                     let indexMatch = localRecords[index];
                     if (indexMatch && 
                         indexMatch['Patient ID'] === mutableCr['Patient ID'] && 
@@ -154,27 +168,23 @@ function syncCloudToLocal() {
                         
                         restoredName = indexMatch['Name'] || "Unknown Patient";
                         if (indexMatch['_uid']) mutableCr['_uid'] = indexMatch['_uid'];
-                        
-                    } else {
-                        // 3. Fallback if array order changed
-                        let fallbackMatch = localRecords.find(lr => 
-                            lr['Patient ID'] === mutableCr['Patient ID'] && 
-                            lr['Selective organism'] === mutableCr['Selective organism'] && 
-                            lr['Date'] === mutableCr['Date']
-                        );
-                        if (fallbackMatch && fallbackMatch['Name']) restoredName = fallbackMatch['Name'];
                     }
-                    
-                    // Guarantee a _uid exists moving forward
-                    if (!mutableCr['_uid']) mutableCr['_uid'] = Date.now().toString(36) + Math.random().toString(36).substr(2, 5) + index;
+                    needsCloudFix = true;
                 }
                 
-                mutableCr['Name'] = restoredName; // Now this assignment will succeed permanently
+                // ضمان وجود معرّف فريد دائماً للحماية المستقبلية
+                if (!mutableCr['_uid']) {
+                    mutableCr['_uid'] = Date.now().toString(36) + Math.random().toString(36).substr(2, 5) + index;
+                    needsCloudFix = true;
+                }
+                
+                mutableCr['Name'] = restoredName;
                 return mutableCr;
             });
 
             let mergedRecordsStr = JSON.stringify(mergedRecords);
 
+            // تحديث واجهة المستخدم فقط إذا كانت السحابة تحمل بيانات حقيقية
             if (mergedRecordsStr !== localRecordsStr && cloudRecords.length > 0) {
                 localStorage.setItem('amr_records', mergedRecordsStr);
                 
@@ -189,12 +199,12 @@ function syncCloudToLocal() {
                 localStorage.setItem('amr_live_settings', JSON.stringify(cloudSettings));
             }
             
-            // Immediately heal the cloud if IDs were missing so they never wipe again
+            // معالجة البيانات المعطوبة في السحابة فوراً إن وجدت
             if (needsCloudFix && typeof syncLocalToCloud === 'function') {
                 syncLocalToCloud();
             }
             
-            console.log("Real-time sync: Data synchronized and names restored locally.");
+            console.log("Real-time sync: Data synchronized and names secured in Vault.");
         }
     }, (error) => {
         console.error("Error fetching live data from cloud:", error);
