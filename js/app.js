@@ -130,39 +130,42 @@ function syncCloudToLocal() {
             let localRecordsStr = localStorage.getItem('amr_records') || "[]";
             let localRecords = JSON.parse(localRecordsStr);
 
-            // 🔄 Bulletproof Memory Bank: Safely restores names sequentially 
-            let nameDictionary = {};
-            let compositeDictionary = {};
-            let compositeTracker = {};
-
-            localRecords.forEach(lr => {
-                if (lr['_uid'] && lr['Name']) {
-                    nameDictionary[lr['_uid']] = lr['Name'];
-                }
-                if (lr['Name']) {
-                    let key = `${lr['Patient ID']}_${lr['Selective organism']}_${lr['Date']}`;
-                    if (!compositeDictionary[key]) compositeDictionary[key] = [];
-                    compositeDictionary[key].push(lr['Name']);
-                }
-            });
-
-            let mergedRecords = cloudRecords.map(cr => {
+            // 🔄 Bulletproof Name Restoration (Index-Preserving)
+            let needsCloudFix = false;
+            let mergedRecords = cloudRecords.map((cr, index) => {
                 let restoredName = "Unknown Patient";
                 
-                if (cr['_uid'] && nameDictionary[cr['_uid']]) {
-                    restoredName = nameDictionary[cr['_uid']];
-                } else {
-                    let key = `${cr['Patient ID']}_${cr['Selective organism']}_${cr['Date']}`;
-                    if (compositeDictionary[key] && compositeDictionary[key].length > 0) {
-                        if (!compositeTracker[key]) compositeTracker[key] = 0;
-                        let idx = compositeTracker[key];
-                        if (idx < compositeDictionary[key].length) {
-                            restoredName = compositeDictionary[key][idx];
-                            compositeTracker[key]++;
-                        } else {
-                            restoredName = compositeDictionary[key][0];
-                        }
+                // 1. Try to match by _uid (Most precise)
+                if (cr['_uid']) {
+                    let exactMatch = localRecords.find(lr => lr['_uid'] === cr['_uid']);
+                    if (exactMatch && exactMatch['Name']) restoredName = exactMatch['Name'];
+                } 
+                else {
+                    // Cloud record is missing an ID (old format or backup restore).
+                    needsCloudFix = true; 
+                    
+                    // 2. Strict Index-Based Matching (Prevents name mixing for identical bacteria)
+                    let indexMatch = localRecords[index];
+                    if (indexMatch && 
+                        indexMatch['Patient ID'] === cr['Patient ID'] && 
+                        indexMatch['Selective organism'] === cr['Selective organism'] && 
+                        indexMatch['Date'] === cr['Date']) {
+                        
+                        restoredName = indexMatch['Name'] || "Unknown Patient";
+                        if (indexMatch['_uid']) cr['_uid'] = indexMatch['_uid'];
+                        
+                    } else {
+                        // 3. Fallback if array order changed
+                        let fallbackMatch = localRecords.find(lr => 
+                            lr['Patient ID'] === cr['Patient ID'] && 
+                            lr['Selective organism'] === cr['Selective organism'] && 
+                            lr['Date'] === cr['Date']
+                        );
+                        if (fallbackMatch && fallbackMatch['Name']) restoredName = fallbackMatch['Name'];
                     }
+                    
+                    // Guarantee a _uid exists moving forward
+                    if (!cr['_uid']) cr['_uid'] = Date.now().toString(36) + Math.random().toString(36).substr(2, 5) + index;
                 }
                 
                 cr['Name'] = restoredName;
@@ -178,11 +181,16 @@ function syncCloudToLocal() {
                 if (!$('#viewAnalytics').hasClass('hidden') && typeof loadAnalyticsFilters === 'function') loadAnalyticsFilters();
                 if (!$('#viewLive').hasClass('hidden') && typeof generateLiveSurveillance === 'function') generateLiveSurveillance();
             } else if (localRecords.length > 0 && cloudRecords.length === 0) {
-                if (typeof syncLocalToCloud === 'function') syncLocalToCloud();
+                needsCloudFix = true;
             }
 
             if (cloudSettings) {
                 localStorage.setItem('amr_live_settings', JSON.stringify(cloudSettings));
+            }
+            
+            // Immediately heal the cloud if IDs were missing so they never wipe again
+            if (needsCloudFix && typeof syncLocalToCloud === 'function') {
+                syncLocalToCloud();
             }
             
             console.log("Real-time sync: Data synchronized and names restored locally.");
@@ -953,7 +961,7 @@ window.processRestore = function() {
                         } else {
                             // Append new record - and assign a _uid if it's missing to prevent future conflicts
                             if (!importedRecord['_uid']) {
-                                importedRecord['_uid'] = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+                                importedRecord['_uid'] = Date.now().toString(36) + Math.random().toString(36).substr(2, 5) + addedCount;
                             }
                             currentRecords.push(importedRecord);
                             addedCount++;
