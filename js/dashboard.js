@@ -747,7 +747,7 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
             return org === normalizedWatchBug;
         });
         
-        let wWard = {}, wSpec = {}, wAbxT = {}, wAbxR = {}, wAbxS = {};
+        let wWard = {}, wSpec = {}, wAbxT = {}, wAbxR = {};
         let allPossibleAbxs = [...(typeof abxList !== 'undefined' ? abxList : []), ...getCustomAntibiotics().map(a => a.name)];
 
         watchRecords.forEach(r => {
@@ -758,7 +758,6 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
                 if(r[a] && r[a] !== '-' && r[a] !== '') {
                     wAbxT[a] = (wAbxT[a] || 0) + 1;
                     if(r[a] === 'R') wAbxR[a] = (wAbxR[a] || 0) + 1;
-                    if(r[a] === 'S') wAbxS[a] = (wAbxS[a] || 0) + 1;
                 }
             });
         });
@@ -767,20 +766,6 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
         let sortedSpecs = Object.keys(wSpec).sort((a,b) => wSpec[b] - wSpec[a]);
         let topW = sortedWards[0] || "None Yet";
         let topS = sortedSpecs[0] || "None Yet";
-        
-        // تحديد أفضل خيار علاجي (أعلى حساسية % S) وأعلى مقاومة (% R)
-        let bestAbx = "-", highestS = -1;
-        let worstAbx = "-", highestR = -1;
-        Object.keys(wAbxT).forEach(a => {
-            let t = wAbxT[a];
-            let sPct = Math.round(((wAbxS[a] || 0) / t) * 100);
-            let rPct = Math.round(((wAbxR[a] || 0) / t) * 100);
-            if (sPct > highestS) { highestS = sPct; bestAbx = a; }
-            if (rPct > highestR) { highestR = rPct; worstAbx = a; }
-        });
-
-        let bestOptionText = bestAbx !== '-' ? `${bestAbx} (${highestS}% S)` : 'No Data';
-        let worstOptionText = worstAbx !== '-' ? `${worstAbx} (${highestR}% R)` : 'No Data';
 
         // بناء أشرطة التقدم للردهات (Ward Distribution Bars)
         let wardBarsHtml = sortedWards.slice(0, 4).map(w => {
@@ -842,18 +827,6 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
                 <div class="bg-white p-2.5 rounded-lg border border-rose-100 shadow-sm">
                     <span class="block text-slate-500 mb-0.5">Top Specimen</span>
                     <span class="font-bold text-rose-700 truncate block" title="${topS}">${topS}</span>
-                </div>
-            </div>
-
-            <!-- Clinical Action Banner (Full Text without truncation) -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 text-[10px]">
-                <div class="bg-white px-3 py-2 rounded-lg border border-l-4 border-rose-100 border-l-rose-600 shadow-sm">
-                    <span class="text-slate-500 block">Highest Resistance:</span>
-                    <span class="font-bold text-rose-700 break-words leading-tight">${worstOptionText}</span>
-                </div>
-                <div class="bg-white px-3 py-2 rounded-lg border border-l-4 border-emerald-100 border-l-emerald-500 shadow-sm">
-                    <span class="text-slate-500 block">Best Empiric Option:</span>
-                    <span class="font-bold text-emerald-700 break-words leading-tight">${bestOptionText}</span>
                 </div>
             </div>
 
