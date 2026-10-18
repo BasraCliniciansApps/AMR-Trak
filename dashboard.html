@@ -173,14 +173,17 @@
                             </label>
                         </div>
 
-                        <!-- S/R Toggle -->
-                        <div class="flex justify-center items-center gap-3 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm">
-                            <span id="lbl_S" class="text-[10px] font-bold text-emerald-600 transition-colors">Susceptibility</span>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="guided_metric_toggle" class="sr-only peer">
-                                <div class="w-9 h-5 bg-emerald-500 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
+                        <!-- 3-Way Metric Toggle -->
+                        <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm text-[10px] font-bold">
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all guided-metric-btn bg-white text-emerald-600 shadow-sm">
+                                <input type="radio" name="guided_metric" value="S" class="hidden" checked> % S
                             </label>
-                            <span id="lbl_R" class="text-[10px] font-bold text-slate-400 transition-colors">Resistance</span>
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all guided-metric-btn text-slate-500 hover:text-slate-700">
+                                <input type="radio" name="guided_metric" value="R" class="hidden"> % R
+                            </label>
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all guided-metric-btn text-slate-500 hover:text-slate-700">
+                                <input type="radio" name="guided_metric" value="NS" class="hidden"> % NS
+                            </label>
                         </div>
                         
                         <!-- n < 30 -->
@@ -251,13 +254,17 @@
                             </label>
                         </div>
 
-                        <div class="flex justify-center items-center gap-3 bg-slate-50 p-1.5 rounded-lg border border-slate-200 shadow-sm">
-                            <span id="lbl_patho_S" class="text-[10px] font-bold text-emerald-600 transition-colors">Susceptibility</span>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="patho_metric_toggle" class="sr-only peer">
-                                <div class="w-9 h-5 bg-emerald-500 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
+                        <!-- 3-Way Metric Toggle -->
+                        <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm text-[10px] font-bold">
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all patho-metric-btn bg-white text-emerald-600 shadow-sm">
+                                <input type="radio" name="patho_metric" value="S" class="hidden" checked> % S
                             </label>
-                            <span id="lbl_patho_R" class="text-[10px] font-bold text-slate-400 transition-colors">Resistance</span>
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all patho-metric-btn text-slate-500 hover:text-slate-700">
+                                <input type="radio" name="patho_metric" value="R" class="hidden"> % R
+                            </label>
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all patho-metric-btn text-slate-500 hover:text-slate-700">
+                                <input type="radio" name="patho_metric" value="NS" class="hidden"> % NS
+                            </label>
                         </div>
                         <div class="flex justify-center items-center gap-2 bg-slate-50 p-2 px-3 rounded-lg border border-slate-200 shadow-sm">
                             <input type="checkbox" id="patho_hide_low" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500">
@@ -320,13 +327,17 @@
                             </label>
                         </div>
 
-                        <div class="flex justify-center items-center gap-3 bg-slate-50 p-1.5 rounded-lg border border-slate-200 shadow-sm">
-                            <span id="lbl_abx_S" class="text-[10px] font-bold text-emerald-600 transition-colors">Susceptibility</span>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="abx_metric_toggle" class="sr-only peer">
-                                <div class="w-9 h-5 bg-emerald-500 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
+                        <!-- 3-Way Metric Toggle -->
+                        <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm text-[10px] font-bold">
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all abx-metric-btn bg-white text-emerald-600 shadow-sm">
+                                <input type="radio" name="abx_metric" value="S" class="hidden" checked> % S
                             </label>
-                            <span id="lbl_abx_R" class="text-[10px] font-bold text-slate-400 transition-colors">Resistance</span>
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all abx-metric-btn text-slate-500 hover:text-slate-700">
+                                <input type="radio" name="abx_metric" value="R" class="hidden"> % R
+                            </label>
+                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all abx-metric-btn text-slate-500 hover:text-slate-700">
+                                <input type="radio" name="abx_metric" value="NS" class="hidden"> % NS
+                            </label>
                         </div>
                         <div class="flex justify-center items-center gap-2 bg-slate-50 p-2 px-3 rounded-lg border border-slate-200 shadow-sm">
                             <input type="checkbox" id="abx_hide_low" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
@@ -381,6 +392,7 @@
                             <select id="adv_metric" class="w-full text-sm border border-slate-300 rounded-lg p-2 bg-white">
                                 <option value="R">Resistance (% R)</option>
                                 <option value="S">Susceptibility (% S)</option>
+                                <option value="NS">Non-Susceptible (% R+I)</option>
                             </select>
                         </div>
                         <div>
