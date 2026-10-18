@@ -905,16 +905,12 @@ $(document).on('change', '#guided_sample', function() {
     generateGuidedAnalytics();
 });
 
-$(document).on('change', '#guided_metric_toggle', function() {
-    if ($(this).is(':checked')) {
-        currentGuidedMetric = 'R';
-        $('#lbl_R').removeClass('text-slate-400').addClass('text-rose-600');
-        $('#lbl_S').removeClass('text-emerald-600').addClass('text-slate-400');
-    } else {
-        currentGuidedMetric = 'S';
-        $('#lbl_S').removeClass('text-slate-400').addClass('text-emerald-600');
-        $('#lbl_R').removeClass('text-rose-600').addClass('text-slate-400');
-    }
+$(document).on('change', 'input[name="guided_metric"]', function() {
+    $('.guided-metric-btn').removeClass('bg-white text-emerald-600 text-rose-600 text-amber-600 shadow-sm').addClass('text-slate-500');
+    let val = $(this).val();
+    currentGuidedMetric = val;
+    let activeClass = val === 'S' ? 'text-emerald-600' : (val === 'R' ? 'text-rose-600' : 'text-amber-600');
+    $(this).parent().removeClass('text-slate-500').addClass(`bg-white ${activeClass} shadow-sm`);
     renderGuidedAST(); 
 });
 
@@ -1040,10 +1036,11 @@ function renderGuidedAST() {
         allPossibleAbxs.forEach(abx => {
             let res = r[abx];
             if (res && res !== '-' && res !== '') {
-                if (!abxStats[abx]) abxStats[abx] = { tested: 0, r: 0, s: 0 };
+                if (!abxStats[abx]) abxStats[abx] = { tested: 0, r: 0, s: 0, ns: 0 }; // إضافة ns
                 abxStats[abx].tested += 1;
                 if (res === 'R') abxStats[abx].r += 1;
                 if (res === 'S') abxStats[abx].s += 1;
+                if (res === 'R' || res === 'I') abxStats[abx].ns += 1; // حساب الـ Non-Susceptible
             }
         });
     });
@@ -1059,7 +1056,7 @@ function renderGuidedAST() {
 
         if (hideLowN && !isReliable) return;
 
-        let targetVal = currentGuidedMetric === 'R' ? s.r : s.s;
+        let targetVal = currentGuidedMetric === 'R' ? s.r : (currentGuidedMetric === 'NS' ? s.ns : s.s);
         let p = Math.round((targetVal / s.tested) * 100);
 
         labels.push(isReliable ? abx : `${abx} *`);
@@ -1099,16 +1096,12 @@ window.togglePathoSearch = function() {
 
 
 $(document).on('change', '#patho_bug', function() { renderPathoChart(); });
-$(document).on('change', '#patho_metric_toggle', function() {
-    if ($(this).is(':checked')) {
-        currentPathoMetric = 'R';
-        $('#lbl_patho_R').removeClass('text-slate-400').addClass('text-rose-600');
-        $('#lbl_patho_S').removeClass('text-emerald-600').addClass('text-slate-400');
-    } else {
-        currentPathoMetric = 'S';
-        $('#lbl_patho_S').removeClass('text-slate-400').addClass('text-emerald-600');
-        $('#lbl_patho_R').removeClass('text-rose-600').addClass('text-slate-400');
-    }
+$(document).on('change', 'input[name="patho_metric"]', function() {
+    $('.patho-metric-btn').removeClass('bg-white text-emerald-600 text-rose-600 text-amber-600 shadow-sm').addClass('text-slate-500');
+    let val = $(this).val();
+    currentPathoMetric = val;
+    let activeClass = val === 'S' ? 'text-emerald-600' : (val === 'R' ? 'text-rose-600' : 'text-amber-600');
+    $(this).parent().removeClass('text-slate-500').addClass(`bg-white ${activeClass} shadow-sm`);
     renderPathoChart(); 
 });
 
@@ -1162,7 +1155,7 @@ function renderPathoChart() {
     records.forEach(r => {
         allPossibleAbxs.forEach(abx => {
             let res = r[abx];
-            if (res && res !== '-' && res !== '') {
+            
                 if (!abxStats[abx]) abxStats[abx] = { tested: 0, r: 0, s: 0 };
                 abxStats[abx].tested += 1;
                 if (res === 'R') abxStats[abx].r += 1;
@@ -1225,16 +1218,12 @@ window.toggleAbxSearch = function() {
 };
 
 $(document).on('change', '#abx_drug', function() { renderAbxChart(); });
-$(document).on('change', '#abx_metric_toggle', function() {
-    if ($(this).is(':checked')) {
-        currentAbxMetric = 'R';
-        $('#lbl_abx_R').removeClass('text-slate-400').addClass('text-rose-600');
-        $('#lbl_abx_S').removeClass('text-emerald-600').addClass('text-slate-400');
-    } else {
-        currentAbxMetric = 'S';
-        $('#lbl_abx_S').removeClass('text-slate-400').addClass('text-emerald-600');
-        $('#lbl_abx_R').removeClass('text-rose-600').addClass('text-slate-400');
-    }
+$(document).on('change', 'input[name="abx_metric"]', function() {
+    $('.abx-metric-btn').removeClass('bg-white text-emerald-600 text-rose-600 text-amber-600 shadow-sm').addClass('text-slate-500');
+    let val = $(this).val();
+    currentAbxMetric = val;
+    let activeClass = val === 'S' ? 'text-emerald-600' : (val === 'R' ? 'text-rose-600' : 'text-amber-600');
+    $(this).parent().removeClass('text-slate-500').addClass(`bg-white ${activeClass} shadow-sm`);
     renderAbxChart(); 
 });
 
@@ -1402,11 +1391,11 @@ window.generateAdvancedAnalytics = function() {
             targetAbxs.forEach(abx => {
                 let res = r[abx];
                 if (res && res !== '-' && res !== '') {
-                    if (!heatmapStats[org][abx]) heatmapStats[org][abx] = { t: 0, r: 0, s: 0 };
+                   if (!heatmapStats[org][abx]) heatmapStats[org][abx] = { t: 0, r: 0, s: 0, ns: 0 };
                     heatmapStats[org][abx].t += 1;
                     if (res === 'R') heatmapStats[org][abx].r += 1;
                     if (res === 'S') heatmapStats[org][abx].s += 1;
-                }
+                    if (res === 'R' || res === 'I') heatmapStats[org][abx].ns += 1;
             });
         }
     });
@@ -1434,7 +1423,7 @@ window.generateAdvancedAnalytics = function() {
             let cell = heatmapStats[o][a];
             if (!cell || cell.t === 0) { hmHtml += '<td class="bg-slate-50 text-slate-300">-</td>'; } 
             else {
-                let targetVal = metric === 'R' ? cell.r : cell.s;
+                let targetVal = metric === 'R' ? cell.r : (metric === 'NS' ? cell.ns : cell.s);
                 let p = Math.round((targetVal / cell.t) * 100);
                 let isLow = cell.t < 30;
                 let dangerScore = metric === 'R' ? p : (100 - p);
