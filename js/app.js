@@ -189,8 +189,7 @@ function syncCloudToLocal() {
                 localStorage.setItem('amr_records', mergedRecordsStr);
                 
                 if (typeof initDataTable === 'function') initDataTable();
-                if (!$('#viewAnalytics').hasClass('hidden') && typeof loadAnalyticsFilters === 'function') loadAnalyticsFilters();
-                if (!$('#viewLive').hasClass('hidden') && typeof generateLiveSurveillance === 'function') generateLiveSurveillance();
+                // تم إزالة دوال التحليلات والمخططات لأنها حذفت من واجهة الحاسوب
             } else if (localRecords.length > 0 && cloudRecords.length === 0) {
                 needsCloudFix = true;
             }
@@ -2432,7 +2431,7 @@ function saveLiveSettings() {
     
     localStorage.setItem('amr_live_settings', JSON.stringify(s));
     
-    if(!$('#viewLive').hasClass('hidden')) generateLiveSurveillance();
+    // تم حذف استدعاء generateLiveSurveillance لمنع الانهيار
     
     if (typeof syncLocalToCloud === "function" && navigator.onLine) {
         syncLocalToCloud();
