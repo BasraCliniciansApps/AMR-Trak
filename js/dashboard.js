@@ -1152,11 +1152,12 @@ function renderPathoChart() {
     records.forEach(r => {
         allPossibleAbxs.forEach(abx => {
             let res = r[abx];
-            
-                if (!abxStats[abx]) abxStats[abx] = { tested: 0, r: 0, s: 0 };
+            if (res && res !== '-' && res !== '') {
+                if (!abxStats[abx]) abxStats[abx] = { tested: 0, r: 0, s: 0, ns: 0 };
                 abxStats[abx].tested += 1;
                 if (res === 'R') abxStats[abx].r += 1;
                 if (res === 'S') abxStats[abx].s += 1;
+                if (res === 'R' || res === 'I') abxStats[abx].ns += 1;
             }
         });
     });
@@ -1275,10 +1276,11 @@ function renderAbxChart() {
         let org = r['Selective organism'];
         let res = r[drug];
         if (org && res && res !== '-' && res !== '') {
-            if (!orgStats[org]) orgStats[org] = { tested: 0, r: 0, s: 0 };
+            if (!orgStats[org]) orgStats[org] = { tested: 0, r: 0, s: 0, ns: 0 };
             orgStats[org].tested += 1;
             if (res === 'R') orgStats[org].r += 1;
             if (res === 'S') orgStats[org].s += 1;
+            if (res === 'R' || res === 'I') orgStats[org].ns += 1;
         }
     });
 
@@ -1303,7 +1305,7 @@ function renderAbxChart() {
 
         if (hideLowN && !isReliable) return;
 
-        let targetVal = currentAbxMetric === 'R' ? s.r : s.s;
+        let targetVal = currentAbxMetric === 'R' ? s.r : (currentAbxMetric === 'NS' ? s.ns : s.s);
         let p = Math.round((targetVal / s.tested) * 100);
 
         let formattedOrg = formatScientificName(org);
@@ -1393,6 +1395,7 @@ window.generateAdvancedAnalytics = function() {
                     if (res === 'R') heatmapStats[org][abx].r += 1;
                     if (res === 'S') heatmapStats[org][abx].s += 1;
                     if (res === 'R' || res === 'I') heatmapStats[org][abx].ns += 1;
+                }
             });
         }
     });
