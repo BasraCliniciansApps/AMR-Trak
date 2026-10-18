@@ -1903,7 +1903,7 @@ function generateAnalytics() {
     $('#heatmapDesc').html(hmDesc);
 
     let hmLegend = '';
-    if (metric === 'R') {
+    if (metric === 'R' || metric === 'NS') {
         hmLegend = `
             <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">0-20%</span>
             <span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-800">21-40%</span>
@@ -2024,7 +2024,7 @@ function generateAnalytics() {
                         if (!isReliable) anyLowReliability = true;
                         
                         let ci = wilsonScoreCI(targetVal, s.tested);
-                        let dangerScore = metric === 'R' ? p : (100 - p);
+                        let dangerScore = (metric === 'R' || metric === 'NS') ? p : (100 - p);
                         let semColor = '';
                         if (!isReliable) semColor = 'text-slate-500';
                         else if (dangerScore <= 20) semColor = 'text-emerald-600';
