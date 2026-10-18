@@ -2413,6 +2413,14 @@ function loadLiveSettings() {
     
     $('#live_profile1_abx').html(optionsHtml).val(s.profile1_abx || 'Meropenem');
     $('#live_profile2_abx').html(optionsHtml).val(s.profile2_abx || 'Ceftriaxone');
+    let allOrgs = [];
+    if (typeof bacteriaLibrary !== 'undefined') allOrgs = bacteriaLibrary.map(b => b.name);
+    let customOrgs = JSON.parse(localStorage.getItem('amr_organisms')) || [];
+    let combinedOrgs = [...new Set([...allOrgs, ...customOrgs])].sort();
+    
+    let orgsHtml = '<option value="">None (Disable Watchlist)</option>';
+    combinedOrgs.forEach(o => { orgsHtml += `<option value="${o}">${o}</option>`; });
+    $('#live_watchlist_bug').html(orgsHtml).val(s.watchlist_bug || '');
 }
 
 function saveLiveSettings() {
@@ -2426,7 +2434,8 @@ function saveLiveSettings() {
         show_amr: $('#live_toggle_amr').is(':checked'),
         show_top3: $('#live_toggle_top3').is(':checked'),
         profile1_abx: $('#live_profile1_abx').val(),
-        profile2_abx: $('#live_profile2_abx').val()
+        profile2_abx: $('#live_profile2_abx').val(),
+        watchlist_bug: $('#live_watchlist_bug').val() // الكود الجديد المضاف
     };
     
     localStorage.setItem('amr_live_settings', JSON.stringify(s));
