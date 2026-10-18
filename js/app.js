@@ -751,21 +751,14 @@ $(document).ready(function() {
 });
 
 // --- Tabs Logic ---
+// --- Tabs Logic ---
 function showTab(tabName) {
-    $('#viewRecords, #viewAnalytics, #viewLive').addClass('hidden');
-    $('#btnTabRecords, #btnTabAnalytics, #btnTabLive').removeClass('bg-teal-600 bg-rose-600 text-white border-teal-400 border-rose-400').addClass('bg-white/10 text-teal-50 border-teal-500/30');
+    $('#viewRecords').addClass('hidden');
+    $('#btnTabRecords').removeClass('bg-teal-600 text-white border-teal-400').addClass('bg-white/10 text-teal-50 border-teal-500/30');
     
     if (tabName === 'records') {
         $('#viewRecords').removeClass('hidden');
         $('#btnTabRecords').removeClass('bg-white/10 text-teal-50 border-teal-500/30').addClass('bg-teal-600 text-white border-teal-400');
-    } else if (tabName === 'analytics') {
-        if(typeof loadAnalyticsFilters === 'function') loadAnalyticsFilters();
-        $('#viewAnalytics').removeClass('hidden');
-        $('#btnTabAnalytics').removeClass('bg-white/10 text-teal-50 border-teal-500/30').addClass('bg-teal-600 text-white border-teal-400');
-    } else if (tabName === 'live') {
-        $('#viewLive').removeClass('hidden');
-        $('#btnTabLive').removeClass('bg-white/10 text-teal-50 border-teal-500/30').addClass('bg-rose-600 text-white border-rose-400');
-        generateLiveSurveillance(); 
     }
 }
 
