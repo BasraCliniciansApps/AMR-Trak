@@ -423,30 +423,27 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
         { 
             orgs: ["escherichia coli", "klebsiella pneumoniae"], 
             abxList: ["Ceftriaxone", "Cefotaxime", "Ceftazidime"], 
-            label: "ESBL Indicator\n(3rd Gen Ceph)" 
+            label: "ESBL" 
         },
         { 
             orgs: ["escherichia coli", "klebsiella pneumoniae"], 
             abxList: ["Ertapenem", "Meropenem", "Imipenem"], 
-            label: "CRE\n(Carbapenem)" 
+            label: "CRE" 
         },
         { 
             orgs: ["staphylococcus aureus"], 
-            // Cefoxitin is the gold standard surrogate test for mecA-mediated MRSA
             abxList: ["Cefoxitin", "Cefoxitin screen", "Oxacillin"], 
-            label: "MRSA\n(FOX/OX)" 
+            label: "MRSA" 
         },
         { 
-            // Purely Enterococcal VRE (Separated from Staph aureus)
             orgs: ["enterococcus faecalis", "enterococcus faecium", "enterococcus spp"], 
             abxList: ["Vancomycin", "Teicoplanin"], 
-            label: "VRE\n(Vancomycin)" 
+            label: "VRE" 
         },
         { 
-            // Tracked independently due to high clinical severity
             orgs: ["staphylococcus aureus"], 
             abxList: ["Vancomycin"], 
-            label: "VRSA\n(Vancomycin)" 
+            label: "VRSA" 
         }
     ];
 
