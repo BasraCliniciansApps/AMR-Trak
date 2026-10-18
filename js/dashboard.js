@@ -741,73 +741,76 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     // 🚨 Global Threat Watchlist Logic
     let watchBug = settings.watchlist_bug;
     if (watchBug && watchBug !== "") {
-        let watchRecords = records.filter(r => r['Selective organism'] === watchBug);
-        if (watchRecords.length > 0) {
-            let wWard = {}, wSpec = {}, wAbxT = {}, wAbxS = {};
-            watchRecords.forEach(r => {
-                if(r.Ward && r.Ward !== "-") wWard[r.Ward] = (wWard[r.Ward]||0)+1;
-                if(r.Sample && r.Sample !== "-") wSpec[r.Sample] = (wSpec[r.Sample]||0)+1;
-                
-                // الاعتماد على قائمة المضادات المتوفرة في الموبايل
-                if(typeof abxList !== 'undefined') {
-                    abxList.forEach(a => {
-                        if(r[a] && r[a] !== '-') {
-                            wAbxT[a] = (wAbxT[a]||0)+1;
-                            if(r[a] === 'S') wAbxS[a] = (wAbxS[a]||0)+1;
-                        }
-                    });
-                }
-            });
-            let topW = Object.keys(wWard).sort((a,b)=>wWard[b]-wWard[a])[0] || "-";
-            let topS = Object.keys(wSpec).sort((a,b)=>wSpec[b]-wSpec[a])[0] || "-";
+        // حماية متقدمة: تطابق الاسم حتى لو كان فيه اختلاف بسيط بالمسافات أو الأقواس
+        let normalizedWatchBug = watchBug.split('(')[0].trim().toLowerCase();
+        let watchRecords = records.filter(r => {
+            let org = (r['Selective organism'] || "").split('(')[0].trim().toLowerCase();
+            return org === normalizedWatchBug;
+        });
+        
+        let wWard = {}, wSpec = {}, wAbxT = {}, wAbxS = {};
+        watchRecords.forEach(r => {
+            if(r.Ward && r.Ward !== "-") wWard[r.Ward] = (wWard[r.Ward]||0)+1;
+            if(r.Sample && r.Sample !== "-") wSpec[r.Sample] = (wSpec[r.Sample]||0)+1;
             
-            // حساب أعلى مقاومة سُجلت لهذه البكتيريا
-            let worstAbx = "-"; let lowestS = 2; 
-            Object.keys(wAbxT).forEach(a => {
-                if(wAbxT[a] >= 1) { 
-                    let p = (wAbxS[a]||0)/wAbxT[a];
-                    if(p < lowestS) { lowestS = p; worstAbx = a; }
-                }
-            });
-            let resistanceText = worstAbx !== '-' ? `${worstAbx} (${100 - Math.round(lowestS*100)}% R)` : '-';
+            if(typeof abxList !== 'undefined') {
+                abxList.forEach(a => {
+                    if(r[a] && r[a] !== '-') {
+                        wAbxT[a] = (wAbxT[a]||0)+1;
+                        if(r[a] === 'S') wAbxS[a] = (wAbxS[a]||0)+1;
+                    }
+                });
+            }
+        });
+        
+        // إذا لم يكن هناك حالات، سيكتب "None Yet" بدلاً من إخفاء البطاقة
+        let topW = Object.keys(wWard).sort((a,b)=>wWard[b]-wWard[a])[0] || "None Yet";
+        let topS = Object.keys(wSpec).sort((a,b)=>wSpec[b]-wSpec[a])[0] || "None Yet";
+        
+        // حساب أعلى مقاومة سُجلت لهذه البكتيريا
+        let worstAbx = "-"; let lowestS = 2; 
+        Object.keys(wAbxT).forEach(a => {
+            if(wAbxT[a] >= 1) { 
+                let p = (wAbxS[a]||0)/wAbxT[a];
+                if(p < lowestS) { lowestS = p; worstAbx = a; }
+            }
+        });
+        let resistanceText = worstAbx !== '-' ? `${worstAbx} (${100 - Math.round(lowestS*100)}% R)` : 'No Data';
 
-            // دالة تنسيق الاسم إذا كانت متوفرة
-            let displayBugName = typeof formatScientificName === 'function' ? formatScientificName(watchBug) : watchBug;
+        // دالة تنسيق الاسم إذا كانت متوفرة
+        let displayBugName = typeof formatScientificName === 'function' ? formatScientificName(watchBug) : watchBug;
 
-            let htmlWatch = `
-            <div class="bg-rose-50 border border-rose-200 rounded-xl p-4 shadow-sm mt-4">
-                <h4 class="text-xs font-bold text-rose-900 mb-3 flex items-center gap-1.5">
-                    <svg class="w-4 h-4 text-rose-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                    Watchlist Threat: ${displayBugName}
-                </h4>
-                <div class="grid grid-cols-2 gap-2 text-center text-[10px]">
-                    <div class="bg-white p-2 rounded border border-rose-100 shadow-inner">
-                        <span class="block text-slate-500 mb-0.5">Total Cases</span>
-                        <span class="font-bold text-rose-700 text-sm">${watchRecords.length}</span>
-                    </div>
-                    <div class="bg-white p-2 rounded border border-rose-100 shadow-inner">
-                        <span class="block text-slate-500 mb-0.5">Hotspot Ward</span>
-                        <span class="font-bold text-rose-700 truncate block">${topW}</span>
-                    </div>
-                    <div class="bg-white p-2 rounded border border-rose-100 shadow-inner">
-                        <span class="block text-slate-500 mb-0.5">Top Specimen</span>
-                        <span class="font-bold text-rose-700 truncate block">${topS}</span>
-                    </div>
-                    <div class="bg-white p-2 rounded border border-rose-100 shadow-inner">
-                        <span class="block text-slate-500 mb-0.5">Highest Resistance</span>
-                        <span class="font-bold text-rose-700 truncate block">${resistanceText}</span>
-                    </div>
+        // إزالة شرط الإخفاء (watchRecords.length > 0) لتظهر البطاقة دائماً وتُعلمك بحالة المراقبة
+        let htmlWatch = `
+        <div class="bg-rose-50 border border-rose-200 rounded-xl p-4 shadow-sm mt-4">
+            <h4 class="text-xs font-bold text-rose-900 mb-3 flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-rose-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                Watchlist Threat: ${displayBugName}
+            </h4>
+            <div class="grid grid-cols-2 gap-2 text-center text-[10px]">
+                <div class="bg-white p-2 rounded border border-rose-100 shadow-inner">
+                    <span class="block text-slate-500 mb-0.5">Total Cases</span>
+                    <span class="font-bold text-rose-700 text-sm">${watchRecords.length}</span>
                 </div>
-            </div>`;
-            $(`#live_${prefix}_watchlist_container`).html(htmlWatch).removeClass('hidden');
-        } else {
-            $(`#live_${prefix}_watchlist_container`).addClass('hidden');
-        }
+                <div class="bg-white p-2 rounded border border-rose-100 shadow-inner">
+                    <span class="block text-slate-500 mb-0.5">Hotspot Ward</span>
+                    <span class="font-bold text-rose-700 truncate block">${topW}</span>
+                </div>
+                <div class="bg-white p-2 rounded border border-rose-100 shadow-inner">
+                    <span class="block text-slate-500 mb-0.5">Top Specimen</span>
+                    <span class="font-bold text-rose-700 truncate block">${topS}</span>
+                </div>
+                <div class="bg-white p-2 rounded border border-rose-100 shadow-inner">
+                    <span class="block text-slate-500 mb-0.5">Highest Resistance</span>
+                    <span class="font-bold text-rose-700 truncate block">${resistanceText}</span>
+                </div>
+            </div>
+        </div>`;
+        $(`#live_${prefix}_watchlist_container`).html(htmlWatch).removeClass('hidden');
     } else {
         $(`#live_${prefix}_watchlist_container`).addClass('hidden');
     }
 }
-
 function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, primaryColor) {
     let canvas = document.getElementById(canvasId);
     if (!canvas) return;
