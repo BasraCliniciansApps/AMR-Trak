@@ -1375,7 +1375,7 @@ window.generateAdvancedAnalytics = function() {
     }
 
     $('#advContainer').removeClass('hidden');
-    let hmLegend = metric === 'R' ? 
+    let hmLegend = (metric === 'R' || metric === 'NS') ? 
         `<span class="px-1 bg-emerald-100 text-emerald-800 rounded">0-20%</span><span class="px-1 bg-yellow-100 text-yellow-800 rounded">21-40%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">41-60%</span><span class="px-1 bg-red-400 text-white rounded">61-80%</span><span class="px-1 bg-red-600 text-white rounded">81-100%</span>` :
         `<span class="px-1 bg-red-600 text-white rounded">0-20%</span><span class="px-1 bg-red-400 text-white rounded">21-40%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">41-60%</span><span class="px-1 bg-yellow-100 text-yellow-800 rounded">61-80%</span><span class="px-1 bg-emerald-100 text-emerald-800 rounded">81-100%</span>`;
     $('#heatmapLegend').html(hmLegend);
@@ -1426,7 +1426,7 @@ window.generateAdvancedAnalytics = function() {
                 let targetVal = metric === 'R' ? cell.r : (metric === 'NS' ? cell.ns : cell.s);
                 let p = Math.round((targetVal / cell.t) * 100);
                 let isLow = cell.t < 30;
-                let dangerScore = metric === 'R' ? p : (100 - p);
+                let dangerScore = (metric === 'R' || metric === 'NS') ? p : (100 - p);
                 let ci = wilsonScoreCI(targetVal, cell.t); // Calculate the confidence interval
                 
                 let bgClass = 'bg-white', textClass = 'text-slate-700';
