@@ -500,7 +500,11 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
             nDataArr.push(stat.tested);
         }
     });
-
+if (settings.show_amr === false) {
+        $(`#live_${prefix}_amr_wrapper`).addClass('hidden');
+    } else {
+        $(`#live_${prefix}_amr_wrapper`).removeClass('hidden');
+    }
     liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_amr`), {
         type: 'bar',
         data: { 
@@ -632,7 +636,11 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
             <div class="text-slate-600 mt-1 pt-1 border-t border-slate-200">Most Susceptible:<br>${fmtAbx}</div>
         </div>`;
     });
-    if (top3Specs.length > 0) $(`#live_${prefix}_top3_container`).html(htmlTop3).removeClass('hidden');
+    if (settings.show_top3 !== false && top3Specs.length > 0) {
+        $(`#live_${prefix}_top3_container`).html(htmlTop3).removeClass('hidden');
+    } else {
+        $(`#live_${prefix}_top3_container`).addClass('hidden');
+    }
 
     let p1 = settings.profile1_abx || 'Meropenem';
     let p2 = settings.profile2_abx || 'Ceftriaxone';
