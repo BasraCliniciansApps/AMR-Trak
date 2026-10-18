@@ -1865,7 +1865,7 @@ function generateAnalytics() {
     const targetOrgs = $('#ana_organism').val() || [];
     const targetAbxs = $('#ana_antibiotic').val() || [];
     const metric = $('#ana_metric').val() || 'R'; 
-    const metricLabel = metric === 'R' ? 'Resistance' : 'Susceptibility';
+    const metricLabel = metric === 'R' ? 'Resistance' : (metric === 'NS' ? 'Non-Susceptible' : 'Susceptibility');
 
     if (!startDate || !endDate) { Swal.fire('Required', 'Please select both dates.', 'warning'); return; }
 
@@ -1943,10 +1943,11 @@ function generateAnalytics() {
         allPossibleAbxs.forEach(abx => {
             let res = r[abx];
             if (res && res !== '-' && res !== '') {
-                if (!heatmapStats[org][abx]) heatmapStats[org][abx] = { t: 0, r: 0, s: 0 };
+                if (!heatmapStats[org][abx]) heatmapStats[org][abx] = { t: 0, r: 0, s: 0, ns: 0 };
                 heatmapStats[org][abx].t += 1;
                 if (res === 'R') heatmapStats[org][abx].r += 1;
                 if (res === 'S') heatmapStats[org][abx].s += 1;
+                if (res === 'R' || res === 'I') heatmapStats[org][abx].ns += 1; // دمج R و I
             }
         });
     });
@@ -2017,7 +2018,7 @@ function generateAnalytics() {
                     let s = s_org ? s_org.abx[abx] : null;
 
                     if (s && s.tested > 0) {
-                        let targetVal = metric === 'R' ? s.r : s.s;
+                        let targetVal = metric === 'R' ? cell.r : (metric === 'NS' ? cell.ns : cell.s);
                         let p = Math.round((targetVal / s.tested) * 100);
                         let isReliable = s.tested >= 30;
                         if (!isReliable) anyLowReliability = true;
@@ -2092,7 +2093,7 @@ function generateAnalytics() {
                     nDataArr.push(0);
                 } else {
                     hasDataForThisPrimary = true;
-                    let targetVal = metric === 'R' ? s.r : s.s;
+                    let targetVal = metric === 'R' ? cell.r : (metric === 'NS' ? cell.ns : cell.s);
                     let p = Math.round((targetVal / s.tested) * 100);
                     let isReliable = s.tested >= 30;
                     
@@ -2188,7 +2189,7 @@ function generateAnalytics() {
                 if (!cell || cell.t === 0) {
                     hmHtml += '<td class="bg-slate-50 text-slate-300">-</td>';
                 } else {
-                    let targetVal = metric === 'R' ? cell.r : cell.s;
+                    let targetVal = metric === 'R' ? cell.r : (metric === 'NS' ? cell.ns : cell.s);
                     let p = Math.round((targetVal / cell.t) * 100);
                     let isLow = cell.t < 30;
                     
