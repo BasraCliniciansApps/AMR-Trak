@@ -386,7 +386,7 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     if(records.length === 0) {
         $(`#live_${prefix}_bug`).text("-");
         $(`#live_${prefix}_spec`).text("-");
-        $(`#live_${prefix}_top3_container, #live_${prefix}_profiles_wrapper`).addClass('hidden');
+        $(`#live_${prefix}_top3_container, #live_${prefix}_profiles_wrapper, #live_${prefix}_watchlist_container`).addClass('hidden');
         
         $(`#live_${prefix}_amr_title`).text(`Critical Resistance Markers (${timeLabel})`);
         $(`#live_${prefix}_blood_subtitle`).text(timeLabel);
@@ -738,10 +738,10 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
 
     buildMobileAbxProfileChart(p1, `chart_${prefix}_mero`, `live_${prefix}_mero_count`, records, prefix === 'm' ? '#2563eb' : '#059669');
     buildMobileAbxProfileChart(p2, `chart_${prefix}_cro`, `live_${prefix}_cro_count`, records, '#0d9488');
-    // 🚨 Global Threat Watchlist Logic
+    // 🚨 Global Threat Watchlist Logic (Linked to Mobile Dash Month & Quarter Settings)
     let watchBug = settings.watchlist_bug;
     if (watchBug && watchBug !== "") {
-        // حماية متقدمة: تطابق الاسم حتى لو كان فيه اختلاف بسيط بالمسافات أو الأقواس
+        // مطابقة ذكية لاسم البكتيريا المختارة من الإعدادات داخل سجلات الشهر أو الفصل المحدد
         let normalizedWatchBug = watchBug.split('(')[0].trim().toLowerCase();
         let watchRecords = records.filter(r => {
             let org = (r['Selective organism'] || "").split('(')[0].trim().toLowerCase();
@@ -749,43 +749,44 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
         });
         
         let wWard = {}, wSpec = {}, wAbxT = {}, wAbxS = {};
+        let allPossibleAbxs = [...(typeof abxList !== 'undefined' ? abxList : []), ...getCustomAntibiotics().map(a => a.name)];
+
         watchRecords.forEach(r => {
-            if(r.Ward && r.Ward !== "-") wWard[r.Ward] = (wWard[r.Ward]||0)+1;
-            if(r.Sample && r.Sample !== "-") wSpec[r.Sample] = (wSpec[r.Sample]||0)+1;
+            if(r.Ward && r.Ward !== "-") wWard[r.Ward] = (wWard[r.Ward] || 0) + 1;
+            if(r.Sample && r.Sample !== "-") wSpec[r.Sample] = (wSpec[r.Sample] || 0) + 1;
             
-            if(typeof abxList !== 'undefined') {
-                abxList.forEach(a => {
-                    if(r[a] && r[a] !== '-') {
-                        wAbxT[a] = (wAbxT[a]||0)+1;
-                        if(r[a] === 'S') wAbxS[a] = (wAbxS[a]||0)+1;
-                    }
-                });
-            }
+            allPossibleAbxs.forEach(a => {
+                if(r[a] && r[a] !== '-') {
+                    wAbxT[a] = (wAbxT[a] || 0) + 1;
+                    if(r[a] === 'S') wAbxS[a] = (wAbxS[a] || 0) + 1;
+                }
+            });
         });
         
-        // إذا لم يكن هناك حالات، سيكتب "None Yet" بدلاً من إخفاء البطاقة
-        let topW = Object.keys(wWard).sort((a,b)=>wWard[b]-wWard[a])[0] || "None Yet";
-        let topS = Object.keys(wSpec).sort((a,b)=>wSpec[b]-wSpec[a])[0] || "None Yet";
+        let topW = Object.keys(wWard).sort((a,b) => wWard[b] - wWard[a])[0] || "None Yet";
+        let topS = Object.keys(wSpec).sort((a,b) => wSpec[b] - wSpec[a])[0] || "None Yet";
         
-        // حساب أعلى مقاومة سُجلت لهذه البكتيريا
-        let worstAbx = "-"; let lowestS = 2; 
+        // حساب أعلى مقاومة سُجلت لهذه البكتيريا خلال الفترة المحددة
+        let worstAbx = "-"; 
+        let lowestS = 2; 
         Object.keys(wAbxT).forEach(a => {
             if(wAbxT[a] >= 1) { 
-                let p = (wAbxS[a]||0)/wAbxT[a];
+                let p = (wAbxS[a] || 0) / wAbxT[a];
                 if(p < lowestS) { lowestS = p; worstAbx = a; }
             }
         });
-        let resistanceText = worstAbx !== '-' ? `${worstAbx} (${100 - Math.round(lowestS*100)}% R)` : 'No Data';
+        let resistanceText = worstAbx !== '-' ? `${worstAbx} (${100 - Math.round(lowestS * 100)}% R)` : 'No Data';
 
-        // دالة تنسيق الاسم إذا كانت متوفرة
         let displayBugName = typeof formatScientificName === 'function' ? formatScientificName(watchBug) : watchBug;
 
-        // إزالة شرط الإخفاء (watchRecords.length > 0) لتظهر البطاقة دائماً وتُعلمك بحالة المراقبة
         let htmlWatch = `
         <div class="bg-rose-50 border border-rose-200 rounded-xl p-4 shadow-sm mt-4">
-            <h4 class="text-xs font-bold text-rose-900 mb-3 flex items-center gap-1.5">
-                <svg class="w-4 h-4 text-rose-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                Watchlist Threat: ${displayBugName}
+            <h4 class="text-xs font-bold text-rose-900 mb-3 flex items-center justify-between">
+                <span class="flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-rose-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    Watchlist Threat: ${displayBugName}
+                </span>
+                <span class="text-[9px] bg-rose-200/70 text-rose-800 px-2 py-0.5 rounded-full font-bold">${timeLabel}</span>
             </h4>
             <div class="grid grid-cols-2 gap-2 text-center text-[10px]">
                 <div class="bg-white p-2 rounded border border-rose-100 shadow-inner">
