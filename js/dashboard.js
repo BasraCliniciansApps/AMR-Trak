@@ -738,17 +738,16 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
 
     buildMobileAbxProfileChart(p1, `chart_${prefix}_mero`, `live_${prefix}_mero_count`, records, prefix === 'm' ? '#2563eb' : '#059669');
     buildMobileAbxProfileChart(p2, `chart_${prefix}_cro`, `live_${prefix}_cro_count`, records, '#0d9488');
-    // 🚨 Global Threat Watchlist Logic (Linked to Mobile Dash Month & Quarter Settings)
+    // 🚨 Global Threat Watchlist Logic (Graphical & Detailed Edition)
     let watchBug = settings.watchlist_bug;
     if (watchBug && watchBug !== "") {
-        // مطابقة ذكية لاسم البكتيريا المختارة من الإعدادات داخل سجلات الشهر أو الفصل المحدد
         let normalizedWatchBug = watchBug.split('(')[0].trim().toLowerCase();
         let watchRecords = records.filter(r => {
             let org = (r['Selective organism'] || "").split('(')[0].trim().toLowerCase();
             return org === normalizedWatchBug;
         });
         
-        let wWard = {}, wSpec = {}, wAbxT = {}, wAbxS = {};
+        let wWard = {}, wSpec = {}, wAbxT = {}, wAbxR = {}, wAbxS = {};
         let allPossibleAbxs = [...(typeof abxList !== 'undefined' ? abxList : []), ...getCustomAntibiotics().map(a => a.name)];
 
         watchRecords.forEach(r => {
@@ -756,58 +755,198 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
             if(r.Sample && r.Sample !== "-") wSpec[r.Sample] = (wSpec[r.Sample] || 0) + 1;
             
             allPossibleAbxs.forEach(a => {
-                if(r[a] && r[a] !== '-') {
+                if(r[a] && r[a] !== '-' && r[a] !== '') {
                     wAbxT[a] = (wAbxT[a] || 0) + 1;
+                    if(r[a] === 'R') wAbxR[a] = (wAbxR[a] || 0) + 1;
                     if(r[a] === 'S') wAbxS[a] = (wAbxS[a] || 0) + 1;
                 }
             });
         });
         
-        let topW = Object.keys(wWard).sort((a,b) => wWard[b] - wWard[a])[0] || "None Yet";
-        let topS = Object.keys(wSpec).sort((a,b) => wSpec[b] - wSpec[a])[0] || "None Yet";
+        let sortedWards = Object.keys(wWard).sort((a,b) => wWard[b] - wWard[a]);
+        let sortedSpecs = Object.keys(wSpec).sort((a,b) => wSpec[b] - wSpec[a]);
+        let topW = sortedWards[0] || "None Yet";
+        let topS = sortedSpecs[0] || "None Yet";
         
-        // حساب أعلى مقاومة سُجلت لهذه البكتيريا خلال الفترة المحددة
-        let worstAbx = "-"; 
-        let lowestS = 2; 
+        // تحديد أفضل خيار علاجي (أعلى حساسية % S) وأعلى مقاومة (% R)
+        let bestAbx = "-", highestS = -1;
+        let worstAbx = "-", highestR = -1;
         Object.keys(wAbxT).forEach(a => {
-            if(wAbxT[a] >= 1) { 
-                let p = (wAbxS[a] || 0) / wAbxT[a];
-                if(p < lowestS) { lowestS = p; worstAbx = a; }
-            }
+            let t = wAbxT[a];
+            let sPct = Math.round(((wAbxS[a] || 0) / t) * 100);
+            let rPct = Math.round(((wAbxR[a] || 0) / t) * 100);
+            if (sPct > highestS) { highestS = sPct; bestAbx = a; }
+            if (rPct > highestR) { highestR = rPct; worstAbx = a; }
         });
-        let resistanceText = worstAbx !== '-' ? `${worstAbx} (${100 - Math.round(lowestS * 100)}% R)` : 'No Data';
+
+        let bestOptionText = bestAbx !== '-' ? `${bestAbx} (${highestS}% S)` : 'No Data';
+        let worstOptionText = worstAbx !== '-' ? `${worstAbx} (${highestR}% R)` : 'No Data';
+
+        // بناء أشرطة التقدم للردهات (Ward Distribution Bars)
+        let wardBarsHtml = sortedWards.slice(0, 4).map(w => {
+            let cnt = wWard[w];
+            let pct = watchRecords.length > 0 ? Math.round((cnt / watchRecords.length) * 100) : 0;
+            return `
+                <div class="mb-2 last:mb-0">
+                    <div class="flex justify-between text-[10px] font-bold text-slate-700 mb-0.5">
+                        <span class="truncate pr-2">${w}</span>
+                        <span class="text-rose-700 shrink-0">${cnt} (${pct}%)</span>
+                    </div>
+                    <div class="w-full bg-rose-100 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-rose-600 h-1.5 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+                    </div>
+                </div>`;
+        }).join('') || '<div class="text-[10px] text-slate-400 text-center py-3">No ward data recorded</div>';
+
+        // بناء أشرطة التقدم للعينات (Specimen Distribution Bars)
+        let specBarsHtml = sortedSpecs.slice(0, 4).map(s => {
+            let cnt = wSpec[s];
+            let pct = watchRecords.length > 0 ? Math.round((cnt / watchRecords.length) * 100) : 0;
+            return `
+                <div class="mb-2 last:mb-0">
+                    <div class="flex justify-between text-[10px] font-bold text-slate-700 mb-0.5">
+                        <span class="truncate pr-2">${s}</span>
+                        <span class="text-amber-700 shrink-0">${cnt} (${pct}%)</span>
+                    </div>
+                    <div class="w-full bg-amber-100 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-amber-500 h-1.5 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+                    </div>
+                </div>`;
+        }).join('') || '<div class="text-[10px] text-slate-400 text-center py-3">No specimen data recorded</div>';
 
         let displayBugName = typeof formatScientificName === 'function' ? formatScientificName(watchBug) : watchBug;
+        let testedAbxs = Object.keys(wAbxT).sort((a,b) => ((wAbxR[b]||0)/wAbxT[b]) - ((wAbxR[a]||0)/wAbxT[a]));
+        let chartMinWidth = testedAbxs.length > 5 ? (testedAbxs.length * 42) + 'px' : '100%';
 
         let htmlWatch = `
         <div class="bg-rose-50 border border-rose-200 rounded-xl p-4 shadow-sm mt-4">
+            <!-- Header -->
             <h4 class="text-xs font-bold text-rose-900 mb-3 flex items-center justify-between">
                 <span class="flex items-center gap-1.5">
-                    <svg class="w-4 h-4 text-rose-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                    Watchlist Threat: ${displayBugName}
+                    <svg class="w-4 h-4 text-rose-600 animate-pulse shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <span>Watchlist Threat: <span class="italic font-black">${displayBugName}</span></span>
                 </span>
-                <span class="text-[9px] bg-rose-200/70 text-rose-800 px-2 py-0.5 rounded-full font-bold">${timeLabel}</span>
+                <span class="text-[9px] bg-rose-200/80 text-rose-900 px-2.5 py-0.5 rounded-full font-extrabold shrink-0">${timeLabel}</span>
             </h4>
-            <div class="grid grid-cols-2 gap-2 text-center text-[10px]">
-                <div class="bg-white p-2 rounded border border-rose-100 shadow-inner">
+
+            <!-- Top 3 Summary KPIs -->
+            <div class="grid grid-cols-3 gap-2 text-center text-[10px] mb-3">
+                <div class="bg-white p-2.5 rounded-lg border border-rose-100 shadow-sm">
                     <span class="block text-slate-500 mb-0.5">Total Cases</span>
-                    <span class="font-bold text-rose-700 text-sm">${watchRecords.length}</span>
+                    <span class="font-black text-rose-700 text-base">${watchRecords.length}</span>
                 </div>
-                <div class="bg-white p-2 rounded border border-rose-100 shadow-inner">
+                <div class="bg-white p-2.5 rounded-lg border border-rose-100 shadow-sm">
                     <span class="block text-slate-500 mb-0.5">Hotspot Ward</span>
-                    <span class="font-bold text-rose-700 truncate block">${topW}</span>
+                    <span class="font-bold text-rose-700 truncate block" title="${topW}">${topW}</span>
                 </div>
-                <div class="bg-white p-2 rounded border border-rose-100 shadow-inner">
+                <div class="bg-white p-2.5 rounded-lg border border-rose-100 shadow-sm">
                     <span class="block text-slate-500 mb-0.5">Top Specimen</span>
-                    <span class="font-bold text-rose-700 truncate block">${topS}</span>
-                </div>
-                <div class="bg-white p-2 rounded border border-rose-100 shadow-inner">
-                    <span class="block text-slate-500 mb-0.5">Highest Resistance</span>
-                    <span class="font-bold text-rose-700 truncate block">${resistanceText}</span>
+                    <span class="font-bold text-rose-700 truncate block" title="${topS}">${topS}</span>
                 </div>
             </div>
+
+            <!-- Clinical Action Banner (Full Text without truncation) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 text-[10px]">
+                <div class="bg-white px-3 py-2 rounded-lg border border-l-4 border-rose-100 border-l-rose-600 shadow-sm">
+                    <span class="text-slate-500 block">Highest Resistance:</span>
+                    <span class="font-bold text-rose-700 break-words leading-tight">${worstOptionText}</span>
+                </div>
+                <div class="bg-white px-3 py-2 rounded-lg border border-l-4 border-emerald-100 border-l-emerald-500 shadow-sm">
+                    <span class="text-slate-500 block">Best Empiric Option:</span>
+                    <span class="font-bold text-emerald-700 break-words leading-tight">${bestOptionText}</span>
+                </div>
+            </div>
+
+            <!-- Visual Breakdown: Wards & Specimens Progress Bars -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                <div class="bg-white p-3 rounded-lg border border-rose-100 shadow-sm">
+                    <h5 class="text-[10px] font-bold text-slate-700 mb-2 border-b border-slate-100 pb-1 flex justify-between">
+                        <span>🏥 Spread by Ward</span>
+                        <span class="text-slate-400 font-normal">Count (%)</span>
+                    </h5>
+                    ${wardBarsHtml}
+                </div>
+                <div class="bg-white p-3 rounded-lg border border-rose-100 shadow-sm">
+                    <h5 class="text-[10px] font-bold text-slate-700 mb-2 border-b border-slate-100 pb-1 flex justify-between">
+                        <span>🧪 Spread by Specimen</span>
+                        <span class="text-slate-400 font-normal">Count (%)</span>
+                    </h5>
+                    ${specBarsHtml}
+                </div>
+            </div>
+
+            <!-- Graphical Antibiogram Chart for Watchlist Bug -->
+            <div class="bg-white p-3 rounded-lg border border-rose-100 shadow-sm">
+                <div class="flex justify-between items-center mb-2">
+                    <h5 class="text-[10px] font-bold text-slate-700">📊 Resistance Profile (% R)</h5>
+                    <span class="text-[9px] text-slate-400">${testedAbxs.length} Antibiotics Tested</span>
+                </div>
+                ${testedAbxs.length > 0 ? `
+                <div class="w-full overflow-x-auto custom-scroll">
+                    <div class="h-44 relative" style="min-width: ${chartMinWidth};">
+                        <canvas id="chart_${prefix}_watch_abx"></canvas>
+                    </div>
+                </div>` : `<div class="text-[10px] text-slate-400 text-center py-6">No susceptibility testing data available for this period</div>`}
+            </div>
         </div>`;
+
         $(`#live_${prefix}_watchlist_container`).html(htmlWatch).removeClass('hidden');
+
+        // رسم المخطط البياني للمضادات الحيوية الخاصة ببكتيريا الـ Watchlist
+        if (testedAbxs.length > 0) {
+            let abxLabels = [], abxData = [], abxColors = [], abxCI = [], abxN = [];
+            testedAbxs.forEach(a => {
+                let t = wAbxT[a];
+                let r = wAbxR[a] || 0;
+                let p = Math.round((r / t) * 100);
+                abxLabels.push(t >= 30 ? a : `${a} *`);
+                abxData.push(p);
+                // تلوين ذكي حسب شدة المقاومة (أحمر للمقاومة العالية، برتقالي للمتوسطة، أخضر للمنخفضة)
+                if (p >= 60) abxColors.push('rgba(225, 29, 72, 0.85)');
+                else if (p >= 30) abxColors.push('rgba(245, 158, 11, 0.85)');
+                else abxColors.push('rgba(16, 185, 129, 0.85)');
+                
+                abxCI.push(wilsonScoreCI(r, t));
+                abxN.push(t);
+            });
+
+            let watchChart = new Chart(document.getElementById(`chart_${prefix}_watch_abx`), {
+                type: 'bar',
+                data: {
+                    labels: abxLabels,
+                    datasets: [{
+                        label: '% Resistance',
+                        data: abxData,
+                        backgroundColor: abxColors,
+                        ciData: abxCI,
+                        nData: abxN,
+                        borderRadius: 4,
+                        maxBarThickness: 28
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    let idx = ctx.dataIndex;
+                                    return `Resistance: ${ctx.raw}% (Tested n=${abxN[idx]})`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, max: 100, ticks: { font: { size: 9 } } },
+                        x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45, font: { size: 9, weight: 'bold' } }, grid: { display: false } }
+                    }
+                },
+                plugins: [errorBarsPlugin]
+            });
+            liveCharts.push(watchChart);
+        }
     } else {
         $(`#live_${prefix}_watchlist_container`).addClass('hidden');
     }
