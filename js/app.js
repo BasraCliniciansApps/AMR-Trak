@@ -2505,12 +2505,13 @@ function buildLiveSection(records, prefix, settings) {
 
     let orgCounts = {}; let specCounts = {};
     
-    // Critical Pairs (With Fallbacks for ESBL)
+    // CLINICALLY VALIDATED CRITICAL MARKERS (CLSI M100 / WHO GLASS)
     const criticalPairs = [
-        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abx: ["Ceftriaxone", "Cefotaxime", "Ceftazidime"], label: "ESBL Indicator\n(CRO/CTX/CAZ)" },
-        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abx: ["Meropenem", "Imipenem"], label: "CRE Indicator\n(Carbapenem)" },
-        { orgs: ["staphylococcus aureus"], abx: ["Oxacillin", "Cefoxitin"], label: "MRSA Indicator\n(OX/FOX)" },
-        { orgs: ["enterococcus faecalis", "enterococcus faecium", "enterococcus spp", "staphylococcus aureus"], abx: ["Vancomycin"], label: "VRE/VRSA\n(VA)" }
+        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abx: ["Ceftriaxone", "Cefotaxime", "Ceftazidime"], label: "ESBL Indicator\n(3rd Gen Ceph)" },
+        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abx: ["Ertapenem", "Meropenem", "Imipenem"], label: "CRE\n(Carbapenem)" },
+        { orgs: ["staphylococcus aureus"], abx: ["Cefoxitin", "Cefoxitin screen", "Oxacillin"], label: "MRSA\n(FOX/OX)" },
+        { orgs: ["enterococcus faecalis", "enterococcus faecium", "enterococcus spp"], abx: ["Vancomycin", "Teicoplanin"], label: "VRE\n(Vancomycin)" },
+        { orgs: ["staphylococcus aureus"], abx: ["Vancomycin"], label: "VRSA\n(Vancomycin)" }
     ];
 
     let amrStats = criticalPairs.map(p => ({ label: p.label, tested: 0, resistant: 0 }));
@@ -2524,10 +2525,14 @@ function buildLiveSection(records, prefix, settings) {
         let orgLower = org.toLowerCase();
         criticalPairs.forEach((pair, index) => {
             if (pair.orgs.some(o => orgLower.includes(o.toLowerCase()))) {
-                let abxFound = pair.abx.find(a => r[a] && r[a] !== '-');
-                if (abxFound) {
+                // Collect all valid test results available in this panel
+                let validResults = pair.abx.map(a => r[a] ? String(r[a]).trim().toUpperCase() : '').filter(val => val && val !== '-');
+                if (validResults.length > 0) {
                     amrStats[index].tested++;
-                    if (r[abxFound] === 'R') amrStats[index].resistant++;
+                    // Non-susceptible/Resistant if ANY indicator agent in the panel is 'R'
+                    if (validResults.some(val => val === 'R' || val.startsWith('R'))) {
+                        amrStats[index].resistant++;
+                    }
                 }
             }
         });
