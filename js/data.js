@@ -188,3 +188,168 @@ const whonetOrgMap = {
     "eae": "Enterobacter aerogenes", "cfr": "Citrobacter freundii", 
     "ckr": "Citrobacter koseri", "sca": "Staphylococcus capitis"
 };
+
+
+// =====================================================================
+// First-isolate deduplication (CLSI M39)
+// One isolate per patient per organism per analysis year.
+// Identification number in WHONET restarts every year, so the key is
+// (Patient ID + year of isolate + organism). The earliest isolate by
+// date is kept (not the first in array order).
+// =====================================================================
+function getDedupPatientId(r) {
+    const raw = String(r['Patient ID'] || r['Name'] || '').trim().toLowerCase();
+    if (!raw || raw === 'unknown' || raw === 'unknown patient') return '';
+    return raw;
+}
+
+function applyDeduplication(records) {
+    const winners = new Map(); // key -> chosen record
+    const keyOf = (r) => {
+        const pid = getDedupPatientId(r);
+        const year = String(r['Date'] || '').substring(0, 4);
+        const org = String(r['Selective organism'] || '').trim().toLowerCase();
+        // Cannot dedup without patient id, a valid year, or an organism: keep the record
+        if (!pid || !/^\d{4}$/.test(year) || !org) return null;
+        return pid + '|' + year + '|' + org;
+    };
+
+    records.forEach(r => {
+        const key = keyOf(r);
+        if (key === null) return;
+        const cur = winners.get(key);
+        if (!cur || String(r['Date']) < String(cur['Date'])) winners.set(key, r);
+    });
+
+    return records.filter(r => {
+        const key = keyOf(r);
+        return key === null || winners.get(key) === r;
+    });
+}
+
+
+// =====================================================================
+// MDR / XDR classification (Magiorakos et al., Clin Microbiol Infect 2012)
+// - Non-susceptible (NS) = I or R.
+// - MDR: NS to >=1 agent in >=3 antimicrobial categories.
+// - XDR: NS to >=1 agent in all but <=2 categories of ALL categories that
+//   apply to the organism (untested categories are unknown, not susceptible).
+//   With routine panels XDR is therefore only established when the panel is
+//   broad enough. "possibleXDR" flags isolates that look XDR on the tested
+//   categories but whose panel is too narrow to confirm it.
+// - Only organisms with a defined category list are classified:
+//   Enterobacterales, P. aeruginosa, Acinetobacter spp., S. aureus.
+// - Intrinsic resistance is excluded from the category counts.
+// >>> Category lists and intrinsic-resistance exclusions below should be
+// >>> reviewed by the clinical pharmacist; edit them here only.
+// =====================================================================
+const MDR_MIN_TESTED_FOR_POSSIBLE_XDR = 6;
+
+const MDR_TABLES = {
+    'Enterobacterales': {
+        'Aminoglycosides': ['Gentamicin', 'Tobramycin', 'Amikacin', 'Netilmicin'],
+        'Antipseudomonal penicillins + BLI': ['Piperacillin/Tazobactam', 'Ticarcillin/Clavulanic acid'],
+        'Carbapenems': ['Ertapenem', 'Imipenem', 'Meropenem', 'Doripenem'],
+        'Cephalosporins (1st/2nd gen)': ['Cefazolin', 'Cefuroxime'],
+        'Cephalosporins (3rd/4th gen)': ['Cefotaxime', 'Ceftriaxone', 'Ceftazidime', 'Cefepime'],
+        'Cephamycins': ['Cefoxitin', 'Cefotetan'],
+        'Fluoroquinolones': ['Ciprofloxacin', 'Levofloxacin', 'Ofloxacin', 'Moxifloxacin'],
+        'Folate pathway inhibitors': ['Trimethoprim/Sulfamethoxazole'],
+        'Glycylcyclines': ['Tigecycline'],
+        'Monobactams': ['Aztreonam'],
+        'Penicillins': ['Ampicillin'],
+        'Penicillins + BLI': ['Amoxicillin/Clavulanic acid', 'Ampicillin/Sulbactam'],
+        'Phosphonic acids': ['Fosfomycin'],
+        'Polymyxins': ['Colistin', 'Polymyxin B'],
+        'Tetracyclines': ['Tetracycline', 'Doxycycline', 'Minocycline']
+    },
+    'Pseudomonas aeruginosa': {
+        'Aminoglycosides': ['Gentamicin', 'Tobramycin', 'Amikacin', 'Netilmicin'],
+        'Antipseudomonal carbapenems': ['Imipenem', 'Meropenem', 'Doripenem'],
+        'Antipseudomonal cephalosporins': ['Ceftazidime', 'Cefepime'],
+        'Antipseudomonal fluoroquinolones': ['Ciprofloxacin', 'Levofloxacin'],
+        'Antipseudomonal penicillins + BLI': ['Piperacillin/Tazobactam', 'Ticarcillin/Clavulanic acid'],
+        'Monobactams': ['Aztreonam'],
+        'Phosphonic acids': ['Fosfomycin'],
+        'Polymyxins': ['Colistin', 'Polymyxin B']
+    },
+    'Acinetobacter spp.': {
+        'Aminoglycosides': ['Gentamicin', 'Tobramycin', 'Amikacin', 'Netilmicin'],
+        'Antipseudomonal carbapenems': ['Imipenem', 'Meropenem', 'Doripenem'],
+        'Antipseudomonal fluoroquinolones': ['Ciprofloxacin', 'Levofloxacin'],
+        'Antipseudomonal penicillins + BLI': ['Piperacillin/Tazobactam', 'Ticarcillin/Clavulanic acid'],
+        'Extended-spectrum cephalosporins': ['Cefotaxime', 'Ceftriaxone', 'Ceftazidime', 'Cefepime'],
+        'Folate pathway inhibitors': ['Trimethoprim/Sulfamethoxazole'],
+        'Penicillins + BLI': ['Ampicillin/Sulbactam'],
+        'Polymyxins': ['Colistin', 'Polymyxin B'],
+        'Tetracyclines': ['Tetracycline', 'Doxycycline', 'Minocycline']
+    },
+    'Staphylococcus aureus': {
+        'Aminoglycosides': ['Gentamicin'],
+        'Ansamycins': ['Rifampicin'],
+        'Anti-MRSA cephalosporins': ['Ceftaroline'],
+        'Anti-staphylococcal beta-lactams': ['Oxacillin', 'Cefoxitin', 'Cefoxitin screen'],
+        'Fluoroquinolones': ['Ciprofloxacin', 'Levofloxacin', 'Moxifloxacin'],
+        'Folate pathway inhibitors': ['Trimethoprim/Sulfamethoxazole'],
+        'Fusidane': ['Fusidic acid'],
+        'Glycopeptides': ['Vancomycin', 'Teicoplanin'],
+        'Glycylcyclines': ['Tigecycline'],
+        'Lincosamides': ['Clindamycin'],
+        'Lipopeptides': ['Daptomycin'],
+        'Macrolides': ['Erythromycin', 'Azithromycin', 'Clarithromycin'],
+        'Oxazolidinones': ['Linezolid'],
+        'Phosphonic acids': ['Fosfomycin'],
+        'Streptogramins': ['Quinupristin/Dalfopristin'],
+        'Tetracyclines': ['Tetracycline', 'Doxycycline', 'Minocycline']
+    }
+};
+
+// Intrinsic (expected) resistance: categories excluded for these organisms.
+const MDR_INTRINSIC_RULES = [
+    { test: /klebsiella|raoultella|citrobacter koseri|citrobacter diversus/, exclude: ['Penicillins'] },
+    { test: /enterobacter|klebsiella aerogenes|citrobacter freundii|serratia|morganella/,
+      exclude: ['Penicillins', 'Penicillins + BLI', 'Cephalosporins (1st/2nd gen)', 'Cephamycins'] },
+    { test: /proteus|morganella|providencia|serratia/, exclude: ['Polymyxins'] },
+    { test: /proteus|morganella|providencia/, exclude: ['Tetracyclines', 'Glycylcyclines'] }
+];
+
+function getMdrGroup(orgLower) {
+    if (/^(escherichia|klebsiella|raoultella|enterobacter|proteus|morganella|providencia|serratia|citrobacter|salmonella|shigella|yersinia|hafnia|pantoea|cronobacter|edwardsiella|enterobacteriaceae)/.test(orgLower)) return 'Enterobacterales';
+    if (orgLower.includes('pseudomonas aeruginosa')) return 'Pseudomonas aeruginosa';
+    if (orgLower.startsWith('acinetobacter')) return 'Acinetobacter spp.';
+    if (orgLower.includes('staphylococcus aureus')) return 'Staphylococcus aureus';
+    return null;
+}
+
+// Returns { cls: 'Non-MDR'|'MDR'|'XDR', ns, tested, total, group, possibleXDR } or null if not classifiable.
+function classifyMDR(r) {
+    const orgLower = String(r['Selective organism'] || '').trim().toLowerCase();
+    const group = getMdrGroup(orgLower);
+    if (!group) return null;
+
+    const excluded = new Set();
+    MDR_INTRINSIC_RULES.forEach(rule => { if (rule.test.test(orgLower)) rule.exclude.forEach(c => excluded.add(c)); });
+
+    let tested = 0, ns = 0, total = 0;
+    Object.keys(MDR_TABLES[group]).forEach(cat => {
+        if (excluded.has(cat)) return;
+        total++;
+        let anyTested = false, anyNS = false;
+        MDR_TABLES[group][cat].forEach(abx => {
+            const v = String(r[abx] || '').trim().toUpperCase();
+            if (v === 'S' || v === 'I' || v === 'R') {
+                anyTested = true;
+                if (v !== 'S') anyNS = true;
+            }
+        });
+        if (anyTested) { tested++; if (anyNS) ns++; }
+    });
+
+    let cls = 'Non-MDR', possibleXDR = false;
+    if (ns >= 3) {
+        cls = 'MDR';
+        if (ns >= total - 2) cls = 'XDR';
+        else if (tested >= MDR_MIN_TESTED_FOR_POSSIBLE_XDR && (tested - ns) <= 2) possibleXDR = true;
+    }
+    return { cls, ns, tested, total, group, possibleXDR };
+}

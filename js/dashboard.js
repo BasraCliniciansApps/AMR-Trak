@@ -33,47 +33,8 @@ let currentPathoMetric = 'S';
 let chartAbxAMR_instance = null;
 let currentAbxMetric = 'S';
 
-// --- دالة التنقيح المركزية (Deduplication) لمعايير CLSI ---
-function applyDeduplication(records) {
-    const seenPatientOrg = new Set();
-    return records.filter(r => {
-        const pName = (r['Name'] || '').trim().toLowerCase();
-        const orgName = (r['Selective organism'] || '').trim().toLowerCase();
-        
-        // عدم استبعاد السجلات إذا كان اسم المريض مفقوداً أو مجهولاً للحفاظ على البيانات
-        if (!pName || pName === 'unknown' || pName === 'unknown patient') return true;
-        
-        const key = `${pName}_${orgName}`;
-        if (seenPatientOrg.has(key)) return false;
-        
-        seenPatientOrg.add(key);
-        return true;
-    });
-}
+// (applyDeduplication is defined once in data.js)
 
-function applyDeduplication(records) {
-    const seenPatientOrg = new Set();
-    
-    return records.filter(r => {
-        // الاعتماد على Patient ID إن وُجد، وإلا نستخدم الاسم كبديل (يُفضل دمج العمر لتفادي تشابه الأسماء)
-        const patientIdentifier = (r['Patient ID'] || r['Name'] || '').trim().toLowerCase();
-        const orgName = (r['Selective organism'] || '').trim().toLowerCase();
-        
-        // إذا كان المريض مجهولاً، لا نحذف العينة للحفاظ على البيانات
-        if (!patientIdentifier || patientIdentifier === 'unknown' || patientIdentifier === 'unknown patient') {
-            return true;
-        }
-        
-        // إنشاء مفتاح فريد: (معرف المريض + اسم البكتيريا)
-        const key = `${patientIdentifier}_${orgName}`;
-        
-        // إذا تم حساب هذه البكتيريا لهذا المريض مسبقاً، نتجاهلها (نحذف التكرار)
-        if (seenPatientOrg.has(key)) return false;
-        
-        seenPatientOrg.add(key);
-        return true;
-    });
-}
 // --- WARD FILTER LOGIC (Inpatient / Outpatient) ---
 function applyWardFilter(records, filterValue) {
     if (filterValue === 'inpatient') {
@@ -402,19 +363,8 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     $(`#live_${prefix}_urine_subtitle`).text(timeLabel);
     $(`#live_${prefix}_bar_title`).text(`Top 5 Specimens (${timeLabel})`);
 
-    // --- CLSI M39 DEDUPLICATION (First isolate per patient per organism) ---
-    const seenPatientOrg = new Set();
-    const surveillanceRecords = records.filter(r => {
-        const pName = (r['Name'] || '').trim().toLowerCase();
-        const orgName = (r['Selective organism'] || '').trim().toLowerCase();
-        // If patient name is missing, retain the record to prevent data loss
-        if (!pName || pName === 'unknown' || pName === 'unknown patient') return true;
-        
-        const key = `${pName}_${orgName}`;
-        if (seenPatientOrg.has(key)) return false;
-        seenPatientOrg.add(key);
-        return true;
-    });
+    // --- CLSI M39 DEDUPLICATION (First isolate per patient per organism per year) ---
+    const surveillanceRecords = applyDeduplication(records);
 
     let orgCounts = {}, specCounts = {};
 
@@ -648,36 +598,15 @@ if (settings.show_amr === false) {
     let mdrStats = { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0 };
     let wardMdrStats = {};
 
-    records.forEach(r => {
-        let resistantGroups = new Set();
-        let org = r['Selective organism'] || "";
+    // MDR/XDR is evaluated on first isolates only (deduplicated), classifiable organisms only
+    surveillanceRecords.forEach(r => {
         let ward = r['Ward'] || "Unknown";
-        
-        // استبعاد البكتيريا الطبيعية أو الملوثات من الحسابات
-        if (!org || org === '-') return;
+        let res = classifyMDR(r);
+        if (!res) return; // organism outside the Magiorakos category lists (or contaminant)
 
-        // مطابقة المضادات الحيوية التي تظهر 'R' مع فئاتها الدوائية من القاموس
-        if (typeof abxGroups !== 'undefined') {
-            Object.keys(abxGroups).forEach(group => {
-                if (group === "Antifungals") return; // نستبعد مضادات الفطريات من تصنيف البكتيريا
-                
-                let abxsInGroup = abxGroups[group];
-                for (let abx of abxsInGroup) {
-                    if (r[abx] && r[abx] === 'R') {
-                        resistantGroups.add(group); // إضافة الفئة إذا كان هناك مضاد واحد على الأقل (R)
-                        break; 
-                    }
-                }
-            });
-        }
-
-        let count = resistantGroups.size;
-        let classification = 'Non-MDR';
-        if (count >= 5) classification = 'XDR'; // تقاوم 5 فئات فأكثر
-        else if (count >= 3) classification = 'MDR'; // تقاوم 3 فئات فأكثر
-
+        let classification = res.cls;
         mdrStats[classification]++;
-        
+
         // حساب التوزيع حسب الردهات
         if (!wardMdrStats[ward]) {
             wardMdrStats[ward] = { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0, total: 0 };
@@ -688,7 +617,7 @@ if (settings.show_amr === false) {
 
     // 1. بناء مخطط الدونات (MDR/XDR Overall Burden)
     let mdrData = [mdrStats['Non-MDR'], mdrStats['MDR'], mdrStats['XDR']];
-    let mdrLabels = ['Normal / Susceptible', 'MDR (≥3 Classes)', 'XDR (≥5 Classes)'];
+    let mdrLabels = ['Non-MDR', 'MDR (≥3 categories)', 'XDR (all but ≤2 categories)'];
     let mdrColors = ['#10b981', '#f59e0b', '#e11d48'];
 
     if (mdrData.reduce((a, b) => a + b, 0) === 0) {
