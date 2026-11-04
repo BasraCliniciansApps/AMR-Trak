@@ -642,7 +642,9 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
             }
         }
     }
-    const audit = { unknownOrg: new Map(), unknownWard: new Map(), unknownSpec: new Map(), unmappedAbx: new Map(), renamed: new Map() };
+    const audit = { unknownOrg: new Map(), unknownWard: new Map(), unknownSpec: new Map(), unmappedAbx: new Map(), ignoredAbx: new Map(), renamed: new Map() };
+    // Legacy WHONET codes for agents outside the current CLSI M100 / WHO AWaRe lists: recognised and deliberately not imported
+    const KNOWN_IGNORED_ABX = new Set(['GAT', 'LOM', 'PNV', 'GEM', 'CPR', 'CIC', 'CCV', 'CLA', 'OPT']);
     const report = { noSpecimen: [], strepPenDisk: 0, duplicates: 0, blankOrg: 0, added: 0, noGrowth: 0, noSri: 0, noDate: 0, vancDisk: 0, vancTypedIR: 0, vancInvalidMic: 0, vancMismatch: 0, vancCandidates: [], vancNeedsMic: 0, vancFromMic: 0, valuesFile: valuesAligned, valuesFileIgnored: !!valuesTable && !valuesAligned };
 
     const abxColumns = [];
@@ -854,7 +856,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         const selectiveOrgName = canonicalOrganismName(fullOrgName);   // current taxonomy name for analytics
         if (!(externalOrgMap[orgCode] || whonetOrgMap[orgCode])) bump(audit.unknownOrg, orgCode);
         if (selectiveOrgName !== fullOrgName) bump(audit.renamed, fullOrgName + ' → ' + selectiveOrgName);
-        unmappedCols.forEach(c => { if (/^[SIR]/i.test(String(cols[c.index] || '').trim())) bump(audit.unmappedAbx, c.code); });
+        unmappedCols.forEach(c => { if (/^[SIR]/i.test(String(cols[c.index] || '').trim())) bump(KNOWN_IGNORED_ABX.has(c.code) ? audit.ignoredAbx : audit.unmappedAbx, c.code); });
 
         let record = {
             '_uid': Date.now().toString(36) + Math.random().toString(36).substr(2, 5) + i,
@@ -976,8 +978,8 @@ function buildImportReport(report, audit, newRecords, skippedCount) {
 
     // --- applied automatically ---
     if (report.noGrowth) auto.push(`No growth / contaminant / no organism rows not imported: ${report.noGrowth}`);
-    if (report.labMonths) auto.push(`Lab quality counts (growth / no growth / contaminated cultures) updated for ${report.labMonths} month(s); shown in the dashboard Lab Quality tab`);
-    if (report.labKept && report.labKept.length) auto.push(`Lab quality kept the existing counts for ${report.labKept.join(', ')} (the new file held fewer cultures for those months)`);
+    if (report.labMonths) auto.push(`Culture counts (positive / no growth / contaminated) updated for ${report.labMonths} month(s); shown in the dashboard Culture Overview tab`);
+    if (report.labKept && report.labKept.length) auto.push(`Culture Overview kept the existing counts for ${report.labKept.join(', ')} (the new file held fewer cultures for those months)`);
     if (report.noSri) auto.push(`Identified organisms without susceptibility results not imported: ${report.noSri}`);
     if (report.duplicates) auto.push(`Already in the database, not added again: ${report.duplicates}`);
     if (report.strepPenDisk) auto.push(`Beta-haemolytic streptococci: penicillin/ampicillin R/I by disk ignored (no valid CLSI disk breakpoints): ${report.strepPenDisk}`);
@@ -1001,6 +1003,7 @@ function buildImportReport(report, audit, newRecords, skippedCount) {
     if (report.blankOrg) attention.push({ t: `Rows with susceptibility results but no organism name (not imported): ${report.blankOrg}`, d: 'Fix the organism in WHONET and import again.' });
     if (report.noSpecimen.length) attention.push({ t: `Rows without a specimen type (not imported): ${report.noSpecimen.length} (${report.noSpecimen.slice(0, 10).map(escapeHtml).join(', ')})`, d: 'Complete the specimen type in WHONET and import again, or add the record manually.' });
     if (audit.unknownOrg.size) attention.push({ t: `Unrecognised organism codes: ${topList(audit.unknownOrg)}`, d: 'These were stored under the raw code. Add them to organisms_dictionary.json so they get a proper name.' });
+    if (audit.ignoredAbx.size) auto.push(`Legacy WHONET antibiotic columns recognised and not imported (outside the current CLSI M100 lists): ${topList(audit.ignoredAbx)}`);
     if (audit.unmappedAbx.size) attention.push({ t: `Antibiotic columns with results that the app does not know: ${topList(audit.unmappedAbx)}`, d: 'Their results were NOT imported. The WHONET code has to be added to the antibiotic dictionary.' });
     if (audit.unknownWard.size) attention.push({ t: `Unrecognised ward codes: ${topList(audit.unknownWard)}`, d: 'Stored as typed. Add them to the ward map so they merge with existing wards.' });
     if (audit.unknownSpec.size) attention.push({ t: `Unrecognised specimen codes: ${topList(audit.unknownSpec)}`, d: 'Stored as typed. Add them to specimens_dictionary.json.' });
@@ -2338,7 +2341,7 @@ async function processAntibiogramExport(year, quarter) {
 // --- Live Settings Logic ---
 // Sections of the mobile dashboard that can be switched on/off (key -> label)
 const DASH_TOGGLES = [
-    { group: 'Tabs', items: [['tab_month', 'Last Month tab'], ['tab_quarter', 'Last Quarter tab'], ['tab_lab', 'Lab Quality tab']] },
+    { group: 'Tabs', items: [['tab_month', 'Last Month tab'], ['tab_quarter', 'Last Quarter tab'], ['tab_lab', 'Culture Overview tab']] },
     { group: 'Analytics tab', items: [['sec_prevalence', 'Clinical Prevalence & AST Profile'], ['sec_patho', 'Bacteria Resistance Profile'], ['sec_abx', 'Antimicrobial Efficacy Profile'], ['sec_heatmap', 'Advanced Heatmap'], ['sec_mdr_panel', 'MDR / XDR / PDR Analysis']] },
     { group: 'Last Month and Last Quarter tabs', items: [['show_amr', 'Critical Resistance Markers'], ['sec_pies', 'Blood and Urine prevalence'], ['sec_top5', 'Top 5 Specimens'], ['sec_mdr', 'MDR / XDR / PDR card'], ['show_top3', 'Top 3 Specimens breakdown'], ['sec_profiles', 'Resistance profiles (2 antibiotics)']] }
 ];

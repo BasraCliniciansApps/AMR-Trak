@@ -1,6 +1,6 @@
 // =====================================================================
 // Dashboard panels: display settings, ICU / non-ICU scope, period pickers,
-// MDR / XDR / PDR analysis panel and the Lab Quality tab.
+// MDR / XDR / PDR analysis panel and the Culture Overview tab.
 // Loaded after dashboard.js (shares its globals).
 // =====================================================================
 
@@ -85,7 +85,7 @@ window.switchTab = function (tab) {
         $('#headerTitle').text('Last Quarter Surveillance');
     } else if (tab === 'lab') {
         $('#viewLab').removeClass('hidden'); $('#btnNavLab').addClass('active');
-        $('#headerTitle').text('Lab Quality');
+        $('#headerTitle').text('Culture Overview');
         renderLabQuality();
     }
     const btn = document.querySelector('.nav-btn.active');
@@ -215,9 +215,16 @@ function renderMdrPanel() {
         ['PDR', n ? counts.PDR : '-', 'text-red-900']
     ].map(t => `<div class="bg-slate-50 border border-slate-100 rounded-lg p-2 text-center"><div class="text-[9px] font-bold text-slate-500">${t[0]}</div><div class="text-sm font-black ${t[2]}">${t[1]}</div></div>`).join(''));
 
-    setInfo('mdr_panel', 'MDR / XDR / PDR classification', mdrInfoHtml(possibleX, possibleP) +
-        '<p style="margin-top:8px">Counts use first isolates only (one per patient, organism and year, CLSI M39). Percentages are of classified isolates; organisms outside the Magiorakos category lists are not classified.</p>');
+    setInfo('mdr_panel', 'MDR / XDR / PDR analysis', mdrInfoHtml(possibleX, possibleP));
     attachInfo('#mdrPanel .mdr-title', 'mdr_panel');
+    setInfo('mdr_tiles', 'Summary figures', '<p><b>Classified isolates:</b> first isolates that could be assigned a class (Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp., <i>S. aureus</i>).</p><p style="margin-top:8px"><b>MDR or worse:</b> MDR, XDR and PDR combined. <b>XDR or worse:</b> XDR and PDR combined. Percentages are of classified isolates in the selected period and unit scope.</p>');
+    attachInfo('#mdr_tiles_title', 'mdr_tiles');
+    setInfo('mdr_trend', 'Monthly trend', '<p>Share of classified isolates in each class per month (MDR, XDR, PDR stacked). Months with few isolates vary widely; read the trend over several months rather than a single bar.</p>');
+    attachInfo('#mdr_trend_title', 'mdr_trend');
+    setInfo('mdr_wards', 'Distribution by ward', '<p>Classified first isolates per ward, split by class. The number in brackets is the total classified isolates for that ward. Wards are ordered by the number of MDR or worse isolates. Isolates are de-duplicated across the whole selected period, so a patient moving between wards is counted once, in the ward of the first isolate.</p>');
+    attachInfo('#mdr_wards_title', 'mdr_wards');
+    setInfo('mdr_group', 'By organism group', '<p>MDR+ = MDR, XDR or PDR. Groups with fewer than 30 isolates are marked with * and should be interpreted with caution (CLSI M39). "Poss." figures are isolates tested against too few categories to confirm XDR or PDR; they are shown for information and are not included in the XDR+ or PDR columns.</p>');
+    attachInfo('#mdr_group_title', 'mdr_group');
 
     const ctxOpts = { responsive: true, maintainAspectRatio: false };
     const pieEl = document.getElementById('chart_mdr_panel_pie');
@@ -280,7 +287,7 @@ function renderPeriodPickerOnce(id, cb) {
     return currentRange(id);
 }
 
-// ---------- Lab Quality tab ----------
+// ---------- Culture Overview tab ----------
 function getLabData() { try { return JSON.parse(localStorage.getItem('amr_dash_lab')) || {}; } catch (e) { return {}; } }
 
 function renderLabQuality() {
@@ -335,20 +342,32 @@ function renderLabQuality() {
           <div class="grid grid-cols-3 gap-2 text-center">
             <div><div class="text-[9px] font-bold text-slate-500">Blood cultures</div><div class="text-sm font-black text-slate-800">${B}</div></div>
             <div><div class="text-[9px] font-bold text-slate-500">Positive</div><div class="text-sm font-black text-rose-600">${pct(blood.g, B)}%</div></div>
-            <div><div class="text-[9px] font-bold text-slate-500">Contamination</div><div class="text-sm font-black text-${tone}-700">${lo === hi ? lo + '%' : lo + ' - ' + hi + '%'}</div></div>
+            <div><div class="text-[9px] font-bold text-slate-500">Reported as contaminated</div><div class="text-sm font-black text-slate-800">${lo}%</div></div>
           </div>
-          <p class="text-[9px] text-slate-500 mt-2 leading-snug">Lab-flagged: ${blood.con} culture(s). Possible skin-flora growth (CoNS, Corynebacterium, Micrococcus...): ${possKeys.size}. Benchmark: 3% or less.</p>
+          <div class="mt-2 pt-2 border-t border-${tone}-200 text-[10px] text-slate-600 leading-snug">
+            <b>Possible</b> skin-flora growth (CoNS, <i>Corynebacterium</i>, <i>Micrococcus</i>...): ${possKeys.size} culture(s), not confirmed.
+            <br><b>Possible contamination, upper estimate:</b> ${hi}%
+          </div>
+          <p class="text-[9px] text-slate-400 mt-1">Reference value: 3% or less.</p>
         </div>` : '<p class="text-xs text-slate-400 text-center">No blood cultures in this period.</p>');
-    setInfo('lab_blood', 'Blood culture contamination', `<p>Contamination = blood cultures where growth does not reflect true bacteraemia. The commonly used benchmark is <b>3% or less</b> of blood cultures (ASM / CAP Q-Probes / CLSI M47).</p>
-        <p style="margin-top:8px"><b>Lab-flagged</b> (certain): cultures the laboratory reported as contaminated.</p>
-        <p style="margin-top:8px"><b>Possible</b> (not certain): blood isolates of usual skin flora (CoNS, Corynebacterium, Micrococcus, viridans streptococci...). One positive set cannot be proven a contaminant from this data, because the number of sets drawn and the clinical picture are not recorded. They are counted as <i>possible</i> and shown as the upper end of the range.</p>
-        <p style="margin-top:8px">A range such as "2.1 - 5.4%" means the true rate lies between the two values. Reduce the range by recording the number of positive sets in the future.</p>`);
+    setInfo('lab_blood', 'Blood cultures: contamination indicators', `<p>Contamination means growth that does not represent true bloodstream infection. The commonly cited reference value is <b>3% or less</b> of blood cultures (ASM Cumitech 1C; CLSI M47).</p>
+        <p style="margin-top:8px"><b>Reported as contaminated:</b> cultures the laboratory itself recorded as contaminated. This figure is certain.</p>
+        <p style="margin-top:8px"><b>Possible skin-flora growth:</b> blood cultures that grew organisms that are usually skin flora (coagulase-negative staphylococci, <i>Corynebacterium</i>, <i>Micrococcus</i>, viridans streptococci...). These organisms can also cause genuine infection, and a single result cannot be classified without knowing how many blood-culture sets were positive and the clinical picture, which are not recorded. They are therefore labelled <i>possible</i> and are not counted as contaminated.</p>
+        <p style="margin-top:8px"><b>Possible contamination, upper estimate:</b> reported contaminated plus possible skin-flora growth, divided by all blood cultures. The true rate lies between the reported figure and this estimate.</p>`);
     attachInfo('#lab_blood_title', 'lab_blood');
 
-    setInfo('lab_def', 'How these numbers are made', `<p>Counts come from the monthly WHONET export. One <b>culture</b> = one patient + date + specimen type (several organisms from the same specimen count once).</p>
-        <ul style="margin:6px 0 0 16px;list-style:disc"><li><b>Positive:</b> an organism was reported.</li><li><b>No growth:</b> no organism (xxx / no growth).</li><li><b>Contaminated:</b> reported as contaminated by the lab.</li></ul>
-        <p style="margin-top:8px">Only counts are stored, never patient rows. Screening cultures are included here (they are only excluded from resistance statistics).</p>`);
+    setInfo('lab_def', 'About the Culture Overview', `<p>Counts come from the monthly WHONET export and describe culture activity, not individual patients. A <b>culture</b> is one patient, one date and one specimen type; several organisms from the same specimen count once.</p>
+        <ul style="margin:6px 0 0 16px;list-style:disc"><li><b>Positive:</b> an organism was reported.</li><li><b>No growth:</b> no organism was reported.</li><li><b>Contaminated:</b> reported as contaminated by the laboratory.</li></ul>
+        <p style="margin-top:8px">Only aggregate counts are stored; no patient rows. Screening cultures are included here (they are excluded only from resistance statistics).</p>`);
     attachInfo('#lab_title', 'lab_def');
+    setInfo('lab_tiles', 'Cultures received', '<p><b>Cultures</b> = all cultures in the period and unit scope. <b>Positive</b>, <b>No growth</b> and <b>Contaminated</b> are shares of that total and add up to 100%.</p><p style="margin-top:8px">Positivity depends on specimen mix and sampling practice (for example, many screening or follow-up cultures lower it), so compare like with like: the same ward or specimen type over time.</p>');
+    attachInfo('#lab_tiles_title', 'lab_tiles');
+    setInfo('lab_volume', 'Culture volume per month', '<p>Number of cultures received each month, split by result. Volume reflects workload and sampling practice.</p><p style="margin-top:8px"><b>Volume notes:</b> a note appears when a month is less than half, or more than 1.6 times, the average of the selected months. A low month usually means an incomplete data file; a high month may reflect an outbreak work-up or a screening campaign. Notes are prompts to check, not conclusions.</p>');
+    attachInfo('#lab_volume_title', 'lab_volume');
+    setInfo('lab_wards', 'Positivity by ward', '<p>Share of cultures with growth in each ward; the number in brackets is the ward total. Grey bars have fewer than 30 cultures and should be interpreted with caution. Differences between wards partly reflect case mix and how often cultures are taken.</p>');
+    attachInfo('#lab_wards_title', 'lab_wards');
+    setInfo('lab_sample', 'By specimen type', '<p>Number of cultures and the share that were positive, had no growth, or were reported as contaminated, for each specimen type in the selected period and unit scope.</p>');
+    attachInfo('#lab_sample_title', 'lab_sample');
 
     const opt = { responsive: true, maintainAspectRatio: false };
     const ml = monthsInRange.filter(m => perMonth[m]);
@@ -368,14 +387,14 @@ function renderLabQuality() {
         })
     }));
 
-    // Volume alert: a month far below the others usually means an incomplete file, not a real drop
+    // Volume notes: a month far below the others usually means an incomplete file, not a real drop
     const vols = ml.map(m => perMonth[m].g + perMonth[m].ng + perMonth[m].con);
     const alerts = [];
     if (ml.length >= 3) {
         const mean = vols.reduce((a, b) => a + b, 0) / vols.length;
         ml.forEach((m, i) => {
-            if (vols[i] < mean * 0.5) alerts.push(`${monthLabel(m)}: only ${vols[i]} cultures (average ${Math.round(mean)}). The file may be incomplete.`);
-            else if (vols[i] > mean * 1.6) alerts.push(`${monthLabel(m)}: ${vols[i]} cultures (average ${Math.round(mean)}). Unusually high volume; check for an outbreak work-up or screening campaign.`);
+            if (vols[i] < mean * 0.5) alerts.push(`${monthLabel(m)}: ${vols[i]} cultures (average ${Math.round(mean)}). Lower than usual; the data file may be incomplete.`);
+            else if (vols[i] > mean * 1.6) alerts.push(`${monthLabel(m)}: ${vols[i]} cultures (average ${Math.round(mean)}). Higher than usual; this may reflect an outbreak work-up or a screening campaign.`);
         });
     }
     $('#lab_alerts').html(alerts.length ? alerts.map(a => `<div class="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-1">${a}</div>`).join('') : '');
@@ -400,6 +419,6 @@ function renderLabQuality() {
         const x = perSample[sname], t = x.g + x.ng + x.con;
         return `<tr class="border-t border-slate-100"><td class="py-1.5 pr-2 font-bold text-slate-700">${escapeHtmlDash(sname)}</td><td class="text-center">${t}</td><td class="text-center text-rose-600 font-bold">${pct(x.g, t)}%</td><td class="text-center">${pct(x.ng, t)}%</td><td class="text-center text-amber-600">${pct(x.con, t)}%</td></tr>`;
     }).join('');
-    $('#lab_sample_table').html(`<table class="w-full text-[10px]"><thead><tr class="text-slate-500"><th class="text-left pb-1">Specimen</th><th>n</th><th>Positive</th><th>No growth</th><th>Contam.</th></tr></thead><tbody>${srows}</tbody></table><p class="text-[9px] text-slate-400 mt-1">Grey ward bars: fewer than 30 cultures.</p>`);
+    $('#lab_sample_table').html(`<table class="w-full text-[10px]"><thead><tr class="text-slate-500"><th class="text-left pb-1">Specimen</th><th>n</th><th>Positive</th><th>No growth</th><th>Contaminated</th></tr></thead><tbody>${srows}</tbody></table><p class="text-[9px] text-slate-400 mt-1">Grey ward bars: fewer than 30 cultures.</p>`);
 }
 function escapeHtmlDash(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }

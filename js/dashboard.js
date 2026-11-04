@@ -229,7 +229,13 @@ function attachInfo(hostSel, key) {
     $h.append(`<button type="button" class="info-btn" data-key="${key}" onclick="showInfo('${key}')" aria-label="Details">i</button>`);
 }
 function mdrInfoHtml(px, pp) {
-    return `<p>Magiorakos et al. 2012 (ECDC/CDC consensus), applied to first isolates of Enterobacterales, P. aeruginosa, Acinetobacter and S. aureus.</p><ul style="margin:6px 0 0 16px;list-style:disc"><li><b>MDR:</b> non-susceptible (I or R) to at least one agent in 3 or more antimicrobial categories.</li><li><b>XDR:</b> non-susceptible to at least one agent in all but 2 or fewer categories.</li><li><b>PDR:</b> non-susceptible to all agents in all categories (every category tested, no susceptible result).</li><li>Intrinsic resistance is not counted. Untested categories are unknown, not resistant.</li></ul><p style="margin-top:8px">Only confirmed XDR/PDR are shown. <b>${px}</b> isolate(s) are possible XDR and <b>${pp}</b> possible PDR, but the tested panel was too limited to confirm.</p>`;
+    return `<p>Resistance categories follow <b>Magiorakos et al., Clin Microbiol Infect 2012;18:268-281</b>, an international proposal by ECDC and CDC. Susceptibility results (S / I / R) are interpreted with <b>CLSI M100</b> breakpoints.</p>
+    <ul style="margin:6px 0 0 16px;list-style:disc">
+    <li><b>MDR (multidrug-resistant):</b> non-susceptible to at least one agent in three or more antimicrobial categories.</li>
+    <li><b>XDR (extensively drug-resistant):</b> non-susceptible to at least one agent in all but two or fewer categories.</li>
+    <li><b>PDR (pandrug-resistant):</b> non-susceptible to all agents in all categories.</li></ul>
+    <p style="margin-top:8px"><b>Method:</b> applied to first isolates (CLSI M39: one per patient, organism and year) of Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp. and <i>S. aureus</i>. Intrinsic resistance is not counted. A category that was not tested is treated as unknown, not as resistant. Each isolate is assigned to its highest class.</p>
+    <p style="margin-top:8px"><b>Possible XDR / PDR:</b> isolates tested against too few categories to confirm the class are not counted in the charts. This period has <b>${px}</b> possible XDR and <b>${pp}</b> possible PDR isolate(s).</p>`;
 }
 const AWARE_NAMES = { A: 'Access', W: 'Watch', R: 'Reserve' };
 
