@@ -719,10 +719,11 @@ if (settings.show_amr === false) {
                 title: { display: true, text: 'Hotspots (Top 5 Wards)', font: { size: 10, weight: 'bold' }, padding: { bottom: 10 } }
             },
             scales: {
-                x: { stacked: true, ticks: { font: { size: 9, weight: 'bold' } }, grid: { display: false } },
+                x: vAxisX(84, { stacked: true, grid: { display: false } }),
                 y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { stepSize: 1 } }
             }
-        }
+        },
+        plugins: [centredAbxLabels]
     }));
     $(`#live_${prefix}_profile1_title`).text(`${p1} Resistance (% R)`);
     $(`#live_${prefix}_profile2_title`).text(`${p2} Resistance (% R)`);
@@ -847,7 +848,7 @@ if (settings.show_amr === false) {
                 </div>
                 ${testedAbxs.length > 0 ? `
                 <div class="w-full overflow-x-auto custom-scroll">
-                    <div class="h-44 relative" style="min-width: ${chartMinWidth};">
+                    <div class="relative" style="height:250px; min-width: ${chartMinWidth};">
                         <canvas id="chart_${prefix}_watch_abx"></canvas>
                     </div>
                 </div>` : `<div class="text-[10px] text-slate-400 text-center py-6">No susceptibility testing data available for this period</div>`}
@@ -904,10 +905,10 @@ if (settings.show_amr === false) {
                     },
                     scales: {
                         y: { beginAtZero: true, max: 100, ticks: { font: { size: 9 } } },
-                        x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45, font: { size: 9, weight: 'bold' } }, grid: { display: false } }
+                        x: vAxisX(100, { grid: { display: false } })
                     }
                 },
-                plugins: [errorBarsPlugin]
+                plugins: [errorBarsPlugin, centredAbxLabels]
             });
             liveCharts.push(watchChart);
         }
@@ -969,17 +970,10 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
             plugins: { legend: { display: false } },
             scales: { 
                 y: { beginAtZero: true, max: 100 }, 
-                x: { 
-                    ticks: { 
-                        autoSkip: false, // لا تقم بقص أو إخفاء أي اسم
-                        maxRotation: 45, 
-                        minRotation: 45,
-                        font: { size: 10 } 
-                    } 
-                } 
+                x: vAxisX(84)
             }
         },
-        plugins: [errorBarsPlugin] // إزالة إضافة الأسماء العمودية
+        plugins: [errorBarsPlugin, centredAbxLabels]
     });
     
     liveCharts.push(chart);
@@ -1068,6 +1062,14 @@ function loadAnalyticsFilters() {
     
     generateGuidedAnalytics();
 }
+// Shared x-axis for charts whose categories are names: vertical, never skipped, fixed label area (names drawn by centredAbxLabels)
+function vAxisX(h, extra) {
+    return Object.assign({
+        afterFit: function(s) { s.height = h; },
+        ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, color: 'rgba(0,0,0,0)', font: { size: 10, weight: 'bold' }, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } }
+    }, extra || {});
+}
+
 // Draws the rotated antibiotic names so every label (one or two lines) is centred on its bar
 const centredAbxLabels = {
     id: 'centredAbxLabels',
@@ -1082,7 +1084,8 @@ const centredAbxLabels = {
             const x = sc.getPixelForTick(i), y = sc.top + 8;
             ctx.save(); ctx.translate(x, y); ctx.rotate(-Math.PI / 2);
             // rotated: text runs bottom-to-top, so the first line sits on the left
-            lines.forEach((ln, k) => ctx.fillText(ln, 0, (k - (lines.length - 1) / 2) * lh));
+            const maxLen = Math.max(30, sc.height - 14);
+            lines.forEach((ln, k) => { while (ln.length > 3 && ctx.measureText(ln).width > maxLen) ln = ln.slice(0, -2) + '\u2026'; ctx.fillText(ln, 0, (k - (lines.length - 1) / 2) * lh); });
             ctx.restore();
         });
         ctx.restore();
@@ -1304,7 +1307,7 @@ function renderGuidedAST() {
         data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
         options: { 
             responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
-            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, color: 'rgba(0,0,0,0)', font: {size: 10, weight: 'bold'}, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } } } } 
+            scales: { y: { max: 100, beginAtZero: true }, x: vAxisX(112) } 
         },
         plugins: [errorBarsPlugin, centredAbxLabels]
     });
@@ -1432,7 +1435,7 @@ function renderPathoChart() {
         data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
         options: { 
             responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
-            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, color: 'rgba(0,0,0,0)', font: {size: 10, weight: 'bold'}, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } } } } 
+            scales: { y: { max: 100, beginAtZero: true }, x: vAxisX(112) } 
         },
         plugins: [errorBarsPlugin, centredAbxLabels]
     });
@@ -1555,7 +1558,7 @@ function renderAbxChart() {
         data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
         options: { 
             responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
-            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, color: 'rgba(0,0,0,0)', font: {size: 10, weight: 'bold'}, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } } } } 
+            scales: { y: { max: 100, beginAtZero: true }, x: vAxisX(112) } 
         },
         plugins: [errorBarsPlugin, centredAbxLabels]
     });
