@@ -38,7 +38,7 @@ function loginUser() {
     const pass = $('#loginPass').val();
     
     if(!email || !pass) {
-        Swal.fire('تنبيه', 'يرجى إدخال البريد وكلمة المرور', 'warning');
+        Swal.fire('Notice', 'Please enter your email and password', 'warning');
         return;
     }
 
@@ -49,7 +49,7 @@ function loginUser() {
             // سيتم تشغيل onAuthStateChanged تلقائياً وفتح التطبيق
         })
         .catch((error) => {
-            Swal.fire('خطأ', 'بيانات الدخول غير صحيحة!', 'error');
+            Swal.fire('Error', 'Incorrect sign-in details!', 'error');
             console.error(error);
         });
 }
@@ -83,12 +83,29 @@ async function syncLocalToCloud() {
 
         let liveSettings = JSON.parse(localStorage.getItem('amr_live_settings')) || { profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
         
+        // Pseudonymisation salt: generated once, kept in the private (signed-in only) document
+        let salt = localStorage.getItem('amr_hash_salt');
+        if (!salt) {
+            const snap = await db.collection("amr_sync").doc("hospital_main").get();
+            salt = (snap.exists && snap.data().salt) ? snap.data().salt : Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+            localStorage.setItem('amr_hash_salt', salt);
+        }
+
         await db.collection("amr_sync").doc("hospital_main").set({
             records: cloudReadyRecords,
             settings: liveSettings,
+            salt: salt,
             last_updated: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true }); 
-        console.log("Data synced to cloud successfully (Names excluded).");
+
+        // Public dashboard copy: no names, no internal ids, Patient ID replaced by a salted hash
+        const publicRecords = await buildPublicRecords(cloudReadyRecords, salt);
+        await db.collection("amr_public").doc("dashboard").set({
+            records: publicRecords,
+            settings: liveSettings,
+            last_updated: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log("Data synced to cloud successfully (names excluded; public copy pseudonymised).");
     } catch(e) {
         console.error("Error syncing to cloud:", e);
     }
@@ -503,7 +520,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
             }
         }
     }
-    const report = { added: 0, noGrowth: 0, noSri: 0, noDate: 0, vancDisk: 0, vancTypedIR: 0, vancInvalidMic: 0, vancMismatch: 0, vancCandidates: [], vancNeedsMic: 0, vancFromMic: 0, valuesFile: valuesAligned, valuesFileIgnored: !!valuesTable && !valuesAligned };
+    const report = { duplicates: 0, blankOrg: 0, added: 0, noGrowth: 0, noSri: 0, noDate: 0, vancDisk: 0, vancTypedIR: 0, vancInvalidMic: 0, vancMismatch: 0, vancCandidates: [], vancNeedsMic: 0, vancFromMic: 0, valuesFile: valuesAligned, valuesFileIgnored: !!valuesTable && !valuesAligned };
 
     const abxColumns = [];
     const allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
@@ -562,6 +579,9 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
     let addedCount = 0;
     let skippedCount = 0;
     const newRecords = [];
+    // Re-importing the same export must not create duplicates: same patient id + month + organism + specimen
+    const dupKey = (r) => [String(r['Patient ID'] || '').toLowerCase(), r['Date'], String(r['Selective organism'] || '').toLowerCase(), String(r['Sample'] || '').toLowerCase()].join('|');
+    const existingKeys = new Set(records.filter(r => r['Patient ID'] && r['Patient ID'] !== 'Unknown').map(dupKey));
 
     const wardMap = {
         'ped': 'Pediatrics', 'ped in': 'Pediatrics',
@@ -588,6 +608,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         if (!cols || cols.length === 0) continue;
 
         let orgCode = idxOrg > -1 && cols[idxOrg] ? cols[idxOrg].toLowerCase() : "";
+        if (!orgCode && abxColumns.some(x => /^[SIR]/i.test(String(cols[x.index] || '').trim()))) report.blankOrg++;   // has AST results but no organism
         if(!orgCode || orgCode === 'xxx' || orgCode === 'con' || orgCode === 'no growth') {
             skippedCount++; report.noGrowth++; continue;
         }
@@ -707,6 +728,8 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         if (flagVal(idxVrsa)) record['VRSA Confirmation'] = flagVal(idxVrsa);
         if (vancMicText && vancFlag !== 'vanc_mic_invalid' && fullOrgName === 'Staphylococcus aureus') record['Vancomycin MIC'] = vancMicText;
         if (vancFlag === 'vanc_candidate') report.vancCandidates.push(patientID + ' (MIC ' + vancMicText + ')');
+        if (record['Patient ID'] && existingKeys.has(dupKey(record))) { skippedCount++; report.duplicates++; continue; }
+        if (record['Patient ID']) existingKeys.add(dupKey(record));
         newRecords.push(record);
         records.push(record);
         addedCount++;
@@ -725,6 +748,8 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         `<b>${report.added}</b> isolates added`,
         `Ignored ${skippedCount}: no growth/contaminant ${report.noGrowth}, no S/I/R result ${report.noSri}, no valid date ${report.noDate}`
     ];
+    if (report.blankOrg) lines.push(`Rows with susceptibility results but NO organism name (ignored - fix in WHONET): <b>${report.blankOrg}</b>`);
+    if (report.duplicates) lines.push(`Already in the database (not added again): <b>${report.duplicates}</b>`);
     if (report.vancDisk) lines.push(`Staphylococcus vancomycin by disk ignored (CLSI: MIC only): <b>${report.vancDisk}</b>`);
     if (report.vancTypedIR) lines.push(`Staphylococcus vancomycin R/I without a numeric MIC ignored: <b>${report.vancTypedIR}</b>`);
     if (report.vancInvalidMic) lines.push(`Invalid vancomycin MIC values ignored (not on 2-fold scale): <b>${report.vancInvalidMic}</b>`);
@@ -1108,9 +1133,9 @@ function showAboutModal() {
                 </div>
                 <h3 class="text-xl font-bold text-slate-800">AMR Tracker</h3>
                 <p class="font-medium text-blue-700">Antimicrobial Resistance Surveillance System</p>
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-right text-sm leading-loose mt-4" dir="rtl">
-                    تم تصميم وإعداد هذه المنصة البرمجية من قبل عضو لجنة المضادات الحيوية، <b>الصيدلاني السريري سعد نبيل الحمادي</b>، 
-                    بالتعاون مع <b>وحدة الـ AMR</b> وكادر <b>مختبر المايكروبايولوجي</b> في <b>مستشفى الموانئ التعليمي</b>.
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center text-sm leading-loose mt-4">
+                    This platform was designed and developed by a member of the Antibiotic Committee, <b>Clinical Pharmacist Saad Nabeel Al-Hamadi</b>,
+                    in collaboration with the <b>AMR Unit</b> and the <b>Microbiology Laboratory</b> staff at <b>Al-Mawani Teaching Hospital</b>.
                 </div>
                 <p class="text-xs text-slate-500 mt-4">
                     This clinical system is developed to facilitate professional data entry, robust epidemiology reporting, and precise antibiogram generation. All rights reserved &copy; 2026.

@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Private working copy (data-entry app): signed-in users only
+    match /amr_sync/{docId} {
+      allow read, write: if request.auth != null;
+    }
+    // Pseudonymised copy for the public dashboard: anyone can read, only signed-in users can write
+    match /amr_public/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}

@@ -213,6 +213,17 @@ function wilsonScoreCI(r, n) {
 }
 
 // دالة جلب البيانات من السحابة وتحديثها في الوقت الفعلي (Real-time)
+// Footnote under the antibiotic charts: selective testing, AWaRe legend, possible contaminants
+function renderChartNotes(containerSel, selectiveNotes, contaminantCount) {
+    const $c = $(containerSel);
+    const host = $c.parent();
+    host.find('.amr-chart-note').remove();
+    let parts = ['<b>*</b> n&lt;30 (interpret with caution)', '<b>[A]/[W]/[R]</b> = WHO AWaRe Access / Watch / Reserve'];
+    if (selectiveNotes.length) parts.push('<b>†</b> selectively tested (tested/total isolates): ' + selectiveNotes.join(', ') + ' - %R may be overestimated');
+    if (contaminantCount > 0) parts.push(`<b>${contaminantCount}</b> blood isolate(s) of this organism are possible skin-flora contaminants - review clinically`);
+    host.append('<p class="amr-chart-note text-[10px] text-slate-500 leading-snug mt-1">' + parts.join(' &middot; ') + '</p>');
+}
+
 function fetchCloudData() {
     if (!db) {
         loadAnalyticsFilters();
@@ -222,8 +233,9 @@ function fetchCloudData() {
     
     Swal.fire({ title: 'Connecting to Cloud...', text: 'Establishing live connection...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
     
-    // استخدام onSnapshot بدلاً من get لجعل التحديث فورياً ومستمراً
-    db.collection("amr_sync").doc("hospital_main").onSnapshot((doc) => {
+    // The dashboard reads ONLY the pseudonymised public copy (no names, hashed patient ids).
+    // The private document (amr_sync) requires sign-in and is used by the data-entry app.
+    db.collection("amr_public").doc("dashboard").onSnapshot((doc) => {
         if (doc.exists) {
             const data = doc.data();
             const cloudRecords = data.records || [];
@@ -231,14 +243,17 @@ function fetchCloudData() {
             const cloudSettings = data.settings || { profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
             
             // حفظ البيانات محلياً في الهاتف
-            localStorage.setItem('amr_records', JSON.stringify(cloudRecords));
+            localStorage.setItem('amr_dash_records', JSON.stringify(cloudRecords));
             localStorage.setItem('amr_live_settings', JSON.stringify(cloudSettings));
             
             // إعادة رسم المخططات فوراً بناءً على الإعدادات الجديدة
             loadAnalyticsFilters();
             generateLiveSurveillance();
+            Swal.close();
+        } else {
+            Swal.close();
+            Swal.fire({ icon: 'info', title: 'No data yet', text: 'The public dashboard data has not been published. Open the data-entry app and sign in once to publish it.' });
         }
-        Swal.close();
     }, (error) => {
         console.error("Firebase Error:", error);
         Swal.close();
@@ -297,7 +312,7 @@ window.switchTab = function(tab) {
 };
 
 function generateLiveSurveillance() {
-    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let allRecords = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
     let settings = JSON.parse(localStorage.getItem('amr_live_settings')) || {};
     
     const blacklist = ["xxx", "con", "no growth", "contaminated", "normal flora", "mixed flora", "no significant growth"];
@@ -367,6 +382,13 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     records = applyDeduplication(records);
     const surveillanceRecords = records;
     $(`#live_${prefix}_total`).text(records.length);
+
+    // Possible skin-flora contaminants in blood cultures (flagged, not removed)
+    const contamN = records.filter(isPossibleContaminant).length;
+    $(`#live_${prefix}_contam_note`).remove();
+    if (contamN > 0) {
+        $(`#live_${prefix}_total`).parent().after(`<p id="live_${prefix}_contam_note" class="text-[10px] text-amber-700 bg-amber-50 border border-amber-100 rounded px-2 py-1 mt-1">${contamN} blood isolate(s) are possible skin-flora contaminants (CoNS, Corynebacterium, Micrococcus, viridans streptococci...) - review clinically.</p>`);
+    }
 
     let orgCounts = {}, specCounts = {};
 
@@ -890,7 +912,7 @@ window.toggleAdvancedSearch = function() {
     
     // Populate the all specimens dropdown when opened
     if(!$('#adv_content').hasClass('hidden')) {
-        let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+        let allRecords = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
         let allSamples = new Set(allRecords.map(r => r.Sample).filter(Boolean));
         let currentAdvSample = $('#adv_sample').val();
         $('#adv_sample').empty().append(new Option("All Specimens", ""));
@@ -904,7 +926,7 @@ function loadAnalyticsFilters() {
     isUpdatingFilters = true;
 
     let period = $('input[name="guided_period"]:checked').val() || 'all';
-    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let allRecords = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
     
     // 1. الفلترة حسب الوقت فقط للقوائم المنسدلة (لا تتأثر بالـ Inpatient/Outpatient)
     let dateRecords = filterByPeriod(allRecords, period); 
@@ -1000,7 +1022,7 @@ function generateGuidedAnalytics() {
     }
 
     let period = $('input[name="guided_period"]:checked').val() || 'all';
-    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let allRecords = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
     let records = filterByPeriod(allRecords, period);
 
     if (targetSample !== "all") { 
@@ -1087,7 +1109,7 @@ function renderGuidedAST() {
     const targetSample = $('#guided_sample').val();
     let period = $('input[name="guided_period"]:checked').val() || 'all';
 
-    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let allRecords = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
     let records = filterByPeriod(allRecords, period);
     records = records.filter(r => r['Selective organism'] === currentGuidedBug);
     
@@ -1117,6 +1139,7 @@ function renderGuidedAST() {
     });
 
     let testedAbxs = Object.keys(abxStats).sort();
+    let selectiveNotes = [];
     let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
     let baseColor = currentGuidedMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : 'rgba(225, 29, 72, 0.9)'; 
     let hideLowN = $('#guided_hide_low').is(':checked');
@@ -1130,7 +1153,9 @@ function renderGuidedAST() {
         let targetVal = currentGuidedMetric === 'R' ? s.r : (currentGuidedMetric === 'NS' ? s.ns : s.s);
         let p = Math.round((targetVal / s.tested) * 100);
 
-        labels.push(isReliable ? abx : `${abx} *`);
+        const selective = isSelectivelyTested(s.tested, records.length);
+        if (selective) selectiveNotes.push(`${abx} (${s.tested}/${records.length})`);
+        labels.push(abx + awareTag(abx) + (selective ? ' †' : '') + (isReliable ? '' : ' *'));
         data.push(p);
         bgColors.push(isReliable ? baseColor : 'rgba(148, 163, 184, 0.5)'); 
         ciData.push(wilsonScoreCI(targetVal, s.tested));
@@ -1143,6 +1168,7 @@ function renderGuidedAST() {
         return;
     }
 
+    renderChartNotes('#guidedAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length);
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#guidedAmrContainer').css('width', chartWidth);
 
@@ -1179,7 +1205,7 @@ $(document).on('change', 'input[name="patho_metric"]', function() {
 function updatePathoDropdowns() {
     let period = $('input[name="patho_period"]:checked').val() || 'all';
 
-    let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let records = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
     records = filterByPeriod(records, period);
     // فصلنا فلتر الردهة عن القائمة المنسدلة لتبقى ثابتة
 
@@ -1212,7 +1238,7 @@ function renderPathoChart() {
     }
 
     let period = $('input[name="patho_period"]:checked').val() || 'all';
-    let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let records = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
     records = filterByPeriod(records, period);
     records = records.filter(r => r['Selective organism'] === bug);
     records = applyWardFilter(records, $('input[name="patho_ward"]:checked').val() || 'total');
@@ -1247,6 +1273,7 @@ function renderPathoChart() {
     
     $('#pathoAmrContainer').html('<canvas id="chartPathoAMR"></canvas>');
 
+    let selectiveNotes = [];
     let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
     let baseColor = currentPathoMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : 'rgba(225, 29, 72, 0.9)'; 
     let hideLowN = $('#patho_hide_low').is(':checked');
@@ -1260,13 +1287,16 @@ function renderPathoChart() {
         let targetVal = currentPathoMetric === 'R' ? s.r : s.s;
         let p = Math.round((targetVal / s.tested) * 100);
 
-        labels.push(isReliable ? abx : `${abx} *`);
+        const selective = isSelectivelyTested(s.tested, records.length);
+        if (selective) selectiveNotes.push(`${abx} (${s.tested}/${records.length})`);
+        labels.push(abx + awareTag(abx) + (selective ? ' †' : '') + (isReliable ? '' : ' *'));
         data.push(p);
         bgColors.push(isReliable ? baseColor : 'rgba(148, 163, 184, 0.5)'); 
         ciData.push(wilsonScoreCI(targetVal, s.tested));
         nDataArr.push(s.tested);
     });
 
+    renderChartNotes('#pathoAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length);
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#pathoAmrContainer').css('width', chartWidth);
 
@@ -1302,7 +1332,7 @@ $(document).on('change', 'input[name="abx_metric"]', function() {
 function updateAbxDropdowns() {
     let period = $('input[name="abx_period"]:checked').val() || 'all';
 
-    let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let records = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
     records = filterByPeriod(records, period);
     // تم فصل فلتر الردهة للحفاظ على قائمة المضادات
 
@@ -1338,7 +1368,7 @@ function renderAbxChart() {
     }
 
     let period = $('input[name="abx_period"]:checked').val() || 'all';
-    let records = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let records = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
     records = filterByPeriod(records, period);
     records = applyWardFilter(records, $('input[name="abx_ward"]:checked').val() || 'total');
 
@@ -1411,7 +1441,7 @@ window.generateAdvancedAnalytics = function() {
     let targetAbxs = $('#adv_antibiotic').val() || [];
     const metric = $('#adv_metric').val() || 'R'; 
 
-    let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+    let allRecords = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
     let records = allRecords; // Start with entire database
 
     // Filter ONLY if the user selected a date
@@ -1536,18 +1566,18 @@ function showAboutModal() {
                 <h3 class="text-xl font-bold text-slate-800">AMR Tracker Dashboard</h3>
                 <p class="font-medium text-teal-700">Antimicrobial Resistance Surveillance System</p>
                 
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-right text-sm leading-loose mt-4" dir="rtl">
-                    تم تصميم وإعداد هذه المنصة البرمجية من قبل عضو لجنة المضادات الحيوية، <b>الصيدلاني السريري سعد نبيل الحمادي</b>، 
-                    بالتعاون مع <b>وحدة الـ AMR</b> وكادر <b>مختبر المايكروبايولوجي</b> في <b>مستشفى الموانئ التعليمي</b>.
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center text-sm leading-loose mt-4">
+                    This platform was designed and developed by a member of the Antibiotic Committee, <b>Clinical Pharmacist Saad Nabeel Al-Hamadi</b>,
+                    in collaboration with the <b>AMR Unit</b> and the <b>Microbiology Laboratory</b> staff at <b>Al-Mawani Teaching Hospital</b>.
                 </div>
                 
-                <p class="text-[11px] text-slate-500 mt-4 leading-relaxed bg-amber-50 p-3 rounded-lg border border-amber-100 text-right" dir="rtl">
-                    <b>الحقوق القانونية:</b> هذه الأداة مخصصة لتسهيل عمليات الرصد الوبائي وتوليد الإحصائيات السريرية الدقيقة، جميع الحقوق الفكرية والبرمجية محفوظة &copy; 2026.
+                <p class="text-[11px] text-slate-500 mt-4 leading-relaxed bg-amber-50 p-3 rounded-lg border border-amber-100 text-center">
+                    <b>Legal notice:</b> This tool supports epidemiological surveillance and the generation of accurate clinical statistics. All intellectual and software rights reserved &copy; 2026.
                 </p>
             </div>
         `,
         showConfirmButton: true,
-        confirmButtonText: 'إغلاق',
+        confirmButtonText: 'Close',
         confirmButtonColor: '#0d9488',
         width: '90%'
     });
@@ -1555,32 +1585,32 @@ function showAboutModal() {
 // --- Modal: Install Guide ---
 function showInstallGuide() {
     Swal.fire({
-        title: '📲 تثبيت التطبيق',
+        title: '📲 Install the App',
         html: `
-            <div class="text-sm text-slate-600 leading-relaxed space-y-5 text-right mt-3" dir="rtl">
-                <p class="font-medium text-slate-700">للحصول على أفضل تجربة وسرعة في الوصول، قم بتثبيت لوحة البيانات كبرنامج على هاتفك:</p>
+            <div class="text-sm text-slate-600 leading-relaxed space-y-5 text-left mt-3">
+                <p class="font-medium text-slate-700">For the best experience and fastest access, install the dashboard as an app on your phone:</p>
                 
                 <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                    <h4 class="font-bold text-blue-800 mb-2 flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> أجهزة آيفون (iOS)</h4>
+                    <h4 class="font-bold text-blue-800 mb-2 flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> iPhone devices (iOS)</h4>
                     <ol class="list-decimal list-inside space-y-1 text-xs">
-                        <li>افتح هذا الرابط باستخدام متصفح <b>Safari</b> حصراً.</li>
-                        <li>اضغط على زر المشاركة <span class="inline-block border border-slate-300 rounded px-1 bg-white">⍗</span> أسفل الشاشة.</li>
-                        <li>اختر <b>"إضافة إلى الصفحة الرئيسية"</b> (Add to Home Screen).</li>
+                        <li>Open this link in <b>Safari</b> only.</li>
+                        <li>Tap the Share button <span class="inline-block border border-slate-300 rounded px-1 bg-white">⍗</span> at the bottom of the screen.</li>
+                        <li>Choose <b>"Add to Home Screen"</b>.</li>
                     </ol>
                 </div>
 
                 <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                    <h4 class="font-bold text-emerald-800 mb-2 flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> أجهزة أندرويد (Android)</h4>
+                    <h4 class="font-bold text-emerald-800 mb-2 flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> Android devices</h4>
                     <ol class="list-decimal list-inside space-y-1 text-xs">
-                        <li>افتح هذا الرابط باستخدام متصفح <b>Chrome</b>.</li>
-                        <li>اضغط على خيارات القائمة <span class="inline-block border border-slate-300 rounded px-1 bg-white">⋮</span> أعلى الشاشة.</li>
-                        <li>اختر <b>"تثبيت التطبيق"</b> (Install app) أو <b>"الإضافة للشاشة الرئيسية"</b>.</li>
+                        <li>Open this link in <b>Chrome</b>.</li>
+                        <li>Tap the menu <span class="inline-block border border-slate-300 rounded px-1 bg-white">⋮</span> at the top of the screen.</li>
+                        <li>Choose <b>"Install app"</b> or <b>"Add to Home screen"</b>.</li>
                     </ol>
                 </div>
             </div>
         `,
         showConfirmButton: true,
-        confirmButtonText: 'حسناً، فهمت',
+        confirmButtonText: 'Got it',
         confirmButtonColor: '#0d9488',
         width: '90%'
     });

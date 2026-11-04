@@ -538,3 +538,75 @@ function evaluateCriticalMarkers(records) {
 
 // Non-antibiotic fields stored on a record (must never be rendered as antibiotic dropdowns)
 const RECORD_META_FIELDS = ['Specimen Date', 'Lab ESBL', 'Lab Carbapenemase', 'Lab MRSA', 'VRSA Confirmation', 'Vancomycin MIC'];
+
+// =====================================================================
+// WHO AWaRe classification (WHO Essential Medicines List 2023).
+// Only agents whose category is unambiguous are listed; others stay unclassified.
+// =====================================================================
+const AWARE_CLASS = {
+    // Access
+    "Benzylpenicillin": "A", "Penicillin": "A", "Ampicillin": "A", "Amoxicillin": "A", "Cloxacillin": "A", "Oxacillin": "A",
+    "Amoxicillin/Clavulanic acid": "A", "Ampicillin/Sulbactam": "A", "Cefazolin": "A", "Gentamicin": "A", "Amikacin": "A",
+    "Clindamycin": "A", "Doxycycline": "A", "Nitrofurantoin": "A", "Trimethoprim": "A", "Trimethoprim/Sulfamethoxazole": "A",
+    "Chloramphenicol": "A", "Spectinomycin": "A",
+    // Watch
+    "Cefuroxime": "W", "Cefixime": "W", "Ceftriaxone": "W", "Cefotaxime": "W", "Ceftazidime": "W", "Cefepime": "W", "Cefoxitin": "W",
+    "Cefpodoxime": "W", "Cefaclor": "W", "Cefotetan": "W", "Cefoperazone": "W",
+    "Piperacillin": "W", "Piperacillin/Tazobactam": "W", "Ticarcillin": "W", "Ticarcillin/Clavulanic acid": "W",
+    "Imipenem": "W", "Meropenem": "W", "Ertapenem": "W", "Doripenem": "W",
+    "Ciprofloxacin": "W", "Levofloxacin": "W", "Moxifloxacin": "W", "Ofloxacin": "W", "Norfloxacin": "W",
+    "Azithromycin": "W", "Clarithromycin": "W", "Erythromycin": "W", "Vancomycin": "W", "Teicoplanin": "W",
+    "Tobramycin": "W", "Streptomycin": "W", "Kanamycin": "W", "Rifampicin": "W",
+    // Reserve
+    "Colistin": "R", "Polymyxin B": "R", "Linezolid": "R", "Tigecycline": "R", "Daptomycin": "R", "Plazomicin": "R",
+    "Ceftazidime/Avibactam": "R", "Ceftolozane/Tazobactam": "R", "Ceftaroline": "R", "Ceftobiprole": "R",
+    "Meropenem/Vaborbactam": "R", "Imipenem/Relebactam": "R", "Telavancin": "R", "Quinupristin/Dalfopristin": "R"
+};
+function awareTag(abx) { return AWARE_CLASS[abx] ? ` [${AWARE_CLASS[abx]}]` : ''; }
+
+// =====================================================================
+// Selective testing: when only part of the isolates of a species were tested for a drug
+// (e.g. colistin only on suspected carbapenem-resistant isolates), %R is biased upward.
+// =====================================================================
+const SELECTIVE_TESTING_THRESHOLD = 0.5;
+function isSelectivelyTested(testedCount, totalIsolates) {
+    return totalIsolates >= 30 && testedCount > 0 && (testedCount / totalIsolates) < SELECTIVE_TESTING_THRESHOLD;
+}
+
+// =====================================================================
+// Possible contaminants: skin-flora organisms in BLOOD cultures. A single positive set
+// of these is often a contaminant; they are flagged (not removed) for clinical review.
+// =====================================================================
+const CONTAMINANT_REGEX = /staphylococcus (epidermidis|hominis|haemolyticus|capitis|warneri|auricularis|cohnii|xylosus|simulans)|coagulase|corynebacterium|micrococcus|bacillus (?!anthracis)|cutibacterium|propionibacterium|streptococcus (viridans|mitis|oralis|sanguinis|salivarius)/i;
+function isPossibleContaminant(r) {
+    return /blood/i.test(String(r['Sample'] || '')) && CONTAMINANT_REGEX.test(String(r['Selective organism'] || ''));
+}
+
+// =====================================================================
+// Privacy for the public dashboard document:
+// no names, no internal ids, Patient ID replaced by a salted SHA-256 pseudonym
+// (same patient -> same pseudonym, so first-isolate de-duplication still works).
+// =====================================================================
+async function sha256Hex(text) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function buildPublicRecords(records, salt) {
+    const cache = new Map();
+    const out = [];
+    for (const r of records) {
+        const copy = { ...r };
+        delete copy['Name']; delete copy['_uid'];
+        const pid = String(r['Patient ID'] || '').trim().toLowerCase();
+        const year = String(r['Date'] || '').substring(0, 4);
+        if (pid && pid !== 'unknown') {
+            const k = pid;
+            if (!cache.has(k)) cache.set(k, (await sha256Hex(salt + '|' + k)).substring(0, 16));
+            copy['Patient ID'] = cache.get(k);
+        } else {
+            copy['Patient ID'] = '';
+        }
+        out.push(copy);
+    }
+    return out;
+}
