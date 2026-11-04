@@ -265,7 +265,7 @@ function mdrInfoHtml(px, pp) {
     <li><b>MDR (multidrug-resistant):</b> non-susceptible to at least one agent in three or more antimicrobial categories.</li>
     <li><b>XDR (extensively drug-resistant):</b> non-susceptible to at least one agent in all but two or fewer categories.</li>
     <li><b>PDR (pandrug-resistant):</b> non-susceptible to all agents in all categories.</li></ul>
-    <p style="margin-top:8px"><b>Method:</b> applied to first isolates (CLSI M39: one per patient, organism and year) of Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp. and <i>S. aureus</i>. Intrinsic resistance is not counted. A category that was not tested is treated as unknown, not as resistant. Each isolate is assigned to its highest class.</p>
+    <p style="margin-top:8px"><b>Method:</b> applied to first isolates (CLSI M39: the first isolate per patient and organism within the reported period: month, quarter or year) of Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp. and <i>S. aureus</i>. Intrinsic resistance is not counted. A category that was not tested is treated as unknown, not as resistant. Each isolate is assigned to its highest class.</p>
     <p style="margin-top:8px"><b>Possible XDR / PDR:</b> isolates tested against too few categories to confirm the class are not counted in the charts. This period has <b>${px}</b> possible XDR and <b>${pp}</b> possible PDR isolate(s).</p>`;
 }
 const AWARE_NAMES = { A: 'Access', W: 'Watch', R: 'Reserve' };
@@ -456,7 +456,7 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
 
     // Overview details (i): method + possible contaminants (flagged, not removed)
     const contamN = records.filter(isPossibleContaminant).length;
-    let overviewHtml = `<p><b>${records.length}</b> first isolates (one per patient, per organism, per year - CLSI M39). Screening cultures are excluded.</p>`;
+    let overviewHtml = `<p><b>${records.length}</b> first isolates (the first one per patient and organism within the reported period - CLSI M39). Screening cultures are excluded.</p>`;
     if (contamN > 0) overviewHtml += `<p style="margin-top:8px"><b>${contamN}</b> blood isolate(s) are possible skin-flora contaminants (CoNS, Corynebacterium, Micrococcus, viridans streptococci...). They are counted, not removed: review clinically.</p>`;
     setInfo('overview_' + prefix, 'Surveillance overview', overviewHtml);
     attachInfo($(`#live_${prefix}_total`).closest('.grid').prev(), 'overview_' + prefix);
