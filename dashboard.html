@@ -55,28 +55,36 @@
         .info-refs li { margin-bottom: 5px; word-break: break-word; }
         .info-refs a { color: #0f766e; text-decoration: underline; text-underline-offset: 2px; }
         .info-close { background: #0f766e; color: #fff; border: 0; border-radius: 10px; padding: 9px 26px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 14px; }
-        /* Print button on charts (Lucide printer icon, monochrome) */
-        .print-btn { position: absolute; left: 2px; top: 2px; z-index: 5; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; color: #64748b; background: rgba(255,255,255,.92); border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; padding: 0; transition: color .15s, border-color .15s; }
-        .print-btn:hover, .print-btn:active { color: #0f172a; border-color: #94a3b8; }
-        .print-btn svg { width: 14px; height: 14px; }
-        .bottom-nav { justify-content: flex-start !important; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; scroll-snap-type: x proximity; }
-        .bottom-nav::-webkit-scrollbar { display: none; }
-        .bottom-nav .nav-btn { flex: 0 0 24%; min-width: 80px; scroll-snap-align: center; }
-        .nav-btn svg { width: 24px; height: 24px; margin-bottom: 4px; }
-        .select2-container .select2-selection--single, .select2-container .select2-selection--multiple { min-height: 42px; border-radius: 8px; border-color: #cbd5e1; }
-        
-        .heatmap-table { border-collapse: separate; border-spacing: 0; min-width: max-content; width: 100%; }
-        .heatmap-table th, .heatmap-table td { padding: 8px 12px; text-align: center; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; font-size: 0.75rem; }
-        .heatmap-table thead th { background-color: #f1f5f9; position: sticky; top: 0; z-index: 10; border-top: 1px solid #e2e8f0; }
-        .heatmap-table tbody th { position: sticky; left: 0; z-index: 20; background-color: #ffffff; text-align: left; border-left: 1px solid #e2e8f0; }
-        .heatmap-table thead th:first-child { position: sticky; left: 0; top: 0; z-index: 30; background-color: #f1f5f9; border-left: 1px solid #e2e8f0; }
-        .heatmap-table th:first-child, .heatmap-table td:first-child { width: 160px; min-width: 160px; max-width: 160px; white-space: normal; word-wrap: break-word; line-height: 1.3; }
-        
-        .info-btn { position: absolute; top: 6px; right: 6px; width: 20px; height: 20px; border-radius: 9999px; border: 1px solid #cbd5e1; background: #fff; color: #64748b; font: italic 700 12px/1 Georgia, serif; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 5; padding: 0; }
-        .info-btn:hover { color: #0d9488; border-color: #0d9488; }
-        .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    </style>
+        /* Section toolbar: information + print (Lucide icons, monochrome) */
+        .sec-head { position: relative; }
+        .sec-tools { display: inline-flex; gap: 6px; align-items: center; }
+        .sec-tools-head { position: absolute; right: 40px; top: 50%; transform: translateY(-50%); z-index: 5; }
+        .sec-tools-title { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 5; }
+        .sec-tool { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; color: #475569; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; padding: 0; transition: color .15s, border-color .15s, background .15s; }
+        .sec-tool:hover, .sec-tool:active { color: #0f172a; border-color: #94a3b8; background: #f8fafc; }
+        .sec-tool svg { width: 15px; height: 15px; }
+        /* collapsible information entries */
+        .info-acc-wrap { text-align: left; }
+        .info-acc { border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 8px; background: #fff; }
+        .info-acc > summary { list-style: none; cursor: pointer; padding: 11px 14px; font-size: 13px; font-weight: 600; color: #0f172a; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .info-acc > summary::-webkit-details-marker { display: none; }
+        .info-acc > summary::after { content: ''; width: 7px; height: 7px; border-right: 2px solid #64748b; border-bottom: 2px solid #64748b; transform: rotate(45deg); transition: transform .2s; flex-shrink: 0; margin-top: -3px; }
+        .info-acc[open] > summary::after { transform: rotate(-135deg); margin-top: 3px; }
+        .info-acc[open] > summary { border-bottom: 1px solid #e2e8f0; }
+        .info-acc .info-body { padding: 10px 14px 6px; }
+        /* print dialog */
+        .pd { text-align: left; font-size: 13px; color: #334155; }
+        .pd-h { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #64748b; margin: 14px 0 6px; }
+        .pd-h:first-child { margin-top: 0; }
+        .pd-row { display: flex; align-items: center; gap: 10px; padding: 7px 2px; cursor: pointer; }
+        .pd-row input { width: 16px; height: 16px; accent-color: #0f766e; flex-shrink: 0; }
+        .pd-all { border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #0f172a; margin-bottom: 2px; }
+        .pd-list { max-height: 210px; overflow-y: auto; }
+        .pd-grid { display: grid; grid-template-columns: 90px 1fr; gap: 8px 10px; align-items: center; }
+        .pd-sel, .pd-input { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 13px; background: #fff; color: #0f172a; font-family: inherit; }
+        .info-actions { gap: 10px; margin-top: 14px; }
+        .info-cancel { background: #fff; color: #475569; border: 1px solid #cbd5e1; border-radius: 10px; padding: 9px 22px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 14px; }
+</style>
 </head>
 <body>
 
@@ -492,7 +500,7 @@
         <!-- Tab 2: Last Month -->
         <div id="viewLastMonth" class="hidden space-y-4">
             <div class="mobile-card border-t-4 border-t-blue-500">
-                <h3 class="text-sm font-bold text-blue-800 mb-3 bg-blue-50 p-2 rounded text-center" id="live_month_title">Surveillance Overview</h3>
+                <h3 class="text-sm font-bold text-blue-800 mb-3 bg-blue-50 p-2 rounded text-center"><span id="live_month_title">Surveillance Overview</span></h3>
                 
                 <div class="grid grid-cols-3 gap-2 text-center mb-4">
                     <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
@@ -571,7 +579,7 @@
         <!-- Tab 3: Last Quarter -->
         <div id="viewLastQuarter" class="hidden space-y-4">
             <div class="mobile-card border-t-4 border-t-emerald-500">
-                <h3 class="text-sm font-bold text-emerald-800 mb-3 bg-emerald-50 p-2 rounded text-center" id="live_q_title">Surveillance Overview</h3>
+                <h3 class="text-sm font-bold text-emerald-800 mb-3 bg-emerald-50 p-2 rounded text-center"><span id="live_q_title">Surveillance Overview</span></h3>
                 
                 <div class="grid grid-cols-3 gap-2 text-center mb-4">
                     <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
@@ -696,9 +704,9 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=6.0"></script>
-    <script src="js/dashboard.js?v=6.0"></script>
-    <script src="js/dashboard_panels.js?v=6.0"></script>
+    <script src="js/data.js?v=7.0"></script>
+    <script src="js/dashboard.js?v=7.0"></script>
+    <script src="js/dashboard_panels.js?v=7.0"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>

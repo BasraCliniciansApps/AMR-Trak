@@ -257,13 +257,8 @@ window.showInfo = function(key) {
         buttonsStyling: false
     });
 };
-function attachInfo(hostSel, key) {
-    const $h = $(hostSel);
-    if (!$h.length) return;
-    $h.css('position', 'relative');
-    $h.children(`.info-btn[data-key="${key}"]`).remove();
-    $h.append(`<button type="button" class="info-btn" data-key="${key}" onclick="showInfo('${key}')" aria-label="Details">i</button>`);
-}
+// Information now lives in the section toolbar (see dashboard_panels.js); per-chart buttons are no longer drawn.
+function attachInfo() {}
 function mdrInfoHtml(px, pp) {
     return `<p>Resistance categories follow <b>Magiorakos et al., Clin Microbiol Infect 2012;18:268-281</b>, an international proposal by ECDC and CDC. Susceptibility results (S / I / R) are interpreted with <b>CLSI M100</b> breakpoints.</p>
     <ul style="margin:6px 0 0 16px;list-style:disc">

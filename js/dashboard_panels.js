@@ -430,102 +430,239 @@ function escapeHtmlDash(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '
 
 
 // =====================================================================
-// Printing: every chart gets a small printer button (Lucide "printer" icon, monochrome).
-// The result is a one-page, print-ready sheet (save as PDF from the print dialog).
+// SECTION TOOLBARS: one information (i) button and one print button per main section.
+//  - (i): popup with one collapsible entry per chart, plus the supporting references.
+//  - printer: popup to choose which charts to print (or all) and the page options;
+//    the result opens the browser print dialog (save as PDF).
+// Icons: Lucide (ISC licence), inlined so they work offline.
 // =====================================================================
-const PRINTER_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>';
+const ICON_PRINTER = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>';
+const ICON_INFO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
 
-function headingBefore(el) {
-    const nodes = document.querySelectorAll('h3, h4, canvas, #heatmapWrapper');
-    let last = '';
-    for (const n of nodes) {
-        if (n === el) break;
-        if (n.tagName === 'H3' || n.tagName === 'H4') {
-            const c = n.cloneNode(true);
-            c.querySelectorAll('.info-btn, .print-btn').forEach(x => x.remove());
-            const t = c.textContent.replace(/\s+/g, ' ').trim();
-            if (t) last = t;
-        }
-    }
-    return last;
+// Static explanations for charts that have no dynamic note
+setInfo('sec_prevalence', 'Organism prevalence', '<p>Share of first isolates by organism for the selected period, specimen and ward filter. Isolates are de-duplicated (CLSI M39: one per patient, organism and year) and screening cultures are excluded. Select a slice to open that organism\'s susceptibility profile.</p>');
+setInfo('sec_patho', 'Susceptibility profile of one organism', '<p>For the selected organism, each bar shows the percentage of tested isolates that are susceptible (S), intermediate (I) or resistant (R) to an antibiotic. Results are interpreted with CLSI M100 breakpoints; %S does not include I or SDD results. Bars based on fewer than 30 isolates are faded (CLSI M39).</p>');
+setInfo('sec_abx', 'Activity of one antibiotic', '<p>For the selected antibiotic, each bar shows the percentage of isolates of an organism that are susceptible (S), intermediate (I) or resistant (R). Interpretation follows CLSI M100. Organisms with fewer than 30 tested isolates are faded and should be interpreted with caution (CLSI M39).</p>');
+setInfo('sec_heatmap', 'Organism by antibiotic heatmap', '<p>Each cell is the percentage of the chosen category (S, I or R) for one organism and antibiotic among tested isolates. An asterisk marks cells with fewer than 30 tested isolates. Isolates are de-duplicated (CLSI M39) and interpreted with CLSI M100.</p>');
+setInfo('sec_pies', 'Blood and urine prevalence', '<p>Organism distribution among first isolates from blood and from urine in the selected period. Possible skin-flora organisms in blood may include contaminants and are reviewed in the Culture Overview.</p>');
+setInfo('sec_top5', 'Top 5 specimens', '<p>The five specimen types that yielded the most first isolates in the selected period.</p>');
+setInfo('sec_profiles', 'Resistance profiles', '<p>Percentage of isolates resistant (R) to the two antibiotics chosen in the data-entry settings, by organism, among isolates tested. Interpretation follows CLSI M100; bars with fewer than 30 tested isolates are grey (CLSI M39).</p>');
+setInfo('sec_watch', 'Threat watchlist', '<p>Occurrence and resistance pattern of the pathogen selected for monitoring in the data-entry settings, among first isolates in the selected period.</p>');
+
+function chartTitleOf(selOrFn) { return typeof selOrFn === 'function' ? selOrFn() : selOrFn; }
+const profTitle = (p, n) => () => $('#live_' + p + '_profile' + n + '_title').text() || ('Resistance profile ' + n);
+
+function monthSection(p, label) {
+    return {
+        id: 'sec_' + label, title: () => $('#live_' + (p === 'm' ? 'month' : 'q') + '_title').text() || (p === 'm' ? 'Last Month' : 'Last Quarter'),
+        infos: [['Overview', 'overview_' + p], ['Critical resistance markers', 'markers_' + p], ['Blood and urine prevalence', 'sec_pies'], ['Top 5 specimens', 'sec_top5'], ['MDR / XDR / PDR classification', 'mdr_' + p], ['Resistance profiles', 'sec_profiles'], ['Threat watchlist', 'sec_watch']],
+        charts: [
+            { title: 'Critical Resistance Markers', el: '#chart_' + p + '_amr' },
+            { title: 'Prevalence in Blood Sample', el: '#chart_' + p + '_blood' },
+            { title: 'Prevalence in Urine Sample', el: '#chart_' + p + '_urine' },
+            { title: 'Top 5 Specimens', el: '#chart_' + p + '_bar' },
+            { title: 'MDR / XDR / PDR: Overall', el: '#chart_' + p + '_mdr_pie' },
+            { title: 'MDR / XDR / PDR: Hotspot wards', el: '#chart_' + p + '_mdr_bar' },
+            { title: profTitle(p, 1), el: '#chart_' + p + '_mero' },
+            { title: profTitle(p, 2), el: '#chart_' + p + '_cro' },
+            { title: 'Global Threat Watchlist', el: '#chart_' + p + '_watch_abx' }
+        ]
+    };
 }
-function infoKeyFor(el) {
-    if (el.closest('[data-sec="mdr"], #mdrPanel')) return 'mdr_panel';
-    let p = el.parentElement;
-    while (p && p !== document.body) {
-        const b = p.querySelector(':scope > .info-btn');
-        if (b) return b.dataset.key;
-        p = p.parentElement;
-    }
-    return null;
+const SECTIONS = {
+    prevalence: { id: 'prevalence', title: 'Clinical Prevalence & AST Profile', infos: [['Organism prevalence', 'sec_prevalence'], ['AST profile of the selected organism', 'abx_guidedAmrContainer']],
+        charts: [{ title: 'Organism Prevalence', el: '#chartGuidedPie' }, { title: 'AST Profile of the selected organism', el: '#chartGuidedAMR' }] },
+    patho: { id: 'patho', title: 'Bacteria/Fungi Susceptibility Profile', infos: [['How to read this chart', 'sec_patho'], ['Sample size and AWaRe', 'abx_pathoAmrContainer']],
+        charts: [{ title: 'Bacteria/Fungi Susceptibility Profile', el: '#chartPathoAMR' }] },
+    abx: { id: 'abx', title: 'Antimicrobial Efficacy Profile', infos: [['How to read this chart', 'sec_abx']],
+        charts: [{ title: 'Antimicrobial Efficacy Profile', el: '#chartAbxAMR' }] },
+    heatmap: { id: 'heatmap', title: 'Advanced Cross-Search (Heatmap)', infos: [['How to read the heatmap', 'sec_heatmap']],
+        charts: [{ title: 'Advanced Heatmap', el: '#heatmapWrapper', kind: 'table', landscape: true }] },
+    mdr: { id: 'mdr', title: 'MDR / XDR / PDR Analysis', labelSel: '#mdr_range_label',
+        infos: [['Definitions and method', 'mdr_panel'], ['Summary figures', 'mdr_tiles'], ['Monthly trend', 'mdr_trend'], ['Distribution by ward', 'mdr_wards'], ['By organism group', 'mdr_group']],
+        charts: [{ title: 'Summary', el: '#mdr_tiles', kind: 'tiles' }, { title: 'Resistance classification', el: '#chart_mdr_panel_pie' }, { title: 'Monthly trend (% of classified isolates)', el: '#chart_mdr_panel_trend' }, { title: 'All wards', el: '#chart_mdr_panel_wards' }, { title: 'By organism group', el: '#mdr_group_table', kind: 'table' }] },
+    month: monthSection('m', 'month'),
+    quarter: monthSection('q', 'quarter'),
+    lab: { id: 'lab', title: 'Culture Overview', labelSel: '#lab_range_label',
+        infos: [['About the Culture Overview', 'lab_def'], ['Cultures received', 'lab_tiles'], ['Blood cultures: contamination indicators', 'lab_blood'], ['Culture volume per month', 'lab_volume'], ['Positivity by ward', 'lab_wards'], ['By specimen type', 'lab_sample']],
+        charts: [{ title: 'Cultures received', el: '#lab_tiles', kind: 'tiles' }, { title: 'Blood cultures: contamination indicators', el: '#lab_blood_box', kind: 'tiles' }, { title: 'Culture volume per month', el: '#chart_lab_volume' }, { title: 'Positivity by ward', el: '#chart_lab_wards' }, { title: 'By specimen type', el: '#lab_sample_table', kind: 'table' }] }
+};
+
+function sectionTitle(sec) { return chartTitleOf(sec.title); }
+function chartElement(c) {
+    const el = document.querySelector(c.alt || c.el);
+    if (!el || el.offsetParent === null) return null;                    // not on screen
+    if (el.tagName === 'CANVAS' && !el.width) return null;
+    if (c.kind === 'table' && !el.querySelector('table')) return null;
+    if (c.kind === 'tiles' && !el.children.length) return null;
+    return el;
 }
+
+// ---------- information popup ----------
+window.showSectionInfo = function (secId) {
+    const sec = SECTIONS[secId]; if (!sec) return;
+    const used = [];
+    const items = sec.infos.map(([title, key]) => {
+        const inf = INFO_STORE[key]; if (!inf) return '';
+        (inf.refs || []).forEach(r => { if (!used.includes(r)) used.push(r); });
+        return `<details class="info-acc"><summary>${escHtml(title)}</summary><div class="info-body">${inf.html}</div></details>`;
+    }).join('');
+    Swal.fire({
+        title: sectionTitle(sec),
+        html: `<div class="info-acc-wrap">${items || '<p class="info-body">Information will appear once data is loaded.</p>'}</div>${refsHtml(used, true)}`,
+        confirmButtonText: 'Close', width: 'min(92vw, 460px)', buttonsStyling: false,
+        customClass: { popup: 'info-popup', title: 'info-title', htmlContainer: 'info-container', confirmButton: 'info-close' }
+    });
+};
+
+// ---------- print popup ----------
 function escHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
-window.printChart = function (el) {
-    const isTable = el.id === 'heatmapWrapper';
-    const title = isTable ? 'Advanced Heatmap' : (headingBefore(el) || 'Chart');
-    const card = el.closest('.mobile-card') || document.body;
-    const labelEl = card.querySelector('#mdr_range_label, #lab_range_label, #live_month_title, #live_q_title');
-    const context = [document.getElementById('headerTitle').textContent, labelEl ? labelEl.textContent : '', 'Unit scope: ' + scopeLabel()].filter(Boolean).join('  |  ');
-    const key = infoKeyFor(el);
-    const info = key && INFO_STORE[key] ? INFO_STORE[key] : null;
-    let body;
-    if (isTable) body = '<div class="tbl">' + el.innerHTML + '</div>';
-    else {
-        const c = document.createElement('canvas');
-        c.width = el.width; c.height = el.height;
-        const g = c.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(el, 0, 0);
-        body = `<img class="chart" src="${c.toDataURL('image/png')}" alt="${escHtml(title)}">`;
-    }
-    const refKeys = info ? info.refs : refsFor(key);
+function chartDataTable(canvas) {
+    try {
+        const ch = (typeof Chart !== 'undefined' && Chart.getChart) ? Chart.getChart(canvas) : null;
+        if (!ch) return '';
+        const labels = (ch.data.labels || []).map(l => Array.isArray(l) ? l.join(' ') : String(l));
+        const ds = ch.data.datasets.filter(d => Array.isArray(d.data));
+        if (!labels.length || !ds.length) return '';
+        const head = '<tr><th></th>' + ds.slice(0, 12).map(d => `<th>${escHtml(d.label || 'Value')}</th>`).join('') + '</tr>';
+        const rows = labels.slice(0, 60).map((l, i) => `<tr><th>${escHtml(l)}</th>` + ds.slice(0, 12).map(d => `<td>${d.data[i] === undefined || d.data[i] === null ? '' : escHtml(typeof d.data[i] === 'object' ? JSON.stringify(d.data[i]) : d.data[i])}</td>`).join('') + '</tr>').join('');
+        return `<table class="vals">${head}${rows}</table>`;
+    } catch (e) { return ''; }
+}
+function tilesToHtml(el) {
+    const tiles = [...el.querySelectorAll('.grid > div')].filter(d => d.children.length >= 2);
+    const items = (tiles.length ? tiles : [...el.children].filter(d => d.children.length >= 2)).map(d => `<div class="tile"><div class="tl">${escHtml(d.children[0].textContent)}</div><div class="tv">${escHtml(d.children[1].textContent)}</div></div>`).join('');
+    const notes = [...el.querySelectorAll(':scope > div > div.mt-2, :scope > div > p, :scope > p')].map(n => `<p class="tn">${escHtml(n.textContent.replace(/\s+/g, ' ').trim())}</p>`).join('');
+    return `<div class="tiles">${items}</div>${notes}`;
+}
+
+window.openPrintDialog = function (secId) {
+    const sec = SECTIONS[secId]; if (!sec) return;
+    const avail = sec.charts.map(c => ({ c, el: chartElement(c) })).filter(x => x.el);
+    if (!avail.length) { Swal.fire({ icon: 'info', title: 'Nothing to print yet', text: 'There are no charts on screen for this section. Generate the results first.', confirmButtonText: 'OK', buttonsStyling: false, customClass: { popup: 'info-popup', confirmButton: 'info-close' } }); return; }
+    const saved = (() => { try { return JSON.parse(localStorage.getItem('amr_print_opts')) || {}; } catch (e) { return {}; } })();
+    const rows = avail.map((x, i) => `<label class="pd-row"><input type="checkbox" class="pd-chart" value="${i}" checked><span>${escHtml(chartTitleOf(x.c.title))}</span></label>`).join('');
+    const sel = (id, opts, cur) => `<select id="${id}" class="pd-sel">${opts.map(o => `<option value="${o[0]}" ${o[0] === cur ? 'selected' : ''}>${o[1]}</option>`).join('')}</select>`;
+    const chk = (id, label, on) => `<label class="pd-row"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><span>${label}</span></label>`;
+    Swal.fire({
+        title: 'Print or save as PDF',
+        html: `<div class="pd">
+            <div class="pd-h">Charts to include</div>
+            <label class="pd-row pd-all"><input type="checkbox" id="pd_all" checked><span>All charts in this section</span></label>
+            <div class="pd-list">${rows}</div>
+            <div class="pd-h">Page</div>
+            <div class="pd-grid"><span>Paper</span>${sel('pd_paper', [['A4', 'A4'], ['Letter', 'US Letter']], saved.paper || 'A4')}
+            <span>Orientation</span>${sel('pd_orient', [['auto', 'Automatic'], ['portrait', 'Portrait'], ['landscape', 'Landscape']], saved.orient || 'auto')}
+            <span>Layout</span>${sel('pd_layout', [['compact', 'Compact (several per page)'], ['single', 'One chart per page']], saved.layout || 'compact')}</div>
+            <div class="pd-h">Content</div>
+            ${chk('pd_notes', 'Notes and definitions', saved.notes !== false)}
+            ${chk('pd_refs', 'References', saved.refs !== false)}
+            ${chk('pd_values', 'Data values table under each chart', !!saved.values)}
+            <div class="pd-h">Report title (optional)</div>
+            <input id="pd_title" class="pd-input" type="text" maxlength="80" placeholder="e.g. hospital or department name" value="${escHtml(saved.title || '')}">
+        </div>`,
+        showCancelButton: true, confirmButtonText: 'Print', cancelButtonText: 'Cancel', width: 'min(92vw, 440px)', buttonsStyling: false,
+        customClass: { popup: 'info-popup', title: 'info-title', htmlContainer: 'info-container', confirmButton: 'info-close', cancelButton: 'info-cancel', actions: 'info-actions' },
+        didOpen: () => {
+            const all = document.getElementById('pd_all');
+            all.addEventListener('change', () => document.querySelectorAll('.pd-chart').forEach(c => { c.checked = all.checked; }));
+            document.querySelectorAll('.pd-chart').forEach(c => c.addEventListener('change', () => { all.checked = [...document.querySelectorAll('.pd-chart')].every(x => x.checked); }));
+        },
+        preConfirm: () => {
+            const picked = [...document.querySelectorAll('.pd-chart')].filter(c => c.checked).map(c => parseInt(c.value, 10));
+            if (!picked.length) { Swal.showValidationMessage('Select at least one chart'); return false; }
+            const o = { picked, paper: document.getElementById('pd_paper').value, orient: document.getElementById('pd_orient').value, layout: document.getElementById('pd_layout').value,
+                notes: document.getElementById('pd_notes').checked, refs: document.getElementById('pd_refs').checked, values: document.getElementById('pd_values').checked, title: document.getElementById('pd_title').value.trim() };
+            return o;
+        }
+    }).then(r => {
+        if (!r.isConfirmed || !r.value) return;
+        const o = r.value;
+        try { localStorage.setItem('amr_print_opts', JSON.stringify({ paper: o.paper, orient: o.orient, layout: o.layout, notes: o.notes, refs: o.refs, values: o.values, title: o.title })); } catch (e) {}
+        runPrint(sec, o.picked.map(i => avail[i]), o);
+    });
+};
+
+function runPrint(sec, picked, o) {
+    const labelEl = sec.labelSel ? document.querySelector(sec.labelSel) : null;
+    const context = [sectionTitle(sec), labelEl ? labelEl.textContent : '', 'Unit scope: ' + scopeLabel()].filter(Boolean).join('  |  ');
+    const landscape = o.orient === 'landscape' || (o.orient === 'auto' && picked.some(x => x.c.landscape));
+    const blocks = picked.map(({ c, el }) => {
+        let media = '', vals = '';
+        if (el.tagName === 'CANVAS') {
+            const cv = document.createElement('canvas'); cv.width = el.width; cv.height = el.height;
+            const g = cv.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(el, 0, 0);
+            media = `<img class="chart" src="${cv.toDataURL('image/png')}" alt="">`;
+            if (o.values) vals = chartDataTable(el);
+        } else if (c.kind === 'table') media = '<div class="tbl">' + el.innerHTML + '</div>';
+        else media = tilesToHtml(el);
+        return `<section class="blk"><h2>${escHtml(chartTitleOf(c.title))}</h2>${media}${vals}</section>`;
+    }).join('');
+    const used = [];
+    const notes = sec.infos.map(([t, k]) => {
+        const inf = INFO_STORE[k]; if (!inf) return '';
+        (inf.refs || []).forEach(r => { if (!used.includes(r)) used.push(r); });
+        return `<div class="note"><h3>${escHtml(t)}</h3>${inf.html}</div>`;
+    }).join('');
+    const refs = used.map(k => REFS[k]).filter(Boolean).map(r => `<li>${escHtml(r.t)} ${escHtml(r.u)}</li>`).join('');
     const when = new Date().toLocaleString([], { dateStyle: 'long', timeStyle: 'short' });
-    const doc = `<!doctype html><html><head><meta charset="utf-8"><title>${escHtml(title)}</title><style>
-        @page { size: ${isTable ? 'A4 landscape' : 'A4 portrait'}; margin: 14mm; }
-        * { box-sizing: border-box; }
+    const doc = `<!doctype html><html><head><meta charset="utf-8"><title>${escHtml(sectionTitle(sec))}</title><style>
+        @page { size: ${o.paper === 'Letter' ? 'Letter' : 'A4'} ${landscape ? 'landscape' : 'portrait'}; margin: 14mm; }
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #0f172a; margin: 0; }
         .brand { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #64748b; font-weight: 700; }
         h1 { font-size: 20px; margin: 4px 0 4px; letter-spacing: -0.01em; }
-        .ctx { font-size: 11px; color: #475569; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #cbd5e1; }
-        .chart { display: block; max-width: 100%; max-height: 520px; margin: 0 auto 14px; object-fit: contain; }
-        .tbl table { border-collapse: collapse; font-size: 9px; } .tbl td, .tbl th { border: 1px solid #cbd5e1; padding: 3px 5px; text-align: center; }
-        h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin: 16px 0 6px; }
-        .notes { font-size: 11px; line-height: 1.6; color: #334155; } .notes p { margin: 0 0 6px; } .notes ul { margin: 4px 0 6px 16px; padding: 0; }
+        .ctx { font-size: 11px; color: #475569; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #cbd5e1; }
+        .blk { margin-bottom: 14px; ${o.layout === 'single' ? 'page-break-after: always; break-after: page;' : 'break-inside: avoid; page-break-inside: avoid;'} }
+        .blk:last-of-type { page-break-after: auto; break-after: auto; }
+        h2 { font-size: 13px; margin: 0 0 6px; color: #0f172a; }
+        .chart { display: block; max-width: 100%; ${o.layout === 'single' ? 'max-height: 620px;' : 'max-height: 300px;'} margin: 0 auto; object-fit: contain; }
+        .tbl table, table.vals { border-collapse: collapse; font-size: 9px; margin-top: 6px; } .tbl td, .tbl th, .vals td, .vals th { border: 1px solid #cbd5e1; padding: 3px 6px; text-align: center; } .vals th:first-child { text-align: left; }
+        .tiles { display: flex; flex-wrap: wrap; gap: 8px; } .tile { border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; min-width: 110px; } .tl { font-size: 9px; color: #64748b; font-weight: 600; } .tv { font-size: 15px; font-weight: 700; } .tn { font-size: 10px; color: #475569; margin: 6px 0 0; }
+        h4.sect { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin: 18px 0 6px; }
+        .note { font-size: 10.5px; line-height: 1.55; color: #334155; margin-bottom: 8px; break-inside: avoid; } .note h3 { font-size: 11px; margin: 0 0 2px; color: #0f172a; } .note p { margin: 0 0 4px; } .note ul { margin: 2px 0 4px 16px; padding: 0; }
         ol { margin: 0; padding-left: 16px; font-size: 9.5px; line-height: 1.5; color: #475569; } li { margin-bottom: 3px; word-break: break-word; }
-        .foot { margin-top: 18px; padding-top: 8px; border-top: 1px solid #cbd5e1; font-size: 9px; color: #94a3b8; }
+        .foot { margin-top: 16px; padding-top: 8px; border-top: 1px solid #cbd5e1; font-size: 9px; color: #94a3b8; }
     </style></head><body>
-        <div class="brand">AMR Trak &middot; Antimicrobial Resistance Surveillance</div>
-        <h1>${escHtml(title)}</h1>
+        <div class="brand">${escHtml(o.title || 'AMR Trak')} &middot; Antimicrobial Resistance Surveillance</div>
+        <h1>${escHtml(sectionTitle(sec))}</h1>
         <div class="ctx">${escHtml(context)}</div>
-        ${body}
-        ${info ? `<h2>Notes and definitions</h2><div class="notes">${info.html}</div>` : ''}
-        <h2>References</h2><ol>${refKeys.map(k => REFS[k]).filter(Boolean).map(r => `<li>${escHtml(r.t)} ${escHtml(r.u)}</li>`).join('')}</ol>
-        <div class="foot">Generated ${escHtml(when)}. De-identified surveillance data: first isolate per patient, organism and year (CLSI M39); screening cultures excluded. Interpretation: CLSI M100.</div>
+        ${blocks}
+        ${o.notes && notes ? `<h4 class="sect">Notes and definitions</h4>${notes}` : ''}
+        ${o.refs && refs ? `<h4 class="sect">References</h4><ol>${refs}</ol>` : ''}
+        <div class="foot">Generated ${escHtml(when)}. De-identified surveillance data: first isolate per patient, organism and year (CLSI M39); screening cultures excluded; interpretation per CLSI M100.</div>
     </body></html>`;
     const f = document.createElement('iframe');
     f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
     document.body.appendChild(f);
     f.contentDocument.open(); f.contentDocument.write(doc); f.contentDocument.close();
-    setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { console.error(e); } }, 350);
-    setTimeout(() => f.remove(), 120000);
-};
+    setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { console.error(e); } }, 400);
+    setTimeout(() => f.remove(), 180000);
+}
 
-function attachPrintButtons() {
-    const targets = [...document.querySelectorAll('canvas')].map(cv => ({ el: cv, host: cv.parentElement }));
-    const hm = document.getElementById('heatmapWrapper');
-    if (hm && hm.querySelector('table')) targets.push({ el: hm, host: hm.parentElement });
-    targets.forEach(t => {
-        if (!t.host || t.host.querySelector(':scope > .print-btn')) return;
-        if (getComputedStyle(t.host).position === 'static') t.host.style.position = 'relative';
-        const b = document.createElement('button');
-        b.type = 'button'; b.className = 'print-btn'; b.title = 'Print / save as PDF'; b.setAttribute('aria-label', 'Print this chart');
-        b.innerHTML = PRINTER_SVG;
-        b.addEventListener('click', () => printChart(t.el));
-        t.host.appendChild(b);
+// ---------- mount the toolbar in each section header ----------
+function toolbarHtml(secId) {
+    return `<button type="button" class="sec-tool" onclick="showSectionInfo('${secId}')" title="Information" aria-label="Information about this section">${ICON_INFO}</button>` +
+        `<button type="button" class="sec-tool" onclick="openPrintDialog('${secId}')" title="Print / save as PDF" aria-label="Print or save as PDF">${ICON_PRINTER}</button>`;
+}
+function mountSectionToolbars() {
+    // collapsible cards: header button is wrapped so the toolbar can sit beside the chevron
+    [['prevalence', 'toggleGuidedSearch()'], ['patho', 'togglePathoSearch()'], ['abx', 'toggleAbxSearch()'], ['heatmap', 'toggleAdvancedSearch()']].forEach(([id, fn]) => {
+        const btn = document.querySelector(`button[onclick="${fn}"]`);
+        if (!btn || btn.parentElement.classList.contains('sec-head')) return;
+        const wrap = document.createElement('div'); wrap.className = 'sec-head';
+        btn.parentNode.insertBefore(wrap, btn); wrap.appendChild(btn);
+        const tb = document.createElement('div'); tb.className = 'sec-tools sec-tools-head'; tb.innerHTML = toolbarHtml(id); wrap.appendChild(tb);
+    });
+    // card titles
+    [['mdr', '#mdrPanel .mdr-title'], ['lab', '#lab_title'], ['month', '#live_month_title'], ['quarter', '#live_q_title']].forEach(([id, sel]) => {
+        let h = document.querySelector(sel);
+        if (h && h.tagName === 'SPAN') h = h.parentElement;      // month / quarter: the title text sits in a span inside the heading
+        if (!h || h.querySelector('.sec-tools')) return;
+        h.style.position = 'relative'; h.style.paddingRight = '76px';
+        if (id === 'month' || id === 'quarter') h.style.paddingLeft = '76px';
+        const tb = document.createElement('div'); tb.className = 'sec-tools sec-tools-title'; tb.innerHTML = toolbarHtml(id); h.appendChild(tb);
     });
 }
-(function () {
-    let timer = null;
-    const run = () => { clearTimeout(timer); timer = setTimeout(attachPrintButtons, 200); };
-    if (document.body) new MutationObserver(run).observe(document.body, { childList: true, subtree: true });
-    document.addEventListener('DOMContentLoaded', run);
-})();
+document.addEventListener('DOMContentLoaded', mountSectionToolbars);
