@@ -111,6 +111,12 @@
         .ld-tip svg { flex: none; width: 22px; height: 22px; color: #0f766e; margin-top: 1px; }
         .ld-tip div { font-size: 12px; line-height: 1.55; color: #334155; }
         .ld-tip b { color: #0f172a; }
+        #printPreview { position: fixed; inset: 0; z-index: 9800; background: #e2e8f0; display: flex; flex-direction: column; }
+        .pv-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: calc(10px + env(safe-area-inset-top)) 12px 10px; background: #0f766e; color: #fff; }
+        .pv-t { font-size: 14px; font-weight: 800; }
+        .pv-bar button { height: 34px; border: 1px solid rgba(255,255,255,.45); background: rgba(255,255,255,.12); color: #fff; border-radius: 10px; padding: 0 12px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+        .pv-bar .pv-go { background: #fff; color: #0f766e; border-color: #fff; }
+        #pvFrame { flex: 1; width: 100%; border: 0; background: #fff; }
         body.gd-lock { overflow: hidden; }
         #guideView { position: fixed; inset: 0; z-index: 9000; background: #f8fafc; display: none; flex-direction: column; }
         #guideView.open { display: flex; }
@@ -177,6 +183,9 @@
         .abx-legend .sw { flex: none; width: 14px; height: 14px; border-radius: 4px; margin-top: 1px; }
         .abx-legend .sw-solid { background: linear-gradient(135deg, #e11d48, #0d9488); }
         .abx-legend .sw-grey { background: rgba(148,163,184,.5); border: 1px solid #94a3b8; }
+        .abx-extra:not(:empty) { margin-top: 10px; padding-top: 8px; border-top: 1px solid #e2e8f0; font-size: 11px; line-height: 1.5; color: #475569; }
+        .abx-extra b { color: #0f172a; font-weight: 600; }
+        .abx-extra ul { margin: 2px 0 6px 16px; padding: 0; list-style: disc; }
         .abx-legend .sym { flex: none; width: 14px; text-align: center; font-weight: 800; color: #0f766e; }
         .info-body p { margin: 0 0 8px; }
         .info-body b { color: #0f172a; font-weight: 600; }
@@ -239,9 +248,9 @@
             <button onclick="showGuide()" class="p-1.5 text-teal-700 bg-teal-50 border border-teal-100 rounded-lg transition-colors shadow-sm" title="Guide" aria-label="Open the guide">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
             </button>
-            <!-- Install Button -->
-            <button onclick="showInstallGuide()" class="p-1.5 text-slate-400 hover:text-teal-700 bg-slate-50 border border-slate-100 rounded-lg transition-colors shadow-sm" title="Install the app">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            <!-- Print Button -->
+            <button onclick="openPrintDialog()" class="p-1.5 text-slate-400 hover:text-teal-700 bg-slate-50 border border-slate-100 rounded-lg transition-colors shadow-sm" title="Print / save as PDF" aria-label="Print or save as PDF">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>
             </button>
             <div id="connection_status" title="Live connection" aria-label="Live connection" class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
                 <span class="relative flex h-2 w-2"><span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
@@ -389,7 +398,7 @@
                     <div class="abx-legend"><div class="abx-legend-title">Chart key</div><ul>
 <li><span class="sw sw-solid"></span><span><b>Solid bar:</b> 30 or more isolates tested. The result is reliable.</span></li>
 <li><span class="sw sw-grey"></span><span><b>Faded grey bar, name ending with *:</b> fewer than 30 isolates tested. Interpret with caution.</span></li>
-<li><span class="sym">&dagger;</span><span><b>Selective test</b> (after the antibiotic name): tested on fewer than half of the isolates, so the percentage may be biased.</span></li><li><span class="sym">i</span><span>Tap a bar to see the number tested and the 95% confidence interval.</span></li></ul></div>
+<li><span class="sym">&dagger;</span><span><b>Selective test</b> (after the antibiotic name): tested on fewer than half of the isolates, so the percentage may be biased.</span></li><li><span class="sym">i</span><span>Tap a bar to see the number tested and the 95% confidence interval.</span></li></ul><div class="abx-extra" id="extra_guidedAmrContainer"></div></div>
                 </div>
             </div>
 
@@ -466,7 +475,7 @@
 <div class="abx-legend"><div class="abx-legend-title">Chart key</div><ul>
 <li><span class="sw sw-solid"></span><span><b>Solid bar:</b> 30 or more isolates tested. The result is reliable.</span></li>
 <li><span class="sw sw-grey"></span><span><b>Faded grey bar, name ending with *:</b> fewer than 30 isolates tested. Interpret with caution.</span></li>
-<li><span class="sym">&dagger;</span><span><b>Selective test</b> (after the antibiotic name): tested on fewer than half of the isolates, so the percentage may be biased.</span></li><li><span class="sym">i</span><span>Tap a bar to see the number tested and the 95% confidence interval.</span></li></ul></div>
+<li><span class="sym">&dagger;</span><span><b>Selective test</b> (after the antibiotic name): tested on fewer than half of the isolates, so the percentage may be biased.</span></li><li><span class="sym">i</span><span>Tap a bar to see the number tested and the 95% confidence interval.</span></li></ul><div class="abx-extra" id="extra_pathoAmrContainer"></div></div>
                 </div>
             </div>
 
@@ -544,7 +553,7 @@
 <div class="abx-legend"><div class="abx-legend-title">Chart key</div><ul>
 <li><span class="sw sw-solid"></span><span><b>Solid bar:</b> 30 or more isolates tested. The result is reliable.</span></li>
 <li><span class="sw sw-grey"></span><span><b>Faded grey bar, name ending with *:</b> fewer than 30 isolates tested. Interpret with caution.</span></li>
-<li><span class="sym">i</span><span>Tap a bar to see the number tested and the 95% confidence interval.</span></li></ul></div>
+<li><span class="sym">i</span><span>Tap a bar to see the number tested and the 95% confidence interval.</span></li></ul><div class="abx-extra" id="extra_abxAmrContainer"></div></div>
                 </div>
             </div>
 
@@ -808,13 +817,13 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=9.4"></script>
-    <script src="js/dashboard.js?v=9.4"></script>
-    <script src="js/info_texts.js?v=9.4"></script>
-    <script src="js/dashboard_panels.js?v=9.4"></script>
-    <script src="js/dashboard_year.js?v=9.4"></script>
-    <script src="js/dashboard_period.js?v=9.4"></script>
-    <script src="js/guide.js?v=9.4"></script>
+    <script src="js/data.js?v=9.5"></script>
+    <script src="js/dashboard.js?v=9.5"></script>
+    <script src="js/info_texts.js?v=9.5"></script>
+    <script src="js/dashboard_panels.js?v=9.5"></script>
+    <script src="js/dashboard_year.js?v=9.5"></script>
+    <script src="js/dashboard_period.js?v=9.5"></script>
+    <script src="js/guide.js?v=9.5"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>

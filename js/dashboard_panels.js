@@ -541,19 +541,28 @@ function tilesToHtml(el) {
     return `<div class="tiles">${items}</div>${notes}`;
 }
 
-window.openPrintDialog = function (secId) {
-    const sec = SECTIONS[secId]; if (!sec) return;
-    const avail = sec.charts.map(c => ({ c, el: chartElement(c) })).filter(x => x.el);
-    if (!avail.length) { Swal.fire({ icon: 'info', title: 'Nothing to print yet', text: 'There are no charts on screen for this section. Generate the results first.', confirmButtonText: 'OK', buttonsStyling: false, customClass: { popup: 'info-popup', confirmButton: 'info-close' } }); return; }
+const TAB_SECTIONS = { analytics: ['prevalence', 'patho', 'abx', 'heatmap', 'mdr'], last_year: ['year'], last_month: ['month'], last_quarter: ['quarter'], lab: ['lab'] };
+
+function printGroups() {
+    const tab = window._currentTab || 'analytics';
+    return (TAB_SECTIONS[tab] || []).map(id => SECTIONS[id]).filter(Boolean)
+        .map(sec => ({ sec, items: sec.charts.map(c => ({ sec, c, el: chartElement(c) })).filter(x => x.el) })).filter(g => g.items.length);
+}
+
+// Printer button (top bar): choose exactly what to print from the open tab, then preview before printing
+window.openPrintDialog = function () {
+    const groups = printGroups();
+    if (!groups.length) { Swal.fire({ icon: 'info', title: 'Nothing to print yet', text: 'There are no charts on screen in this tab. Wait for the results to load.', confirmButtonText: 'OK', buttonsStyling: false, customClass: { popup: 'info-popup', title: 'info-title', htmlContainer: 'info-container', confirmButton: 'info-close' } }); return; }
+    const flat = [];
     const saved = (() => { try { return JSON.parse(localStorage.getItem('amr_print_opts')) || {}; } catch (e) { return {}; } })();
-    const rows = avail.map((x, i) => `<label class="pd-row"><input type="checkbox" class="pd-chart" value="${i}" checked><span>${escHtml(chartTitleOf(x.c.title))}</span></label>`).join('');
+    const rows = groups.map(g => `<div class="pd-h">${escHtml(sectionTitle(g.sec))}</div>` + g.items.map(x => { const i = flat.push(x) - 1; return `<label class="pd-row"><input type="checkbox" class="pd-chart" value="${i}" checked><span>${escHtml(chartTitleOf(x.c.title))}</span></label>`; }).join('')).join('');
     const sel = (id, opts, cur) => `<select id="${id}" class="pd-sel">${opts.map(o => `<option value="${o[0]}" ${o[0] === cur ? 'selected' : ''}>${o[1]}</option>`).join('')}</select>`;
     const chk = (id, label, on) => `<label class="pd-row"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><span>${label}</span></label>`;
     Swal.fire({
         title: 'Print or save as PDF',
         html: `<div class="pd">
-            <div class="pd-h">Charts to include</div>
-            <label class="pd-row pd-all"><input type="checkbox" id="pd_all" checked><span>All charts in this section</span></label>
+            <div class="pd-h" style="margin-top:0">What to print from this screen</div>
+            <label class="pd-row pd-all"><input type="checkbox" id="pd_all" checked><span>Select everything</span></label>
             <div class="pd-list">${rows}</div>
             <div class="pd-h">Page</div>
             <div class="pd-grid"><span>Paper</span>${sel('pd_paper', [['A4', 'A4'], ['Letter', 'US Letter']], saved.paper || 'A4')}
@@ -566,7 +575,7 @@ window.openPrintDialog = function (secId) {
             <div class="pd-h">Report title (optional)</div>
             <input id="pd_title" class="pd-input" type="text" maxlength="80" placeholder="e.g. hospital or department name" value="${escHtml(saved.title || '')}">
         </div>`,
-        showCancelButton: true, confirmButtonText: 'Print', cancelButtonText: 'Cancel', width: 'min(92vw, 440px)', buttonsStyling: false,
+        showCancelButton: true, confirmButtonText: 'Preview', cancelButtonText: 'Cancel', width: 'min(92vw, 440px)', buttonsStyling: false,
         customClass: { popup: 'info-popup', title: 'info-title', htmlContainer: 'info-container', confirmButton: 'info-close', cancelButton: 'info-cancel', actions: 'info-actions' },
         didOpen: () => {
             const all = document.getElementById('pd_all');
@@ -575,50 +584,59 @@ window.openPrintDialog = function (secId) {
         },
         preConfirm: () => {
             const picked = [...document.querySelectorAll('.pd-chart')].filter(c => c.checked).map(c => parseInt(c.value, 10));
-            if (!picked.length) { Swal.showValidationMessage('Select at least one chart'); return false; }
-            const o = { picked, paper: document.getElementById('pd_paper').value, orient: document.getElementById('pd_orient').value, layout: document.getElementById('pd_layout').value,
+            if (!picked.length) { Swal.showValidationMessage('Select at least one item'); return false; }
+            return { picked, paper: document.getElementById('pd_paper').value, orient: document.getElementById('pd_orient').value, layout: document.getElementById('pd_layout').value,
                 notes: document.getElementById('pd_notes').checked, refs: document.getElementById('pd_refs').checked, values: document.getElementById('pd_values').checked, title: document.getElementById('pd_title').value.trim() };
-            return o;
         }
     }).then(r => {
         if (!r.isConfirmed || !r.value) return;
         const o = r.value;
         try { localStorage.setItem('amr_print_opts', JSON.stringify({ paper: o.paper, orient: o.orient, layout: o.layout, notes: o.notes, refs: o.refs, values: o.values, title: o.title })); } catch (e) {}
-        runPrint(sec, o.picked.map(i => avail[i]), o);
+        const items = o.picked.map(i => flat[i]);
+        const doc = withOpened(items, () => buildPrintDoc(items, o));
+        showPrintPreview(doc);
     });
 };
 
-function runPrint(sec, picked, o) {
-    // collapsed cards hold zero-size canvases: open them briefly so charts render at full size, then restore
+// collapsed cards hold zero-size canvases: open them briefly so charts render at full size, then restore
+function withOpened(items, fn) {
     const reopened = [];
-    picked.forEach(({ el }) => { let p = el.parentElement; while (p) { if (p.classList && p.classList.contains('hidden') && !reopened.includes(p)) { p.classList.remove('hidden'); reopened.push(p); } p = p.parentElement; } });
-    if (reopened.length) picked.forEach(({ el }) => { try { const ch = el.tagName === 'CANVAS' && window.Chart && Chart.getChart(el); if (ch) { ch.resize(); ch.update('none'); } } catch (e) {} });
-    try { return runPrintInner(sec, picked, o); } finally { reopened.forEach(p => p.classList.add('hidden')); }
+    items.forEach(({ el }) => { let p = el.parentElement; while (p) { if (p.classList && p.classList.contains('hidden') && !reopened.includes(p)) { p.classList.remove('hidden'); reopened.push(p); } p = p.parentElement; } });
+    if (reopened.length) items.forEach(({ el }) => { try { const ch = el.tagName === 'CANVAS' && window.Chart && Chart.getChart(el); if (ch) { ch.resize(); ch.update('none'); } } catch (e) {} });
+    try { return fn(); } finally { reopened.forEach(p => p.classList.add('hidden')); }
 }
-function runPrintInner(sec, picked, o) {
-    const labelEl = sec.labelSel ? document.querySelector(sec.labelSel) : null;
-    const context = [sectionTitle(sec), labelEl ? labelEl.textContent : '', 'Unit scope: ' + scopeLabel()].filter(Boolean).join('  |  ');
-    const landscape = o.orient === 'landscape' || (o.orient === 'auto' && picked.some(x => x.c.landscape));
-    const blocks = picked.map(({ c, el }) => {
-        let media = '', vals = '';
-        if (el.tagName === 'CANVAS') {
-            const cv = document.createElement('canvas'); cv.width = el.width; cv.height = el.height;
-            const g = cv.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(el, 0, 0);
-            media = `<img class="chart" src="${cv.toDataURL('image/png')}" alt="">`;
-            if (o.values) vals = chartDataTable(el);
-        } else if (c.kind === 'table') media = '<div class="tbl">' + el.innerHTML + '</div>';
-        else media = tilesToHtml(el);
-        return `<section class="blk"><h2>${escHtml(chartTitleOf(c.title))}</h2>${media}${vals}</section>`;
+
+function buildPrintDoc(items, o) {
+    const tabTitle = ($('#headerTitle').text() || 'AMR Trak').trim();
+    const secs = []; items.forEach(x => { if (!secs.includes(x.sec)) secs.push(x.sec); });
+    const labels = secs.map(s => s.labelSel ? (document.querySelector(s.labelSel) || {}).textContent : '').filter(Boolean);
+    const context = [secs.length === 1 ? sectionTitle(secs[0]) : '', labels[0] || '', 'Unit scope: ' + scopeLabel()].filter(Boolean).join('  |  ');
+    const landscape = o.orient === 'landscape' || (o.orient === 'auto' && items.some(x => x.c.landscape));
+    const blocks = secs.map(sec => {
+        const mine = items.filter(x => x.sec === sec);
+        const head = secs.length > 1 ? `<h3 class="secname">${escHtml(sectionTitle(sec))}</h3>` : '';
+        return head + mine.map(({ c, el }) => {
+            let media = '', vals = '';
+            if (el.tagName === 'CANVAS') {
+                const cv = document.createElement('canvas'); cv.width = el.width; cv.height = el.height;
+                const g = cv.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(el, 0, 0);
+                media = `<img class="chart" src="${cv.toDataURL('image/png')}" alt="">`;
+                if (o.values) vals = chartDataTable(el);
+            } else if (c.kind === 'table') media = '<div class="tbl">' + el.innerHTML + '</div>';
+            else media = tilesToHtml(el);
+            return `<section class="blk"><h2>${escHtml(chartTitleOf(c.title))}</h2>${media}${vals}</section>`;
+        }).join('');
     }).join('');
     const used = [];
-    const notes = sec.infos.map(([t, k]) => {
+    const notes = secs.map(sec => sec.infos.map(([t, k]) => {
         const inf = INFO_STORE[k]; if (!inf) return '';
         (inf.refs || []).forEach(r => { if (!used.includes(r)) used.push(r); });
         return `<div class="note"><h3>${escHtml(t)}</h3>${inf.html}</div>`;
-    }).join('');
+    }).join('')).join('');
     const refs = used.map(k => REFS[k]).filter(Boolean).map(r => `<li>${escHtml(r.t)} ${escHtml(r.u)}</li>`).join('');
     const when = new Date().toLocaleString([], { dateStyle: 'long', timeStyle: 'short' });
-    const doc = `<!doctype html><html><head><meta charset="utf-8"><title>${escHtml(sectionTitle(sec))}</title><style>
+    return `<!doctype html><html><head><meta charset="utf-8"><title>${escHtml(tabTitle)}</title><style>
+
         @page { size: ${o.paper === 'Letter' ? 'Letter' : 'A4'} ${landscape ? 'landscape' : 'portrait'}; margin: 14mm; }
         * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #0f172a; margin: 0; }
@@ -635,28 +653,34 @@ function runPrintInner(sec, picked, o) {
         .note { font-size: 10.5px; line-height: 1.55; color: #334155; margin-bottom: 8px; break-inside: avoid; } .note h3 { font-size: 11px; margin: 0 0 2px; color: #0f172a; } .note p { margin: 0 0 4px; } .note ul { margin: 2px 0 4px 16px; padding: 0; }
         ol { margin: 0; padding-left: 16px; font-size: 9.5px; line-height: 1.5; color: #475569; } li { margin-bottom: 3px; word-break: break-word; }
         .foot { margin-top: 16px; padding-top: 8px; border-top: 1px solid #cbd5e1; font-size: 9px; color: #94a3b8; }
+        .secname { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #0f766e; margin: 16px 0 6px; }
+        .note h5 { font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: #0f766e; margin: 6px 0 2px; }
+        @media screen { body { padding: 14px; max-width: 860px; margin: 0 auto; background: #fff; } .tbl { overflow-x: auto; } }
     </style></head><body>
         <div class="brand">${escHtml(o.title || 'AMR Trak')} &middot; Antimicrobial Resistance Surveillance</div>
-        <h1>${escHtml(sectionTitle(sec))}</h1>
+        <h1>${escHtml(tabTitle)}</h1>
         <div class="ctx">${escHtml(context)}</div>
         ${blocks}
         ${o.notes && notes ? `<h4 class="sect">Notes and definitions</h4>${notes}` : ''}
         ${o.refs && refs ? `<h4 class="sect">References</h4><ol>${refs}</ol>` : ''}
-        <div class="foot">Generated ${escHtml(when)}. De-identified surveillance data: first isolate per patient, organism and year (CLSI M39); screening cultures excluded; interpretation per CLSI M100.</div>
+        <div class="foot">Generated ${escHtml(when)}. De-identified surveillance data: first isolate per patient, organism and period (CLSI M39); screening cultures excluded; interpretation per CLSI M100.</div>
     </body></html>`;
-    const f = document.createElement('iframe');
-    f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
-    document.body.appendChild(f);
-    f.contentDocument.open(); f.contentDocument.write(doc); f.contentDocument.close();
-    setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { console.error(e); } }, 400);
-    setTimeout(() => f.remove(), 180000);
+}
+
+// Preview before printing: the exact document is shown first; nothing is sent to the printer until the user confirms
+function showPrintPreview(doc) {
+    const old = document.getElementById('printPreview'); if (old) old.remove();
+    const el = document.createElement('div'); el.id = 'printPreview';
+    el.innerHTML = `<div class="pv-bar"><button type="button" id="pvBack">&lsaquo; Options</button><div class="pv-t">Print preview</div><button type="button" id="pvGo" class="pv-go">Print / Save PDF</button></div><iframe id="pvFrame" title="Print preview"></iframe>`;
+    document.body.appendChild(el); document.body.classList.add('gd-lock');
+    const f = el.querySelector('#pvFrame'); f.srcdoc = doc;
+    const close = () => { el.remove(); document.body.classList.remove('gd-lock'); };
+    el.querySelector('#pvBack').onclick = () => { close(); openPrintDialog(); };
+    el.querySelector('#pvGo').onclick = () => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { console.error(e); } };
 }
 
 // ---------- mount the toolbar in each section header ----------
-function toolbarHtml(secId) {
-    return `<button type="button" class="sec-tool" onclick="showSectionInfo('${secId}')" title="Information" aria-label="Information about this section">${ICON_INFO}</button>` +
-        `<button type="button" class="sec-tool" onclick="openPrintDialog('${secId}')" title="Print / save as PDF" aria-label="Print or save as PDF">${ICON_PRINTER}</button>`;
-}
+function toolbarHtml() { return ''; }
 function mountSectionToolbars() {
     // Collapsible card headers: [ title .......... print info  chevron ]
     [['prevalence', 'toggleGuidedSearch()'], ['patho', 'togglePathoSearch()'], ['abx', 'toggleAbxSearch()'], ['heatmap', 'toggleAdvancedSearch()'], ['mdr', 'toggleMdrPanel()']].forEach(([id, fn]) => {
@@ -668,17 +692,8 @@ function mountSectionToolbars() {
         btn.parentNode.insertBefore(wrap, btn); wrap.appendChild(btn);
         btn.classList.add('sec-main');
         const chev = btn.querySelector(':scope > svg');
-        const tb = document.createElement('div'); tb.className = 'sec-tools'; tb.innerHTML = toolbarHtml(id); wrap.appendChild(tb);
         const cb = document.createElement('button'); cb.className = 'sec-chev'; cb.setAttribute('aria-label', 'Expand or collapse');
         cb.setAttribute('onclick', fn); if (chev) cb.appendChild(chev); wrap.appendChild(cb);
-    });
-    // Card titles (tabs): title on the left, toolbar on the right
-    [['lab', '#lab_title'], ['year', '#live_y_title'], ['month', '#live_month_title'], ['quarter', '#live_q_title']].forEach(([id, sel]) => {
-        let h = document.querySelector(sel);
-        if (h && h.tagName === 'SPAN') h = h.parentElement;
-        if (!h || h.querySelector('.sec-tools')) return;
-        h.classList.remove('text-center', 'pr-8'); h.classList.add('sec-title-row'); if (id !== 'lab') h.classList.add('sec-title-center');
-        const tb = document.createElement('div'); tb.className = 'sec-tools'; tb.innerHTML = toolbarHtml(id); h.appendChild(tb);
     });
 }
 document.addEventListener('DOMContentLoaded', mountSectionToolbars);

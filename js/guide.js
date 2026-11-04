@@ -32,6 +32,30 @@
                 ['<b>Cultures</b>', 'Laboratory activity and blood culture quality.', 'How many cultures grew, and how many were contaminated?']]) +
             P('The month, quarter and year shown in the three "Last" tabs are chosen by the surveillance team, so everyone reads the same reporting period.')],
 
+        ['tools', 'How to use the tools', () =>
+            H('Moving around') + L([
+                '<b>Bottom bar:</b> switches between Analytics, Last Year, Last Quarter, Last Month and Cultures.',
+                '<b>Top bar:</b> (i) About, the open book is this Guide, the printer prints the open tab, and the green dot shows the live connection.',
+                '<b>Unit scope</b> (All units, ICU, Non-ICU) filters everything on every tab.',
+                '<b>Section headers</b> in Analytics open and close when tapped. Open only the one you need.']) +
+            H('Choosing the data (Analytics)') + L([
+                '<b>Time Period:</b> All Times, Last Year, Last Quarter or Last Month. Start with a wider period when numbers are small, because more isolates give more reliable percentages.',
+                '<b>Specimen:</b> restricts to blood, urine, wound and so on. Resistance often differs by site, so choose the specimen that matches the patient\'s infection.',
+                '<b>Ward (All, In, Out):</b> all patients, inpatients, or outpatients.',
+                '<b>Bacteria or Antimicrobial:</b> the organism or the drug you want to examine.',
+                '<b>% S, % R, % NS:</b> the metric. Use %S to see what works, %R to see how bad resistance is, and %NS when intermediate results should be treated as not reliable.',
+                '<b>Hide n &lt; 30:</b> removes the unreliable (grey) bars.']) +
+            H('Reading and exploring') + L([
+                '<b>Tap a slice or a bar</b> to see the number tested and the 95% confidence interval.',
+                '<b>Scroll sideways</b> in a wide chart to see all antibiotics.',
+                '<b>Heatmap:</b> choose the months, specimen, several organisms and several antibiotics together. Leave organisms or antibiotics blank to include all.']) +
+            H('Printing') + L([
+                'Tap the <b>printer</b> at the top. A window lists every chart and table on the open tab; tick what you want.',
+                'Choose paper, orientation and layout, and whether to include notes, references and data tables. You can add a title such as the hospital or department name.',
+                'Tap <b>Preview</b> to see the exact document. If it is right, tap <b>Print / Save PDF</b>; otherwise go back and change the options.',
+                'To keep a file, choose <b>Save as PDF</b> in the phone\'s print screen.']) +
+            H('Connection') + P('The dashboard loads the latest published data when it opens. If the connection fails it shows the last data saved on the phone, and says so.')],
+
         ['concepts', 'Basic concepts you need first', () =>
             H('S, I, R and SDD') + L([
                 '<b>S (susceptible):</b> the antibiotic is expected to work at the usual dose.',
@@ -49,6 +73,23 @@
             H('Selective testing (&dagger;)') + P('Some antibiotics are tested only when the first-line drugs fail. If an antibiotic was tested on fewer than half of the isolates, the tested isolates are probably the more resistant ones, so the resistance percentage may be too high. Such antibiotics are marked with <b>&dagger;</b>.') +
             H('Possible contaminants') + P('Organisms that normally live on the skin (coagulase-negative staphylococci such as <i>S. epidermidis</i> and <i>S. hominis</i>, <i>Corynebacterium</i>, <i>Micrococcus</i>, viridans streptococci) are often contaminants when found in blood. They are flagged, not deleted, because they can occasionally cause true infection.') +
             H('Intrinsic resistance') + P('Some organisms are naturally resistant to certain antibiotics (for example <i>Proteus</i> to colistin). These results are not counted as acquired resistance.')],
+
+        ['terms', 'Clinical terms and why they matter', () =>
+            P('Each term below is explained with its meaning and how a clinician or the antibiotic committee uses it.') +
+            T(['Term', 'Meaning', 'Clinical use'], [
+                ['<b>Prevalence</b> (organism prevalence)', 'The share of first isolates that each organism contributes in the chosen period, specimen and ward. For example, if 40 of 100 blood isolates are <i>K. pneumoniae</i>, its prevalence is 40%. It describes the cultured isolates, not the whole population.', 'Shows which organisms the empirical antibiotic must cover at each site. Frequent organisms deserve the first look; a change in the order suggests a change in the local infection pattern.'],
+                ['<b>Susceptibility (% S)</b>', 'The share of tested isolates that are susceptible to an antibiotic.', 'The practical question before the culture result: "how likely is this drug to work?". Many guidelines accept an empirical drug when %S is high enough (often 80% or more, depending on infection severity).'],
+                ['<b>Resistance (% R)</b>', 'The share of tested isolates that are resistant.', 'Measures the size of the problem and its trend. Rising %R for a key drug calls for review of use and infection-control measures.'],
+                ['<b>Non-susceptibility (% NS)</b>', 'I, SDD and R together.', 'A stricter view: drugs whose non-susceptibility is high are poor empirical choices.'],
+                ['<b>Antibiogram</b>', 'A table of % susceptible for each organism and antibiotic over a period (CLSI M39).', 'The local tool for choosing empirical therapy and for writing hospital treatment guidelines.'],
+                ['<b>Empirical therapy</b>', 'Treatment started before the culture and susceptibility results are known.', 'Chosen from the antibiogram, the likely organisms (prevalence) and the infection site.'],
+                ['<b>Targeted therapy and de-escalation</b>', 'Choosing, or narrowing to, the most suitable drug once results are known.', 'Reduces unnecessary broad-spectrum use. The AWaRe grouping helps to pick the narrowest effective antibiotic.'],
+                ['<b>Isolate and culture</b>', 'An isolate is one organism grown from a specimen; a culture is one specimen sent to the laboratory.', 'Isolates are used for resistance statistics; cultures describe laboratory activity and quality.'],
+                ['<b>Incidence</b>', 'New cases per population or per patient-days. The dashboard does <b>not</b> calculate it, because patient-days are not in the data.', 'Counts of resistant isolates alone are not incidence rates and should not be compared between wards of different size.'],
+                ['<b>Breakpoint and MIC</b>', 'MIC is the lowest concentration of a drug that stops growth; the breakpoint is the cut-off that turns it into S, I or R (CLSI M100).', 'Explains why a result can change when the standard is updated, and why borderline MICs deserve care.'],
+                ['<b>ESBL, carbapenemase, MRSA, VRE</b>', 'Resistance mechanisms or phenotypes (see the section on priority indicators).', 'They change treatment (for example carbapenems for ESBL) and require isolation precautions.'],
+                ['<b>Antimicrobial stewardship</b>', 'A programme that promotes the right drug, dose, route and duration.', 'Uses these data to set hospital guidelines, audit prescribing and monitor the effect of interventions.'],
+                ['<b>Inpatient and outpatient (In, Out)</b>', 'Patients who are admitted, and patients seen without admission.', 'Community-onset infections usually show less resistance than hospital-onset ones, so they are read separately.']])],
 
         ['standards', 'The standards behind the numbers: CLSI M100 and CLSI M39', () =>
             P('Two documents of the <b>Clinical and Laboratory Standards Institute (CLSI)</b>, an international non-profit standards organisation, define how results are <b>interpreted</b> (M100) and how they are <b>summarised</b> (M39). Almost every rule in this dashboard comes from one of them.') +
@@ -79,10 +120,10 @@
             T(['Sign', 'Meaning', 'What to do'], [
                 ['<span class="gd-sw gd-sw-solid"></span> Solid bar', '30 or more isolates were tested.', 'The result is reliable.'],
                 ['<span class="gd-sw gd-sw-grey"></span> Faded grey bar, name ending with <b>*</b>', 'Fewer than 30 isolates were tested.', 'Interpret with caution. Use the switch "Hide n &lt; 30" to hide them.'],
-                ['<b>&dagger;</b> after the antibiotic name', 'Selective test: tested on fewer than half of the isolates.', 'The percentage may be biased. The list with the numbers is in the (i) of the chart.'],
+                ['<b>&dagger;</b> after the antibiotic name', 'Selective test: tested on fewer than half of the isolates.', 'The percentage may be biased. The antibiotics concerned are listed under the chart key.'],
                 ['<b>Tap a bar</b>', 'Shows the number tested and the 95% confidence interval.', 'Use it to judge precision.']]) +
             H('In trend charts') + L(['A <b>hollow point</b> and a <b>dashed line</b> mean fewer than 30 isolates were tested in that period.', 'In tables, <b>*</b> beside a number carries the same meaning.']) +
-            H('WHO AWaRe') + P('Antibiotics are grouped by the WHO into <b>Access</b> (first choice, low resistance risk), <b>Watch</b> (higher resistance potential, should be monitored) and <b>Reserve</b> (last resort). The group of each antibiotic shown is listed in the (i) of the chart.')],
+            H('WHO AWaRe') + P('Antibiotics are grouped by the WHO into <b>Access</b> (first choice, low resistance risk), <b>Watch</b> (higher resistance potential, should be monitored) and <b>Reserve</b> (last resort). The group of each antibiotic shown is listed under the chart key.')],
 
         ['analytics', 'Analytics tab', () =>
             P('Use this tab to explore the data freely. Choose the period, specimen and ward, and every chart updates.') +
@@ -145,6 +186,12 @@
         ['scope', 'Unit scope and ICU', () =>
             P('The switch at the top filters every chart by ward: <b>All units</b>, <b>ICU</b> only, or <b>Non-ICU</b>.') +
             L(['The wards counted as ICU are set by the surveillance team.', 'The first isolate per patient is chosen across all wards first, and the ward filter is applied afterwards. A patient who moves between wards is therefore not counted twice.', 'The Last Quarter ICU comparison always shows both units, whatever the switch is set to.'])],
+
+        ['install', 'Install the app on your phone', () =>
+            P('Installing gives a home-screen icon, full-screen use and faster opening, and the app can open the last saved data when the connection is weak.') +
+            H('iPhone (Safari only)') + L(['Open the dashboard link in <b>Safari</b>.', 'Tap the <b>Share</b> button at the bottom of the screen.', 'Choose <b>Add to Home Screen</b>.']) +
+            H('Android (Chrome)') + L(['Open the dashboard link in <b>Chrome</b>.', 'Tap the menu (three dots) at the top of the screen.', 'Choose <b>Install app</b> or <b>Add to Home screen</b>.']) +
+            TIP('If an older version of the app is already installed and looks different, remove it from the home screen and install it again.')],
 
         ['limits', 'Limits and good practice', () =>
             L(['<b>Small numbers:</b> do not draw conclusions from fewer than 30 isolates.', '<b>Surveillance is not a patient report:</b> use the susceptibility report of the patient\'s own culture for treatment.', '<b>Sampling bias:</b> cultures are usually taken from sicker patients or after treatment failure, so resistance in the hospital may look higher than in all patients.', '<b>Data quality:</b> missing patient numbers prevent de-duplication; missing results lower the numbers tested.', '<b>One period at a time:</b> compare like with like (same period length, same unit, same specimen).', '<b>Unconfirmed results:</b> VRSA candidates, possible XDR and possible contaminants need confirmation before action beyond precaution.'])],

@@ -307,6 +307,12 @@ function renderChartNotes(containerSel, selectiveNotes, contaminantCount, shownA
     }
     if (contaminantCount > 0) html += `<h5>Possible contaminants</h5><p><b>${contaminantCount}</b> blood isolate(s) of this organism are possible skin-flora contaminants. Review them clinically.</p>`;
     setInfo(key, 'About this chart', html);
+    // the details that matter for this particular chart are shown under the chart key
+    let extra = '';
+    if (selectiveNotes.length) extra += `<div><b>&dagger; Selective tests here</b> (tested / isolates): ${selectiveNotes.join(', ')}.</div>`;
+    if (groups.A.length || groups.W.length || groups.R.length) extra += '<div style="margin-top:6px"><b>WHO AWaRe groups</b></div><ul>' + ['A', 'W', 'R'].filter(k => groups[k].length).map(k => `<li><b>${AWARE_NAMES[k]}:</b> ${groups[k].join(', ')}</li>`).join('') + '</ul>';
+    if (contaminantCount > 0) extra += `<div style="margin-top:6px"><b>${contaminantCount}</b> blood isolate(s) of this organism are possible skin-flora contaminants. Review them clinically.</div>`;
+    $('#extra_' + containerSel.replace('#', '')).html(extra);
 }
 
 function setDashStatus(kind, text) {

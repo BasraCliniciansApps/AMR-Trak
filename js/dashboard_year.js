@@ -83,7 +83,6 @@ function yaBuild() {
         <div class="ya-card" id="ya_card_${id}">
             <div class="sec-head ya-head">
                 <button type="button" class="sec-main ya-title" onclick="toggleYa('${id}')">${title}</button>
-                <div class="sec-tools"><button type="button" class="sec-tool" onclick="showInfo('ya_${id}')" title="Information" aria-label="Information about this section">${ICON_INFO}</button></div>
                 <button type="button" class="sec-chev" onclick="toggleYa('${id}')" aria-label="Expand or collapse"><span class="ya-chev ${open ? 'rot' : ''}" id="ya_icon_${id}">${YA_CHEV}</span></button>
             </div>
             <div id="ya_body_${id}" class="ya-body ${open ? '' : 'hidden'}">${bodies[id]}</div>

@@ -66,7 +66,6 @@ function opBuild(p) {
         <div class="ya-card">
             <div class="sec-head ya-head">
                 <button type="button" class="sec-main ya-title" onclick="toggleOp('${p}','${id}')">${title}</button>
-                <div class="sec-tools"><button type="button" class="sec-tool" onclick="showInfo('op_${p}_${id}')" title="Information" aria-label="Information about this section">${ICON_INFO}</button></div>
                 <button type="button" class="sec-chev" onclick="toggleOp('${p}','${id}')" aria-label="Expand or collapse"><span class="ya-chev ${open ? 'rot' : ''}" id="op_icon_${p}_${id}">${OP_CHEV}</span></button>
             </div>
             <div id="op_body_${p}_${id}" class="ya-body ${open ? '' : 'hidden'}">${opBody(p, id)}</div>
