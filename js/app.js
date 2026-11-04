@@ -78,6 +78,7 @@ async function syncLocalToCloud() {
         let cloudReadyRecords = localRecords.map(r => {
             let recordCopy = { ...r };
             delete recordCopy['Name']; 
+            delete recordCopy['Name Original'];   // never leaves the device
             return recordCopy;
         });
 
@@ -532,7 +533,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         }
     }
     const audit = { unknownOrg: new Map(), unknownWard: new Map(), unknownSpec: new Map(), unmappedAbx: new Map(), renamed: new Map() };
-    const report = { duplicates: 0, blankOrg: 0, added: 0, noGrowth: 0, noSri: 0, noDate: 0, vancDisk: 0, vancTypedIR: 0, vancInvalidMic: 0, vancMismatch: 0, vancCandidates: [], vancNeedsMic: 0, vancFromMic: 0, valuesFile: valuesAligned, valuesFileIgnored: !!valuesTable && !valuesAligned };
+    const report = { strepPenDisk: 0, duplicates: 0, blankOrg: 0, added: 0, noGrowth: 0, noSri: 0, noDate: 0, vancDisk: 0, vancTypedIR: 0, vancInvalidMic: 0, vancMismatch: 0, vancCandidates: [], vancNeedsMic: 0, vancFromMic: 0, valuesFile: valuesAligned, valuesFileIgnored: !!valuesTable && !valuesAligned };
 
     const abxColumns = [];
     const allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
@@ -583,7 +584,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
 
         if (matchedName === 'Vancomycin' && (i === vanDiskIdx || i === vanMicIdx)) continue;
         if(matchedName) {
-            abxColumns.push({ index: i, name: matchedName });
+            abxColumns.push({ index: i, name: matchedName, isDisk: h.includes('_nd') });
         }
     }
 
@@ -635,8 +636,12 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         let hasSRIData = false;
         let abxResults = {};
         
+        const orgForRules = String(externalOrgMap[orgCode] || whonetOrgMap[orgCode] || orgCode).toLowerCase();
+        const isBetaHemolyticStrep = /streptococcus (pyogenes|agalactiae|dysgalactiae)|streptococcus,? beta|group [abcg]\b/.test(orgForRules);
         abxColumns.forEach(abx => {
             let val = cols[abx.index] ? String(cols[abx.index]).trim().toUpperCase() : "";
+            // CLSI M100: beta-haemolytic streptococci have no disk breakpoints for R/I to penicillin/ampicillin (disk can only show S)
+            if (abx.isDisk && isBetaHemolyticStrep && (abx.name === 'Penicillin' || abx.name === 'Ampicillin') && (val === 'R' || val === 'I')) { report.strepPenDisk++; return; }
             if (val === 'S' || val === 'I' || val === 'R') {
                 hasSRIData = true;
                 abxResults[abx.name] = val;
@@ -760,15 +765,86 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         report.added++;
     }
 
-    localStorage.setItem('amr_records', JSON.stringify(records));
-    
-    initDataTable();
-    if (typeof syncLocalToCloud === "function" && navigator.onLine) syncLocalToCloud();
-    if (!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
-    if (!$('#viewLive').hasClass('hidden')) generateLiveSurveillance();
-    
-    showImportReport(report, audit, newRecords, skippedCount, Array.from(event.target.files || []).map(f => f.name));
-    event.target.value = ''; 
+    const fileNames = Array.from(event.target.files || []).map(f => f.name);
+    const finalize = () => {
+        localStorage.setItem('amr_records', JSON.stringify(records));
+        initDataTable();
+        if (typeof syncLocalToCloud === "function" && navigator.onLine) syncLocalToCloud();
+        showImportReport(report, audit, newRecords, skippedCount, fileNames);
+        event.target.value = '';
+    };
+
+    // Same identification number + same year but different patient names: the user decides BEFORE anything is saved
+    const groups = findIdNameConflictGroups(records, newRecords);
+    if (groups.length === 0) { finalize(); return; }
+    reviewIdConflicts(groups).then(decisions => {
+        if (decisions === null) { event.target.value = ''; Swal.fire('Import cancelled', 'Nothing was saved.', 'info'); return; }
+        applyIdConflictDecisions(groups, decisions);
+        finalize();
+    });
+}
+
+// ---- ID / name conflicts: review window shown before saving ----
+function findIdNameConflictGroups(allRecords, newRecords) {
+    const newSet = new Set(newRecords);
+    const map = new Map();
+    allRecords.forEach(r => {
+        const id = String(r['Patient ID'] || '').trim();
+        const year = String(r['Date'] || '').substring(0, 4);
+        const nm = normalizePersonName(r['Name']);
+        if (!id || id.toLowerCase() === 'unknown' || !/^\d{4}$/.test(year) || !nm || nm === 'unknown patient') return;
+        const key = id.toLowerCase() + '|' + year;
+        if (!map.has(key)) map.set(key, { id: id, year: year, rows: [], names: [] });
+        const g = map.get(key);
+        g.rows.push(r);
+        if (!g.names.includes(nm)) g.names.push(nm);
+    });
+    return Array.from(map.values()).filter(g => g.names.length > 1 && g.rows.some(r => newSet.has(r)));
+}
+
+function reviewIdConflicts(groups) {
+    const cell = 'padding:3px 6px;border-bottom:1px solid #e2e8f0;white-space:nowrap';
+    const html = groups.map((g, gi) => {
+        const rows = g.rows.map(r => `<tr><td style="${cell}">${escapeHtml(r['Name'] || '')}</td><td style="${cell}">${escapeHtml(r['Specimen Date'] || r['Date'] || '')}</td><td style="${cell}">${escapeHtml(r['Selective organism'] || '')}</td><td style="${cell}">${escapeHtml(r['Sample'] || '')}</td><td style="${cell}">${escapeHtml(r['Ward'] || '')}</td><td style="${cell}">${escapeHtml(String(r['Age'] || ''))} ${escapeHtml(String(r['Sex'] || ''))}</td></tr>`).join('');
+        const nameOpts = Array.from(new Set(g.rows.map(r => r['Name']))).map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+        return `<div style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;padding:8px;margin-bottom:10px;text-align:left">
+            <div style="font-weight:700;margin-bottom:4px">ID ${escapeHtml(g.id)} &middot; ${g.year}</div>
+            <div style="overflow-x:auto"><table style="font-size:11px;border-collapse:collapse;width:100%"><tr style="color:#64748b"><th style="${cell};text-align:left">Name</th><th style="${cell};text-align:left">Date</th><th style="${cell};text-align:left">Organism</th><th style="${cell};text-align:left">Specimen</th><th style="${cell};text-align:left">Ward</th><th style="${cell};text-align:left">Age/Sex</th></tr>${rows}</table></div>
+            <label style="display:block;margin-top:6px;font-size:12px"><input type="radio" name="idc_${gi}" value="same"> Same patient (name typo) &mdash; use name:
+                <select id="idc_name_${gi}" style="font-size:12px;max-width:100%">${nameOpts}</select></label>
+            <label style="display:block;margin-top:2px;font-size:12px"><input type="radio" name="idc_${gi}" value="diff"> Different patients &mdash; keep separate (the later patient gets the ID suffix -B, -C...)</label>
+        </div>`;
+    }).join('');
+    return Swal.fire({
+        title: 'Review identification numbers',
+        html: `<p style="font-size:12px;color:#64748b;text-align:left;margin-bottom:8px">The same identification number appears with different names in the same year. First-isolate counting depends on it, so please decide for each case. Nothing has been saved yet.</p>${html}`,
+        width: 'min(96vw, 720px)', showCancelButton: true, confirmButtonText: 'Apply and import', cancelButtonText: 'Cancel import', confirmButtonColor: '#0d9488', allowOutsideClick: false,
+        preConfirm: () => {
+            const out = [];
+            for (let i = 0; i < groups.length; i++) {
+                const v = document.querySelector(`input[name="idc_${i}"]:checked`);
+                if (!v) { Swal.showValidationMessage('Please choose an option for every identification number.'); return false; }
+                out.push({ mode: v.value, name: document.getElementById('idc_name_' + i).value });
+            }
+            return out;
+        }
+    }).then(res => res.isConfirmed ? res.value : null);
+}
+
+function applyIdConflictDecisions(groups, decisions) {
+    groups.forEach((g, gi) => {
+        const d = decisions[gi];
+        if (d.mode !== 'same' && d.mode !== 'diff') return;
+        if (d.mode === 'same') {
+            g.rows.forEach(r => { if (normalizePersonName(r['Name']) !== normalizePersonName(d.name)) { r['Name Original'] = r['Name']; r['Name'] = d.name; } });
+        } else {
+            g.names.forEach((nm, ni) => {
+                if (ni === 0) return;
+                const suffix = '-' + String.fromCharCode(65 + ni);   // B, C, D...
+                g.rows.forEach(r => { if (normalizePersonName(r['Name']) === nm) { r['Original ID'] = r['Patient ID']; r['Patient ID'] = g.id + suffix; } });
+            });
+        }
+    });
 }
 // ---- Import report: what the app corrected automatically + what needs the user's attention ----
 function bump(m, k) { m.set(k, (m.get(k) || 0) + 1); }
@@ -781,6 +857,7 @@ function buildImportReport(report, audit, newRecords, skippedCount) {
     if (report.noGrowth) auto.push(`No growth / contaminant / no organism rows not imported: ${report.noGrowth}`);
     if (report.noSri) auto.push(`Identified organisms without susceptibility results not imported: ${report.noSri}`);
     if (report.duplicates) auto.push(`Already in the database, not added again: ${report.duplicates}`);
+    if (report.strepPenDisk) auto.push(`Beta-haemolytic streptococci: penicillin/ampicillin R/I by disk ignored (no valid CLSI disk breakpoints): ${report.strepPenDisk}`);
     if (report.vancDisk) auto.push(`Staphylococcus vancomycin by disk ignored (CLSI: MIC only): ${report.vancDisk}`);
     if (report.vancTypedIR) auto.push(`Staphylococcus vancomycin R/I without a numeric MIC ignored: ${report.vancTypedIR}`);
     if (report.vancInvalidMic) auto.push(`Invalid vancomycin MIC values ignored (not on the 2-fold scale): ${report.vancInvalidMic}`);
@@ -799,8 +876,8 @@ function buildImportReport(report, audit, newRecords, skippedCount) {
     if (report.valuesFileIgnored) attention.push({ t: 'The raw-values file did not match the interpretation file row by row and was not used', d: 'Export both files from WHONET with the same filters and sort order.' });
     if (report.vancNeedsMic) attention.push({ t: `S. aureus vancomycin R/I without an MIC (kept as reported): ${report.vancNeedsMic}`, d: 'Select the raw-values file together with the interpretation file so the MIC can be checked.' });
     if (report.vancCandidates.length) attention.push({ t: `VRSA candidates (MIC ≥16): ${report.vancCandidates.map(escapeHtml).join(', ')}`, d: 'Confirm identification and MIC at the reference laboratory before reporting VRSA.' });
-    const conflicts = findIdNameConflicts(newRecords);
-    if (conflicts.length) attention.push({ t: `${conflicts.length} identification number(s) used by more than one patient name in the same year`, d: 'First-isolate de-duplication relies on the ID: check these for typing errors.' });
+    const idFixed = newRecords.filter(r => r['Original ID'] || r['Name Original']).length;
+    if (idFixed) auto.push(`Identification numbers / names resolved by you in the review window: ${idFixed} record(s)`);
 
     const today = new Date().toISOString().slice(0, 7);
     const futureDates = newRecords.filter(r => r['Date'] > today).length;

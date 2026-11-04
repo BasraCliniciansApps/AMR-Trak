@@ -537,7 +537,7 @@ function evaluateCriticalMarkers(records) {
 }
 
 // Non-antibiotic fields stored on a record (must never be rendered as antibiotic dropdowns)
-const RECORD_META_FIELDS = ['Specimen Date', 'Lab ESBL', 'Lab Carbapenemase', 'Lab MRSA', 'VRSA Confirmation', 'Vancomycin MIC'];
+const RECORD_META_FIELDS = ['Specimen Date', 'Lab ESBL', 'Lab Carbapenemase', 'Lab MRSA', 'VRSA Confirmation', 'Vancomycin MIC', 'Original ID', 'Name Original'];
 
 // =====================================================================
 // WHO AWaRe classification (WHO Essential Medicines List 2023).
@@ -596,7 +596,7 @@ async function buildPublicRecords(records, salt) {
     const out = [];
     for (const r of records) {
         const copy = { ...r };
-        delete copy['Name']; delete copy['_uid'];
+        delete copy['Name']; delete copy['_uid']; delete copy['Name Original']; delete copy['Original ID'];
         const pid = String(r['Patient ID'] || '').trim().toLowerCase();
         const year = String(r['Date'] || '').substring(0, 4);
         if (pid && pid !== 'unknown') {
