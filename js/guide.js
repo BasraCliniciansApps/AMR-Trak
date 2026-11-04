@@ -50,6 +50,30 @@
             H('Possible contaminants') + P('Organisms that normally live on the skin (coagulase-negative staphylococci such as <i>S. epidermidis</i> and <i>S. hominis</i>, <i>Corynebacterium</i>, <i>Micrococcus</i>, viridans streptococci) are often contaminants when found in blood. They are flagged, not deleted, because they can occasionally cause true infection.') +
             H('Intrinsic resistance') + P('Some organisms are naturally resistant to certain antibiotics (for example <i>Proteus</i> to colistin). These results are not counted as acquired resistance.')],
 
+        ['standards', 'The standards behind the numbers: CLSI M100 and CLSI M39', () =>
+            P('Two documents of the <b>Clinical and Laboratory Standards Institute (CLSI)</b>, an international non-profit standards organisation, define how results are <b>interpreted</b> (M100) and how they are <b>summarised</b> (M39). Almost every rule in this dashboard comes from one of them.') +
+            H('CLSI M100: Performance Standards for Antimicrobial Susceptibility Testing') + L([
+                '<b>What it is:</b> the reference that tells the laboratory how to turn a measurement (an MIC value or an inhibition-zone diameter) into <b>S, I, SDD or R</b>. These cut-off values are called <b>breakpoints</b>.',
+                '<b>What else it contains:</b> which antibiotics to test and report for each organism group, quality-control ranges, special tests (for example cefoxitin to detect MRSA, and vancomycin MIC for staphylococci), and the list of intrinsic (natural) resistance.',
+                '<b>Why it is needed:</b> without one shared standard, the same bacterium could be called susceptible in one laboratory and resistant in another. M100 makes results comparable between laboratories, hospitals and countries.',
+                '<b>Why breakpoints change:</b> CLSI reviews them every year using new data on drug dosing, MIC distributions and clinical outcomes. For example, the carbapenem breakpoints for Enterobacterales were lowered to detect carbapenemase producers better. The laboratory should state which edition it uses, because a change of edition can change the percentages.',
+                '<b>Where it is used here:</b> the S, I and R results imported from WHONET, the MRSA rule (cefoxitin), the VRSA rule (vancomycin MIC of 16 or more in <i>S. aureus</i>), the rule that staphylococcal vancomycin must be tested by MIC, and intrinsic resistance.']) +
+            H('CLSI M39: Analysis and Presentation of Cumulative Antimicrobial Susceptibility Test Data') + L([
+                '<b>What it is:</b> the guideline for building a <b>cumulative antibiogram</b>, the table of % susceptible for each organism and antibiotic that clinicians use to choose empirical therapy.',
+                '<b>The main rules:</b>',
+                '&nbsp;&nbsp;&bull; Count only the <b>first isolate per patient</b> for each organism in the analysis period, so a long-stay patient does not dominate the result.',
+                '&nbsp;&nbsp;&bull; Report a percentage only when <b>30 or more isolates</b> were tested, because smaller numbers are statistically unstable.',
+                '&nbsp;&nbsp;&bull; Count only <b>S</b> as susceptible; I and SDD are not counted.',
+                '&nbsp;&nbsp;&bull; Exclude <b>screening or surveillance cultures</b>, which look for carriage rather than infection.',
+                '&nbsp;&nbsp;&bull; Analyse at least <b>once a year</b>, and show important subgroups (such as ICU, or blood and urine) separately.',
+                '<b>Why it is needed:</b> it removes the bias that raw laboratory counts carry (repeat cultures, tiny numbers, screening swabs), so that one hospital\'s antibiogram can be compared with another\'s and with its own earlier years.',
+                '<b>Where it is used here:</b> first-isolate de-duplication, the minimum of 30, %S counting only S, the exclusion of screening cultures, the specimen buttons and ICU comparison, and the 30-isolate marking (* and hollow points) everywhere.']) +
+            H('Why these two were chosen') + L([
+                'They are the most widely used standards for hospital laboratories worldwide, and the WHO surveillance system (GLASS) and WHONET are built to work with them.',
+                'M100 and M39 fit together: M100 decides the result of each isolate, and M39 decides how the isolates are counted.',
+                'Using one recognised standard also makes the dashboard defensible when results are audited or shared with the Ministry or the WHO.']) +
+            TIP('One deliberate adaptation: M39 is designed for a yearly analysis. The Last Year tab follows it exactly. The Last Quarter and Last Month tabs apply the same first-isolate rule within the quarter or month, for follow-up and early warning, so their percentages should be read as indicators, not as a formal antibiogram.')],
+
         ['marks', 'How to read the bars: colours and symbols', () =>
             P('The three antibiotic charts in the Analytics tab use the same key. It is shown under each chart.') +
             T(['Sign', 'Meaning', 'What to do'], [
