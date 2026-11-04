@@ -1,12 +1,12 @@
-const CACHE_NAME = 'amr-dashboard-cache-v10';
+const CACHE_NAME = 'amr-dashboard-cache-v11';
 
 // قائمة بالملفات والروابط الخارجية التي يعتمد عليها تطبيق الهاتف
 const PRECACHE_URLS = [
     './',
     './dashboard.html',
-    './js/data.js?v=7.4',
-    './js/dashboard.js?v=7.4',
-    './js/dashboard_panels.js?v=7.4',
+    './js/data.js?v=7.5',
+    './js/dashboard.js?v=7.5',
+    './js/dashboard_panels.js?v=7.5',
     './manifest.json',
     './icon.png',
     'https://cdn.tailwindcss.com',

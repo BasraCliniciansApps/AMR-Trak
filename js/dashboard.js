@@ -519,7 +519,7 @@ if (settings.show_amr === false) {
             responsive: true, 
             maintainAspectRatio: false, 
             plugins: { legend: { display: false } }, 
-            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, color: 'rgba(0,0,0,0)', font: { size: 10, weight: 'bold' }, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } } } } 
+            scales: { y: { max: 100, beginAtZero: true }, x: { afterFit: function(scale) { scale.height = 92; }, ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, color: 'rgba(0,0,0,0)', font: { size: 10, weight: 'bold' }, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } } } } 
         },
         plugins: [errorBarsPlugin, centredAbxLabels]
     }));
