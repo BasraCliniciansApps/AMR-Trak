@@ -92,6 +92,7 @@ function card(id, icon, title, body) {
     </section>`;
 }
 
+function wardSummary(l) { return !l.length ? 'No ward selected' : l.length <= 2 ? l.join(', ') : l.length + ' wards selected'; }
 function render() {
     const abx = (typeof abxList !== 'undefined' ? abxList : []).slice().sort();
     const orgs = (typeof bacteriaLibrary !== 'undefined' ? bacteriaLibrary.map(b => b.name) : []).slice().sort();
@@ -117,7 +118,8 @@ function render() {
         <div class="field"><label>Default period for MDR and Culture Overview</label>
             <select class="select" data-k="dash_default_period">${[['month', 'Latest month'], ['quarter', 'Latest complete quarter'], ['year', 'Latest year'], ['all', 'All data']].map(([v, t]) => `<option value="${v}" ${cur.dash_default_period === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
         <div class="field"><label>Wards counted as ICU</label>
-            <div class="chips" id="wardChips">${wards.map(w => `<button type="button" class="wchip ${cur.dash_icu_wards.includes(w) ? 'on' : ''}" data-ward="${esc(w)}">${esc(w)}</button>`).join('')}</div>
+            <button type="button" class="wd-btn" id="wardBtn" aria-expanded="false"><span id="wardSummary">${esc(wardSummary(cur.dash_icu_wards))}</span><span aria-hidden="true">&#9662;</span></button>
+            <div class="wd-list" id="wardList">${wards.map(w => `<label class="wd-row"><input type="checkbox" data-ward="${esc(w)}" ${cur.dash_icu_wards.includes(w) ? 'checked' : ''}><span>${esc(w)}</span></label>`).join('')}</div>
             <p class="hint">Neonatal ICU is a separate unit. Leave it unselected to keep it out of the ICU view.</p></div>`;
 
     const profiles = `
@@ -179,14 +181,16 @@ document.addEventListener('click', e => {
     if (q) { cur.mobile_dash_quarter = q.dataset.q; $$('#qSeg button').forEach(b => b.classList.toggle('on', b === q)); refreshState(); return; }
     const sc = e.target.closest('[data-scope]');
     if (sc) { cur.dash_default_scope = sc.dataset.scope; $$('#scopeSeg button').forEach(b => b.classList.toggle('on', b === sc)); refreshState(); return; }
-    const w = e.target.closest('[data-ward]');
-    if (w) {
-        const name = w.dataset.ward, list = cur.dash_icu_wards.slice(), i = list.indexOf(name);
-        if (i >= 0) { if (list.length === 1) { toast('At least one ICU ward is required.'); return; } list.splice(i, 1); } else list.push(name);
-        cur.dash_icu_wards = list; w.classList.toggle('on', i < 0); refreshState();
-    }
+    if (e.target.closest('#wardBtn')) { const l = $('#wardList'), o = l.classList.toggle('open'); $('#wardBtn').setAttribute('aria-expanded', o); return; }
 });
 document.addEventListener('change', e => {
+    const wc = e.target.closest('input[data-ward]');
+    if (wc) {
+        const name = wc.dataset.ward, list = cur.dash_icu_wards.filter(x => x !== name);
+        if (wc.checked) list.push(name);
+        else if (!list.length) { wc.checked = true; toast('At least one ICU ward is required.'); return; }
+        cur.dash_icu_wards = list; $('#wardSummary').textContent = wardSummary(list); refreshState(); return;
+    }
     const el = e.target.closest('[data-k]');
     if (!el) return;
     const k = el.dataset.k;
@@ -258,7 +262,12 @@ async function loadSettings() {
     try {
         const [priv, pub] = await Promise.all([db.collection('amr_sync').doc('hospital_main').get(), db.collection('amr_public').doc('dashboard').get()]);
         rawSettings = (priv.exists && priv.data().settings) || (pub.exists && pub.data().settings) || {};
-        wardOptions = (pub.exists && Array.isArray(pub.data().wards) && pub.data().wards.length ? pub.data().wards : (typeof defaultWards !== 'undefined' ? defaultWards : [])).slice();
+        const ws = new Set((pub.exists && Array.isArray(pub.data().wards) ? pub.data().wards : []).concat(typeof defaultWards !== 'undefined' ? defaultWards : []));
+        try {   // wards actually present in the published data, so no Publish is needed for new ward names
+            const snap = await db.collection('amr_public').get();
+            snap.forEach(d => { if (/^r_/.test(d.id)) (d.data().records || []).forEach(r => { if (r && r.Ward && r.Ward !== '-') ws.add(String(r.Ward).trim()); }); });
+        } catch (e) { console.warn('ward scan', e); }
+        wardOptions = Array.from(ws).filter(Boolean);
         base = normalise(rawSettings); cur = JSON.parse(JSON.stringify(base));
         loaded = true;
         $('#loadingBox').classList.add('hidden'); $('#sections').classList.remove('hidden');

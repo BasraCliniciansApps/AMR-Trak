@@ -18,5 +18,7 @@
       "type": "image/png",
       "purpose": "any"
     }
-  ]
+  ],
+  "id": "./dashboard.html",
+  "scope": "./dashboard.html"
 }
