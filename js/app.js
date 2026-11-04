@@ -25,7 +25,12 @@ auth.onAuthStateChanged((user) => {
         $('#loginOverlay').addClass('hidden');
         $('#mainAppContainer').removeClass('hidden');
     } else {
-        // إذا لم يكن مسجلاً، أظهر شاشة الدخول وأخفِ التطبيق
+        // Not signed in: open the public dashboard by default. The sign-in screen is only shown
+        // when the data-entry mode is requested explicitly (index.html?entry=1).
+        if (!new URLSearchParams(location.search).has('entry')) {
+            location.replace('dashboard.html');
+            return;
+        }
         $('#loginOverlay').removeClass('hidden');
         $('#mainAppContainer').addClass('hidden');
     }
@@ -531,6 +536,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
             }
         }
     }
+    const audit = { unknownOrg: new Map(), unknownWard: new Map(), unknownSpec: new Map(), unmappedAbx: new Map(), renamed: new Map() };
     const report = { duplicates: 0, blankOrg: 0, added: 0, noGrowth: 0, noSri: 0, noDate: 0, vancDisk: 0, vancTypedIR: 0, vancInvalidMic: 0, vancMismatch: 0, vancCandidates: [], vancNeedsMic: 0, vancFromMic: 0, valuesFile: valuesAligned, valuesFileIgnored: !!valuesTable && !valuesAligned };
 
     const abxColumns = [];
@@ -550,8 +556,8 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         "ipm": "Imipenem", "mem": "Meropenem", "etp": "Ertapenem", "dor": "Doripenem", 
         "mev": "Meropenem/Vaborbactam", "imr": "Imipenem/Relebactam", "atm": "Aztreonam",
         "ami": "Amikacin", "amk": "Amikacin", "gen": "Gentamicin", "tob": "Tobramycin", 
-        "net": "Netilmicin", "str": "Streptomycin", "kan": "Kanamycin", "plz": "Plazomicin", "spt": "Spectinomycin",
-        "cip": "Ciprofloxacin", "lev": "Levofloxacin", "lvx": "Levofloxacin", "mox": "Moxifloxacin",
+        "net": "Netilmicin", "str": "Streptomycin", "kan": "Kanamycin", "geh": "Gentamicin high-level", "kac": "Kanamycin high-level", "plz": "Plazomicin", "spt": "Spectinomycin",
+        "cip": "Ciprofloxacin", "lev": "Levofloxacin", "lvx": "Levofloxacin", "mfx": "Moxifloxacin",   // WHONET: MFX = moxifloxacin (MOX = moxalactam)
         "ofx": "Ofloxacin", "nor": "Norfloxacin", "nal": "Nalidixic acid",
         "ery": "Erythromycin", "azi": "Azithromycin", "azm": "Azithromycin", 
         "clr": "Clarithromycin", "cli": "Clindamycin", "qda": "Quinupristin/Dalfopristin",
@@ -585,6 +591,13 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
             abxColumns.push({ index: i, name: matchedName });
         }
     }
+
+    // WHONET antibiotic columns this app does not know (results would be silently lost)
+    const unmappedCols = [];
+    actualHeaders.forEach((h, i) => {
+        const m = h.match(/^([a-z0-9]{3})_n[dm]/);
+        if (m && !whonetAbxMap[m[1]] && !abxColumns.some(c => c.index === i) && i !== vanDiskIdx && i !== vanMicIdx) unmappedCols.push({ index: i, code: m[1].toUpperCase() });
+    });
 
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
     let addedCount = 0;
@@ -679,7 +692,9 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         let rawWard = idxWard > -1 && cols[idxWard] ? String(cols[idxWard]).toLowerCase() : "";
         let ward = wardMap[rawWard] || (rawWard ? rawWard.charAt(0).toUpperCase() + rawWard.slice(1) : "-");
 
+        if (rawWard && !wardMap[rawWard]) bump(audit.unknownWard, rawWard);
         let rawSample = idxSample > -1 && cols[idxSample] ? String(cols[idxSample]).toLowerCase() : "";
+        if (rawSample && !externalSpecimenMap[rawSample]) bump(audit.unknownSpec, rawSample);
         let sample = externalSpecimenMap[rawSample] || (rawSample ? rawSample.charAt(0).toUpperCase() + rawSample.slice(1) : "-");
 
         let rawDate = idxDate > -1 && cols[idxDate] ? String(cols[idxDate]).trim() : "";
@@ -722,6 +737,9 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         };
         if (orgNameCleanup[fullOrgName]) fullOrgName = orgNameCleanup[fullOrgName];
         const selectiveOrgName = canonicalOrganismName(fullOrgName);   // current taxonomy name for analytics
+        if (!(externalOrgMap[orgCode] || whonetOrgMap[orgCode])) bump(audit.unknownOrg, orgCode);
+        if (selectiveOrgName !== fullOrgName) bump(audit.renamed, fullOrgName + ' → ' + selectiveOrgName);
+        unmappedCols.forEach(c => { if (/^[SIR]/i.test(String(cols[c.index] || '').trim())) bump(audit.unmappedAbx, c.code); });
 
         let record = {
             '_uid': Date.now().toString(36) + Math.random().toString(36).substr(2, 5) + i,
@@ -741,7 +759,6 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         if (vancMicText && vancFlag !== 'vanc_mic_invalid' && fullOrgName === 'Staphylococcus aureus') record['Vancomycin MIC'] = vancMicText;
         if (vancFlag === 'vanc_candidate') report.vancCandidates.push(patientID + ' (MIC ' + vancMicText + ')');
         if (record['Patient ID'] && existingKeys.has(dupKey(record))) { skippedCount++; report.duplicates++; continue; }
-        if (record['Patient ID']) existingKeys.add(dupKey(record));
         newRecords.push(record);
         records.push(record);
         addedCount++;
@@ -755,25 +772,93 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
     if (!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
     if (!$('#viewLive').hasClass('hidden')) generateLiveSurveillance();
     
-    const conflicts = findIdNameConflicts(newRecords);
-    const lines = [
-        `<b>${report.added}</b> isolates added`,
-        `Ignored ${skippedCount}: no growth/contaminant ${report.noGrowth}, no S/I/R result ${report.noSri}, no valid date ${report.noDate}`
-    ];
-    if (report.blankOrg) lines.push(`Rows with susceptibility results but NO organism name (ignored - fix in WHONET): <b>${report.blankOrg}</b>`);
-    if (report.duplicates) lines.push(`Already in the database (not added again): <b>${report.duplicates}</b>`);
-    if (report.vancDisk) lines.push(`Staphylococcus vancomycin by disk ignored (CLSI: MIC only): <b>${report.vancDisk}</b>`);
-    if (report.vancTypedIR) lines.push(`Staphylococcus vancomycin R/I without a numeric MIC ignored: <b>${report.vancTypedIR}</b>`);
-    if (report.vancInvalidMic) lines.push(`Invalid vancomycin MIC values ignored (not on 2-fold scale): <b>${report.vancInvalidMic}</b>`);
-    if (report.vancNeedsMic) lines.push(`S. aureus vancomycin R/I without MIC kept as reported (upload the raw-values file to verify): <b>${report.vancNeedsMic}</b>`);
-    if (report.vancMismatch) lines.push(`Vancomycin interpretation differed from CLSI MIC breakpoints (CLSI used): <b>${report.vancMismatch}</b>`);
-    if (report.vancCandidates.length) lines.push(`<span style="color:#b91c1c">VRSA candidates (MIC ≥16) need reference-lab confirmation: ${report.vancCandidates.join(', ')}</span>`);
-    if (report.valuesFile) lines.push('Raw-values file matched row by row: MIC values used.');
-    if (report.valuesFileIgnored) lines.push('Raw-values file did not match the interpretation file row by row - it was not used.');
-    if (conflicts.length) lines.push(`<span style="color:#b45309">${conflicts.length} Identification numbers share one year with different patient names - please review.</span>`);
-    Swal.fire({ title: 'Import report', html: '<div style="text-align:left;font-size:13px;line-height:1.7">' + lines.join('<br>') + '</div>', icon: 'success' });
+    showImportReport(report, audit, newRecords, skippedCount, Array.from(event.target.files || []).map(f => f.name));
     event.target.value = ''; 
 }
+// ---- Import report: what the app corrected automatically + what needs the user's attention ----
+function bump(m, k) { m.set(k, (m.get(k) || 0) + 1); }
+function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function buildImportReport(report, audit, newRecords, skippedCount) {
+    const auto = [], attention = [];
+    const topList = (m, n) => Array.from(m.entries()).sort((x, y) => y[1] - x[1]).slice(0, n || 8).map(([k, v]) => `${escapeHtml(k)} (${v})`).join(', ');
+
+    // --- applied automatically ---
+    if (report.noGrowth) auto.push(`No growth / contaminant / no organism rows not imported: ${report.noGrowth}`);
+    if (report.noSri) auto.push(`Identified organisms without susceptibility results not imported: ${report.noSri}`);
+    if (report.duplicates) auto.push(`Already in the database, not added again: ${report.duplicates}`);
+    if (report.vancDisk) auto.push(`Staphylococcus vancomycin by disk ignored (CLSI: MIC only): ${report.vancDisk}`);
+    if (report.vancTypedIR) auto.push(`Staphylococcus vancomycin R/I without a numeric MIC ignored: ${report.vancTypedIR}`);
+    if (report.vancInvalidMic) auto.push(`Invalid vancomycin MIC values ignored (not on the 2-fold scale): ${report.vancInvalidMic}`);
+    if (report.vancMismatch) auto.push(`Vancomycin result re-interpreted from MIC using CLSI breakpoints: ${report.vancMismatch}`);
+    if (report.valuesFile) auto.push('Raw-values file matched row by row: MIC values used');
+    if (audit.renamed.size) auto.push(`Old organism names updated: ${topList(audit.renamed)}`);
+    const screening = newRecords.filter(isScreeningSpecimen).length;
+    if (screening) auto.push(`Screening specimens stored but excluded from analysis (CLSI M39): ${screening}`);
+
+    // --- needs attention ---
+    if (report.blankOrg) attention.push({ t: `Rows with susceptibility results but no organism name (not imported): ${report.blankOrg}`, d: 'Fix the organism in WHONET and import again.' });
+    if (audit.unknownOrg.size) attention.push({ t: `Unrecognised organism codes: ${topList(audit.unknownOrg)}`, d: 'These were stored under the raw code. Add them to organisms_dictionary.json so they get a proper name.' });
+    if (audit.unmappedAbx.size) attention.push({ t: `Antibiotic columns with results that the app does not know: ${topList(audit.unmappedAbx)}`, d: 'Their results were NOT imported. The WHONET code has to be added to the antibiotic dictionary.' });
+    if (audit.unknownWard.size) attention.push({ t: `Unrecognised ward codes: ${topList(audit.unknownWard)}`, d: 'Stored as typed. Add them to the ward map so they merge with existing wards.' });
+    if (audit.unknownSpec.size) attention.push({ t: `Unrecognised specimen codes: ${topList(audit.unknownSpec)}`, d: 'Stored as typed. Add them to specimens_dictionary.json.' });
+    if (report.valuesFileIgnored) attention.push({ t: 'The raw-values file did not match the interpretation file row by row and was not used', d: 'Export both files from WHONET with the same filters and sort order.' });
+    if (report.vancNeedsMic) attention.push({ t: `S. aureus vancomycin R/I without an MIC (kept as reported): ${report.vancNeedsMic}`, d: 'Select the raw-values file together with the interpretation file so the MIC can be checked.' });
+    if (report.vancCandidates.length) attention.push({ t: `VRSA candidates (MIC ≥16): ${report.vancCandidates.map(escapeHtml).join(', ')}`, d: 'Confirm identification and MIC at the reference laboratory before reporting VRSA.' });
+    const conflicts = findIdNameConflicts(newRecords);
+    if (conflicts.length) attention.push({ t: `${conflicts.length} identification number(s) used by more than one patient name in the same year`, d: 'First-isolate de-duplication relies on the ID: check these for typing errors.' });
+
+    const today = new Date().toISOString().slice(0, 7);
+    const futureDates = newRecords.filter(r => r['Date'] > today).length;
+    if (futureDates) attention.push({ t: `Records dated in the future: ${futureDates}`, d: 'Check the specimen date format (day/month order) in the export.' });
+    const noId = newRecords.filter(r => !r['Patient ID']).length;
+    if (noId) attention.push({ t: `Records without an identification number: ${noId}`, d: 'They cannot be de-duplicated per patient and are always counted.' });
+
+    const contam = newRecords.filter(isPossibleContaminant).length;
+    if (contam) attention.push({ t: `Possible skin-flora contaminants in blood cultures: ${contam}`, d: 'Flagged only. Review clinically (single positive set of CoNS, Corynebacterium, Micrococcus, viridans streptococci...).' });
+
+    // phenotype audit (expected resistance, flag mismatches)
+    const phen = new Map(), phenIds = new Map();
+    newRecords.forEach(r => auditRecord(r).forEach(i => { bump(phen, i.text); if (!phenIds.has(i.text)) phenIds.set(i.text, []); if (phenIds.get(i.text).length < 5) phenIds.get(i.text).push(r['Patient ID'] || '?'); }));
+    if (phen.size) {
+        const rows = Array.from(phen.entries()).sort((x, y) => y[1] - x[1]).slice(0, 10).map(([k, v]) => `${escapeHtml(k)}: ${v} (e.g. ${phenIds.get(k).map(escapeHtml).join(', ')})`);
+        attention.push({ t: `Unexpected phenotypes: ${Array.from(phen.values()).reduce((p, c) => p + c, 0)} finding(s)`, d: 'Likely identification or reporting errors:<br>' + rows.join('<br>') });
+    }
+    return { auto, attention };
+}
+
+function showImportReport(report, audit, newRecords, skippedCount, fileNames) {
+    const rep = buildImportReport(report, audit, newRecords, skippedCount);
+    // keep the last 12 reports so they can be reviewed later
+    try {
+        const log = JSON.parse(localStorage.getItem('amr_import_log')) || [];
+        log.unshift({ when: new Date().toISOString(), files: fileNames, added: report.added, skipped: skippedCount, auto: rep.auto, attention: rep.attention });
+        localStorage.setItem('amr_import_log', JSON.stringify(log.slice(0, 12)));
+    } catch (e) {}
+    Swal.fire({ title: 'Import report', html: renderImportReportHtml({ added: report.added, skipped: skippedCount, auto: rep.auto, attention: rep.attention }), icon: rep.attention.length ? 'warning' : 'success', width: 'min(94vw, 560px)', confirmButtonText: 'Close', confirmButtonColor: '#0d9488' });
+}
+
+function renderImportReportHtml(r) {
+    let h = `<div style="text-align:left;font-size:13px;line-height:1.55">
+        <p style="margin-bottom:8px"><b>${r.added}</b> isolates added &middot; ${r.skipped} rows not imported</p>`;
+    if (r.attention.length) {
+        h += `<p style="font-weight:700;color:#b45309;margin:10px 0 4px">Needs your attention (${r.attention.length})</p>`;
+        r.attention.forEach(x => { h += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;margin-bottom:6px"><div style="font-weight:600">${x.t}</div><div style="font-size:12px;color:#78716c;margin-top:2px">${x.d}</div></div>`; });
+    } else {
+        h += `<p style="color:#047857;font-weight:700;margin:10px 0 4px">Nothing needs attention.</p>`;
+    }
+    if (r.auto.length) {
+        h += `<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:700;color:#0f766e">Applied automatically (${r.auto.length})</summary><ul style="margin:6px 0 0 18px;list-style:disc;font-size:12px;color:#475569">` + r.auto.map(x => `<li>${x}</li>`).join('') + '</ul></details>';
+    }
+    return h + '</div>';
+}
+
+window.showImportHistory = function() {
+    const log = JSON.parse(localStorage.getItem('amr_import_log')) || [];
+    if (!log.length) { Swal.fire({ title: 'Import history', text: 'No imports recorded on this device yet.', icon: 'info' }); return; }
+    const html = log.map((e, i) => `<details style="text-align:left;margin-bottom:6px;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px"><summary style="cursor:pointer;font-weight:600">${new Date(e.when).toLocaleString()} &middot; ${e.added} added${e.attention.length ? ` &middot; <span style="color:#b45309">${e.attention.length} to review</span>` : ''}</summary>${renderImportReportHtml(e)}</details>`).join('');
+    Swal.fire({ title: 'Import history', html: html, width: 'min(94vw, 600px)', confirmButtonText: 'Close', confirmButtonColor: '#0d9488' });
+};
+
 // Live CLSI interpretation hint for the vancomycin MIC field
 $(document).on('input', '#p_van_mic', function() {
     const org = String($('#p_organism').val() || '').toLowerCase();

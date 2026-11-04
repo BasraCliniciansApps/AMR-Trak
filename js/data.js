@@ -90,7 +90,7 @@ const abxGroups = {
     "Penicillins": ["Benzylpenicillin", "Penicillin", "Ampicillin", "Amoxicillin", "Cloxacillin", "Oxacillin", "Amoxicillin/Clavulanic acid", "Ampicillin/Sulbactam", "Amoxicillin/Sulbactam", "Piperacillin", "Piperacillin/Tazobactam", "Ticarcillin", "Ticarcillin/Clavulanic acid", "Mecillinam"],
     "Cephalosporins": ["Cefazolin", "Cefoxitin", "Cefuroxime", "Cefixime", "Ceftriaxone", "Cefotaxime", "Ceftazidime", "Cefepime", "Cefaclor", "Cefpodoxime", "Cefdinir", "Cephalothin", "Cefoperazone", "Cefotetan", "Ceftaroline", "Ceftizoxime", "Ceftobiprole", "Ceftazidime/Avibactam", "Ceftolozane/Tazobactam", "Cefoxitin screen"],
     "Carbapenems & Monobactams": ["Imipenem", "Meropenem", "Ertapenem", "Doripenem", "Meropenem/Vaborbactam", "Imipenem/Relebactam", "Aztreonam"],
-    "Aminoglycosides": ["Amikacin", "Gentamicin", "Tobramycin", "Netilmicin", "Streptomycin", "Kanamycin", "Plazomicin", "Spectinomycin"],
+    "Aminoglycosides": ["Amikacin", "Gentamicin", "Gentamicin high-level", "Kanamycin high-level", "Tobramycin", "Netilmicin", "Streptomycin", "Kanamycin", "Plazomicin", "Spectinomycin"],
     "Fluoroquinolones": ["Nalidixic acid", "Ciprofloxacin", "Levofloxacin", "Moxifloxacin", "Ofloxacin", "Norfloxacin"],
     "Macrolides & Lincosamides": ["Erythromycin", "Azithromycin", "Clarithromycin", "Clindamycin", "Quinupristin/Dalfopristin", "Inducible Clindamycin Resistance"],
     "Glycopeptides": ["Vancomycin", "Teicoplanin", "Daptomycin", "Dalbavancin", "Oritavancin", "Telavancin"],
@@ -634,7 +634,7 @@ const ORGANISM_SYNONYMS = {
     "chryseobacterium meningosepticum": "Elizabethkingia meningoseptica",
     "torulopsis glabrata": "Candida glabrata",
     "nakaseomyces glabratus": "Candida glabrata",
-    "candida krusei": "Pichia kudriavzevii",
+    "pichia kudriavzevii": "Candida krusei",
     "candida guilliermondii": "Meyerozyma guilliermondii",
     "pichia guilliermondii": "Meyerozyma guilliermondii",
     "micrococcus kristinae": "Kocuria kristinae",
@@ -657,4 +657,43 @@ function normalizeOrganismNames(records) {
         if (c !== r['Selective organism']) { r['Selective organism'] = c; n++; }
     });
     return n;
+}
+
+// =====================================================================
+// Data-quality audit (runs on every import; nothing is changed silently).
+// Returns a list of { code, text } for one record. Checks: expected (intrinsic) resistance
+// reported as susceptible (CLSI M100 / EUCAST expected phenotypes), methicillin discordance,
+// and disagreement between laboratory flags and the antibiotic results.
+// =====================================================================
+const EXPECTED_RESISTANCE = [
+    { test: /^(klebsiella|raoultella|citrobacter koseri)/, abx: ['Ampicillin', 'Amoxicillin'] },
+    { test: /^(enterobacter|klebsiella aerogenes|citrobacter freundii|serratia|morganella)/, abx: ['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Ampicillin/Sulbactam', 'Cefazolin', 'Cefoxitin'] },
+    { test: /^(proteus|morganella|providencia|serratia)/, abx: ['Colistin', 'Polymyxin B'] },
+    { test: /^(proteus mirabilis|morganella|providencia)/, abx: ['Tetracycline', 'Tigecycline'] },
+    { test: /^pseudomonas aeruginosa/, abx: ['Ampicillin', 'Amoxicillin/Clavulanic acid', 'Cefazolin', 'Ceftriaxone', 'Cefotaxime', 'Ertapenem', 'Trimethoprim/Sulfamethoxazole', 'Tetracycline'] },
+    { test: /^acinetobacter baumannii/, abx: ['Ampicillin', 'Cefazolin', 'Ertapenem'] },
+    { test: /^enterococcus/, abx: ['Cefazolin', 'Cefuroxime', 'Ceftriaxone', 'Cefotaxime', 'Ceftazidime', 'Cefepime', 'Clindamycin', 'Trimethoprim/Sulfamethoxazole'] },
+    { test: /^streptococcus pyogenes/, abx: [] }
+];
+function auditRecord(r) {
+    const issues = [];
+    const org = String(r['Selective organism'] || '').trim().toLowerCase();
+    const val = a => String(r[a] || '').trim().toUpperCase();
+    EXPECTED_RESISTANCE.forEach(rule => {
+        if (!rule.test.test(org)) return;
+        rule.abx.forEach(a => { if (val(a) === 'S') issues.push({ code: 'intrinsic', text: `${r['Selective organism']}: ${a} reported susceptible (expected resistant)` }); });
+    });
+    if (org.startsWith('streptococcus pyogenes') && val('Penicillin') && val('Penicillin') !== 'S')
+        issues.push({ code: 'intrinsic', text: 'Streptococcus pyogenes: penicillin non-susceptible is not expected - confirm identification/result' });
+    if (org.includes('staphylococcus aureus')) {
+        const fox = val('Cefoxitin') || val('Cefoxitin screen'), oxa = val('Oxacillin');
+        if (fox && oxa && ((fox === 'R') !== (oxa === 'R'))) issues.push({ code: 'mrsa_discord', text: 'S. aureus: cefoxitin and oxacillin disagree (cefoxitin is used)' });
+        if (r['Lab MRSA'] === '+' && fox === 'S') issues.push({ code: 'flag_mismatch', text: 'Lab MRSA positive but cefoxitin susceptible' });
+        if (r['Lab MRSA'] === '-' && fox === 'R') issues.push({ code: 'flag_mismatch', text: 'Lab MRSA negative but cefoxitin resistant' });
+    }
+    if (r['Lab ESBL'] === '+' && ['Ceftriaxone', 'Cefotaxime', 'Ceftazidime'].every(a => !val(a) || val(a) === 'S') && ['Ceftriaxone', 'Cefotaxime', 'Ceftazidime'].some(a => val(a)))
+        issues.push({ code: 'flag_mismatch', text: 'Lab ESBL positive but all tested 3rd-generation cephalosporins are susceptible' });
+    if (r['Lab Carbapenemase'] === '+' && ['Meropenem', 'Imipenem', 'Ertapenem'].some(a => val(a)) && ['Meropenem', 'Imipenem', 'Ertapenem'].every(a => !val(a) || val(a) === 'S'))
+        issues.push({ code: 'flag_mismatch', text: 'Lab carbapenemase positive but all tested carbapenems are susceptible' });
+    return issues;
 }
