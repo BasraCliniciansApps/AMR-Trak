@@ -93,6 +93,24 @@
         .info-title { font-size: 1.05rem !important; font-weight: 700 !important; color: #0f172a !important; text-align: left !important; letter-spacing: -0.01em; line-height: 1.3 !important; padding: 0 0 10px !important; margin: 0 !important; border-bottom: 1px solid #e2e8f0; }
         .info-container { margin: 12px 0 0 !important; padding: 0 !important; text-align: left !important; }
         .info-body { font-size: 13px; line-height: 1.65; color: #334155; text-align: left; }
+        #loadView { position: fixed; inset: 0; z-index: 9500; display: flex; align-items: center; justify-content: center; padding: 24px; background: radial-gradient(120% 90% at 50% 0%, #ccfbf1 0%, #f0fdfa 45%, #f8fafc 100%); opacity: 1; transition: opacity .35s ease; }
+        #loadView.out { opacity: 0; pointer-events: none; }
+        .ld-card { width: 100%; max-width: 340px; text-align: center; }
+        .ld-logo { position: relative; width: 112px; height: 112px; margin: 0 auto 18px; }
+        .ld-logo img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 14px rgba(15,118,110,.25)); }
+        .ld-logo::before, .ld-logo::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid rgba(13,148,136,.35); animation: ldPulse 2.2s ease-out infinite; }
+        .ld-logo::after { animation-delay: 1.1s; }
+        @keyframes ldPulse { 0% { transform: scale(.85); opacity: .9; } 100% { transform: scale(1.35); opacity: 0; } }
+        .ld-name { font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -.01em; }
+        .ld-sub { font-size: 12px; font-weight: 600; color: #0f766e; margin-top: 2px; }
+        .ld-bar { height: 5px; border-radius: 999px; background: #d1fae5; overflow: hidden; margin: 22px auto 10px; max-width: 220px; }
+        .ld-bar i { display: block; height: 100%; width: 40%; border-radius: 999px; background: linear-gradient(90deg, #14b8a6, #0f766e); animation: ldSlide 1.3s ease-in-out infinite; }
+        @keyframes ldSlide { 0% { transform: translateX(-110%); } 100% { transform: translateX(260%); } }
+        .ld-status { font-size: 12px; color: #475569; min-height: 18px; }
+        .ld-tip { display: flex; gap: 10px; align-items: flex-start; text-align: left; margin-top: 26px; padding: 12px 14px; background: rgba(255,255,255,.85); border: 1px solid #99f6e4; border-radius: 14px; box-shadow: 0 4px 14px rgba(15,118,110,.08); }
+        .ld-tip svg { flex: none; width: 22px; height: 22px; color: #0f766e; margin-top: 1px; }
+        .ld-tip div { font-size: 12px; line-height: 1.55; color: #334155; }
+        .ld-tip b { color: #0f172a; }
         body.gd-lock { overflow: hidden; }
         #guideView { position: fixed; inset: 0; z-index: 9000; background: #f8fafc; display: none; flex-direction: column; }
         #guideView.open { display: flex; }
@@ -203,15 +221,19 @@
         </div>
         <div class="flex items-center gap-2">
             <!-- About Button -->
-            <button onclick="showGuide()" class="p-1.5 text-slate-400 hover:text-teal-700 bg-slate-50 border border-slate-100 rounded-lg transition-colors shadow-sm" title="Guide" aria-label="Open the guide">
+            <button onclick="showAboutModal()" class="p-1.5 text-slate-400 hover:text-teal-700 bg-slate-50 border border-slate-100 rounded-lg transition-colors shadow-sm" title="About" aria-label="About the platform">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </button>
+            <!-- Guide Button -->
+            <button onclick="showGuide()" class="p-1.5 text-teal-700 bg-teal-50 border border-teal-100 rounded-lg transition-colors shadow-sm" title="Guide" aria-label="Open the guide">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
             </button>
             <!-- Install Button -->
             <button onclick="showInstallGuide()" class="p-1.5 text-slate-400 hover:text-teal-700 bg-slate-50 border border-slate-100 rounded-lg transition-colors shadow-sm" title="Install the app">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
             </button>
-            <div id="connection_status" class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
-                <span class="relative flex h-2 w-2"><span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span> Cloud
+            <div id="connection_status" title="Live connection" aria-label="Live connection" class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+                <span class="relative flex h-2 w-2"><span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
             </div>
         </div>
         <div id="scopeBar" class="w-full basis-full mt-2">
@@ -775,13 +797,13 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=8.7"></script>
-    <script src="js/dashboard.js?v=8.7"></script>
-    <script src="js/info_texts.js?v=8.7"></script>
-    <script src="js/dashboard_panels.js?v=8.7"></script>
-    <script src="js/dashboard_year.js?v=8.7"></script>
-    <script src="js/dashboard_period.js?v=8.7"></script>
-    <script src="js/guide.js?v=8.7"></script>
+    <script src="js/data.js?v=8.8"></script>
+    <script src="js/dashboard.js?v=8.8"></script>
+    <script src="js/info_texts.js?v=8.8"></script>
+    <script src="js/dashboard_panels.js?v=8.8"></script>
+    <script src="js/dashboard_year.js?v=8.8"></script>
+    <script src="js/dashboard_period.js?v=8.8"></script>
+    <script src="js/guide.js?v=8.8"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>

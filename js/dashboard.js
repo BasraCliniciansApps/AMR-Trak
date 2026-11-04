@@ -316,13 +316,40 @@ function setDashStatus(kind, text) {
     el.className = 'text-[10px] font-bold rounded-lg px-3 py-1.5 mb-3 border ' + (kind === 'ok' ? 'text-emerald-700 bg-emerald-50 border-emerald-100' : kind === 'warn' ? 'text-amber-800 bg-amber-50 border-amber-200' : 'text-red-700 bg-red-50 border-red-200');
 }
 
+// Branded loading screen (replaces the plain dialog): logo, progress bar and a pointer to the Guide
+function showLoading(text) {
+    let el = document.getElementById('loadView');
+    if (!el) {
+        el = document.createElement('div'); el.id = 'loadView';
+        el.innerHTML = `<div class="ld-card">
+            <div class="ld-logo"><img src="icon.png" alt=""></div>
+            <div class="ld-name">AMR Tracker</div>
+            <div class="ld-sub">Antimicrobial Resistance Surveillance</div>
+            <div class="ld-bar" role="progressbar" aria-label="Loading"><i></i></div>
+            <div class="ld-status" id="ldStatus"></div>
+            <div class="ld-tip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+            <div><b>New here?</b> Open the <b>Guide</b> (the book icon at the top of the screen). It explains every chart, how to read it, and the standards behind it. We recommend reading it once.</div></div>
+        </div>`;
+        document.body.appendChild(el);
+    }
+    el.classList.remove('out');
+    const st = document.getElementById('ldStatus'); if (st) st.textContent = text || '';
+}
+function hideLoading() {
+    const el = document.getElementById('loadView');
+    if (!el) return;
+    el.classList.add('out');
+    setTimeout(() => { if (el.classList.contains('out') && el.parentNode) el.parentNode.removeChild(el); }, 450);
+}
+
 function fetchCloudData() {
     if (!db) {
         refreshAll();
         return;
     }
     
-    Swal.fire({ title: 'Connecting to Cloud...', text: 'Establishing live connection...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+    showLoading('Connecting to the surveillance cloud...');
+    setTimeout(hideLoading, 15000);   // never block the app: fall back to the data saved on this phone
     
     // The dashboard reads ONLY the pseudonymised public copy (no names, hashed patient ids).
     // The private document (amr_sync) requires sign-in and is used by the data-entry app.
@@ -339,7 +366,7 @@ function fetchCloudData() {
                 const ids = Object.keys(data.chunks || {}).sort();
                 const have = ids.filter(id => docsById[id]).length;
                 if (have < ids.length) {                                             // a part is still arriving or missing
-                    Swal.close();
+                    hideLoading();
                     setDashStatus('warn', `Data is incomplete in the cloud (${have} of ${ids.length} parts). Open the data-entry app and use "Publish now".`);
                     refreshAll();
                     return;
@@ -355,18 +382,18 @@ function fetchCloudData() {
             } catch (e) { console.warn('Local cache full', e); }
 
             refreshAll();
-            Swal.close();
+            hideLoading();
             let when = '';
             try { when = data.last_updated && data.last_updated.toDate ? data.last_updated.toDate().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : ''; } catch (e) {}
             setDashStatus(cloudRecords.length ? 'ok' : 'warn', `${cloudRecords.length} isolates${when ? ' - published ' + when : ''}`);
         } else {
-            Swal.close();
+            hideLoading();
             setDashStatus('warn', 'No published data found in the cloud.');
             Swal.fire({ icon: 'info', title: 'No data yet', text: 'The public dashboard data has not been published. Open the data-entry app and sign in once to publish it.' });
         }
     }, (error) => {
         console.error("Firebase Error:", error);
-        Swal.close();
+        hideLoading();
         setDashStatus('err', `Could not read the cloud (${error && error.code ? error.code : 'error'}). Showing the last saved data on this phone.`);
         Swal.fire({ icon: 'warning', title: 'Offline Mode', text: 'Could not connect to cloud.', timer: 2000, showConfirmButton: false });
         refreshAll();
