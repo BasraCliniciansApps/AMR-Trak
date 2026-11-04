@@ -1068,6 +1068,27 @@ function loadAnalyticsFilters() {
     
     generateGuidedAnalytics();
 }
+// Draws the rotated antibiotic names so every label (one or two lines) is centred on its bar
+const centredAbxLabels = {
+    id: 'centredAbxLabels',
+    afterDraw(chart) {
+        const sc = chart.scales.x; if (!sc) return;
+        const ctx = chart.ctx, lh = 12, labels = chart.data.labels || [];
+        ctx.save();
+        ctx.fillStyle = '#475569'; ctx.font = "bold 10px Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif";
+        ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        labels.forEach((l, i) => {
+            const t = wrapAbxLabel(l), lines = Array.isArray(t) ? t : [t];
+            const x = sc.getPixelForTick(i), y = sc.top + 8;
+            ctx.save(); ctx.translate(x, y); ctx.rotate(-Math.PI / 2);
+            // rotated: text runs bottom-to-top, so the first line sits on the left
+            lines.forEach((ln, k) => ctx.fillText(ln, 0, (k - (lines.length - 1) / 2) * lh));
+            ctx.restore();
+        });
+        ctx.restore();
+    }
+};
+
 // Long combination names (e.g. Trimethoprim/Sulfamethoxazole) are split into two lines at "/" so they fit under the bars
 function wrapAbxLabel(l) {
     l = String(l == null ? '' : l);
@@ -1282,9 +1303,9 @@ function renderGuidedAST() {
         data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
         options: { 
             responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
-            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, font: {size: 10, weight: 'bold'}, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } } } } 
+            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, color: 'rgba(0,0,0,0)', font: {size: 10, weight: 'bold'}, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } } } } 
         },
-        plugins: [errorBarsPlugin]
+        plugins: [errorBarsPlugin, centredAbxLabels]
     });
 }
 // -------------------------------------------------------------
@@ -1410,9 +1431,9 @@ function renderPathoChart() {
         data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
         options: { 
             responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
-            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, font: {size: 10, weight: 'bold'}, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } } } } 
+            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, color: 'rgba(0,0,0,0)', font: {size: 10, weight: 'bold'}, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } } } } 
         },
-        plugins: [errorBarsPlugin]
+        plugins: [errorBarsPlugin, centredAbxLabels]
     });
 }
 // -------------------------------------------------------------
@@ -1533,9 +1554,9 @@ function renderAbxChart() {
         data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
         options: { 
             responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
-            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, font: {size: 10, weight: 'bold'}, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } } } } 
+            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, color: 'rgba(0,0,0,0)', font: {size: 10, weight: 'bold'}, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } } } } 
         },
-        plugins: [errorBarsPlugin]
+        plugins: [errorBarsPlugin, centredAbxLabels]
     });
 }
 window.generateAdvancedAnalytics = function() {
