@@ -230,6 +230,7 @@ const REFS = {
 // Which sources support which (i) popup
 function refsFor(key) {
     const k = String(key || '');
+    if (/^ya_/.test(k)) return ['CLSI_M39', 'WHO_GLASS', 'CLSI_M100'];
     if (/^mdr/.test(k)) return ['MAGIORAKOS', 'CLSI_M100', 'CLSI_M39'];
     if (/^markers/.test(k)) return ['WHO_BPPL', 'WHO_GLASS', 'CLSI_M100'];
     if (k === 'lab_blood') return ['CLSI_M47', 'ASM_BCC'];

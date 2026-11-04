@@ -71,6 +71,7 @@ function refreshAll() {
     try { generateLiveSurveillance(); } catch (e) { console.error(e); }
     try { renderMdrPanel(); } catch (e) { console.error(e); }
     try { renderLabQuality(); } catch (e) { console.error(e); }
+    try { renderAnnualReport(); } catch (e) { console.error(e); }
 }
 
 // ---------- tabs ----------
@@ -495,8 +496,15 @@ const SECTIONS = {
 function sectionTitle(sec) { return chartTitleOf(sec.title); }
 function chartElement(c) {
     const el = document.querySelector(c.alt || c.el);
-    if (!el || el.offsetParent === null) return null;                    // not on screen
-    if (el.tagName === 'CANVAS' && !el.width) return null;
+    if (!el) return null;
+    // collapsed cards are still printable: only switched-off sections and tabs that are not open are skipped
+    if (el.closest('.sec-off, .res-collapsed')) return null;
+    const view = el.closest('#viewAnalytics, #viewLastYear, #viewLastMonth, #viewLastQuarter, #viewLab');
+    if (view && view.classList.contains('hidden')) return null;
+    if (el.tagName === 'CANVAS') {
+        let chart = null; try { chart = window.Chart && Chart.getChart && Chart.getChart(el); } catch (e) {}
+        if (!chart && !el.width) return null;
+    }
     if (c.kind === 'table' && !el.querySelector('table')) return null;
     if (c.kind === 'tiles' && !el.children.length) return null;
     return el;
