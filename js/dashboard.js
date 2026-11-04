@@ -430,7 +430,6 @@ function generateLiveSurveillance() {
 
     buildMobileLiveSection(monthRecords, 'm', settings, targetMonthPrefix);
     buildMobileLiveSection(quarterRecords, 'q', settings, `${qLabel} ${qYear}`);
-    buildMobileLiveSection(yearRecords, 'y', settings, fullYear);
 }
 
 function buildMobileLiveSection(records, prefix, settings, timeLabel) {
@@ -438,24 +437,10 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     if(records.length === 0) {
         $(`#live_${prefix}_bug`).text("-");
         $(`#live_${prefix}_spec`).text("-");
-        $(`#live_${prefix}_profiles_wrapper, #live_${prefix}_watchlist_container`).addClass('hidden');
-        
-        $(`#live_${prefix}_amr_title`).text(`Critical Resistance Markers (${timeLabel})`);
-        $(`#live_${prefix}_blood_subtitle`).text(timeLabel);
-        $(`#live_${prefix}_urine_subtitle`).text(timeLabel);
-        $(`#live_${prefix}_bar_title`).text(`Top 5 Specimens (${timeLabel})`);
+        $(`#live_${prefix}_watchlist_container`).addClass('hidden');
         return;
     }
 
-    $(`#live_${prefix}_profiles_wrapper`).removeClass('hidden');
-
-    $(`#live_${prefix}_amr_title`).text(`Critical Resistance Markers (${timeLabel})`);
-    const markerHtml = '<ul style="margin-left:16px;list-style:disc">' + CRITICAL_MARKERS.map(m => `<li style="margin-bottom:4px"><b>${m.label}</b>: ${m.info || ''}</li>`).join('') + '</ul><p style="margin-top:8px">Counted on first isolates only. Grey bars: fewer than 30 isolates tested.</p>';
-    setInfo('markers_' + prefix, 'Critical resistance markers', markerHtml);
-    attachInfo(`#live_${prefix}_amr_wrapper`, 'markers_' + prefix);
-    $(`#live_${prefix}_blood_subtitle`).text(timeLabel);
-    $(`#live_${prefix}_urine_subtitle`).text(timeLabel);
-    $(`#live_${prefix}_bar_title`).text(`Top 5 Specimens (${timeLabel})`);
 
     // --- CLSI M39 DEDUPLICATION (First isolate per patient per organism per year) ---
     records = applyDeduplication(records);
@@ -471,8 +456,6 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
 
     let orgCounts = {}, specCounts = {};
 
-    // --- CRITICAL MARKERS (WHO GLASS / WHO priority pathogens / CLSI M100): defined once in data.js ---
-    let amrStats = evaluateCriticalMarkers(surveillanceRecords);
 
     // Prevalence is tallied on first isolates only
     records.forEach(r => {
@@ -484,126 +467,6 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     $(`#live_${prefix}_bug`).text(formatOrgName(Object.keys(orgCounts).sort((a, b) => orgCounts[b] - orgCounts[a])[0]) || "-");
     $(`#live_${prefix}_spec`).text(Object.keys(specCounts).sort((a, b) => specCounts[b] - specCounts[a])[0] || "-");
 
-    let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
-    amrStats.forEach((stat, index) => {
-        let markerLabel = stat.label.split('\n');
-        if (stat.candidates) markerLabel.push(stat.candidates + ' unconfirmed');
-        labels.push(markerLabel);
-        let palette = extendedPalette[index % extendedPalette.length]; 
-        
-        if (stat.tested === 0) { 
-            data.push(0); 
-            bgColors.push(palette.faded); 
-            ciData.push({ lower: 0, upper: 0 }); 
-            nDataArr.push(0);
-        } else {
-            data.push(Math.round((stat.resistant / stat.tested) * 100));
-            // Gray out bar if sample size is below CLSI statistical threshold (n < 30)
-            bgColors.push(stat.tested >= 30 ? palette.bg : '#94a3b8'); 
-            ciData.push(wilsonScoreCI(stat.resistant, stat.tested));
-            nDataArr.push(stat.tested);
-        }
-    });
-if (settings.show_amr === false) {
-        $(`#live_${prefix}_amr_wrapper`).addClass('hidden');
-    } else {
-        $(`#live_${prefix}_amr_wrapper`).removeClass('hidden');
-    }
-    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_amr`), {
-        type: 'bar',
-        data: { 
-            labels, 
-            datasets: [{ 
-                label: 'Pathogen', 
-                data, 
-                backgroundColor: bgColors, 
-                ciData, 
-                nData: nDataArr, 
-                borderRadius: 4, 
-                maxBarThickness: 30 
-            }] 
-        },
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            plugins: { legend: { display: false } }, 
-            scales: { y: { max: 100, beginAtZero: true }, x: { afterFit: function(scale) { scale.height = 92; }, ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, color: 'rgba(0,0,0,0)', font: { size: 10, weight: 'bold' }, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } } } } 
-        },
-        plugins: [errorBarsPlugin, centredAbxLabels]
-    }));
-    
-    let bloodRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'blood');
-    let urineRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'urine');
-    
-    let bloodCounts = {};
-    bloodRecords.forEach(r => { let o = r['Selective organism']; if(o) bloodCounts[o] = (bloodCounts[o] || 0) + 1; });
-    let urineCounts = {};
-    urineRecords.forEach(r => { let o = r['Selective organism']; if(o) urineCounts[o] = (urineCounts[o] || 0) + 1; });
-    
-    let sortedBlood = Object.keys(bloodCounts).sort((a,b)=>bloodCounts[b]-bloodCounts[a]).slice(0, 5);
-    let sortedUrine = Object.keys(urineCounts).sort((a,b)=>urineCounts[b]-urineCounts[a]).slice(0, 5);
-    
-    let bloodData = sortedBlood.length ? sortedBlood.map(o=>bloodCounts[o]) : [1];
-    let bloodLabels = sortedBlood.length ? sortedBlood.map(o => formatOrgName(o)) : ['No Blood Samples'];
-    let bloodColors = sortedBlood.length ? ['#ef4444','#dc2626','#f87171','#fca5a5','#fef2f2'] : ['#e2e8f0'];
-
-    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_blood`), {
-        type: 'doughnut', 
-        data: { labels: bloodLabels, datasets: [{ data: bloodData, backgroundColor: bloodColors }] },
-        options: { 
-            responsive: true, maintainAspectRatio: false, 
-            plugins: { 
-                legend: { display: false },
-                tooltip: { enabled: sortedBlood.length > 0 }
-            } 
-        }
-    }));
-    
-    let urineData = sortedUrine.length ? sortedUrine.map(o=>urineCounts[o]) : [1];
-    let urineLabels = sortedUrine.length ? sortedUrine.map(o => formatOrgName(o)) : ['No Urine Samples'];
-    let urineColors = sortedUrine.length ? ['#eab308','#ca8a04','#fde047','#fef08a','#fefce8'] : ['#e2e8f0'];
-
-    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_urine`), {
-        type: 'doughnut', 
-        data: { labels: urineLabels, datasets: [{ data: urineData, backgroundColor: urineColors }] },
-        options: { 
-            responsive: true, maintainAspectRatio: false, 
-            plugins: { 
-                legend: { display: false },
-                tooltip: { enabled: sortedUrine.length > 0 }
-            } 
-        }
-    }));
-
-    let sortedSpecs = Object.keys(specCounts).sort((a,b)=>specCounts[b]-specCounts[a]);
-    let top5Specs = sortedSpecs.slice(0, 5);
-
-    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_bar`), {
-        type: 'bar', 
-        data: { 
-            labels: top5Specs, 
-            datasets: [{ 
-                data: top5Specs.map(s => specCounts[s]), 
-                backgroundColor: '#2cb4a4', 
-                borderRadius: 4 
-            }] 
-        },
-        options: { 
-            indexAxis: 'y', 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            plugins: { legend: { display: false } }, 
-            scales: { 
-                x: { 
-                    ticks: { stepSize: 1, maxRotation: 45, minRotation: 45 } 
-                },
-                y: { grid: { display: false } }
-            } 
-        }
-    }));
-
-    let p1 = settings.profile1_abx || 'Meropenem';
-    let p2 = settings.profile2_abx || 'Ceftriaxone';
 // --- 🚨 MDR / XDR Classification Algorithm ---
     let mdrStats = { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0, 'PDR': 0 };
     let possibleXdrCount = 0, possiblePdrCount = 0;
@@ -689,11 +552,6 @@ if (settings.show_amr === false) {
         },
         plugins: [centredAbxLabels]
     }));
-    $(`#live_${prefix}_profile1_title`).text(`${p1} Resistance (% R)`);
-    $(`#live_${prefix}_profile2_title`).text(`${p2} Resistance (% R)`);
-
-    buildMobileAbxProfileChart(p1, `chart_${prefix}_mero`, `live_${prefix}_mero_count`, records, prefix === 'm' ? '#2563eb' : '#059669');
-    buildMobileAbxProfileChart(p2, `chart_${prefix}_cro`, `live_${prefix}_cro_count`, records, '#0d9488');
     // 🚨 Global Threat Watchlist Logic (Graphical & Detailed Edition)
     let watchBug = settings.watchlist_bug;
     if (watchBug && watchBug !== "") {

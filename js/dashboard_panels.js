@@ -72,6 +72,7 @@ function refreshAll() {
     try { renderMdrPanel(); } catch (e) { console.error(e); }
     try { renderLabQuality(); } catch (e) { console.error(e); }
     try { renderAnnualReport(); } catch (e) { console.error(e); }
+    try { renderPeriodPanels(); } catch (e) { console.error(e); }
 }
 
 // ---------- tabs ----------
@@ -448,9 +449,6 @@ setInfo('sec_prevalence', 'Organism prevalence', '<p>Share of first isolates by 
 setInfo('sec_patho', 'Susceptibility profile of one organism', '<p>For the selected organism, each bar shows the percentage of tested isolates that are susceptible (S), intermediate (I) or resistant (R) to an antibiotic. Results are interpreted with CLSI M100 breakpoints; %S does not include I or SDD results. Bars based on fewer than 30 isolates are faded (CLSI M39).</p>');
 setInfo('sec_abx', 'Activity of one antibiotic', '<p>For the selected antibiotic, each bar shows the percentage of isolates of an organism that are susceptible (S), intermediate (I) or resistant (R). Interpretation follows CLSI M100. Organisms with fewer than 30 tested isolates are faded and should be interpreted with caution (CLSI M39).</p>');
 setInfo('sec_heatmap', 'Organism by antibiotic heatmap', '<p>Each cell is the percentage of the chosen category (S, I or R) for one organism and antibiotic among tested isolates. An asterisk marks cells with fewer than 30 tested isolates. Isolates are de-duplicated (CLSI M39) and interpreted with CLSI M100.</p>');
-setInfo('sec_pies', 'Blood and urine prevalence', '<p>Organism distribution among first isolates from blood and from urine in the selected period. Possible skin-flora organisms in blood may include contaminants and are reviewed in the Culture Overview.</p>');
-setInfo('sec_top5', 'Top 5 specimens', '<p>The five specimen types that yielded the most first isolates in the selected period.</p>');
-setInfo('sec_profiles', 'Resistance profiles', '<p>Percentage of isolates resistant (R) to the two antibiotics chosen in the data-entry settings, by organism, among isolates tested. Interpretation follows CLSI M100; bars with fewer than 30 tested isolates are grey (CLSI M39).</p>');
 setInfo('sec_watch', 'Threat watchlist', '<p>Occurrence and resistance pattern of the pathogen selected for monitoring in the data-entry settings, among first isolates in the selected period.</p>');
 
 function chartTitleOf(selOrFn) { return typeof selOrFn === 'function' ? selOrFn() : selOrFn; }
@@ -458,17 +456,11 @@ const profTitle = (p, n) => () => $('#live_' + p + '_profile' + n + '_title').te
 
 function monthSection(p, label) {
     return {
-        id: 'sec_' + label, title: () => $('#live_' + (p === 'm' ? 'month' : p) + '_title').text() || (p === 'm' ? 'Last Month' : p === 'y' ? 'Last Year' : 'Last Quarter'),
-        infos: [['Overview', 'overview_' + p], ['Critical resistance markers', 'markers_' + p], ['Blood and urine prevalence', 'sec_pies'], ['Top 5 specimens', 'sec_top5'], ['MDR / XDR / PDR classification', 'mdr_' + p], ['Resistance profiles', 'sec_profiles'], ['Threat watchlist', 'sec_watch']],
+        id: 'sec_' + label, title: () => $('#live_' + (p === 'm' ? 'month' : p) + '_title').text() || (p === 'm' ? 'Last Month' : 'Last Quarter'),
+        infos: [['Overview', 'overview_' + p], ['MDR / XDR / PDR classification', 'mdr_' + p], ['Threat watchlist', 'sec_watch']],
         charts: [
-            { title: 'Critical Resistance Markers', el: '#chart_' + p + '_amr' },
-            { title: 'Prevalence in Blood Sample', el: '#chart_' + p + '_blood' },
-            { title: 'Prevalence in Urine Sample', el: '#chart_' + p + '_urine' },
-            { title: 'Top 5 Specimens', el: '#chart_' + p + '_bar' },
             { title: 'MDR / XDR / PDR: Overall', el: '#chart_' + p + '_mdr_pie' },
             { title: 'MDR / XDR / PDR: Hotspot wards', el: '#chart_' + p + '_mdr_bar' },
-            { title: profTitle(p, 1), el: '#chart_' + p + '_mero' },
-            { title: profTitle(p, 2), el: '#chart_' + p + '_cro' },
             { title: 'Global Threat Watchlist', el: '#chart_' + p + '_watch_abx' }
         ]
     };
@@ -485,7 +477,7 @@ const SECTIONS = {
     mdr: { id: 'mdr', title: 'MDR / XDR / PDR Analysis', labelSel: '#mdr_range_label',
         infos: [['Definitions and method', 'mdr_panel'], ['Summary figures', 'mdr_tiles'], ['Monthly trend', 'mdr_trend'], ['Distribution by ward', 'mdr_wards'], ['By organism group', 'mdr_group']],
         charts: [{ title: 'Summary', el: '#mdr_tiles', kind: 'tiles' }, { title: 'Resistance classification', el: '#chart_mdr_panel_pie' }, { title: 'Monthly trend (% of classified isolates)', el: '#chart_mdr_panel_trend' }, { title: 'All wards', el: '#chart_mdr_panel_wards' }, { title: 'By organism group', el: '#mdr_group_table', kind: 'table' }] },
-    year: monthSection('y', 'year'),
+    year: { id: 'sec_year', title: () => $('#live_y_title').text() || 'Last Year', infos: [], charts: [] },
     month: monthSection('m', 'month'),
     quarter: monthSection('q', 'quarter'),
     lab: { id: 'lab', title: 'Culture Overview', labelSel: '#lab_range_label',

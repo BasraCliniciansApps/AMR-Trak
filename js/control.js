@@ -21,7 +21,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 const TOGGLES = {
     tabs: [['tab_year', 'Last Year'], ['tab_quarter', 'Last Quarter'], ['tab_month', 'Last Month'], ['tab_lab', 'Culture Overview']],
     analytics: [['sec_prevalence', 'Clinical Prevalence & AST Profile'], ['sec_patho', 'Bacteria / Fungi Susceptibility Profile'], ['sec_abx', 'Antimicrobial Efficacy Profile'], ['sec_heatmap', 'Advanced Cross-Search (Heatmaps)'], ['sec_mdr_panel', 'MDR / XDR / PDR Analysis']],
-    content: [['show_amr', 'Critical Resistance Markers'], ['sec_pies', 'Blood and Urine prevalence'], ['sec_top5', 'Top 5 Specimens'], ['sec_mdr', 'MDR / XDR / PDR card'], ['sec_profiles', 'Resistance profiles (2 antibiotics)']]
+    content: [['sec_mdr', 'MDR / XDR / PDR card']]
 };
 const ALL_TOGGLE_KEYS = [].concat(TOGGLES.tabs, TOGGLES.analytics, TOGGLES.content).map(x => x[0]);
 
@@ -123,8 +123,6 @@ function render() {
             <p class="hint">Neonatal ICU is a separate unit. Leave it unselected to keep it out of the ICU view.</p></div>`;
 
     const profiles = `
-        <div class="field"><label>Resistance profile 1</label><select class="select" data-k="profile1_abx">${optionList(abx, cur.profile1_abx)}</select></div>
-        <div class="field"><label>Resistance profile 2</label><select class="select" data-k="profile2_abx">${optionList(abx, cur.profile2_abx)}</select></div>
         <div class="field"><label>Threat watchlist organism</label><select class="select" data-k="watchlist_bug">${optionList(orgs, cur.watchlist_bug, 'None (watchlist off)')}</select>
             <p class="hint">When this organism is detected in the selected period, the dashboard shows an alert card with its resistance profile.</p></div>`;
 
@@ -134,7 +132,7 @@ function render() {
         card('analytics', 'chart', 'Analytics sections', `<div>${toggleRows(TOGGLES.analytics)}</div>`) +
         card('content', 'layers', 'Period tab content', `<div>${toggleRows(TOGGLES.content)}</div><p class="hint" style="margin-top:8px">Applies to the Last Year, Last Quarter and Last Month tabs.</p>`) +
         card('scope', 'building', 'Unit scope', scope) +
-        card('profiles', 'flask', 'Profiles and watchlist', profiles);
+        card('profiles', 'flask', 'Threat watchlist', profiles);
     open.forEach(id => $('#card_' + id) && $('#card_' + id).classList.add('open'));
     summaries();
 }
@@ -153,7 +151,7 @@ function summaries() {
     set('content', count(TOGGLES.content));
     const sc = { all: 'All units', icu: 'ICU', nonicu: 'Non-ICU' }[cur.dash_default_scope];
     set('scope', (cur.dash_show_scope ? 'Switch visible' : 'Switch hidden') + `  ·  opens on ${sc}`);
-    set('profiles', `${cur.profile1_abx}, ${cur.profile2_abx}` + (cur.watchlist_bug ? `  ·  ${cur.watchlist_bug}` : '  ·  watchlist off'));
+    set('profiles', cur.watchlist_bug ? cur.watchlist_bug : 'Watchlist off');
 }
 
 function refreshState() {

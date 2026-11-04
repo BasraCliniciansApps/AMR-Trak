@@ -577,33 +577,8 @@
                     </div>
                 </div>
                 
-                <div id="live_m_amr_wrapper" class="mt-4 border-t border-slate-100 pt-4">
-                    <h4 id="live_m_amr_title" class="text-xs font-bold text-slate-700 text-center mb-2">Critical Resistance Markers</h4>
-                    <div class="w-full overflow-x-auto custom-scroll mb-2">
-                        <div class="h-[250px] relative" style="min-width: 400px;"><canvas id="chart_m_amr"></canvas></div>
-                    </div>
-                    
-                </div>
-                
-                <!-- Blood & Urine Charts -->
-                <div data-sec="pies" class="grid grid-cols-2 gap-2 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <div>
-                        <h4 class="text-[10px] font-bold text-center text-red-700 mb-0">Prevalence in Blood Sample</h4>
-                        <div id="live_m_blood_subtitle" class="text-[8px] text-center text-slate-500 mb-1"></div>
-                        <div class="h-28 relative"><canvas id="chart_m_blood"></canvas></div>
-                    </div>
-                    <div>
-                        <h4 class="text-[10px] font-bold text-center text-yellow-600 mb-0">Prevalence in Urine Sample</h4>
-                        <div id="live_m_urine_subtitle" class="text-[8px] text-center text-slate-500 mb-1"></div>
-                        <div class="h-28 relative"><canvas id="chart_m_urine"></canvas></div>
-                    </div>
-                </div>
+                <div id="op_m_root" class="space-y-3"></div>
 
-                <!-- Top 5 Specimens Bar Chart -->
-                <div data-sec="top5" class="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4 mt-2">
-                    <h4 id="live_m_bar_title" class="text-[11px] font-bold text-center text-slate-700 mb-2">Top 5 Specimens</h4>
-                    <div class="h-40 relative"><canvas id="chart_m_bar"></canvas></div>
-                </div>
 <!-- MDR & XDR Surveillance Card -->
                 <div data-sec="mdr" class="bg-rose-50 border border-rose-200 rounded-xl p-4 shadow-sm mt-4 mb-4 print-full">
                     <h4 class="text-xs font-bold text-rose-900 mb-3 flex items-center gap-1.5">
@@ -622,16 +597,7 @@
                     </div>
                 </div>
                 <div id="live_m_watchlist_container" class="hidden mt-4"></div>
-                <div data-sec="profiles" id="live_m_profiles_wrapper" class="space-y-3 mt-4 pt-4 border-t border-slate-100 hidden">
-                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                        <h4 class="text-xs font-bold text-red-700 mb-2 flex justify-between"><span id="live_m_profile1_title">Profile 1</span><span class="text-[9px] text-slate-500" id="live_m_mero_count"></span></h4>
-                        <div class="w-full overflow-x-auto custom-scroll"><div class="h-60 relative" style="min-width: 300px;"><canvas id="chart_m_mero"></canvas></div></div>
-                    </div>
-                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                        <h4 class="text-xs font-bold text-amber-600 mb-2 flex justify-between"><span id="live_m_profile2_title">Profile 2</span><span class="text-[9px] text-slate-500" id="live_m_cro_count"></span></h4>
-                        <div class="w-full overflow-x-auto custom-scroll"><div class="h-60 relative" style="min-width: 300px;"><canvas id="chart_m_cro"></canvas></div></div>
-                    </div>
-                </div>
+                
             </div>
         </div>
 
@@ -640,69 +606,9 @@
             <div class="mobile-card border-t-4 border-t-indigo-500">
                 <h3 class="text-sm font-bold text-indigo-800 mb-3 bg-indigo-50 p-2 rounded text-center"><span id="live_y_title">Surveillance Overview</span></h3>
                 
-                <div class="grid grid-cols-3 gap-2 text-center mb-4">
-                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
-                        <div class="text-[10px] text-slate-500 font-bold mb-1">Isolates</div>
-                        <div class="text-lg font-black text-slate-800" id="live_y_total">-</div>
-                    </div>
-                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
-                        <div class="text-[10px] text-slate-500 font-bold mb-1">Top Bug</div>
-                        <div class="text-[11px] font-bold text-rose-600 leading-snug break-words" id="live_y_bug">-</div>
-                    </div>
-                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
-                        <div class="text-[10px] text-slate-500 font-bold mb-1">Top Specimen</div>
-                        <div class="text-[11px] font-bold text-teal-600 leading-snug break-words" id="live_y_spec">-</div>
-                    </div>
-                </div>
-                
-                <!-- Annual surveillance report (built by js/dashboard_year.js) -->
                 <div id="ya_report" class="mb-4"></div>
 
-                <div id="live_y_amr_wrapper" class="mt-4 border-t border-slate-100 pt-4">
-                    <h4 id="live_y_amr_title" class="text-xs font-bold text-slate-700 text-center mb-2">Critical Resistance Markers</h4>
-                    <div class="w-full overflow-x-auto custom-scroll mb-2">
-                        <div class="h-[250px] relative" style="min-width: 400px;"><canvas id="chart_y_amr"></canvas></div>
-                    </div>
-                    
-                </div>
                 
-                <!-- Blood & Urine Charts -->
-                <div data-sec="pies" class="grid grid-cols-2 gap-2 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <div>
-                        <h4 class="text-[10px] font-bold text-center text-red-700 mb-0">Prevalence in Blood Sample</h4>
-                        <div id="live_y_blood_subtitle" class="text-[8px] text-center text-slate-500 mb-1"></div>
-                        <div class="h-28 relative"><canvas id="chart_y_blood"></canvas></div>
-                    </div>
-                    <div>
-                        <h4 class="text-[10px] font-bold text-center text-yellow-600 mb-0">Prevalence in Urine Sample</h4>
-                        <div id="live_y_urine_subtitle" class="text-[8px] text-center text-slate-500 mb-1"></div>
-                        <div class="h-28 relative"><canvas id="chart_y_urine"></canvas></div>
-                    </div>
-                </div>
-
-                <!-- Top 5 Specimens Bar Chart -->
-                <div data-sec="top5" class="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4 mt-2">
-                    <h4 id="live_y_bar_title" class="text-[11px] font-bold text-center text-slate-700 mb-2">Top 5 Specimens</h4>
-                    <div class="h-40 relative"><canvas id="chart_y_bar"></canvas></div>
-                </div>
-<!-- MDR & XDR Surveillance Card -->
-                <div data-sec="mdr" class="bg-rose-50 border border-rose-200 rounded-xl p-4 shadow-sm mt-4 mb-4 print-full">
-                    <h4 class="text-xs font-bold text-rose-900 mb-3 flex items-center gap-1.5">
-                        <svg class="w-4 h-4 text-rose-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                        MDR / XDR / PDR Epidemiological Burden
-                    </h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Doughnut Chart -->
-                        <div class="bg-white border border-rose-100 p-2 rounded-lg shadow-inner">
-                            <div class="h-[180px] relative"><canvas id="chart_y_mdr_pie"></canvas></div>
-                        </div>
-                        <!-- Stacked Bar Chart -->
-                        <div class="bg-white border border-rose-100 p-2 rounded-lg shadow-inner">
-                            <div class="h-[250px] relative"><canvas id="chart_y_mdr_bar"></canvas></div>
-                        </div>
-                    </div>
-                </div>
-                <div id="live_y_watchlist_container" class="hidden mt-4"></div>
             </div>
         </div>
 
@@ -727,33 +633,8 @@
                     </div>
                 </div>
                 
-                <div id="live_q_amr_wrapper" class="mt-4 border-t border-slate-100 pt-4">
-                    <h4 id="live_q_amr_title" class="text-xs font-bold text-slate-700 text-center mb-2">Critical Resistance Markers</h4>
-                    <div class="w-full overflow-x-auto custom-scroll mb-2">
-                        <div class="h-[250px] relative" style="min-width: 400px;"><canvas id="chart_q_amr"></canvas></div>
-                    </div>
-                    
-                </div>
-                
-                <!-- Blood & Urine Charts -->
-                <div data-sec="pies" class="grid grid-cols-2 gap-2 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <div>
-                        <h4 class="text-[10px] font-bold text-center text-red-700 mb-0">Prevalence in Blood Sample</h4>
-                        <div id="live_q_blood_subtitle" class="text-[8px] text-center text-slate-500 mb-1"></div>
-                        <div class="h-28 relative"><canvas id="chart_q_blood"></canvas></div>
-                    </div>
-                    <div>
-                        <h4 class="text-[10px] font-bold text-center text-yellow-600 mb-0">Prevalence in Urine Sample</h4>
-                        <div id="live_q_urine_subtitle" class="text-[8px] text-center text-slate-500 mb-1"></div>
-                        <div class="h-28 relative"><canvas id="chart_q_urine"></canvas></div>
-                    </div>
-                </div>
+                <div id="op_q_root" class="space-y-3"></div>
 
-                <!-- Top 5 Specimens Bar Chart -->
-                <div data-sec="top5" class="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4 mt-2">
-                    <h4 id="live_q_bar_title" class="text-[11px] font-bold text-center text-slate-700 mb-2">Top 5 Specimens</h4>
-                    <div class="h-40 relative"><canvas id="chart_q_bar"></canvas></div>
-                </div>
 <!-- MDR & XDR Surveillance Card -->
                 <div data-sec="mdr" class="bg-rose-50 border border-rose-200 rounded-xl p-4 shadow-sm mt-4 mb-4 print-full">
                     <h4 class="text-xs font-bold text-rose-900 mb-3 flex items-center gap-1.5">
@@ -772,16 +653,7 @@
                     </div>
                 </div>
                 <div id="live_q_watchlist_container" class="hidden mt-4"></div>
-                <div data-sec="profiles" id="live_q_profiles_wrapper" class="space-y-3 mt-4 pt-4 border-t border-slate-100 hidden">
-                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                        <h4 class="text-xs font-bold text-red-700 mb-2 flex justify-between"><span id="live_q_profile1_title">Profile 1</span><span class="text-[9px] text-slate-500" id="live_q_mero_count"></span></h4>
-                        <div class="w-full overflow-x-auto custom-scroll"><div class="h-60 relative" style="min-width: 300px;"><canvas id="chart_q_mero"></canvas></div></div>
-                    </div>
-                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                        <h4 class="text-xs font-bold text-amber-600 mb-2 flex justify-between"><span id="live_q_profile2_title">Profile 2</span><span class="text-[9px] text-slate-500" id="live_q_cro_count"></span></h4>
-                        <div class="w-full overflow-x-auto custom-scroll"><div class="h-60 relative" style="min-width: 300px;"><canvas id="chart_q_cro"></canvas></div></div>
-                    </div>
-                </div>
+                
             </div>
         </div>
 
@@ -838,10 +710,11 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=8.4"></script>
-    <script src="js/dashboard.js?v=8.4"></script>
-    <script src="js/dashboard_panels.js?v=8.4"></script>
-    <script src="js/dashboard_year.js?v=8.4"></script>
+    <script src="js/data.js?v=8.5"></script>
+    <script src="js/dashboard.js?v=8.5"></script>
+    <script src="js/dashboard_panels.js?v=8.5"></script>
+    <script src="js/dashboard_year.js?v=8.5"></script>
+    <script src="js/dashboard_period.js?v=8.5"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>
