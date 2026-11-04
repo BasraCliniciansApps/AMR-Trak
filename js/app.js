@@ -1843,6 +1843,9 @@ function generateAnalytics() {
     let records = allRecords.filter(r => r.Date >= startDate && r.Date <= endDate);
 
     if (targetSample) { records = records.filter(r => r.Sample === targetSample); }
+
+    // CLSI M39: first isolate per patient per organism per year
+    records = applyDeduplication(records);
     
     if (records.length === 0) {
         $('#analyticsPlaceholder').removeClass('hidden').html(`
@@ -1857,7 +1860,7 @@ function generateAnalytics() {
     $('#analyticsContainer').removeClass('hidden');
 
     let dashTitle = "Antibiogram Analysis";
-    let dashSub = `${startDate} to ${endDate} | Metric: % ${metricLabel}`;
+    let dashSub = `${startDate} to ${endDate} | Metric: % ${metricLabel} | n=${records.length} first isolates (CLSI M39)`;
     if(targetSample) dashSub += ` | Sample: ${targetSample}`;
     $('#dashTitle').text(dashTitle);
     $('#dashSubtitle').text(dashSub);
@@ -1917,7 +1920,7 @@ function generateAnalytics() {
                 heatmapStats[org][abx].t += 1;
                 if (res === 'R') heatmapStats[org][abx].r += 1;
                 if (res === 'S') heatmapStats[org][abx].s += 1;
-                if (res === 'R' || res === 'I') heatmapStats[org][abx].ns += 1; // دمج R و I
+                if (res === 'R' || res === 'I' || res === 'SDD') heatmapStats[org][abx].ns += 1; // دمج R و I
             }
         });
     });
@@ -2483,39 +2486,19 @@ function buildLiveSection(records, prefix, settings) {
 
     $(`#live_${prefix}_profiles_wrapper`).removeClass('hidden');
 
+    records = applyDeduplication(records);
+    $(`#live_${prefix}_total`).text(records.length);
+
     let orgCounts = {}; let specCounts = {};
     
-    // CLINICALLY VALIDATED CRITICAL MARKERS (CLSI M100 / WHO GLASS)
-    const criticalPairs = [
-        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abx: ["Ceftriaxone", "Cefotaxime", "Ceftazidime"], label: "ESBL Indicator\n(3rd Gen Ceph)" },
-        { orgs: ["escherichia coli", "klebsiella pneumoniae"], abx: ["Ertapenem", "Meropenem", "Imipenem"], label: "CRE\n(Carbapenem)" },
-        { orgs: ["staphylococcus aureus"], abx: ["Cefoxitin", "Cefoxitin screen", "Oxacillin"], label: "MRSA\n(FOX/OX)" },
-        { orgs: ["enterococcus faecalis", "enterococcus faecium", "enterococcus spp"], abx: ["Vancomycin", "Teicoplanin"], label: "VRE\n(Vancomycin)" },
-        { orgs: ["staphylococcus aureus"], abx: ["Vancomycin"], label: "VRSA\n(Vancomycin)" }
-    ];
-
-    let amrStats = criticalPairs.map(p => ({ label: p.label, tested: 0, resistant: 0 }));
+    // CRITICAL MARKERS (WHO GLASS / WHO priority pathogens / CLSI M100): defined once in data.js
+    let amrStats = evaluateCriticalMarkers(records);
 
     records.forEach(r => {
         let org = r['Selective organism'] || "";
         let spec = r['Sample'];
         orgCounts[org] = (orgCounts[org] || 0) + 1;
         if(spec && spec !== "-") specCounts[spec] = (specCounts[spec] || 0) + 1;
-
-        let orgLower = org.toLowerCase();
-        criticalPairs.forEach((pair, index) => {
-            if (pair.orgs.some(o => orgLower.includes(o.toLowerCase()))) {
-                // Collect all valid test results available in this panel
-                let validResults = pair.abx.map(a => r[a] ? String(r[a]).trim().toUpperCase() : '').filter(val => val && val !== '-');
-                if (validResults.length > 0) {
-                    amrStats[index].tested++;
-                    // Non-susceptible/Resistant if ANY indicator agent in the panel is 'R'
-                    if (validResults.some(val => val === 'R' || val.startsWith('R'))) {
-                        amrStats[index].resistant++;
-                    }
-                }
-            }
-        });
     });
 
     let topOrg = Object.keys(orgCounts).sort((a,b)=>orgCounts[b]-orgCounts[a])[0] || "-";

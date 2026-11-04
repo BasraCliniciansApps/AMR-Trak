@@ -364,69 +364,20 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     $(`#live_${prefix}_bar_title`).text(`Top 5 Specimens (${timeLabel})`);
 
     // --- CLSI M39 DEDUPLICATION (First isolate per patient per organism per year) ---
-    const surveillanceRecords = applyDeduplication(records);
+    records = applyDeduplication(records);
+    const surveillanceRecords = records;
+    $(`#live_${prefix}_total`).text(records.length);
 
     let orgCounts = {}, specCounts = {};
 
-    // --- CLINICALLY VALIDATED CRITICAL MARKERS (CLSI M100 / WHO GLASS) ---
-    const criticalPairs = [
-        { 
-            orgs: ["escherichia coli", "klebsiella pneumoniae"], 
-            abxList: ["Ceftriaxone", "Cefotaxime", "Ceftazidime"], 
-            label: "ESBL" 
-        },
-        { 
-            orgs: ["escherichia coli", "klebsiella pneumoniae"], 
-            abxList: ["Ertapenem", "Meropenem", "Imipenem"], 
-            label: "CRE" 
-        },
-        { 
-            orgs: ["staphylococcus aureus"], 
-            abxList: ["Cefoxitin", "Cefoxitin screen", "Oxacillin"], 
-            label: "MRSA" 
-        },
-        { 
-            orgs: ["enterococcus faecalis", "enterococcus faecium", "enterococcus spp"], 
-            abxList: ["Vancomycin", "Teicoplanin"], 
-            label: "VRE" 
-        },
-        { 
-            orgs: ["staphylococcus aureus"], 
-            abxList: ["Vancomycin"], 
-            label: "VRSA" 
-        }
-    ];
+    // --- CRITICAL MARKERS (WHO GLASS / WHO priority pathogens / CLSI M100): defined once in data.js ---
+    let amrStats = evaluateCriticalMarkers(surveillanceRecords);
 
-    let amrStats = criticalPairs.map(p => ({ label: p.label, tested: 0, resistant: 0 }));
-
-    // Tally prevalence using all valid records
+    // Prevalence is tallied on first isolates only
     records.forEach(r => {
         let org = r['Selective organism'] || "", spec = r['Sample'];
         orgCounts[org] = (orgCounts[org] || 0) + 1;
         if (spec && spec !== "-") specCounts[spec] = (specCounts[spec] || 0) + 1;
-    });
-
-    // Evaluate AMR resistance on deduplicated surveillance records
-    surveillanceRecords.forEach(r => {
-        let org = r['Selective organism'] || "";
-        let orgLower = org.toLowerCase();
-
-        criticalPairs.forEach((pair, index) => {
-            if (pair.orgs.some(o => orgLower.includes(o.toLowerCase()))) {
-                // Collect all valid test results available in this panel
-                let validResults = pair.abxList
-                    .map(a => r[a] ? String(r[a]).trim().toUpperCase() : '')
-                    .filter(val => val && val !== '-');
-
-                if (validResults.length > 0) {
-                    amrStats[index].tested++;
-                    // Non-susceptible/Resistant if ANY indicator agent in the panel is 'R'
-                    if (validResults.some(val => val === 'R' || val.startsWith('R'))) {
-                        amrStats[index].resistant++;
-                    }
-                }
-            }
-        });
     });
 
     $(`#live_${prefix}_bug`).text(formatOrgName(Object.keys(orgCounts).sort((a, b) => orgCounts[b] - orgCounts[a])[0]) || "-");
@@ -596,6 +547,7 @@ if (settings.show_amr === false) {
     let p2 = settings.profile2_abx || 'Ceftriaxone';
 // --- 🚨 MDR / XDR Classification Algorithm ---
     let mdrStats = { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0 };
+    let possibleXdrCount = 0;
     let wardMdrStats = {};
 
     // MDR/XDR is evaluated on first isolates only (deduplicated), classifiable organisms only
@@ -605,6 +557,7 @@ if (settings.show_amr === false) {
         if (!res) return; // organism outside the Magiorakos category lists (or contaminant)
 
         let classification = res.cls;
+        if (res.possibleXDR) possibleXdrCount++;
         mdrStats[classification]++;
 
         // حساب التوزيع حسب الردهات
@@ -632,7 +585,7 @@ if (settings.show_amr === false) {
             cutout: '65%',
             plugins: { 
                 legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9, weight: 'bold' } } },
-                title: { display: true, text: 'Overall Resistance Classification', font: { size: 10, weight: 'bold' }, padding: { bottom: 10 } }
+                title: { display: true, text: ['Overall Resistance Classification', `n=${mdrData.reduce((x, y) => x + y, 0)} first isolates | XDR = confirmed only (${possibleXdrCount} possible, limited panel)`], font: { size: 10, weight: 'bold' }, padding: { bottom: 10 } }
             } 
         }
     }));
@@ -1158,7 +1111,7 @@ function renderGuidedAST() {
                 abxStats[abx].tested += 1;
                 if (res === 'R') abxStats[abx].r += 1;
                 if (res === 'S') abxStats[abx].s += 1;
-                if (res === 'R' || res === 'I') abxStats[abx].ns += 1; // حساب الـ Non-Susceptible
+                if (res === 'R' || res === 'I' || res === 'SDD') abxStats[abx].ns += 1; // حساب الـ Non-Susceptible
             }
         });
     });
@@ -1278,7 +1231,7 @@ function renderPathoChart() {
                 abxStats[abx].tested += 1;
                 if (res === 'R') abxStats[abx].r += 1;
                 if (res === 'S') abxStats[abx].s += 1;
-                if (res === 'R' || res === 'I') abxStats[abx].ns += 1;
+                if (res === 'R' || res === 'I' || res === 'SDD') abxStats[abx].ns += 1;
             }
         });
     });
@@ -1401,7 +1354,7 @@ function renderAbxChart() {
             orgStats[org].tested += 1;
             if (res === 'R') orgStats[org].r += 1;
             if (res === 'S') orgStats[org].s += 1;
-            if (res === 'R' || res === 'I') orgStats[org].ns += 1;
+            if (res === 'R' || res === 'I' || res === 'SDD') orgStats[org].ns += 1;
         }
     });
 
@@ -1515,7 +1468,7 @@ window.generateAdvancedAnalytics = function() {
                     heatmapStats[org][abx].t += 1;
                     if (res === 'R') heatmapStats[org][abx].r += 1;
                     if (res === 'S') heatmapStats[org][abx].s += 1;
-                    if (res === 'R' || res === 'I') heatmapStats[org][abx].ns += 1;
+                    if (res === 'R' || res === 'I' || res === 'SDD') heatmapStats[org][abx].ns += 1;
                 }
             });
         }

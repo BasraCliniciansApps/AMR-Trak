@@ -203,7 +203,20 @@ function getDedupPatientId(r) {
     return raw;
 }
 
+// Screening / surveillance cultures must be excluded from the antibiogram (CLSI M39).
+const SCREENING_SPECIMEN_REGEX = /\b(rectal|perirectal|nasal|nares|axilla|axillary|groin|inguinal)\s+swabs?\b|screening|surveillance/i;
+function isScreeningSpecimen(r) {
+    return SCREENING_SPECIMEN_REGEX.test(String(r['Sample'] || ''));
+}
+
+// Non-susceptible = Intermediate, Susceptible-dose dependent, or Resistant
+function isNonSusceptibleResult(v) {
+    v = String(v || '').trim().toUpperCase();
+    return v === 'R' || v === 'I' || v === 'SDD';
+}
+
 function applyDeduplication(records) {
+    records = records.filter(r => !isScreeningSpecimen(r));
     const winners = new Map(); // key -> chosen record
     const keyOf = (r) => {
         const pid = getDedupPatientId(r);
@@ -337,7 +350,7 @@ function classifyMDR(r) {
         let anyTested = false, anyNS = false;
         MDR_TABLES[group][cat].forEach(abx => {
             const v = String(r[abx] || '').trim().toUpperCase();
-            if (v === 'S' || v === 'I' || v === 'R') {
+            if (v === 'S' || v === 'I' || v === 'R' || v === 'SDD') {
                 anyTested = true;
                 if (v !== 'S') anyNS = true;
             }
@@ -352,4 +365,52 @@ function classifyMDR(r) {
         else if (tested >= MDR_MIN_TESTED_FOR_POSSIBLE_XDR && (tested - ns) <= 2) possibleXDR = true;
     }
     return { cls, ns, tested, total, group, possibleXDR };
+}
+
+
+// =====================================================================
+// Critical resistance markers - defined ONCE for the dashboard and the PC app.
+// Based on WHO GLASS / WHO bacterial priority pathogens and CLSI M100.
+//  - "3GC-R" is a phenotypic PROXY for ESBL (ESBL itself needs confirmatory testing).
+//  - CRE covers all Enterobacterales; CRAB and CRPA follow the WHO priority list.
+//  - MRSA is decided by cefoxitin (CLSI); oxacillin is used only when cefoxitin
+//    was not tested.
+//  - VRE is decided by vancomycin only (teicoplanin-R alone is not VRE).
+//  - Vancomycin for S. aureus must be confirmed by MIC (disk diffusion is not valid).
+// A marker is counted per first isolate; "tested" = isolates with a result for the marker.
+// =====================================================================
+const CRITICAL_MARKERS = [
+    { label: "3GC-R\n(ESBL proxy)", abxPriority: [["Ceftriaxone", "Cefotaxime", "Ceftazidime"]],
+      match: o => o.includes("escherichia coli") || o.includes("klebsiella pneumoniae") },
+    { label: "CRE\n(Enterobacterales)", abxPriority: [["Ertapenem", "Meropenem", "Imipenem", "Doripenem"]],
+      match: o => getMdrGroup(o) === 'Enterobacterales' },
+    { label: "CRAB\n(A. baumannii)", abxPriority: [["Imipenem", "Meropenem", "Doripenem"]],
+      match: o => o.includes("acinetobacter baumannii") || o.includes("acinetobacter calcoaceticus") },
+    { label: "CRPA\n(P. aeruginosa)", abxPriority: [["Imipenem", "Meropenem", "Doripenem"]],
+      match: o => o.includes("pseudomonas aeruginosa") },
+    { label: "MRSA\n(Cefoxitin)", abxPriority: [["Cefoxitin", "Cefoxitin screen"], ["Oxacillin"]],
+      match: o => o.includes("staphylococcus aureus") },
+    { label: "VRE\n(Vancomycin)", abxPriority: [["Vancomycin"]],
+      match: o => o.includes("enterococcus") },
+    { label: "VRSA*\n(confirm by MIC)", abxPriority: [["Vancomycin"]],
+      match: o => o.includes("staphylococcus aureus") }
+];
+
+function evaluateCriticalMarkers(records) {
+    const stats = CRITICAL_MARKERS.map(m => ({ label: m.label, tested: 0, resistant: 0 }));
+    records.forEach(r => {
+        const orgLower = String(r['Selective organism'] || '').trim().toLowerCase();
+        CRITICAL_MARKERS.forEach((m, i) => {
+            if (!m.match(orgLower)) return;
+            for (const group of m.abxPriority) {
+                const results = group.map(a => String(r[a] || '').trim().toUpperCase())
+                                     .filter(v => v === 'S' || v === 'I' || v === 'R' || v === 'SDD');
+                if (results.length === 0) continue;   // try next agent group
+                stats[i].tested++;
+                if (results.includes('R')) stats[i].resistant++;
+                break;
+            }
+        });
+    });
+    return stats;
 }
