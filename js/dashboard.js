@@ -988,6 +988,7 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
 window.toggleAdvancedSearch = function() {
     $('#adv_content').toggleClass('hidden');
     $('#adv_icon').toggleClass('rotate-180');
+    syncResultsCollapse('#adv_content', ['#advContainer']);
     
     // Populate the all specimens dropdown when opened
     if(!$('#adv_content').hasClass('hidden')) {
@@ -1067,15 +1068,34 @@ function loadAnalyticsFilters() {
     
     generateGuidedAnalytics();
 }
+// Long combination names (e.g. Trimethoprim/Sulfamethoxazole) are split into two lines at "/" so they fit under the bars
+function wrapAbxLabel(l) {
+    l = String(l == null ? '' : l);
+    const i = l.indexOf('/');
+    if (i < 0 || l.length < 16) return l;
+    return [l.slice(0, i + 1), l.slice(i + 1)];
+}
+
 window.toggleMdrPanel = function() {
     $('#mdr_content').toggleClass('hidden');
     $('#mdr_icon').toggleClass('rotate-180');
     if (!$('#mdr_content').hasClass('hidden')) { try { window.dispatchEvent(new Event('resize')); } catch (e) {} }
 };
 
+// Result blocks that live outside their collapsible card follow the card's open/closed state
+function syncResultsCollapse(contentSel, resultSels) {
+    const closed = $(contentSel).hasClass('hidden');
+    resultSels.forEach(s => $(s).toggleClass('res-collapsed', closed));
+}
+$(function() {
+    syncResultsCollapse('#guided_content', ['#guidedContainer', '#guidedPlaceholder']);
+    syncResultsCollapse('#adv_content', ['#advContainer']);
+});
+
 window.toggleGuidedSearch = function() {
     $('#guided_content').toggleClass('hidden');
     $('#guided_icon').toggleClass('rotate-180');
+    syncResultsCollapse('#guided_content', ['#guidedContainer', '#guidedPlaceholder']);
 };
 
 // Add listener to trigger search when a specimen is selected
@@ -1262,7 +1282,7 @@ function renderGuidedAST() {
         data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
         options: { 
             responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
-            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, font: {size: 10, weight: 'bold'} } } } 
+            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, font: {size: 10, weight: 'bold'}, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } } } } 
         },
         plugins: [errorBarsPlugin]
     });
@@ -1390,7 +1410,7 @@ function renderPathoChart() {
         data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
         options: { 
             responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
-            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, font: {size: 10, weight: 'bold'} } } } 
+            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, font: {size: 10, weight: 'bold'}, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } } } } 
         },
         plugins: [errorBarsPlugin]
     });
@@ -1513,7 +1533,7 @@ function renderAbxChart() {
         data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
         options: { 
             responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
-            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, font: {size: 10, weight: 'bold'} } } } 
+            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, font: {size: 10, weight: 'bold'}, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } } } } 
         },
         plugins: [errorBarsPlugin]
     });
