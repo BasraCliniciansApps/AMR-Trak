@@ -478,7 +478,9 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
 
     let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
     amrStats.forEach((stat, index) => {
-        labels.push(stat.label.split('\n'));
+        let markerLabel = stat.label.split('\n');
+        if (stat.candidates) markerLabel.push(stat.candidates + ' unconfirmed');
+        labels.push(markerLabel);
         let palette = extendedPalette[index % extendedPalette.length]; 
         
         if (stat.tested === 0) { 

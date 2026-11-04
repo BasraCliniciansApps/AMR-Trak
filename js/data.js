@@ -475,8 +475,9 @@ function findIdNameConflicts(records) {
 //  - MRSA is decided by cefoxitin (CLSI), oxacillin only if cefoxitin was not
 //    tested, and the lab MRSA flag only if neither was tested.
 //  - VRE is decided by vancomycin only (teicoplanin-R alone is not VRE).
-//  - VRSA = S. aureus with a numeric vancomycin MIC >= 16. It stays a
-//    candidate until confirmed (VRSA Confirmation = '+').
+//  - VRSA = S. aureus with a numeric vancomycin MIC >= 16 AND confirmation
+//    (VRSA Confirmation = '+'). Unconfirmed MIC >= 16 isolates are counted as
+//    candidates only, not in the percentage.
 // A marker is counted per first isolate; "tested" = isolates with a usable result.
 // =====================================================================
 function labFlagResult(v) {
@@ -505,24 +506,27 @@ const CRITICAL_MARKERS = [
       match: o => o.includes("staphylococcus aureus") },
     { label: "VRE", info: "Vancomycin-resistant Enterococcus. Decided by vancomycin only (teicoplanin resistance alone does not count).", abxPriority: [["Vancomycin"]],
       match: o => o.includes("enterococcus") },
-    { label: "VRSA", info: "S. aureus with a vancomycin MIC of 16 µg/mL or more (CLSI M100). Remains a candidate until confirmed by a reference laboratory.",
+    { label: "VRSA", info: "Confirmed vancomycin-resistant S. aureus: vancomycin MIC of 16 µg/mL or more (CLSI M100) AND confirmed by a reference laboratory. Isolates with an MIC of 16 or more that are not yet confirmed are shown under the label as candidates and are not counted in the percentage, because true VRSA is very rare and such results need confirmation of identification and MIC.",
       match: o => o.includes("staphylococcus aureus"),
       evaluate: r => {
           const mic = parseMicValue(r['Vancomycin MIC']);
           if (!mic || mic.numeric === undefined || mic.numeric === null || !mic.valid) return null;
-          return { tested: true, resistant: interpretStaphVancomycinMic(true, mic) === 'R' };
+          if (interpretStaphVancomycinMic(true, mic) !== 'R') return { tested: true, resistant: false };
+          const conf = labFlagResult(r['VRSA Confirmation']);
+          if (conf) return { tested: true, resistant: conf.resistant };      // confirmed (+) or excluded (-)
+          return { tested: true, resistant: false, candidate: true };        // MIC >= 16, awaiting confirmation
       } }
 ];
 
 function evaluateCriticalMarkers(records) {
-    const stats = CRITICAL_MARKERS.map(m => ({ label: m.label, tested: 0, resistant: 0 }));
+    const stats = CRITICAL_MARKERS.map(m => ({ label: m.label, tested: 0, resistant: 0, candidates: 0 }));
     records.forEach(r => {
         const orgLower = String(r['Selective organism'] || '').trim().toLowerCase();
         CRITICAL_MARKERS.forEach((m, i) => {
             if (!m.match(orgLower)) return;
             if (m.evaluate) {
                 const res = m.evaluate(r);
-                if (res) { stats[i].tested++; if (res.resistant) stats[i].resistant++; }
+                if (res) { stats[i].tested++; if (res.resistant) stats[i].resistant++; if (res.candidate) stats[i].candidates++; }
                 return;
             }
             for (const group of m.abxPriority) {
