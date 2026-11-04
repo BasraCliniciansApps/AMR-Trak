@@ -1159,10 +1159,9 @@ function generateGuidedAnalytics() {
         records = records.filter(r => r.Sample === targetSample); 
     }
     
-    records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
-    
-    // تطبيق دالة منع التكرار (Deduplication)
+    // CLSI M39: the first isolate per patient is chosen across all wards; the ward filter is applied afterwards
     records = applyDeduplication(records);
+    records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
         
         // الإبقاء على الحاوية ظاهرة دائماً لكي لا تختفي أزرار الفلاتر (Inpatient/Outpatient)
         $('#guidedPlaceholder').addClass('hidden');
@@ -1247,10 +1246,9 @@ function renderGuidedAST() {
         records = records.filter(r => r.Sample === targetSample);
     }
     
-    records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
-    
-    // تطبيق دالة منع التكرار (Deduplication)
+    // CLSI M39: the first isolate per patient is chosen across all wards; the ward filter is applied afterwards
     records = applyDeduplication(records);
+    records = applyWardFilter(records, $('input[name="guided_ward"]:checked').val() || 'total');
     
     let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
     let abxStats = {};
@@ -1371,10 +1369,9 @@ function renderPathoChart() {
     let records = getDashRecords();
     records = filterByPeriod(records, period);
     records = records.filter(r => r['Selective organism'] === bug);
-    records = applyWardFilter(records, $('input[name="patho_ward"]:checked').val() || 'total');
-
-    // تطبيق دالة منع التكرار (Deduplication)
+    // CLSI M39: the first isolate per patient is chosen across all wards; the ward filter is applied afterwards
     records = applyDeduplication(records);
+    records = applyWardFilter(records, $('input[name="patho_ward"]:checked').val() || 'total');
 
     let allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
     let abxStats = {};
@@ -1500,10 +1497,9 @@ function renderAbxChart() {
     let period = $('input[name="abx_period"]:checked').val() || 'all';
     let records = getDashRecords();
     records = filterByPeriod(records, period);
-    records = applyWardFilter(records, $('input[name="abx_ward"]:checked').val() || 'total');
-
-    // تطبيق دالة منع التكرار (Deduplication)
+    // CLSI M39: the first isolate per patient is chosen across all wards; the ward filter is applied afterwards
     records = applyDeduplication(records);
+    records = applyWardFilter(records, $('input[name="abx_ward"]:checked').val() || 'total');
 
     let orgStats = {};
     records.forEach(r => {
@@ -1589,10 +1585,9 @@ window.generateAdvancedAnalytics = function() {
     }
 
     // Apply Ward Filter (All / Inpatient / Outpatient)
-    records = applyWardFilter(records, $('input[name="adv_ward"]:checked').val() || 'total');
-
-    // تطبيق دالة منع التكرار (Deduplication)
+    // CLSI M39: the first isolate per patient is chosen across all wards; the ward filter is applied afterwards
     records = applyDeduplication(records);
+    records = applyWardFilter(records, $('input[name="adv_ward"]:checked').val() || 'total');
 
     // --- NEW LOGIC: If left blank, automatically grab ALL available options ---
     if (targetOrgs.length === 0) {
