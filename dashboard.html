@@ -74,6 +74,8 @@
         .sec-tools { display: inline-flex; gap: 4px; align-items: center; flex-shrink: 0; }
         .sec-head > .sec-tools { padding: 0 4px 0 6px; }
         .sec-head > .sec-chev { padding: 0 12px 0 6px; align-self: stretch; display: flex; align-items: center; background: transparent; border: 0; cursor: pointer; }
+        h3.sec-title-center::before { content: ''; width: 56px; flex-shrink: 0; }
+        h3.sec-title-center > span { flex: 1; text-align: center; }
         h3.sec-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .sec-tool { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; color: #64748b; background: transparent; border: 0; border-radius: 7px; cursor: pointer; padding: 0; transition: color .15s, border-color .15s, background .15s; }
         .sec-tool:hover, .sec-tool:active { color: #0f172a; background: rgba(15,23,42,.07); }
@@ -727,9 +729,9 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=7.6"></script>
-    <script src="js/dashboard.js?v=7.6"></script>
-    <script src="js/dashboard_panels.js?v=7.6"></script>
+    <script src="js/data.js?v=7.7"></script>
+    <script src="js/dashboard.js?v=7.7"></script>
+    <script src="js/dashboard_panels.js?v=7.7"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>

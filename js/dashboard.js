@@ -415,8 +415,8 @@ function generateLiveSurveillance() {
         return parseInt(parts[0]) === qYear && qMonths.includes(parts[1]);
     });
 
-    $('#live_month_title').text(`Surveillance Overview (${targetMonthPrefix}) - ${scopeLabel()}`);
-    $('#live_q_title').text(`Surveillance Overview (${qLabel} ${qYear}) - ${scopeLabel()}`);
+    $('#live_month_title').text(`Surveillance Overview (${targetMonthPrefix})`);
+    $('#live_q_title').text(`Surveillance Overview (${qLabel} ${qYear})`);
 
     liveCharts.forEach(c => c.destroy());
     liveCharts = [];

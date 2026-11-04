@@ -673,7 +673,7 @@ function mountSectionToolbars() {
         let h = document.querySelector(sel);
         if (h && h.tagName === 'SPAN') h = h.parentElement;
         if (!h || h.querySelector('.sec-tools')) return;
-        h.classList.remove('text-center', 'pr-8'); h.classList.add('sec-title-row');
+        h.classList.remove('text-center', 'pr-8'); h.classList.add('sec-title-row'); if (id === 'month' || id === 'quarter') h.classList.add('sec-title-center');
         const tb = document.createElement('div'); tb.className = 'sec-tools'; tb.innerHTML = toolbarHtml(id); h.appendChild(tb);
     });
 }
