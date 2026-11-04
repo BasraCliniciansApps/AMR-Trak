@@ -256,7 +256,8 @@ async function syncLocalToCloud(opts) {
         };
 
         const w1 = await writeFamily("amr_sync", "hospital_main", cloudReadyRecords, { salt: salt });
-        const w2 = await writeFamily("amr_public", "dashboard", publicRecords, { labQuality: labQuality });
+        const wardList = [...new Set([...(typeof defaultWards !== 'undefined' ? defaultWards : []), ...localRecords.map(r => r.Ward).filter(Boolean)])].sort();
+        const w2 = await writeFamily("amr_public", "dashboard", publicRecords, { labQuality: labQuality, wards: wardList });
 
         if (w1) localStorage.setItem('amr_cloud_rev', rev);
         result = { ok: true, wrote: !!(w1 || w2), count: localRecords.length };
@@ -1459,7 +1460,7 @@ window.processRestore = function() {
 // --- APP MODALS ---
 function showSettingsModal() {
     loadAbbreviations();
-    loadLiveSettings();
+    restoreSyncStatus();
     $('#settingsModal').removeClass('hidden');
 }
 
@@ -2368,91 +2369,10 @@ async function processAntibiogramExport(year, quarter) {
     }
 }
 
-// --- Live Settings Logic ---
-// --- Live Settings Logic ---
-// Sections of the mobile dashboard that can be switched on/off (key -> label)
-const DASH_TOGGLES = [
-    { group: 'Tabs', items: [['tab_month', 'Last Month tab'], ['tab_quarter', 'Last Quarter tab'], ['tab_lab', 'Culture Overview tab']] },
-    { group: 'Analytics tab', items: [['sec_prevalence', 'Clinical Prevalence & AST Profile'], ['sec_patho', 'Bacteria Resistance Profile'], ['sec_abx', 'Antimicrobial Efficacy Profile'], ['sec_heatmap', 'Advanced Heatmap'], ['sec_mdr_panel', 'MDR / XDR / PDR Analysis']] },
-    { group: 'Last Month and Last Quarter tabs', items: [['show_amr', 'Critical Resistance Markers'], ['sec_pies', 'Blood and Urine prevalence'], ['sec_top5', 'Top 5 Specimens'], ['sec_mdr', 'MDR / XDR / PDR card'], ['show_top3', 'Top 3 Specimens breakdown'], ['sec_profiles', 'Resistance profiles (2 antibiotics)']] }
-];
-function toggleSwitchHtml(id, label) {
-    return `<div class="flex items-center justify-between py-1"><label for="${id}" class="text-sm font-bold text-slate-700 cursor-pointer pr-3">${label}</label>
-        <label class="relative inline-flex items-center cursor-pointer flex-shrink-0"><input type="checkbox" id="${id}" class="dash-toggle sr-only peer"><span class="w-10 h-5 bg-slate-300 peer-checked:bg-blue-600 rounded-full transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></span></label></div>`;
-}
-
-function loadLiveSettings() {
-    let currentYear = new Date().getFullYear();
-    let currentMonth = new Date().toISOString().slice(0, 7);
-    let s = JSON.parse(localStorage.getItem('amr_live_settings')) || {};
-
-    $('#mobile_dash_month').val(s.mobile_dash_month || currentMonth);
-    $('#mobile_dash_quarter').val(s.mobile_dash_quarter || 'Q1');
-    $('#mobile_dash_year').val(s.mobile_dash_year || currentYear);
-
-    // Section / tab switches (everything is ON unless it was switched off)
-    let html = '';
-    DASH_TOGGLES.forEach(g => {
-        html += `<div class="md:col-span-2 text-[11px] font-black text-slate-400 uppercase tracking-wide mt-2">${g.group}</div>`;
-        g.items.forEach(it => { html += toggleSwitchHtml('dt_' + it[0], it[1]); });
-    });
-    $('#dash_sections_box').html(html);
-    DASH_TOGGLES.forEach(g => g.items.forEach(it => $('#dt_' + it[0]).prop('checked', s[it[0]] !== false)));
-
-    // Unit scope
-    $('#dash_show_scope').prop('checked', s.dash_show_scope !== false);
-    $('#dash_default_scope').val(s.dash_default_scope || 'all');
-    $('#dash_default_period').val(s.dash_default_period || 'month');
-    const wardSet = new Set([...(JSON.parse(localStorage.getItem('amr_wards')) || defaultWards), ...defaultWards,
-        ...(JSON.parse(localStorage.getItem('amr_records')) || []).map(r => r.Ward).filter(Boolean)]);
-    const icuSel = Array.isArray(s.dash_icu_wards) && s.dash_icu_wards.length ? s.dash_icu_wards : ['ICU'];
-    $('#dash_icu_wards').html([...wardSet].sort().map(w => `<label class="flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 cursor-pointer"><input type="checkbox" class="icu-ward-cb" value="${escapeHtml(w)}" ${icuSel.some(x => x.toLowerCase() === w.toLowerCase()) ? 'checked' : ''}> ${escapeHtml(w)}</label>`).join(''));
-
-    // Antibiotics for the two resistance profiles
-    let allAbx = [...abxList, ...getCustomAntibiotics().map(a => a.name)].sort();
-    let optionsHtml = '';
-    allAbx.forEach(a => { optionsHtml += `<option value="${a}">${a}</option>`; });
-    $('#live_profile1_abx').html(optionsHtml).val(s.profile1_abx || 'Meropenem');
-    $('#live_profile2_abx').html(optionsHtml).val(s.profile2_abx || 'Ceftriaxone');
-    let allOrgs = [];
-    if (typeof bacteriaLibrary !== 'undefined') allOrgs = bacteriaLibrary.map(b => b.name);
-    let customOrgs = JSON.parse(localStorage.getItem('amr_organisms')) || [];
-    let combinedOrgs = [...new Set([...allOrgs, ...customOrgs])].sort();
-    let orgsHtml = '<option value="">None (Disable Watchlist)</option>';
-    combinedOrgs.forEach(o => { orgsHtml += `<option value="${o}">${o}</option>`; });
-    $('#live_watchlist_bug').html(orgsHtml).val(s.watchlist_bug || '');
-
+// Dashboard display settings are edited on their own page; this page only publishes them with the data.
+function restoreSyncStatus() {
     try {
         const st = JSON.parse(localStorage.getItem('amr_sync_status') || 'null');
         if (st) setSyncStatus(st.kind, st.text);
     } catch (e) {}
 }
-
-function saveLiveSettings() {
-    const old = JSON.parse(localStorage.getItem('amr_live_settings')) || {};
-    let s = Object.assign({}, old, {
-        mobile_dash_month: $('#mobile_dash_month').val(),
-        mobile_dash_quarter: $('#mobile_dash_quarter').val(),
-        mobile_dash_year: $('#mobile_dash_year').val(),
-        profile1_abx: $('#live_profile1_abx').val(),
-        profile2_abx: $('#live_profile2_abx').val(),
-        watchlist_bug: $('#live_watchlist_bug').val(),
-        dash_show_scope: $('#dash_show_scope').is(':checked'),
-        dash_default_scope: $('#dash_default_scope').val(),
-        dash_default_period: $('#dash_default_period').val(),
-        dash_icu_wards: $('.icu-ward-cb:checked').map(function () { return this.value; }).get()
-    });
-    DASH_TOGGLES.forEach(g => g.items.forEach(it => { s[it[0]] = $('#dt_' + it[0]).is(':checked'); }));
-    delete s.pc_live_month; delete s.pc_live_quarter; delete s.pc_live_year;   // PC analytics no longer exist
-    if (!s.dash_icu_wards.length) s.dash_icu_wards = ['ICU'];
-
-    localStorage.setItem('amr_live_settings', JSON.stringify(s));
-
-    if (typeof syncLocalToCloud === "function" && navigator.onLine) {
-        syncLocalToCloud();
-    }
-
-    Swal.fire({icon:'success', title:'Saved', text: 'The dashboard will show the new settings after it refreshes.', timer:1800, showConfirmButton:false});
-}
-
-

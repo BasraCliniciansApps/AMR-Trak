@@ -392,6 +392,7 @@ function generateLiveSurveillance() {
     if (cleanRecords.length === 0) {
         $('#live_month_title').text('Target Month (No Data)');
         $('#live_q_title').text('Target Quarter (No Data)');
+        $('#live_y_title').text('Target Year (No Data)');
         liveCharts.forEach(c => c.destroy());
         liveCharts = [];
         return;
@@ -415,6 +416,11 @@ function generateLiveSurveillance() {
         return parseInt(parts[0]) === qYear && qMonths.includes(parts[1]);
     });
 
+    // Last Year tab: a full calendar year (CLSI M39 / WHO GLASS reference period); defaults to the previous calendar year
+    let fullYear = String(parseInt(settings.mobile_dash_fullyear) || (new Date().getFullYear() - 1));
+    let yearRecords = cleanRecords.filter(r => r.Date && String(r.Date).startsWith(fullYear + '-'));
+
+    $('#live_y_title').text(`Surveillance Overview (${fullYear})`);
     $('#live_month_title').text(`Surveillance Overview (${targetMonthPrefix})`);
     $('#live_q_title').text(`Surveillance Overview (${qLabel} ${qYear})`);
 
@@ -423,6 +429,7 @@ function generateLiveSurveillance() {
 
     buildMobileLiveSection(monthRecords, 'm', settings, targetMonthPrefix);
     buildMobileLiveSection(quarterRecords, 'q', settings, `${qLabel} ${qYear}`);
+    buildMobileLiveSection(yearRecords, 'y', settings, fullYear);
 }
 
 function buildMobileLiveSection(records, prefix, settings, timeLabel) {

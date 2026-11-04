@@ -55,14 +55,14 @@ function applyDashboardSettings() {
     $('[data-sec]').each(function () {
         $(this).toggleClass('sec-off', s['sec_' + $(this).data('sec')] === false);
     });
-    [['month', 'LastMonth'], ['quarter', 'LastQuarter'], ['lab', 'Lab']].forEach(([t, id]) => {
+    [['year', 'LastYear'], ['month', 'LastMonth'], ['quarter', 'LastQuarter'], ['lab', 'Lab']].forEach(([t, id]) => {
         $('#btnNav' + id).toggleClass('sec-off', s['tab_' + t] === false);
     });
     $('#scopeBar').toggleClass('sec-off', s.dash_show_scope === false);
     updateScopeBar();
     // leave a tab that was switched off
     const cur = window._currentTab || 'analytics';
-    if ((cur === 'last_month' && s.tab_month === false) || (cur === 'last_quarter' && s.tab_quarter === false) || (cur === 'lab' && s.tab_lab === false)) switchTab('analytics');
+    if ((cur === 'last_year' && s.tab_year === false) || (cur === 'last_month' && s.tab_month === false) || (cur === 'last_quarter' && s.tab_quarter === false) || (cur === 'lab' && s.tab_lab === false)) switchTab('analytics');
 }
 
 function refreshAll() {
@@ -76,12 +76,15 @@ function refreshAll() {
 // ---------- tabs ----------
 window.switchTab = function (tab) {
     window._currentTab = tab;
-    $('#viewAnalytics, #viewLastMonth, #viewLastQuarter, #viewLab').addClass('hidden');
-    $('#btnNavAnalytics, #btnNavLastMonth, #btnNavLastQuarter, #btnNavLab').removeClass('active');
+    $('#viewAnalytics, #viewLastYear, #viewLastMonth, #viewLastQuarter, #viewLab').addClass('hidden');
+    $('#btnNavAnalytics, #btnNavLastYear, #btnNavLastMonth, #btnNavLastQuarter, #btnNavLab').removeClass('active');
     if (tab === 'analytics') {
         $('#viewAnalytics').removeClass('hidden'); $('#btnNavAnalytics').addClass('active');
         $('#headerTitle').text('Surveillance Analytics');
         if (!isUpdatingFilters) loadAnalyticsFilters();
+    } else if (tab === 'last_year') {
+        $('#viewLastYear').removeClass('hidden'); $('#btnNavLastYear').addClass('active');
+        $('#headerTitle').text('Last Year Surveillance');
     } else if (tab === 'last_month') {
         $('#viewLastMonth').removeClass('hidden'); $('#btnNavLastMonth').addClass('active');
         $('#headerTitle').text('Last Month Surveillance');
@@ -454,7 +457,7 @@ const profTitle = (p, n) => () => $('#live_' + p + '_profile' + n + '_title').te
 
 function monthSection(p, label) {
     return {
-        id: 'sec_' + label, title: () => $('#live_' + (p === 'm' ? 'month' : 'q') + '_title').text() || (p === 'm' ? 'Last Month' : 'Last Quarter'),
+        id: 'sec_' + label, title: () => $('#live_' + (p === 'm' ? 'month' : p) + '_title').text() || (p === 'm' ? 'Last Month' : p === 'y' ? 'Last Year' : 'Last Quarter'),
         infos: [['Overview', 'overview_' + p], ['Critical resistance markers', 'markers_' + p], ['Blood and urine prevalence', 'sec_pies'], ['Top 5 specimens', 'sec_top5'], ['MDR / XDR / PDR classification', 'mdr_' + p], ['Resistance profiles', 'sec_profiles'], ['Threat watchlist', 'sec_watch']],
         charts: [
             { title: 'Critical Resistance Markers', el: '#chart_' + p + '_amr' },
@@ -481,6 +484,7 @@ const SECTIONS = {
     mdr: { id: 'mdr', title: 'MDR / XDR / PDR Analysis', labelSel: '#mdr_range_label',
         infos: [['Definitions and method', 'mdr_panel'], ['Summary figures', 'mdr_tiles'], ['Monthly trend', 'mdr_trend'], ['Distribution by ward', 'mdr_wards'], ['By organism group', 'mdr_group']],
         charts: [{ title: 'Summary', el: '#mdr_tiles', kind: 'tiles' }, { title: 'Resistance classification', el: '#chart_mdr_panel_pie' }, { title: 'Monthly trend (% of classified isolates)', el: '#chart_mdr_panel_trend' }, { title: 'All wards', el: '#chart_mdr_panel_wards' }, { title: 'By organism group', el: '#mdr_group_table', kind: 'table' }] },
+    year: monthSection('y', 'year'),
     month: monthSection('m', 'month'),
     quarter: monthSection('q', 'quarter'),
     lab: { id: 'lab', title: 'Culture Overview', labelSel: '#lab_range_label',
@@ -669,11 +673,11 @@ function mountSectionToolbars() {
         cb.setAttribute('onclick', fn); if (chev) cb.appendChild(chev); wrap.appendChild(cb);
     });
     // Card titles (tabs): title on the left, toolbar on the right
-    [['lab', '#lab_title'], ['month', '#live_month_title'], ['quarter', '#live_q_title']].forEach(([id, sel]) => {
+    [['lab', '#lab_title'], ['year', '#live_y_title'], ['month', '#live_month_title'], ['quarter', '#live_q_title']].forEach(([id, sel]) => {
         let h = document.querySelector(sel);
         if (h && h.tagName === 'SPAN') h = h.parentElement;
         if (!h || h.querySelector('.sec-tools')) return;
-        h.classList.remove('text-center', 'pr-8'); h.classList.add('sec-title-row'); if (id === 'month' || id === 'quarter') h.classList.add('sec-title-center');
+        h.classList.remove('text-center', 'pr-8'); h.classList.add('sec-title-row'); if (id !== 'lab') h.classList.add('sec-title-center');
         const tb = document.createElement('div'); tb.className = 'sec-tools'; tb.innerHTML = toolbarHtml(id); h.appendChild(tb);
     });
 }

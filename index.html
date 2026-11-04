@@ -360,84 +360,13 @@
             
             <div class="p-6 bg-white flex-1 overflow-y-auto space-y-8 custom-scroll">
                 
-                <!-- Dashboard Control -->
+                <!-- Dashboard publishing (display settings are managed on their own page) -->
                 <div class="border border-slate-200 rounded-xl p-5 bg-slate-50/50">
-                    <h4 class="font-bold text-slate-800 mb-1 flex items-center gap-2 text-lg">📱 Dashboard Control</h4>
-                    <p class="text-xs text-slate-500 mb-4">Choose what appears on the mobile dashboard. Changes are published to the dashboard the next time the data syncs (automatic when online).</p>
-                    <div class="space-y-4">
-
-                        <div class="bg-white p-3 rounded-lg border border-slate-200">
-                            <h5 class="text-sm font-bold text-slate-800 border-b pb-2 mb-3">Unit scope (ICU / Non-ICU)</h5>
-                            <div class="flex items-center justify-between mb-3">
-                                <label class="text-sm font-bold text-slate-700" for="dash_show_scope">Show the All / ICU / Non-ICU switch</label>
-                                <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="dash_show_scope" class="sr-only peer"><span class="w-10 h-5 bg-slate-300 peer-checked:bg-blue-600 rounded-full transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></span></label>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Default scope when the dashboard opens</label>
-                                    <select id="dash_default_scope" class="w-full border border-slate-300 p-2.5 rounded-lg text-sm bg-white outline-none">
-                                        <option value="all">All units</option><option value="icu">ICU only</option><option value="nonicu">Non-ICU units</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Default period for MDR and Culture Overview</label>
-                                    <select id="dash_default_period" class="w-full border border-slate-300 p-2.5 rounded-lg text-sm bg-white outline-none">
-                                        <option value="month">Latest month</option><option value="quarter">Latest complete quarter</option><option value="year">Latest year</option><option value="all">All data</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <label class="block text-xs font-bold text-slate-700 mt-3 mb-1">Wards counted as ICU</label>
-                            <div id="dash_icu_wards" class="flex flex-wrap gap-2"></div>
-                            <p class="text-[10px] text-slate-500 mt-1">Neonatal ICU is a separate unit: leave it unticked to keep it out of the ICU view.</p>
-                        </div>
-
-                        <div class="bg-white p-3 rounded-lg border border-slate-200">
-                            <h5 class="text-sm font-bold text-slate-800 border-b pb-2 mb-3">Tabs and sections shown</h5>
-                            <div id="dash_sections_box" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2"></div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-3 rounded-lg border border-slate-200">
-                            <div class="col-span-2"><h5 class="text-sm font-bold text-slate-800 border-b pb-2">Last Month / Last Quarter tabs: period</h5></div>
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">Target Month</label>
-                                <input type="month" id="mobile_dash_month" class="w-full border border-slate-300 p-2.5 rounded-lg text-sm outline-none">
-                            </div>
-                            <div class="flex gap-2">
-                                <div class="w-1/2">
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Target Quarter</label>
-                                    <select id="mobile_dash_quarter" class="w-full border border-slate-300 p-2.5 rounded-lg text-sm bg-white outline-none">
-                                        <option value="Q1">Q1 (Jan-Mar)</option><option value="Q2">Q2 (Apr-Jun)</option>
-                                        <option value="Q3">Q3 (Jul-Sep)</option><option value="Q4">Q4 (Oct-Dec)</option>
-                                    </select>
-                                </div>
-                                <div class="w-1/2">
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Year</label>
-                                    <input type="number" id="mobile_dash_year" placeholder="YYYY" class="w-full border border-slate-300 p-2.5 rounded-lg text-sm outline-none">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-white p-3 rounded-lg border border-slate-200">
-                            <label class="block text-xs font-bold text-slate-700 mb-1">🚨 Global Threat Watchlist (Select Pathogen)</label>
-                            <select id="live_watchlist_bug" class="w-full border border-slate-300 p-2.5 rounded-lg text-sm outline-none bg-white"></select>
-                            <p class="text-[10px] text-slate-500 mt-1">Select a dangerous organism to monitor. It will trigger a red alert card on the mobile dashboard when detected.</p>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-200">
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Resistance Profile 1 Antibiotic</label>
-                                    <select id="live_profile1_abx" class="w-full border border-slate-300 p-2.5 rounded-lg text-sm outline-none bg-white"></select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 mb-1">Resistance Profile 2 Antibiotic</label>
-                                    <select id="live_profile2_abx" class="w-full border border-slate-300 p-2.5 rounded-lg text-sm outline-none bg-white"></select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-3">
-                            <button type="button" onclick="saveLiveSettings()" class="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm transition">Save and publish to dashboard</button>
-                            <button type="button" onclick="publishNow()" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-lg text-sm font-bold shadow-sm transition">Publish now</button>
-                            <span id="syncStatus" class="text-[11px] font-bold text-slate-400"></span>
-                        </div>
+                    <h4 class="font-bold text-slate-800 mb-1 flex items-center gap-2 text-lg">📱 Dashboard Publishing</h4>
+                    <p class="text-xs text-slate-500 mb-4">Records are published to the mobile dashboard automatically when you are online. Use this button to publish immediately.</p>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <button type="button" onclick="publishNow()" class="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm transition">Publish now</button>
+                        <span id="syncStatus" class="text-[11px] font-bold text-slate-400"></span>
                     </div>
                 </div>
 
