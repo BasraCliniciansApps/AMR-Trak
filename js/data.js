@@ -743,7 +743,8 @@ function getMinistryCategory(name) {
         [/^enterococcus (gallinarum|casseliflavus)/, 'Enterococcus gallinarum/E. casseliflavus'],
         [/^enterococcus/, 'enterococcus spp'],
         [/^listeria/, 'listeria'],
-        [/^clostridium/, 'clostridium Spp'],
+        [/^(clostridium|clostridioides)/, 'clostridium Spp'],
+        [/^anaerobes/, 'anaerobes'],
         [/^bacillus/, 'bacillus'],
         [/^mycobacterium tuberculosis/, 'mycobacterium tuberculosis']
     ];
