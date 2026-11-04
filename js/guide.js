@@ -1,0 +1,186 @@
+// =====================================================================
+// User guide: one collapsible page that explains every concept used in the dashboard.
+// Opened from the information button at the top of the app. "About" is the last section.
+// =====================================================================
+(function () {
+    const H = t => `<h4>${t}</h4>`;
+    const P = t => `<p>${t}</p>`;
+    const L = items => '<ul>' + items.map(i => `<li>${i}</li>`).join('') + '</ul>';
+    const T = (head, rows) => `<div class="gd-tbl"><table><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+    const TIP = t => `<div class="gd-tip">${t}</div>`;
+
+    const SECTIONS = [
+        ['start', 'Start here: what this dashboard is for', () =>
+            P('The AMR Tracker Dashboard turns the hospital\'s culture and susceptibility results into surveillance information: which organisms cause infection, how resistant they are, whether resistance is changing, and where the problems are.') +
+            H('What it is used for') + L([
+                'Choosing sensible <b>empirical antibiotic therapy</b> from local data (the cumulative antibiogram).',
+                'Following <b>resistance trends</b> over months, quarters and years.',
+                'Detecting <b>priority pathogens</b> and possible <b>clusters</b> early, so infection control can act.',
+                'Supporting <b>antimicrobial stewardship</b> and national or WHO reporting.']) +
+            H('Where the data come from') + L([
+                'The microbiology laboratory exports its results from <b>WHONET</b> every month.',
+                'The data-entry app cleans and checks them, then publishes a <b>de-identified</b> copy to the cloud. Names are removed and patient numbers are replaced by codes.',
+                'This dashboard only reads that copy. It never shows patient names.']) +
+            TIP('This is a surveillance tool. It describes populations of isolates, not individual patients. It does not replace the susceptibility report of a single culture or clinical judgement.')],
+
+        ['tabs', 'The five tabs at a glance', () =>
+            T(['Tab', 'Purpose', 'Typical question'], [
+                ['<b>Analytics</b>', 'Free exploration of all data with filters.', 'How resistant is <i>K. pneumoniae</i> to meropenem in blood?'],
+                ['<b>Last Year</b>', 'The annual report: the formal reference for the year.', 'What is our cumulative antibiogram and are we improving?'],
+                ['<b>Last Quarter</b>', 'Medium-term trend and where resistance concentrates.', 'Is resistance rising over the last quarters? Which wards carry the burden?'],
+                ['<b>Last Month</b>', 'Operational follow-up and alerts.', 'Did anything urgent happen this month?'],
+                ['<b>Cultures</b>', 'Laboratory activity and blood culture quality.', 'How many cultures grew, and how many were contaminated?']]) +
+            P('The month, quarter and year shown in the three "Last" tabs are chosen by the surveillance team, so everyone reads the same reporting period.')],
+
+        ['concepts', 'Basic concepts you need first', () =>
+            H('S, I, R and SDD') + L([
+                '<b>S (susceptible):</b> the antibiotic is expected to work at the usual dose.',
+                '<b>I (intermediate):</b> it may work at higher doses or at body sites where the drug concentrates.',
+                '<b>SDD (susceptible-dose dependent):</b> it works only if a higher dose or more frequent dosing is used.',
+                '<b>R (resistant):</b> the antibiotic is not expected to work.',
+                '<b>NS (non-susceptible):</b> I, SDD and R together.']) +
+            P('Results are interpreted with the <b>CLSI M100</b> breakpoints. The percentage <b>susceptible (%S)</b> counts only S, because I and SDD results are not reliable for treatment.') +
+            H('First isolate (de-duplication)') + P('If one patient has the same organism in ten cultures, counting all ten would make that patient dominate the result and usually over-estimate resistance, because patients with long infections are sicker and have received more antibiotics.') +
+            L(['CLSI M39 therefore counts only the <b>first isolate of each organism per patient</b> within the reported period.', 'In the month tab the period is the month, in the quarter tab the quarter, and in the year tab the year.', 'Screening cultures (rectal, nasal, axillary and groin swabs) are excluded because they look for carriage, not infection.']) +
+            H('Why at least 30 isolates?') + P('A percentage calculated from a few isolates is unstable. For example, 2 resistant out of 4 is 50%, but the true value could be anywhere from about 15% to 85%. CLSI M39 recommends reporting a susceptibility percentage only when <b>30 or more isolates</b> were tested.') +
+            L(['A bar or cell based on fewer than 30 isolates is faded grey and marked with <b>*</b>.', 'In tables, a dash means there were too few isolates to report a value.']) +
+            H('Confidence interval (95% CI)') + P('The range in which the true percentage probably lies. A narrow interval means a precise estimate. It is calculated with the Wilson method, which is reliable for small numbers and for percentages near 0% or 100%. Tap a bar or point to see it.') +
+            H('Statistical significance') + P('When two periods are compared, a difference is called significant only if a two-proportion z-test gives p below 0.05 and both groups have 30 or more tested isolates. Otherwise it is marked <b>ns</b> (not significant): the change may be due to chance.') +
+            H('Selective testing (&dagger;)') + P('Some antibiotics are tested only when the first-line drugs fail. If an antibiotic was tested on fewer than half of the isolates, the tested isolates are probably the more resistant ones, so the resistance percentage may be too high. Such antibiotics are marked with <b>&dagger;</b>.') +
+            H('Possible contaminants') + P('Organisms that normally live on the skin (coagulase-negative staphylococci such as <i>S. epidermidis</i> and <i>S. hominis</i>, <i>Corynebacterium</i>, <i>Micrococcus</i>, viridans streptococci) are often contaminants when found in blood. They are flagged, not deleted, because they can occasionally cause true infection.') +
+            H('Intrinsic resistance') + P('Some organisms are naturally resistant to certain antibiotics (for example <i>Proteus</i> to colistin). These results are not counted as acquired resistance.')],
+
+        ['marks', 'How to read the bars: colours and symbols', () =>
+            P('The three antibiotic charts in the Analytics tab use the same key. It is shown under each chart.') +
+            T(['Sign', 'Meaning', 'What to do'], [
+                ['<span class="gd-sw gd-sw-solid"></span> Solid bar', '30 or more isolates were tested.', 'The result is reliable.'],
+                ['<span class="gd-sw gd-sw-grey"></span> Faded grey bar, name ending with <b>*</b>', 'Fewer than 30 isolates were tested.', 'Interpret with caution. Use the switch "Hide n &lt; 30" to hide them.'],
+                ['<b>&dagger;</b> after the antibiotic name', 'Selective test: tested on fewer than half of the isolates.', 'The percentage may be biased. The list with the numbers is in the (i) of the chart.'],
+                ['<b>Tap a bar</b>', 'Shows the number tested and the 95% confidence interval.', 'Use it to judge precision.']]) +
+            H('In trend charts') + L(['A <b>hollow point</b> and a <b>dashed line</b> mean fewer than 30 isolates were tested in that period.', 'In tables, <b>*</b> beside a number carries the same meaning.']) +
+            H('WHO AWaRe') + P('Antibiotics are grouped by the WHO into <b>Access</b> (first choice, low resistance risk), <b>Watch</b> (higher resistance potential, should be monitored) and <b>Reserve</b> (last resort). The group of each antibiotic shown is listed in the (i) of the chart.')],
+
+        ['analytics', 'Analytics tab', () =>
+            P('Use this tab to explore the data freely. Choose the period, specimen and ward, and every chart updates.') +
+            H('Organism prevalence (pie chart)') + L(['<b>What:</b> the share of each organism among first isolates.', '<b>Why:</b> to know which organisms matter most locally, because empirical therapy must cover the common ones.', '<b>How to read:</b> a larger slice is a more frequent organism. Tap a slice to see its susceptibility profile.']) +
+            H('Susceptibility profile of one organism') + L(['<b>What:</b> for one organism, the %S, %I or %R to each antibiotic.', '<b>Why:</b> to see which drugs still work against that organism.', '<b>How to read:</b> choose the metric, then read the bars from left to right. Check the key for * and &dagger;.']) +
+            H('Activity of one antibiotic') + L(['<b>What:</b> for one antibiotic, the result against each organism.', '<b>Why:</b> to judge whether a drug is a good option across the organisms you meet.', '<b>How to read:</b> one bar per organism; compare organisms for the same drug.']) +
+            H('Heatmap') + L(['<b>What:</b> organisms against antibiotics in one table; each cell is a percentage.', '<b>Why:</b> a single page overview of the whole antibiogram.', '<b>How to read:</b> green is the favourable end (a low %R or %NS, or a high %S) and red the unfavourable end. The colour key under the table shows the ranges. A * marks fewer than 30 tested.']) +
+            H('MDR / XDR / PDR panel') + P('Explained in the section on multidrug resistance below.')],
+
+        ['markers', 'Priority resistance indicators', () =>
+            P('These indicators are the ones recommended by the WHO (GLASS and the Bacterial Priority Pathogens List) because they identify the resistance that is most dangerous or most difficult to treat. They appear in the Last Year, Last Quarter and Last Month tabs.') +
+            T(['Indicator', 'Organisms', 'Definition'], [
+                ['<b>3GC-R</b>', '<i>E. coli</i>, <i>K. pneumoniae</i>', 'Resistant to ceftriaxone, cefotaxime or ceftazidime. A practical marker for ESBL production.'],
+                ['<b>ESBL</b>', '<i>E. coli</i>, <i>K. pneumoniae</i>', 'Extended-spectrum beta-lactamase confirmed by the laboratory.'],
+                ['<b>CRE</b>', 'Enterobacterales', 'Carbapenem-resistant: resistant to ertapenem, meropenem, imipenem or doripenem. Imipenem is not used for <i>Proteus</i>, <i>Morganella</i> and <i>Providencia</i>, which are naturally less susceptible to it.'],
+                ['<b>CPE</b>', 'Enterobacterales', 'Carbapenemase production confirmed by the laboratory.'],
+                ['<b>CRAB</b>', '<i>A. baumannii</i>', 'Carbapenem-resistant <i>Acinetobacter baumannii</i>. WHO critical priority.'],
+                ['<b>CRPA</b>', '<i>P. aeruginosa</i>', 'Carbapenem-resistant <i>Pseudomonas aeruginosa</i>. WHO high priority.'],
+                ['<b>MRSA</b>', '<i>S. aureus</i>', 'Methicillin-resistant, decided by cefoxitin (CLSI). Oxacillin is used only when cefoxitin was not tested.'],
+                ['<b>VRE</b>', 'Enterococcus', 'Vancomycin-resistant. Teicoplanin resistance alone does not count.'],
+                ['<b>VRSA</b>', '<i>S. aureus</i>', 'Vancomycin MIC of 16 or more <b>and</b> confirmed by a reference laboratory. Unconfirmed isolates are shown as candidates only.']]) +
+            TIP('The percentage is "resistant isolates / isolates tested for that drug", not a percentage of all isolates.')],
+
+        ['mdr', 'Multidrug resistance: MDR, XDR and PDR', () =>
+            P('A single resistant result does not show how limited the treatment options are. The international definitions of Magiorakos et al. (2012, ECDC and CDC) classify an isolate by how many antibiotic <b>categories</b> it resists.') +
+            L(['<b>MDR:</b> non-susceptible to at least one agent in three or more categories.', '<b>XDR:</b> non-susceptible to at least one agent in all but two or fewer categories. Only one or two categories remain active.', '<b>PDR:</b> non-susceptible to all agents in all categories.']) +
+            H('How it is applied here') + L(['Only first isolates of Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp. and <i>S. aureus</i> are classified.', 'Intrinsic resistance is excluded.', 'A category that was not tested is treated as unknown, not as resistant or susceptible. XDR and PDR are therefore conservative.', '<b>Possible XDR / PDR</b> means the panel was too narrow to confirm the class. These isolates are shown separately.', '<b>MDR+</b> means MDR, XDR or PDR together.']) +
+            H('Why it matters') + P('MDR and above are the isolates that drive prolonged stay, higher cost and mortality, and that need isolation precautions.')],
+
+        ['year', 'Last Year tab: the annual report', () =>
+            P('This tab is the formal yearly report. The reference period is a full calendar year, as required by CLSI M39 for cumulative antibiograms and by WHO GLASS for reporting. The year is set by the surveillance team.') +
+            H('1. Key resistance indicators') + L(['<b>Why:</b> they are the standard measures used to compare hospitals and countries.', '<b>How to read:</b> compare the percentage with the previous year; trust the change only when it is marked as significant.']) +
+            H('2. Cumulative antibiogram') + L(['<b>Why:</b> it guides empirical treatment. It tells the prescriber, before the culture result, how likely a drug is to work.', '<b>How to read:</b> find the suspected organism in the row, then the drug in the column. Green 90% or more, yellow 70 to 89%, orange 50 to 69%, red below 50%.', '<b>Basis:</b> CLSI M39: one isolate per patient and organism per year, only S counted as susceptible, minimum 30 isolates.', '<b>Specimen buttons:</b> a blood and a urine isolate of the same organism may differ, so each specimen with 30 or more isolates can be viewed separately.', '<b>Contaminant switch:</b> removes skin-flora organisms from blood so they do not distort the table.']) +
+            H('3. Quarterly trend') + L(['<b>Why:</b> to see whether resistance moved within the year.', '<b>How to read:</b> hollow points and dashed lines mean fewer than 30 isolates.']) +
+            H('4. Antibiotic trend') + L(['<b>Why:</b> to follow one drug, for example meropenem, over the years or by quarter, for all organisms or one organism.', '<b>How to read:</b> choose the drug, the organism, the period and %R or %S. Tap a point for n and the confidence interval.']) +
+            H('5. MDR / XDR / PDR by organism group') + L(['<b>Why:</b> it measures the burden of the most limited-option infections.', '<b>How to read:</b> "Any" is MDR, XDR and PDR together.']) +
+            H('6. Culture burden') + L(['<b>Why:</b> resistance percentages mean little without knowing how many cultures were taken.', '<b>How to read:</b> check the blood culture contamination against the 3% benchmark.']) +
+            H('7. Data quality') + L(['<b>Why:</b> an estimate is only as good as its data.', '<b>How to read:</b> low completeness means the indicators should be read with caution.'])],
+
+        ['quarter', 'Last Quarter tab: trend and where the burden is', () =>
+            P('A quarter has enough isolates to judge direction and to compare units, which a single month usually cannot.') +
+            H('Trend over the last 8 quarters') + L(['<b>Why:</b> one quarter can be a fluctuation; a direction over several quarters is a real signal.', '<b>How to read:</b> follow each line. Hollow points mean fewer than 30 isolates. Tap a point for the confidence interval; overlapping intervals suggest no real change.']) +
+            H('ICU compared with non-ICU') + L(['<b>Why:</b> ICUs have the sickest patients, the most antibiotic exposure and the most devices, so their resistance differs.', '<b>How to read:</b> compare the two columns. The last column marks a statistically significant difference.', '<b>Basis:</b> CLSI M39 supports stratifying results by location. The first isolate is chosen hospital-wide before the split.']) +
+            H('Ward ranking') + L(['<b>Why:</b> to direct stewardship and infection control to the wards with the greatest burden.', '<b>How to read:</b> wards are ranked by the number of MDR, XDR or PDR isolates. Do not compare percentages based on fewer than 10 isolates.']) +
+            H('MDR / XDR / PDR charts and watchlist') + P('The class distribution for the quarter, the wards with the most resistant isolates, and the pathogen chosen for special monitoring.')],
+
+        ['month', 'Last Month tab: follow-up and alerts', () =>
+            P('A month is too short for reliable percentages, so this tab is built for action, not for trend.') +
+            H('Priority alerts') + L(['<b>Why:</b> some isolates need a response the same week.', '<b>What:</b> CRE, CRAB, CRPA, VRE, VRSA (and candidates), <i>Candida auris</i>, and XDR or PDR isolates, with date and ward.', '<b>What to do:</b> inform the infection control team; send VRSA candidates to a reference laboratory.']) +
+            H('Possible clusters') + L(['<b>Why:</b> outbreaks are recognised earlier when the same organism and resistance type appear repeatedly in one ward.', '<b>Rule:</b> three or more different patients, same ward, same organism and same resistance type, within 14 days.', '<b>Caution:</b> this is a signal, not proof. Confirm with the infection control team.']) +
+            H('Comparison with earlier periods') + L(['<b>Why:</b> to put the month in context.', '<b>How to read:</b> compare with the previous month and the same month last year. Numbers are shown as counts: do not read a trend into one month.']) +
+            H('Blood isolates: possible contaminants') + P('The share of blood isolates that are usual skin organisms. A high share points to a sampling problem. The formal benchmark is in the Cultures tab.')],
+
+        ['cultures', 'Cultures tab: laboratory activity and quality', () =>
+            P('Describes how many cultures the laboratory received and what they grew. The numbers are aggregate counts, not patient records.') +
+            L(['<b>Positive:</b> an organism was reported. <b>No growth:</b> nothing grew. <b>Contaminated:</b> reported as contaminated by the laboratory.', '<b>Volume per month:</b> workload. A very low month usually means an incomplete file.', '<b>Positivity by ward and specimen:</b> depends on case mix and on how often cultures are taken.']) +
+            H('Blood culture contamination') + L(['<b>Benchmark:</b> 3% or less of blood cultures (CLSI M47).', '<b>Reported as contaminated:</b> certain.', '<b>Possible skin-flora growth:</b> uncertain, because these organisms can also cause true infection.', '<b>Upper estimate:</b> the two added together. The real rate lies between the reported figure and the estimate.']) +
+            H('Why it matters') + P('Contaminated blood cultures lead to unnecessary antibiotics, longer stay and cost. The rate is a quality indicator for blood collection.')],
+
+        ['scope', 'Unit scope and ICU', () =>
+            P('The switch at the top filters every chart by ward: <b>All units</b>, <b>ICU</b> only, or <b>Non-ICU</b>.') +
+            L(['The wards counted as ICU are set by the surveillance team.', 'The first isolate per patient is chosen across all wards first, and the ward filter is applied afterwards. A patient who moves between wards is therefore not counted twice.', 'The Last Quarter ICU comparison always shows both units, whatever the switch is set to.'])],
+
+        ['limits', 'Limits and good practice', () =>
+            L(['<b>Small numbers:</b> do not draw conclusions from fewer than 30 isolates.', '<b>Surveillance is not a patient report:</b> use the susceptibility report of the patient\'s own culture for treatment.', '<b>Sampling bias:</b> cultures are usually taken from sicker patients or after treatment failure, so resistance in the hospital may look higher than in all patients.', '<b>Data quality:</b> missing patient numbers prevent de-duplication; missing results lower the numbers tested.', '<b>One period at a time:</b> compare like with like (same period length, same unit, same specimen).', '<b>Unconfirmed results:</b> VRSA candidates, possible XDR and possible contaminants need confirmation before action beyond precaution.'])],
+
+        ['glossary', 'Glossary', () =>
+            T(['Term', 'Meaning'], [
+                ['AMR', 'Antimicrobial resistance.'], ['ASP', 'Antimicrobial stewardship programme.'], ['AST', 'Antimicrobial susceptibility testing.'],
+                ['AWaRe', 'WHO grouping of antibiotics: Access, Watch, Reserve.'], ['CI', 'Confidence interval.'],
+                ['CLSI', 'Clinical and Laboratory Standards Institute: publishes the breakpoints (M100) and the rules for antibiograms (M39).'],
+                ['GLASS', 'WHO Global Antimicrobial Resistance and Use Surveillance System.'], ['MIC', 'Minimum inhibitory concentration: the lowest drug concentration that stops growth.'],
+                ['n', 'Number of isolates (or cultures) tested.'], ['ns', 'Not statistically significant.'], ['pp', 'Percentage points: the difference between two percentages.'],
+                ['WHONET', 'Free WHO software used by laboratories to record and analyse susceptibility data.'], ['ESBL', 'Extended-spectrum beta-lactamase.']])],
+
+        ['refs', 'References', () => {
+            const keys = ['CLSI_M39', 'CLSI_M100', 'CLSI_M47', 'MAGIORAKOS', 'WHO_GLASS', 'WHO_BPPL', 'WHO_AWARE', 'WHONET', 'ASM_BCC'];
+            return P('The rules used in this dashboard come from the following sources.') + (typeof refsHtml === 'function' ? refsHtml(keys, true) : '');
+        }],
+
+        ['about', 'About', () => `
+            <div class="gd-about">
+                <div class="gd-logo"><img src="icon.png" alt="AMR Icon"></div>
+                <h3>AMR Tracker Dashboard</h3>
+                <p class="gd-sub">Antimicrobial Resistance Surveillance System</p>
+                <div class="gd-box">This platform was designed and developed by a member of the Antibiotic Committee, <b>Clinical Pharmacist Saad Nabeel Al-Hamadi</b>, in collaboration with the <b>AMR Unit</b> and the <b>Microbiology Laboratory</b> staff at <b>Al-Mawani Teaching Hospital</b>.</div>
+                <div class="gd-legal"><b>Legal notice:</b> This tool supports epidemiological surveillance and the generation of accurate clinical statistics. All intellectual and software rights reserved &copy; 2026.</div>
+            </div>`]
+    ];
+
+    function build() {
+        const items = SECTIONS.map(([id, title, body], i) => `
+            <details class="gd-sec" data-id="${id}">
+                <summary><span class="gd-num">${id === 'about' ? '' : (i + 1)}</span><span class="gd-t">${title}</span></summary>
+                <div class="gd-body">${body()}</div>
+            </details>`).join('');
+        return `
+            <div class="gd-bar">
+                <div><div class="gd-title">Guide</div><div class="gd-subtitle">How to read this dashboard</div></div>
+                <div class="gd-actions"><button type="button" id="gdToggle">Expand all</button><button type="button" id="gdClose" aria-label="Close the guide">&times;</button></div>
+            </div>
+            <div class="gd-scroll">
+                <p class="gd-intro">Tap a section to open it. Each section explains what a chart or concept is, why it is used, how to read it, and on what rule it is based.</p>
+                ${items}
+            </div>`;
+    }
+
+    window.showGuide = function () {
+        let el = document.getElementById('guideView');
+        if (!el) { el = document.createElement('div'); el.id = 'guideView'; document.body.appendChild(el); }
+        el.innerHTML = build();
+        el.classList.add('open');
+        document.body.classList.add('gd-lock');
+        const close = () => { el.classList.remove('open'); document.body.classList.remove('gd-lock'); };
+        el.querySelector('#gdClose').onclick = close;
+        const tg = el.querySelector('#gdToggle');
+        tg.onclick = () => {
+            const all = el.querySelectorAll('details.gd-sec'), anyClosed = Array.from(all).some(d => !d.open);
+            all.forEach(d => { d.open = anyClosed; });
+            tg.textContent = anyClosed ? 'Collapse all' : 'Expand all';
+        };
+        el.querySelector('.gd-scroll').scrollTop = 0;
+    };
+    window.hideGuide = function () { const el = document.getElementById('guideView'); if (el) el.classList.remove('open'); document.body.classList.remove('gd-lock'); };
+})();

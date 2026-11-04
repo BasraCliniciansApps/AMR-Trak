@@ -109,13 +109,13 @@ function opAlerts(first, month) {
     rows.sort((a, b) => a.w - b.w || String(a.r.Date).localeCompare(String(b.r.Date)));
     if (!rows.length) {
         $('#op_m_alerts_table').html('<div class="ya-empty" style="color:#047857">No priority alerts in this month: no CRE, CRAB, CRPA, VRE, VRSA, C. auris, XDR or PDR isolates.</div>');
-        $('#op_m_alerts_note').text('');
+        setNote('#op_m_alerts_note', []);
         return;
     }
     const shown = rows.slice(0, 30);
     const body = shown.map(x => `<tr><td class="ya-l">${escHtml(String(x.r.Date || '').slice(5))}</td><td class="ya-l">${escHtml(x.r.Ward || '-')}</td><td class="ya-l"><i>${escHtml(formatOrgName(x.r['Selective organism']))}</i><div class="ya-mute">${escHtml(x.r.Sample || '')}</div></td><td class="ya-l">${x.chips}</td></tr>`).join('');
     $('#op_m_alerts_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Date</th><th class="ya-l">Ward</th><th class="ya-l">Organism</th><th class="ya-l">Flag</th></tr></thead><tbody>${body}</tbody></table>`);
-    $('#op_m_alerts_note').html(`<b>${rows.length}</b> alert isolate${rows.length === 1 ? '' : 's'} among ${first.length} first isolates${rows.length > shown.length ? ' (first ' + shown.length + ' shown)' : ''}. Report to infection control; VRSA candidates need reference-laboratory confirmation.`);
+    setNote('#op_m_alerts_note', [`<b>${rows.length}</b> alert isolate${rows.length === 1 ? '' : 's'} among ${first.length} first isolates${rows.length > shown.length ? ' (first ' + shown.length + ' shown)' : ''}.`, 'Each alert should be reported to the infection control team.', 'VRSA candidates need confirmation by a reference laboratory before they are counted as VRSA.']);
 }
 
 // ---------------------------------------------------------------- MONTH: clusters
@@ -149,12 +149,12 @@ function opClusters(month) {
     out.sort((a, b) => b.n - a.n);
     if (!out.length) {
         $('#op_m_clusters_table').html('<div class="ya-empty" style="color:#047857">No ward cluster signal: no ward had 3 or more patients with the same organism and the same resistance type within 14 days.</div>');
-        $('#op_m_clusters_note').text('');
+        setNote('#op_m_clusters_note', []);
         return;
     }
     const body = out.slice(0, 15).map(c => `<tr><td class="ya-l"><b>${escHtml(c.ward)}</b></td><td class="ya-l"><i>${escHtml(formatOrgName(c.org))}</i></td><td class="ya-l">${opChip(escHtml(c.tag), '#fee2e2', '#991b1b')}</td><td><b>${c.n}</b></td><td class="ya-l">${escHtml(c.from.slice(5))} to ${escHtml(c.to.slice(5))}</td></tr>`).join('');
     $('#op_m_clusters_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Ward</th><th class="ya-l">Organism</th><th class="ya-l">Type</th><th>Patients</th><th class="ya-l">Dates</th></tr></thead><tbody>${body}</tbody></table>`);
-    $('#op_m_clusters_note').html('A signal only, not a confirmed outbreak: confirm with the infection control team (same unit, timing, and typing if available).');
+    setNote('#op_m_clusters_note', ['This is a signal only, not a confirmed outbreak.', 'Confirm with the infection control team: same unit, timing of admission, and typing where available.']);
 }
 
 // ---------------------------------------------------------------- MONTH: comparison
@@ -171,17 +171,17 @@ function opCompare(month) {
     rows.push(`<tr><td class="ya-l"><b>MDR / XDR / PDR</b></td>${cols.map(c => opCell(c.mdr.plus, c.mdr.n)).join('')}</tr>`);
     rows.push(`<tr><td class="ya-l"><b>XDR / PDR</b></td>${cols.map(c => opCell(c.mdr.xp, c.mdr.n)).join('')}</tr>`);
     $('#op_m_compare_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Indicator</th>${head}</tr></thead><tbody>${rows.join('')}</tbody></table>`);
-    $('#op_m_compare_note').html('Resistant / tested, with the percentage below. * fewer than 30 tested: monthly figures are counts to watch, not trends; percentages from small numbers move a lot by chance.');
+    setNote('#op_m_compare_note', ['Each cell shows resistant / tested, with the percentage below it.', '<b>*</b> (grey) = fewer than 30 isolates tested. A single month is a count to watch, not a trend: small numbers change a lot by chance.', 'Use the Last Quarter and Last Year tabs to judge trends.']);
 }
 
 // ---------------------------------------------------------------- MONTH: blood contaminants
 function opBloodQuality(first) {
     const blood = first.filter(r => /blood/i.test(String(r.Sample || '')));
     const c = blood.filter(isPossibleContaminant);
-    if (!blood.length) { $('#op_m_bloodq_table').html('<div class="ya-empty">No blood isolates in this month.</div>'); $('#op_m_bloodq_note').text(''); return; }
+    if (!blood.length) { $('#op_m_bloodq_table').html('<div class="ya-empty">No blood isolates in this month.</div>'); setNote('#op_m_bloodq_note', []); return; }
     const p = opPct(c.length, blood.length);
     $('#op_m_bloodq_table').html(`<div style="font-size:13px;color:#334155"><b>${c.length}</b> of <b>${blood.length}</b> blood isolates are possible skin-flora contaminants (<b style="color:${p > 3 ? '#dc2626' : '#059669'}">${opFmt(p)}%</b>).</div>`);
-    $('#op_m_bloodq_note').html('This is a share of isolates, only a proxy. The CLSI M47 benchmark of 3% or less applies to blood cultures collected: see the Culture Overview tab.');
+    setNote('#op_m_bloodq_note', ['This is the share of blood <i>isolates</i>, so it is only a proxy.', 'The CLSI M47 benchmark (3% or less) applies to blood <i>cultures collected</i>; see the Cultures tab for that rate.']);
 }
 
 // ---------------------------------------------------------------- QUARTER: run chart
@@ -198,7 +198,7 @@ function opRun(q, qy) {
     const labels = CRITICAL_MARKERS.map(m => m.label);
     const use = labels.filter((l, i) => ['3GC-R', 'CRE', 'CRAB', 'CRPA', 'MRSA', 'VRE'].includes(l) && per.filter(p => p.st[i].tested > 0).length >= 1);
     const cv = document.getElementById('chart_q_run');
-    if (!use.length || !per.some(p => p.f.length)) { $('#op_q_run_table').html('<div class="ya-empty">Not enough data for a trend.</div>'); $('#op_q_run_note').text(''); return; }
+    if (!use.length || !per.some(p => p.f.length)) { $('#op_q_run_table').html('<div class="ya-empty">Not enough data for a trend.</div>'); setNote('#op_q_run_note', []); return; }
     if (cv && typeof Chart !== 'undefined') {
         OP.chart = new Chart(cv.getContext('2d'), {
             type: 'line',
@@ -217,7 +217,7 @@ function opRun(q, qy) {
     const head = per.map(p => `<th>${escHtml(p.label)}</th>`).join('');
     const rows = use.map(l => { const i = labels.indexOf(l); return `<tr><td class="ya-l"><b>${l}</b></td>${per.map(p => opCell(p.st[i].resistant, p.st[i].tested)).join('')}</tr>`; }).join('');
     $('#op_q_run_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Indicator</th>${head}</tr></thead><tbody>${rows}</tbody></table>`);
-    $('#op_q_run_note').html('Each quarter uses its own first isolates. Hollow points and dashed lines: fewer than 30 tested, indicative only. A change is worth attention when it persists over several quarters and the 95% intervals (tooltip) do not overlap.');
+    setNote('#op_q_run_note', ['Each quarter uses its own first isolates (CLSI M39).', '<b>Hollow point and dashed line</b> = fewer than 30 isolates tested: indicative only.', 'Tap a point to see the counts and the 95% confidence interval.', 'A change deserves attention when it persists over several quarters and the intervals do not overlap.']);
 }
 
 // ---------------------------------------------------------------- QUARTER: ICU vs non-ICU
@@ -236,7 +236,7 @@ function opIcu(q, qy) {
     });
     rows.push(`<tr><td class="ya-l"><b>MDR / XDR / PDR</b></td>${opCell(mi.plus, mi.n)}${opCell(mn.plus, mn.n)}<td>${sig(mi.plus, mi.n, mn.plus, mn.n) ? 'differs' + sig(mi.plus, mi.n, mn.plus, mn.n) : '<span class="ya-mute">-</span>'}</td></tr>`);
     $('#op_q_icu_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Indicator</th><th>ICU</th><th>Non-ICU</th><th>Difference</th></tr></thead><tbody>${rows.join('')}</tbody></table>`);
-    $('#op_q_icu_note').html(`Resistant / tested. Always shows both units, whatever unit filter is selected above. First isolate is chosen across all wards before the split. * (red) = statistically different (p &lt; 0.05), only when both groups have 30 or more tested. Wards counted as ICU: ${escHtml(icuWardList().join(', '))}.`);
+    setNote('#op_q_icu_note', ['Each cell shows resistant / tested, with the percentage below it. <b>*</b> (grey) = fewer than 30 tested.', 'Both units are always shown, whatever unit filter is selected at the top.', 'The first isolate per patient and organism is chosen across all wards before the split.', 'A red <b style="color:#dc2626">*</b> in the last column = a statistically significant difference (p &lt; 0.05), calculated only when both groups have 30 or more tested.', `Wards counted as ICU: ${escHtml(icuWardList().join(', '))}.`]);
 }
 
 // ---------------------------------------------------------------- QUARTER: ward ranking
@@ -251,10 +251,10 @@ function opWards(q, qy) {
         o.n++; if (c.cls !== 'Non-MDR') o.mdr++; if (c.cls === 'XDR' || c.cls === 'PDR') o.xp++;
     });
     const list = Object.keys(by).map(w => ({ w, ...by[w] })).sort((x, y) => y.mdr - x.mdr || y.n - x.n).slice(0, 10);
-    if (!list.length) { $('#op_q_wards_table').html('<div class="ya-empty">No classifiable isolates in this quarter.</div>'); $('#op_q_wards_note').text(''); return; }
+    if (!list.length) { $('#op_q_wards_table').html('<div class="ya-empty">No classifiable isolates in this quarter.</div>'); setNote('#op_q_wards_note', []); return; }
     const body = list.map(x => `<tr><td class="ya-l"><b>${escHtml(x.w)}</b></td><td>${x.n}</td><td><b>${x.mdr}</b></td><td>${x.n < 10 ? '<span class="ya-mute">' + opFmt(opPct(x.mdr, x.n)) + '%*</span>' : '<b>' + opFmt(opPct(x.mdr, x.n)) + '%</b>'}</td><td>${x.xp}</td></tr>`).join('');
     $('#op_q_wards_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Ward</th><th>Classified</th><th>MDR+</th><th>% MDR+</th><th>XDR / PDR</th></tr></thead><tbody>${body}</tbody></table>`);
-    $('#op_q_wards_note').html('Top 10 wards by number of MDR, XDR or PDR first isolates (Magiorakos 2012). MDR+ = MDR, XDR or PDR. * fewer than 10 classified isolates: do not compare percentages. Counts reflect sampling as well as resistance.');
+    setNote('#op_q_wards_note', ['Top 10 wards by the number of MDR, XDR or PDR first isolates (Magiorakos 2012). MDR+ = MDR, XDR or PDR.', '<b>*</b> (grey) = fewer than 10 classified isolates: do not compare percentages.', 'Counts reflect how many cultures a ward sends as well as its true resistance.']);
 }
 
 // ---------------------------------------------------------------- information texts

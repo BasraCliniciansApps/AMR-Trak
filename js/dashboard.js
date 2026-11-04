@@ -246,7 +246,16 @@ function refsHtml(keys, asLinks) {
         : `<li>${r.t} ${r.u}</li>`).join('');
     return items ? `<div class="info-refs"><div class="info-refs-title">References</div><ol>${items}</ol></div>` : '';
 }
-function setInfo(key, title, html, refs) { INFO_STORE[key] = { title: title, html: html, refs: refs || refsFor(key) }; }
+function setInfo(key, title, html, refs) {
+    const o = (typeof INFO_OVERRIDE !== 'undefined') ? INFO_OVERRIDE[key] : null;   // reviewed texts (info_texts.js) replace the inline drafts
+    if (o) { title = o.title || title; html = o.html; refs = o.refs || refs; }
+    INFO_STORE[key] = { title: title, html: html, refs: refs || refsFor(key) };
+}
+// Notes under a chart or table: one point per line, never a run-on paragraph
+function setNote(sel, items) {
+    const list = (items || []).filter(Boolean);
+    $(sel).html(list.length ? '<ul class="note-list">' + list.map(t => '<li>' + t + '</li>').join('') + '</ul>' : '');
+}
 window.showInfo = function(key) {
     const i = INFO_STORE[key];
     if (!i) return;
@@ -261,31 +270,43 @@ window.showInfo = function(key) {
 // Information now lives in the section toolbar (see dashboard_panels.js); per-chart buttons are no longer drawn.
 function attachInfo() {}
 function mdrInfoHtml(px, pp) {
-    return `<p>Resistance categories follow <b>Magiorakos et al., Clin Microbiol Infect 2012;18:268-281</b>, an international proposal by ECDC and CDC. Susceptibility results (S / I / R) are interpreted with <b>CLSI M100</b> breakpoints.</p>
-    <ul style="margin:6px 0 0 16px;list-style:disc">
-    <li><b>MDR (multidrug-resistant):</b> non-susceptible to at least one agent in three or more antimicrobial categories.</li>
-    <li><b>XDR (extensively drug-resistant):</b> non-susceptible to at least one agent in all but two or fewer categories.</li>
-    <li><b>PDR (pandrug-resistant):</b> non-susceptible to all agents in all categories.</li></ul>
-    <p style="margin-top:8px"><b>Method:</b> applied to first isolates (CLSI M39: the first isolate per patient and organism within the reported period: month, quarter or year) of Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp. and <i>S. aureus</i>. Intrinsic resistance is not counted. A category that was not tested is treated as unknown, not as resistant. Each isolate is assigned to its highest class.</p>
-    <p style="margin-top:8px"><b>Possible XDR / PDR:</b> isolates tested against too few categories to confirm the class are not counted in the charts. This period has <b>${px}</b> possible XDR and <b>${pp}</b> possible PDR isolate(s).</p>`;
+    return `<h5>What it shows</h5>
+    <p>How many first isolates are multidrug-resistant (MDR), extensively drug-resistant (XDR) or pandrug-resistant (PDR), and where they occur.</p>
+    <h5>Definitions (Magiorakos et al., 2012)</h5>
+    <ul>
+    <li><b>MDR:</b> non-susceptible to at least one agent in three or more antimicrobial categories.</li>
+    <li><b>XDR:</b> non-susceptible to at least one agent in all but two or fewer categories.</li>
+    <li><b>PDR:</b> non-susceptible to all agents in all categories.</li></ul>
+    <h5>Method</h5>
+    <ul>
+    <li>Applied to first isolates (CLSI M39) of Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp. and <i>S. aureus</i>.</li>
+    <li>Susceptibility results are interpreted with CLSI M100 breakpoints.</li>
+    <li>Intrinsic resistance is not counted.</li>
+    <li>A category that was not tested is treated as unknown, not as resistant.</li>
+    <li>Each isolate is placed in its highest class.</li></ul>
+    <h5>Possible XDR / PDR</h5>
+    <p>Isolates tested against too few categories to confirm their class are not counted in the charts. This period has <b>${px}</b> possible XDR and <b>${pp}</b> possible PDR isolate(s).</p>`;
 }
 const AWARE_NAMES = { A: 'Access', W: 'Watch', R: 'Reserve' };
 
 // Antibiotic chart details: how to read the chart, selective testing, AWaRe, contaminants
 function renderChartNotes(containerSel, selectiveNotes, contaminantCount, shownAbx) {
     const key = 'abx_' + containerSel.replace('#', '');
-    let html = '<p><b>*</b> fewer than 30 isolates tested: interpret with caution (grey bars).</p>';
-    if (selectiveNotes.length) html += `<p style="margin-top:8px"><b>†</b> Selectively tested (tested / isolates): ${selectiveNotes.join(', ')}.<br>Only part of the isolates were tested, so the resistance rate may be overestimated.</p>`;
+    let html = '<h5>How to read the bars</h5><ul>' +
+        '<li><b>Solid bar:</b> 30 or more isolates were tested. The result is considered reliable.</li>' +
+        '<li><b>Faded grey bar, name ending with *:</b> fewer than 30 isolates were tested. Interpret with caution (CLSI M39).</li>' +
+        '<li><b>Name ending with &dagger;:</b> selective test. The antibiotic was tested on fewer than half of the isolates, so the percentage may be biased.</li>' +
+        '<li>Tap a bar to see the number tested and the 95% confidence interval.</li></ul>';
+    if (selectiveNotes.length) html += `<h5>Selectively tested agents (tested / isolates)</h5><ul>${selectiveNotes.map(n => '<li>' + n + '</li>').join('')}</ul><p>Only part of the isolates were tested, so the resistance rate may be overestimated.</p>`;
     const groups = { A: [], W: [], R: [] };
     (shownAbx || []).forEach(a => { if (AWARE_CLASS[a]) groups[AWARE_CLASS[a]].push(a); });
     if (groups.A.length || groups.W.length || groups.R.length) {
-        html += '<p style="margin-top:8px"><b>WHO AWaRe</b></p><ul style="margin-left:16px;list-style:disc">';
+        html += '<h5>WHO AWaRe classification</h5><ul>';
         ['A', 'W', 'R'].forEach(k => { if (groups[k].length) html += `<li><b>${AWARE_NAMES[k]}:</b> ${groups[k].join(', ')}</li>`; });
         html += '</ul>';
     }
-    if (contaminantCount > 0) html += `<p style="margin-top:8px"><b>${contaminantCount}</b> blood isolate(s) of this organism are possible skin-flora contaminants. Review clinically.</p>`;
+    if (contaminantCount > 0) html += `<h5>Possible contaminants</h5><p><b>${contaminantCount}</b> blood isolate(s) of this organism are possible skin-flora contaminants. Review them clinically.</p>`;
     setInfo(key, 'About this chart', html);
-    attachInfo($(containerSel).parent().parent(), key);
 }
 
 function setDashStatus(kind, text) {
@@ -449,8 +470,9 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
 
     // Overview details (i): method + possible contaminants (flagged, not removed)
     const contamN = records.filter(isPossibleContaminant).length;
-    let overviewHtml = `<p><b>${records.length}</b> first isolates (the first one per patient and organism within the reported period - CLSI M39). Screening cultures are excluded.</p>`;
-    if (contamN > 0) overviewHtml += `<p style="margin-top:8px"><b>${contamN}</b> blood isolate(s) are possible skin-flora contaminants (CoNS, Corynebacterium, Micrococcus, viridans streptococci...). They are counted, not removed: review clinically.</p>`;
+    let overviewHtml = `<h5>What it shows</h5><p>The period contains <b>${records.length}</b> first isolates, with the most frequent organism and specimen.</p>` +
+        '<h5>How the numbers are counted</h5><ul><li>Only the first isolate per patient and organism within the reported period is counted (CLSI M39).</li><li>Screening cultures (for example rectal or nasal swabs) are excluded.</li></ul>';
+    if (contamN > 0) overviewHtml += `<h5>Possible contaminants</h5><p><b>${contamN}</b> blood isolate(s) are possible skin-flora contaminants (coagulase-negative staphylococci, <i>Corynebacterium</i>, <i>Micrococcus</i>, viridans streptococci and similar). They are counted, not removed, and should be reviewed clinically.</p>`;
     setInfo('overview_' + prefix, 'Surveillance overview', overviewHtml);
     attachInfo($(`#live_${prefix}_total`).closest('.grid').prev(), 'overview_' + prefix);
 

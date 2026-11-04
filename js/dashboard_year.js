@@ -130,7 +130,7 @@ function yaIndicators() {
     $('#ya_ind_table').html(rows
         ? `<table class="ya-table"><thead><tr><th class="ya-l">Indicator</th><th>R / tested</th><th>% R (95% CI)</th><th>${y - 1}</th><th>Change</th></tr></thead><tbody>${rows}</tbody></table>`
         : '<div class="ya-empty">No indicator data for this year and selection.</div>');
-    $('#ya_ind_note').html(`${y}: ${cur.length} first isolates${YA.spec === 'blood' ? ' from blood' : ''}; ${y - 1}: ${prev.length}. * fewer than 30 tested: interpret with caution. Change is shown in percentage points; <b>ns</b> = not statistically significant (two-proportion z-test, p &ge; 0.05, both years n &ge; 30).`);
+    setNote('#ya_ind_note', [`${y}: ${cur.length} first isolates${YA.spec === 'blood' ? ' from blood' : ''}. ${y - 1}: ${prev.length} first isolates.`, '<b>*</b> (grey) = fewer than 30 isolates tested: interpret with caution.', 'Change is in percentage points (pp). <b>ns</b> = not statistically significant (two-proportion z-test, p &ge; 0.05, or fewer than 30 tested in either year).', 'Candidates: isolates with a vancomycin MIC of 16 or more that are still waiting for reference-laboratory confirmation.']);
 }
 
 // ---------------------------------------------------------------- 2. cumulative antibiogram (CLSI M39)
@@ -148,7 +148,7 @@ function yaCumulative() {
     const small = Object.keys(byOrg).filter(o => byOrg[o].length < 30).sort((a, b) => byOrg[b].length - byOrg[a].length);
     if (!orgs.length) {
         $('#ya_cum_table').html('<div class="ya-empty">No organism reached 30 first isolates in ' + y + (YA.cumSpec !== 'all' ? ' for this specimen' : '') + '.</div>');
-        $('#ya_cum_note').html((YA.noContam && exclN ? `${exclN} possible contaminant isolate(s) excluded. ` : '') + (small.length ? `Organisms below 30 isolates (not shown): ${small.slice(0, 8).map(o => `${escHtml(formatOrgName(o))} (n=${byOrg[o].length})`).join('; ')}.` : ''));
+        setNote('#ya_cum_note', [YA.noContam && exclN ? `${exclN} possible contaminant isolate(s) excluded.` : '', small.length ? `Organisms below 30 isolates (not shown): ${small.slice(0, 8).map(o => `${escHtml(formatOrgName(o))} (n=${byOrg[o].length})`).join('; ')}.` : '']);
         return;
     }
     const stats = {}; const colTotals = {};
@@ -176,7 +176,7 @@ function yaCumulative() {
     }).join('');
     const head = cols.map(a => `<th class="ya-v"><span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;height:96px;white-space:nowrap;font-size:10px">${escHtml(a)}</span></th>`).join('');
     $('#ya_cum_table').html(`<table class="ya-table ya-cum"><thead><tr><th class="ya-l">Organism</th>${head}</tr></thead><tbody>${body}</tbody></table>`);
-    $('#ya_cum_note').html(`${YA.noContam && exclN ? `<b>${exclN} possible skin-flora contaminant isolate${exclN === 1 ? '' : 's'} (e.g. coagulase-negative staphylococci in blood) excluded.</b> ` : ''}${y}, first isolate per patient and organism (CLSI M39). Values are % susceptible (S only; I and SDD are not counted as susceptible). A cell is shown only when at least 30 isolates were tested; organisms with fewer than 30 isolates are not shown${small.length ? `: ${small.slice(0, 6).map(o => `${escHtml(formatOrgName(o))} (n=${byOrg[o].length})`).join('; ')}${small.length > 6 ? '...' : ''}` : ''}.` + (dagger ? ' &dagger; Tested on only part of the isolates (selective testing); the percentage may be biased.' : ''));
+    setNote('#ya_cum_note', [YA.noContam && exclN ? `<b>${exclN} possible skin-flora contaminant isolate${exclN === 1 ? '' : 's'}</b> (for example coagulase-negative staphylococci in blood) excluded.` : '', `${y}: first isolate per patient and organism (CLSI M39).`, 'Values are % <b>susceptible</b>. Only S counts; I and SDD are not counted as susceptible.', 'A cell is shown only when 30 or more isolates were tested. Colours: green 90% or more, yellow 70-89%, orange 50-69%, red below 50%.', small.length ? `Organisms with fewer than 30 isolates (not shown): ${small.slice(0, 6).map(o => `${escHtml(formatOrgName(o))} (n=${byOrg[o].length})`).join('; ')}${small.length > 6 ? '...' : ''}.` : '', dagger ? '<b>&dagger;</b> = selective test: the agent was tested on fewer than half of the isolates, so the percentage may be biased.' : '']);
 }
 
 // ---------------------------------------------------------------- 3. quarterly trend
@@ -190,7 +190,7 @@ function yaTrend() {
     const cv = document.getElementById('chart_y_trend');
     if (!markers.length) {
         $('#ya_trend_table').html('<div class="ya-empty">No indicator data to trend for this year and selection.</div>');
-        $('#ya_trend_note').text('');
+        setNote('#ya_trend_note', []);
         return;
     }
     if (cv && window.Chart) {
@@ -214,7 +214,7 @@ function yaTrend() {
         return s.tested ? `<td style="${s.tested < 30 ? 'color:#94a3b8' : ''}">${yaFmt(yaPct(s.resistant, s.tested))}%<div class="ya-mute">n=${s.tested}${s.tested < 30 ? '*' : ''}</div></td>` : '<td class="ya-mute">-</td>';
     }).join('') + '</tr>').join('');
     $('#ya_trend_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Indicator (% R)</th>${quarters.map(q => `<th>${q[0]}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`);
-    $('#ya_trend_note').html(`${y}, each isolate counted once (first of the year) in the quarter in which it appeared, so the quarters add up to the annual figure. * fewer than 30 tested: the trend is indicative only.`);
+    setNote('#ya_trend_note', [`${y}: each isolate is counted once (the first of the year), in the quarter in which it appeared, so the quarters add up to the annual figure.`, '<b>*</b> (grey) = fewer than 30 tested: the trend is indicative only.', 'Hollow points and dashed lines on the chart carry the same meaning.']);
 }
 
 
@@ -257,7 +257,7 @@ function yaAbxTrend() {
     const has = data.some(d => d.cells.some(c => c.t > 0));
     if (!has) {
         $('#ya_abx_table').html('<div class="ya-empty">No susceptibility results for ' + escHtml(S.abx) + ' in this selection.</div>');
-        $('#ya_abx_note').text('');
+        setNote('#ya_abx_note', []);
         return;
     }
     if (cv && typeof Chart !== 'undefined') {
@@ -278,7 +278,7 @@ function yaAbxTrend() {
     const head = periods.map(p => `<th>${escHtml(p.label)}</th>`).join('');
     const rows = data.map(d => `<tr><td class="ya-l"><b>${escHtml(d.se.name)}</b></td>${d.cells.map(c => c.t ? `<td style="${c.t < 30 ? 'color:#94a3b8' : ''}"><b>${yaFmt(pctOf(c))}%</b><div class="ya-mute">n=${c.t}</div></td>` : '<td class="ya-mute">-</td>').join('')}</tr>`).join('');
     $('#ya_abx_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Organism</th>${head}</tr></thead><tbody>${rows}</tbody></table>`);
-    $('#ya_abx_note').html(`${escHtml(S.abx)}: first isolate per patient and organism in each period (CLSI M39). Hollow points and dashed lines mean fewer than 30 tested isolates: treat as indicative only. Only organisms with at least 30 results over the whole period are listed.`);
+    setNote('#ya_abx_note', [`${escHtml(S.abx)}: first isolate per patient and organism in each period (CLSI M39).`, '<b>Hollow point and dashed line</b> = fewer than 30 isolates tested: indicative only.', 'Only organisms with 30 or more results over the whole period are listed.', 'Tap a point to see n and the 95% confidence interval.']);
 }
 
 // ---------------------------------------------------------------- 4. MDR / XDR / PDR by organism group
@@ -291,7 +291,7 @@ function yaMdr() {
         x.n++; x[c.cls]++; if (c.possibleXDR) x.pXDR++;
     });
     const names = Object.keys(g).sort((a, b) => g[b].n - g[a].n);
-    if (!names.length) { $('#ya_mdr_table').html('<div class="ya-empty">No classifiable isolates for this year.</div>'); $('#ya_mdr_note').text(''); return; }
+    if (!names.length) { $('#ya_mdr_table').html('<div class="ya-empty">No classifiable isolates for this year.</div>'); setNote('#ya_mdr_note', []); return; }
     let T = { n: 0, any: 0 };
     const rows = names.map(k => {
         const x = g[k], any = x.MDR + x.XDR + x.PDR, ci = wilsonScoreCI(any, x.n);
@@ -299,7 +299,7 @@ function yaMdr() {
         return `<tr><td class="ya-l"><b>${escHtml(k)}</b><div class="ya-mute">n=${x.n}${x.n < 30 ? '*' : ''}</div></td><td>${yaFmt(yaPct(x.MDR, x.n))}%</td><td>${yaFmt(yaPct(x.XDR, x.n))}%${x.pXDR ? `<div class="ya-mute">+${x.pXDR} possible</div>` : ''}</td><td>${yaFmt(yaPct(x.PDR, x.n))}%</td><td><b>${yaFmt(yaPct(any, x.n))}%</b><div class="ya-mute">${ci.lower}-${ci.upper}</div></td></tr>`;
     }).join('');
     $('#ya_mdr_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Group</th><th>MDR</th><th>XDR</th><th>PDR</th><th>Any (95% CI)</th></tr></thead><tbody>${rows}</tbody></table>`);
-    $('#ya_mdr_note').html(`${y}, first isolates. Each isolate is assigned to its highest class (MDR, XDR or PDR); "Any" = MDR + XDR + PDR (Magiorakos 2012). Untested categories are unknown, not susceptible, so XDR and PDR are conservative; "possible" marks isolates that look XDR on the tested categories but had too narrow a panel to confirm. * fewer than 30 isolates.`);
+    setNote('#ya_mdr_note', [`${y}: first isolates. Each isolate is placed in its highest class (MDR, XDR or PDR).`, '"Any" = MDR + XDR + PDR (Magiorakos 2012).', 'Categories that were not tested are treated as unknown, not susceptible, so XDR and PDR counts are conservative.', '"Possible" marks isolates that look XDR on the tested categories but had too narrow a panel to confirm.', '<b>*</b> (grey) = fewer than 30 isolates.']);
 }
 
 // ---------------------------------------------------------------- 5. culture burden
@@ -320,7 +320,7 @@ function yaCultures() {
     const tot = { g: 0, ng: 0, con: 0, bT: 0, bC: 0 };
     Object.values(per).forEach(p => { Object.keys(tot).forEach(k => { tot[k] += p[k]; }); });
     const T = tot.g + tot.ng + tot.con;
-    if (!T) { $('#ya_cult_table').html('<div class="ya-empty">No culture counts for ' + y + '. Counts are collected from the monthly WHONET files.</div>'); $('#ya_cult_note').text(''); return; }
+    if (!T) { $('#ya_cult_table').html('<div class="ya-empty">No culture counts for ' + y + '. Counts are collected from the monthly WHONET files.</div>'); setNote('#ya_cult_note', []); return; }
     const row = (label, p, bold) => {
         const t = p.g + p.ng + p.con;
         if (!t) return `<tr><td class="ya-l">${label}</td><td class="ya-mute" colspan="5">-</td></tr>`;
@@ -329,13 +329,13 @@ function yaCultures() {
     };
     const rows = MONTH_NAMES.map((n, i) => row(n, per[i + 1])).join('') + row('Year', tot, true);
     $('#ya_cult_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Month</th><th>Cultures</th><th>Positive</th><th>No growth</th><th>Contam.</th><th>Blood contam.</th></tr></thead><tbody>${rows}</tbody></table>`);
-    $('#ya_cult_note').html(`${y}, ${scopeLabel()}. Blood culture contamination is the share of blood cultures reported as contaminated; the benchmark is 3% or less (CLSI M47). Months far below the others usually point to an incomplete file rather than a real drop.`);
+    setNote('#ya_cult_note', [`${y}, ${scopeLabel()}.`, 'Blood culture contamination = share of blood cultures reported as contaminated. Benchmark: 3% or less (CLSI M47).', 'A month far below the others usually means an incomplete file rather than a real drop.']);
 }
 
 // ---------------------------------------------------------------- 6. data quality
 function yaQuality() {
     const y = yaYear(), raw = yaRaw(y);
-    if (!raw.length) { $('#ya_q_table').html('<div class="ya-empty">No records for this year.</div>'); $('#ya_q_note').text(''); return; }
+    if (!raw.length) { $('#ya_q_table').html('<div class="ya-empty">No records for this year.</div>'); setNote('#ya_q_note', []); return; }
     const screening = raw.filter(isScreeningSpecimen).length;
     const clinical = raw.filter(r => !isScreeningSpecimen(r));
     const first = applyDeduplication(raw);
@@ -362,7 +362,7 @@ function yaQuality() {
         ['<i>Enterococcus</i> tested for vancomycin', tested('Enterococcus', ['Vancomycin']), 'VRE indicator']
     ].map(([l, v, h]) => `<tr><td class="ya-l">${l}${h ? `<div class="ya-mute">${h}</div>` : ''}</td><td>${v}</td></tr>`).join('');
     $('#ya_q_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Measure</th><th>${y}</th></tr></thead><tbody>${rows}</tbody></table>`);
-    $('#ya_q_note').text('Low completeness limits what can be reported: indicators are only as reliable as the share of isolates tested for the agents they depend on.');
+    setNote('#ya_q_note', ['Indicators are only as reliable as the share of isolates tested for the agents they depend on.', 'Low completeness limits what can be reported.']);
 }
 
 // ---------------------------------------------------------------- information texts
