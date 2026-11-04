@@ -538,7 +538,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         }
     }
     const audit = { unknownOrg: new Map(), unknownWard: new Map(), unknownSpec: new Map(), unmappedAbx: new Map(), renamed: new Map() };
-    const report = { strepPenDisk: 0, duplicates: 0, blankOrg: 0, added: 0, noGrowth: 0, noSri: 0, noDate: 0, vancDisk: 0, vancTypedIR: 0, vancInvalidMic: 0, vancMismatch: 0, vancCandidates: [], vancNeedsMic: 0, vancFromMic: 0, valuesFile: valuesAligned, valuesFileIgnored: !!valuesTable && !valuesAligned };
+    const report = { noSpecimen: [], strepPenDisk: 0, duplicates: 0, blankOrg: 0, added: 0, noGrowth: 0, noSri: 0, noDate: 0, vancDisk: 0, vancTypedIR: 0, vancInvalidMic: 0, vancMismatch: 0, vancCandidates: [], vancNeedsMic: 0, vancFromMic: 0, valuesFile: valuesAligned, valuesFileIgnored: !!valuesTable && !valuesAligned };
 
     const abxColumns = [];
     const allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
@@ -701,6 +701,8 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         let rawSample = idxSample > -1 && cols[idxSample] ? String(cols[idxSample]).toLowerCase() : "";
         if (rawSample && !externalSpecimenMap[rawSample]) bump(audit.unknownSpec, rawSample);
         let sample = externalSpecimenMap[rawSample] || (rawSample ? rawSample.charAt(0).toUpperCase() + rawSample.slice(1) : "-");
+        // No specimen type: the source cannot be analysed (and screening cultures cannot be excluded), so the row is not imported
+        if (!rawSample || sample === '-') { skippedCount++; report.noSpecimen.push(patientID || ('row ' + (i + 1))); continue; }
 
         let rawDate = idxDate > -1 && cols[idxDate] ? String(cols[idxDate]).trim() : "";
         let formattedDate = ""; 
@@ -881,6 +883,7 @@ function buildImportReport(report, audit, newRecords, skippedCount) {
 
     // --- needs attention ---
     if (report.blankOrg) attention.push({ t: `Rows with susceptibility results but no organism name (not imported): ${report.blankOrg}`, d: 'Fix the organism in WHONET and import again.' });
+    if (report.noSpecimen.length) attention.push({ t: `Rows without a specimen type (not imported): ${report.noSpecimen.length} (${report.noSpecimen.slice(0, 10).map(escapeHtml).join(', ')})`, d: 'Complete the specimen type in WHONET and import again, or add the record manually.' });
     if (audit.unknownOrg.size) attention.push({ t: `Unrecognised organism codes: ${topList(audit.unknownOrg)}`, d: 'These were stored under the raw code. Add them to organisms_dictionary.json so they get a proper name.' });
     if (audit.unmappedAbx.size) attention.push({ t: `Antibiotic columns with results that the app does not know: ${topList(audit.unmappedAbx)}`, d: 'Their results were NOT imported. The WHONET code has to be added to the antibiotic dictionary.' });
     if (audit.unknownWard.size) attention.push({ t: `Unrecognised ward codes: ${topList(audit.unknownWard)}`, d: 'Stored as typed. Add them to the ward map so they merge with existing wards.' });
