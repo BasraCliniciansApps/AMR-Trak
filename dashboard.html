@@ -62,6 +62,16 @@
         .ya-chev.rot { transform: rotate(180deg); }
         .ya-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; background: #f1f5f9; padding: 3px; border-radius: 10px; margin-bottom: 10px; }
         .ya-seg button { height: 30px; border: 0; border-radius: 8px; background: transparent; font-size: 11px; font-weight: 700; color: #64748b; cursor: pointer; }
+        .ya-seg-wrap { grid-auto-flow: row; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); }
+        .ya-ctl { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+        .ya-sel { height: 36px; width: 100%; min-width: 0; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; font-size: 12px; font-weight: 600; color: #334155; padding: 0 8px; }
+        .ya-opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 10px; }
+        .ya-sw { position: relative; width: 40px; height: 22px; flex: none; }
+        .ya-sw input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+        .ya-sw i { position: absolute; inset: 0; border-radius: 999px; background: #cbd5e1; transition: .2s; }
+        .ya-sw i::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: .2s; }
+        .ya-sw input:checked + i { background: #0d9488; }
+        .ya-sw input:checked + i::after { left: 20px; }
         .ya-seg button.on { background: #fff; color: #0f766e; box-shadow: 0 1px 2px rgba(15,23,42,.12); }
         .ya-scroll { overflow-x: auto; }
         .ya-scroll::-webkit-scrollbar { height: 4px; } .ya-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -612,7 +622,6 @@
                     </div>
                 </div>
                 <div id="live_m_watchlist_container" class="hidden mt-4"></div>
-                <div id="live_m_top3_container" class="mt-4 space-y-2 hidden"></div>
                 <div data-sec="profiles" id="live_m_profiles_wrapper" class="space-y-3 mt-4 pt-4 border-t border-slate-100 hidden">
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
                         <h4 class="text-xs font-bold text-red-700 mb-2 flex justify-between"><span id="live_m_profile1_title">Profile 1</span><span class="text-[9px] text-slate-500" id="live_m_mero_count"></span></h4>
@@ -694,17 +703,6 @@
                     </div>
                 </div>
                 <div id="live_y_watchlist_container" class="hidden mt-4"></div>
-                <div id="live_y_top3_container" class="mt-4 space-y-2 hidden"></div>
-                <div data-sec="profiles" id="live_y_profiles_wrapper" class="space-y-3 mt-4 pt-4 border-t border-slate-100 hidden">
-                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                        <h4 class="text-xs font-bold text-red-700 mb-2 flex justify-between"><span id="live_y_profile1_title">Profile 1</span><span class="text-[9px] text-slate-500" id="live_y_mero_count"></span></h4>
-                        <div class="w-full overflow-x-auto custom-scroll"><div class="h-60 relative" style="min-width: 300px;"><canvas id="chart_y_mero"></canvas></div></div>
-                    </div>
-                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                        <h4 class="text-xs font-bold text-amber-600 mb-2 flex justify-between"><span id="live_y_profile2_title">Profile 2</span><span class="text-[9px] text-slate-500" id="live_y_cro_count"></span></h4>
-                        <div class="w-full overflow-x-auto custom-scroll"><div class="h-60 relative" style="min-width: 300px;"><canvas id="chart_y_cro"></canvas></div></div>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -774,7 +772,6 @@
                     </div>
                 </div>
                 <div id="live_q_watchlist_container" class="hidden mt-4"></div>
-                <div id="live_q_top3_container" class="mt-4 space-y-2 hidden"></div>
                 <div data-sec="profiles" id="live_q_profiles_wrapper" class="space-y-3 mt-4 pt-4 border-t border-slate-100 hidden">
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
                         <h4 class="text-xs font-bold text-red-700 mb-2 flex justify-between"><span id="live_q_profile1_title">Profile 1</span><span class="text-[9px] text-slate-500" id="live_q_mero_count"></span></h4>
@@ -841,10 +838,10 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=8.2"></script>
-    <script src="js/dashboard.js?v=8.2"></script>
-    <script src="js/dashboard_panels.js?v=8.2"></script>
-    <script src="js/dashboard_year.js?v=8.2"></script>
+    <script src="js/data.js?v=8.3"></script>
+    <script src="js/dashboard.js?v=8.3"></script>
+    <script src="js/dashboard_panels.js?v=8.3"></script>
+    <script src="js/dashboard_year.js?v=8.3"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>

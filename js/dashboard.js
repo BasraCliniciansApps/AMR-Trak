@@ -438,7 +438,7 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     if(records.length === 0) {
         $(`#live_${prefix}_bug`).text("-");
         $(`#live_${prefix}_spec`).text("-");
-        $(`#live_${prefix}_top3_container, #live_${prefix}_profiles_wrapper, #live_${prefix}_watchlist_container`).addClass('hidden');
+        $(`#live_${prefix}_profiles_wrapper, #live_${prefix}_watchlist_container`).addClass('hidden');
         
         $(`#live_${prefix}_amr_title`).text(`Critical Resistance Markers (${timeLabel})`);
         $(`#live_${prefix}_blood_subtitle`).text(timeLabel);
@@ -602,50 +602,6 @@ if (settings.show_amr === false) {
         }
     }));
 
-    let top3Specs = sortedSpecs.slice(0, 3);
-    let htmlTop3 = `<h4 class="text-xs font-bold text-slate-700 mt-2 mb-2 border-b pb-1">Top 3 Specimens Breakdown (${timeLabel})</h4>`;
-    
-    top3Specs.forEach(spec => {
-        let specRecords = records.filter(r => r.Sample === spec);
-        let bCounts = {};
-        specRecords.forEach(r => { let o = r['Selective organism']; if(o) bCounts[o] = (bCounts[o]||0)+1; });
-        let topBugSpec = formatOrgName(Object.keys(bCounts).sort((a,b)=>bCounts[b]-bCounts[a])[0]) || "-";
-
-        let abxS = {}, abxT = {};
-        specRecords.forEach(r => {
-            if(typeof abxList !== 'undefined') {
-                abxList.forEach(a => {
-                    if(r[a] && r[a] !== '-') {
-                        abxT[a] = (abxT[a]||0)+1;
-                        if(r[a] === 'S') abxS[a] = (abxS[a]||0)+1;
-                    }
-                });
-            }
-        });
-        
-        let bestAbx = "-", bestP = -1;
-        Object.keys(abxT).forEach(a => { if(abxT[a] >= 5) { let p = (abxS[a]||0)/abxT[a]; if(p > bestP) { bestP=p; bestAbx=a; } } });
-        if(bestP === -1) { Object.keys(abxT).forEach(a => { let p = (abxS[a]||0)/abxT[a]; if(p > bestP) { bestP=p; bestAbx=a; } }); }
-
-        let fmtAbx = "N/A";
-        if (bestAbx !== "-") {
-            let ci = wilsonScoreCI(abxS[bestAbx]||0, abxT[bestAbx]);
-            fmtAbx = `<span class="block">${bestAbx} <span class="text-emerald-600 font-bold">(${Math.round(bestP*100)}% S)</span></span><span class="text-[9px] text-slate-400 bg-slate-100 px-1 rounded block mt-0.5">CI: ${ci.lower}%-${ci.upper}%</span>`;
-        }
-
-        htmlTop3 += `
-        <div class="bg-slate-50 border border-slate-100 p-2 rounded flex flex-col gap-1 text-[10px]">
-            <div class="font-bold text-blue-800 bg-blue-100 px-1.5 rounded self-start">${spec}</div>
-            <div class="text-slate-600">Top Bug: <span class="font-bold text-rose-600">${topBugSpec}</span></div>
-            <div class="text-slate-600 mt-1 pt-1 border-t border-slate-200">Most Susceptible:<br>${fmtAbx}</div>
-        </div>`;
-    });
-    if (settings.show_top3 !== false && top3Specs.length > 0) {
-        $(`#live_${prefix}_top3_container`).html(htmlTop3).removeClass('hidden');
-    } else {
-        $(`#live_${prefix}_top3_container`).addClass('hidden');
-    }
-
     let p1 = settings.profile1_abx || 'Meropenem';
     let p2 = settings.profile2_abx || 'Ceftriaxone';
 // --- 🚨 MDR / XDR Classification Algorithm ---
@@ -747,6 +703,11 @@ if (settings.show_amr === false) {
             return org === normalizedWatchBug;
         });
         
+        if (watchRecords.length === 0) {
+            const nm = typeof formatScientificName === 'function' ? formatScientificName(watchBug) : watchBug;
+            $(`#live_${prefix}_watchlist_container`).html(`<div class="flex items-center gap-2 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2"><svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span>Watchlist: <i>${nm}</i> - none detected (${timeLabel})</span></div>`).removeClass('hidden');
+            return;
+        }
         let wWard = {}, wSpec = {}, wAbxT = {}, wAbxR = {};
         let allPossibleAbxs = [...(typeof abxList !== 'undefined' ? abxList : []), ...getCustomAntibiotics().map(a => a.name)];
 

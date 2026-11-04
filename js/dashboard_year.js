@@ -2,7 +2,8 @@
 // Reference methods: CLSI M39 (first isolate per patient, organism and year; n >= 30), CLSI M100 (interpretation),
 // WHO GLASS (priority indicators, specimen-specific reporting), Magiorakos 2012 (MDR / XDR / PDR).
 
-const YA = { spec: 'all', cumSpec: 'all', trend: null };
+const YA = { spec: 'all', cumSpec: 'all', noContam: true, trend: null, abxChart: null, abx: { abx: 'Meropenem', org: 'top', mode: 'year', metric: 'R' } };
+try { const sv = JSON.parse(localStorage.getItem('amr_trend_sel') || 'null'); if (sv && typeof sv === 'object') Object.assign(YA.abx, sv); } catch (e) {}
 const YA_EXCLUDED_ORGS = ['xxx', 'con', 'no growth', 'contaminated', 'normal flora', 'mixed flora', 'no significant growth'];
 const YA_MARKER_NAMES = {
     '3GC-R': 'Third-generation cephalosporin-resistant <i>E. coli</i> / <i>K. pneumoniae</i>',
@@ -31,9 +32,16 @@ function yaRaw(year) {
     });
 }
 // First isolates of a year, optionally restricted to one specimen type BEFORE de-duplication (specimen-specific reporting)
-function yaFirst(year, spec) {
-    let raw = yaRaw(year);
-    if (spec === 'blood') raw = raw.filter(yaIsBlood); else if (spec === 'urine') raw = raw.filter(yaIsUrine);
+function yaMatchSpec(r, spec) {
+    if (!spec || spec === 'all') return true;
+    const s = String(r.Sample || '');
+    if (spec === 'blood') return /blood/i.test(s);
+    if (spec === 'urine') return /urine/i.test(s);
+    return s.toLowerCase() === String(spec).toLowerCase();
+}
+function yaFirst(year, spec, noContam) {
+    let raw = yaRaw(year).filter(r => yaMatchSpec(r, spec));
+    if (noContam) raw = raw.filter(r => !isPossibleContaminant(r));
     return applyDeduplication(raw);
 }
 function yaZ(r1, n1, r2, n2) {
@@ -49,6 +57,7 @@ const YA_CARDS = [
     ['ind', 'Key resistance indicators', true],
     ['cum', 'Cumulative antibiogram (% susceptible)', false],
     ['trend', 'Quarterly trend', false],
+    ['abx', 'Antibiotic trend', false],
     ['mdr', 'MDR / XDR / PDR by organism group', false],
     ['cult', 'Culture burden', false],
     ['qual', 'Data quality', false]
@@ -63,8 +72,9 @@ function yaBuild() {
     host.dataset.built = '1';
     const bodies = {
         ind: yaSeg('ya_spec_seg', [['all', 'All specimens'], ['blood', 'Blood only']], YA.spec, 'yaSetSpec') + '<div id="ya_ind_table" class="ya-scroll"></div><p class="ya-note" id="ya_ind_note"></p>',
-        cum: yaSeg('ya_cum_seg', [['all', 'All specimens'], ['blood', 'Blood'], ['urine', 'Urine']], YA.cumSpec, 'yaSetCumSpec') + '<div id="ya_cum_table" class="ya-scroll"></div><p class="ya-note" id="ya_cum_note"></p>',
+        cum: '<div id="ya_cum_seg" class="ya-seg ya-seg-wrap"></div><label class="ya-opt"><span>Exclude possible skin-flora contaminants</span><span class="ya-sw"><input type="checkbox" id="ya_nocontam" checked onchange="yaSetNoContam(this.checked)"><i></i></span></label><div id="ya_cum_table" class="ya-scroll"></div><p class="ya-note" id="ya_cum_note"></p>',
         trend: '<div class="ya-chart"><canvas id="chart_y_trend"></canvas></div><div id="ya_trend_table" class="ya-scroll"></div><p class="ya-note" id="ya_trend_note"></p>',
+        abx: '<div id="ya_abx_ctl"></div><div class="ya-chart"><canvas id="chart_y_abxtrend"></canvas></div><div id="ya_abx_table" class="ya-scroll"></div><p class="ya-note" id="ya_abx_note"></p>',
         mdr: '<div id="ya_mdr_table" class="ya-scroll"></div><p class="ya-note" id="ya_mdr_note"></p>',
         cult: '<div id="ya_cult_table" class="ya-scroll"></div><p class="ya-note" id="ya_cult_note"></p>',
         qual: '<div id="ya_q_table" class="ya-scroll"></div><p class="ya-note" id="ya_q_note"></p>'
@@ -85,7 +95,15 @@ window.toggleYa = function (id) {
     if (!$('#ya_body_' + id).hasClass('hidden')) { try { window.dispatchEvent(new Event('resize')); } catch (e) {} }
 };
 window.yaSetSpec = function (v) { YA.spec = v; $('#ya_spec_seg button').each(function () { $(this).toggleClass('on', $(this).data('v') === v); }); yaIndicators(); yaTrend(); };
-window.yaSetCumSpec = function (v) { YA.cumSpec = v; $('#ya_cum_seg button').each(function () { $(this).toggleClass('on', $(this).data('v') === v); }); yaCumulative(); };
+window.yaSetCumSpec = function (v) { YA.cumSpec = v; yaCumulative(); };
+window.yaSetNoContam = function (on) { YA.noContam = !!on; yaCumulative(); };
+// specimen types that reach 30 first isolates in the year (CLSI M39: a specimen is reported separately only when numbers allow)
+function yaSpecOptions(year) {
+    const names = {};
+    yaRaw(year).forEach(r => { const s = String(r.Sample || '').trim(); if (s) names[s.toLowerCase()] = s; });
+    return Object.keys(names).map(k => ({ key: k, label: names[k], n: yaFirst(year, k, false).length }))
+        .filter(o => o.n >= 30).sort((a, b) => b.n - a.n).slice(0, 8);
+}
 
 // ---------------------------------------------------------------- 1. key resistance indicators (+ year on year)
 function yaIndicators() {
@@ -117,14 +135,20 @@ function yaIndicators() {
 
 // ---------------------------------------------------------------- 2. cumulative antibiogram (CLSI M39)
 function yaCumulative() {
-    const y = yaYear(), recs = yaFirst(y, YA.cumSpec);
+    const y = yaYear();
+    const specs = yaSpecOptions(y);
+    if (YA.cumSpec !== 'all' && !specs.some(s => s.key === YA.cumSpec)) YA.cumSpec = 'all';
+    $('#ya_cum_seg').html([{ key: 'all', label: 'All specimens' }].concat(specs).map(s => `<button type="button" data-v="${escHtml(s.key)}" class="${s.key === YA.cumSpec ? 'on' : ''}" onclick="yaSetCumSpec(this.getAttribute('data-v'))">${escHtml(s.label)}</button>`).join(''));
+    $('#ya_nocontam').prop('checked', YA.noContam);
+    const recs = yaFirst(y, YA.cumSpec, YA.noContam);
+    const exclN = yaRaw(y).filter(r => yaMatchSpec(r, YA.cumSpec) && isPossibleContaminant(r)).length;
     const byOrg = {};
     recs.forEach(r => { const o = r['Selective organism']; (byOrg[o] = byOrg[o] || []).push(r); });
     const orgs = Object.keys(byOrg).filter(o => byOrg[o].length >= 30).sort((a, b) => byOrg[b].length - byOrg[a].length).slice(0, 15);
     const small = Object.keys(byOrg).filter(o => byOrg[o].length < 30).sort((a, b) => byOrg[b].length - byOrg[a].length);
     if (!orgs.length) {
         $('#ya_cum_table').html('<div class="ya-empty">No organism reached 30 first isolates in ' + y + (YA.cumSpec !== 'all' ? ' for this specimen' : '') + '.</div>');
-        $('#ya_cum_note').html(small.length ? `Organisms below 30 isolates (not shown): ${small.slice(0, 8).map(o => `${escHtml(formatOrgName(o))} (n=${byOrg[o].length})`).join('; ')}.` : '');
+        $('#ya_cum_note').html((YA.noContam && exclN ? `${exclN} possible contaminant isolate(s) excluded. ` : '') + (small.length ? `Organisms below 30 isolates (not shown): ${small.slice(0, 8).map(o => `${escHtml(formatOrgName(o))} (n=${byOrg[o].length})`).join('; ')}.` : ''));
         return;
     }
     const stats = {}; const colTotals = {};
@@ -152,7 +176,7 @@ function yaCumulative() {
     }).join('');
     const head = cols.map(a => `<th class="ya-v"><span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;height:96px;white-space:nowrap;font-size:10px">${escHtml(a)}</span></th>`).join('');
     $('#ya_cum_table').html(`<table class="ya-table ya-cum"><thead><tr><th class="ya-l">Organism</th>${head}</tr></thead><tbody>${body}</tbody></table>`);
-    $('#ya_cum_note').html(`${y}, first isolate per patient and organism (CLSI M39). Values are % susceptible (S only; I and SDD are not counted as susceptible). A cell is shown only when at least 30 isolates were tested; organisms with fewer than 30 isolates are not shown${small.length ? `: ${small.slice(0, 6).map(o => `${escHtml(formatOrgName(o))} (n=${byOrg[o].length})`).join('; ')}${small.length > 6 ? '...' : ''}` : ''}.` + (dagger ? ' &dagger; Tested on only part of the isolates (selective testing); the percentage may be biased.' : ''));
+    $('#ya_cum_note').html(`${YA.noContam && exclN ? `<b>${exclN} possible skin-flora contaminant isolate${exclN === 1 ? '' : 's'} (e.g. coagulase-negative staphylococci in blood) excluded.</b> ` : ''}${y}, first isolate per patient and organism (CLSI M39). Values are % susceptible (S only; I and SDD are not counted as susceptible). A cell is shown only when at least 30 isolates were tested; organisms with fewer than 30 isolates are not shown${small.length ? `: ${small.slice(0, 6).map(o => `${escHtml(formatOrgName(o))} (n=${byOrg[o].length})`).join('; ')}${small.length > 6 ? '...' : ''}` : ''}.` + (dagger ? ' &dagger; Tested on only part of the isolates (selective testing); the percentage may be biased.' : ''));
 }
 
 // ---------------------------------------------------------------- 3. quarterly trend
@@ -191,6 +215,70 @@ function yaTrend() {
     }).join('') + '</tr>').join('');
     $('#ya_trend_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Indicator (% R)</th>${quarters.map(q => `<th>${q[0]}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`);
     $('#ya_trend_note').html(`${y}, each isolate counted once (first of the year) in the quarter in which it appeared, so the quarters add up to the annual figure. * fewer than 30 tested: the trend is indicative only.`);
+}
+
+
+// ---------------------------------------------------------------- 3b. antibiotic trend (any agent over years or quarters)
+const YA_ORG_COLORS = ['#2563eb', '#e11d48', '#0d9488', '#f59e0b', '#7c3aed', '#475569'];
+window.yaAbxSet = function (k, v) { YA.abx[k] = v; try { localStorage.setItem('amr_trend_sel', JSON.stringify(YA.abx)); } catch (e) {} yaAbxTrend(); };
+function yaAbxTrend() {
+    const y = yaYear(), S = YA.abx;
+    if (!abxList.includes(S.abx)) S.abx = abxList.includes('Meropenem') ? 'Meropenem' : abxList[0];
+    // periods
+    let periods = [];
+    if (S.mode === 'quarter') {
+        const recs = yaFirst(y, 'all', false);
+        [['Q1', ['01', '02', '03']], ['Q2', ['04', '05', '06']], ['Q3', ['07', '08', '09']], ['Q4', ['10', '11', '12']]].forEach(([q, ms]) =>
+            periods.push({ label: q + ' ' + y, recs: recs.filter(r => ms.includes(String(r.Date).slice(5, 7))) }));
+    } else {
+        const all = getDashRecords(); let first = y;
+        all.forEach(r => { const yr = parseInt(String(r.Date || '').slice(0, 4)); if (yr && yr < first) first = yr; });
+        for (let yr = Math.max(first, y - 9); yr <= y; yr++) periods.push({ label: String(yr), recs: yaFirst(yr, 'all', false) });
+    }
+    // organisms: per period tested counts for this antibiotic
+    const tally = (recs, org) => { let t = 0, r = 0, s = 0; recs.forEach(x => { if (org && x['Selective organism'] !== org) return; const v = String(x[S.abx] || '').trim().toUpperCase(); if (!yaIsSIR(v)) return; t++; if (v === 'R') r++; if (v === 'S') s++; }); return { t, r, s }; };
+    const totalByOrg = {};
+    periods.forEach(pd => pd.recs.forEach(x => { const v = String(x[S.abx] || '').trim().toUpperCase(); if (yaIsSIR(v)) totalByOrg[x['Selective organism']] = (totalByOrg[x['Selective organism']] || 0) + 1; }));
+    const orgOpts = Object.keys(totalByOrg).filter(o => totalByOrg[o] >= 30).sort((a, b) => totalByOrg[b] - totalByOrg[a]);
+    if (S.org !== 'top' && S.org !== 'all' && !orgOpts.includes(S.org)) S.org = 'top';
+    const series = S.org === 'all' ? [{ name: 'All organisms', org: null }]
+        : S.org === 'top' ? orgOpts.slice(0, 4).map(o => ({ name: formatOrgName(o), org: o }))
+        : [{ name: formatOrgName(S.org), org: S.org }];
+    const sel = (k, opts, cur) => `<select class="ya-sel" onchange="yaAbxSet('${k}', this.value)">${opts.map(([v, t]) => `<option value="${escHtml(v)}" ${v === cur ? 'selected' : ''}>${escHtml(t)}</option>`).join('')}</select>`;
+    $('#ya_abx_ctl').html(`<div class="ya-ctl">
+        ${sel('abx', abxList.map(a => [a, a]), S.abx)}
+        ${sel('org', [['top', 'Top organisms'], ['all', 'All organisms']].concat(orgOpts.map(o => [o, formatOrgName(o)])), S.org)}
+        ${sel('mode', [['year', 'By year'], ['quarter', 'By quarter of ' + y]], S.mode)}
+        ${sel('metric', [['R', '% Resistant'], ['S', '% Susceptible']], S.metric)}</div>`);
+    const pctOf = c => c.t ? Math.round(((S.metric === 'S' ? c.s : c.r) / c.t) * 1000) / 10 : null;
+    const data = series.map(se => ({ se, cells: periods.map(pd => tally(pd.recs, se.org)) }));
+    if (YA.abxChart) { try { YA.abxChart.destroy(); } catch (e) {} YA.abxChart = null; }
+    const cv = document.getElementById('chart_y_abxtrend');
+    const has = data.some(d => d.cells.some(c => c.t > 0));
+    if (!has) {
+        $('#ya_abx_table').html('<div class="ya-empty">No susceptibility results for ' + escHtml(S.abx) + ' in this selection.</div>');
+        $('#ya_abx_note').text('');
+        return;
+    }
+    if (cv && typeof Chart !== 'undefined') {
+        YA.abxChart = new Chart(cv.getContext('2d'), {
+            type: 'line',
+            data: { labels: periods.map(p => p.label), datasets: data.map((d, i) => {
+                const col = YA_ORG_COLORS[i % YA_ORG_COLORS.length];
+                return { label: d.se.name, data: d.cells.map(c => c.t ? pctOf(c) : null), borderColor: col, backgroundColor: col, spanGaps: true, tension: 0.2, borderWidth: 2,
+                    pointRadius: 4, pointBackgroundColor: d.cells.map(c => c.t >= 30 ? col : '#fff'), pointBorderColor: col, pointBorderWidth: 2,
+                    segment: { borderDash: ctx => (d.cells[ctx.p0DataIndex].t < 30 || d.cells[ctx.p1DataIndex].t < 30) ? [5, 4] : undefined }, _cells: d.cells };
+            }) },
+            options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'nearest', intersect: true },
+                scales: { y: { min: 0, max: 100, title: { display: true, text: S.metric === 'S' ? '% susceptible' : '% resistant' } } },
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } },
+                    tooltip: { callbacks: { label: c => { const k = c.dataset._cells[c.dataIndex]; const ci = wilsonScoreCI(S.metric === 'S' ? k.s : k.r, k.t); return `${c.dataset.label}: ${c.parsed.y}% (n=${k.t}, 95% CI ${ci.lower}-${ci.upper})${k.t < 30 ? ' n<30' : ''}`; } } } } }
+        });
+    }
+    const head = periods.map(p => `<th>${escHtml(p.label)}</th>`).join('');
+    const rows = data.map(d => `<tr><td class="ya-l"><b>${escHtml(d.se.name)}</b></td>${d.cells.map(c => c.t ? `<td style="${c.t < 30 ? 'color:#94a3b8' : ''}"><b>${yaFmt(pctOf(c))}%</b><div class="ya-mute">n=${c.t}</div></td>` : '<td class="ya-mute">-</td>').join('')}</tr>`).join('');
+    $('#ya_abx_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Organism</th>${head}</tr></thead><tbody>${rows}</tbody></table>`);
+    $('#ya_abx_note').html(`${escHtml(S.abx)}: first isolate per patient and organism in each period (CLSI M39). Hollow points and dashed lines mean fewer than 30 tested isolates: treat as indicative only. Only organisms with at least 30 results over the whole period are listed.`);
 }
 
 // ---------------------------------------------------------------- 4. MDR / XDR / PDR by organism group
@@ -288,6 +376,8 @@ function yaSetInfo() {
         P + '<b>&dagger;</b> marks agents tested on only part of the isolates, where the percentage may be biased.' + E, ['CLSI_M39', 'CLSI_M100']);
     setInfo('ya_trend', 'Quarterly trend', P + 'Resistance of the priority indicators across the four quarters of the selected year.' + E +
         P + 'Each first isolate of the year is counted once, in the quarter in which it appeared, so the quarters add up to the annual figure. Quarters with fewer than 30 tested isolates are marked and should be read as indicative only.' + E, ['CLSI_M39', 'WHO_GLASS']);
+    setInfo('ya_abx', 'Antibiotic trend', P + 'Follows the resistance (or susceptibility) of one chosen antibiotic over the years, or across the quarters of the selected year, for all organisms together or for individual organisms.' + E +
+        P + 'Each period uses first isolates per patient and organism (CLSI M39). Hollow points and dashed segments mark periods with fewer than 30 tested isolates; the tooltip shows n and the 95% Wilson confidence interval. Overlapping intervals mean a change may be chance.' + E, ['CLSI_M39', 'WHO_GLASS']);
     setInfo('ya_mdr', 'MDR / XDR / PDR by organism group', P + 'Multidrug-resistant (MDR), extensively drug-resistant (XDR) and pandrug-resistant (PDR) isolates among Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp. and <i>S. aureus</i>, using the standard definitions of Magiorakos et al. (2012).' + E +
         P + 'Intrinsic resistance is excluded. A category that was not tested is treated as unknown, not as susceptible, so XDR and PDR are conservative; isolates that look XDR on the tested categories but had too narrow a panel are shown as "possible".' + E, ['MAGIORAKOS', 'CLSI_M100', 'CLSI_M39']);
     setInfo('ya_cult', 'Culture burden', P + 'Monthly number of cultures received, the share with growth, without growth and reported as contaminated, and the contamination rate of blood cultures.' + E +
@@ -302,7 +392,7 @@ function renderAnnualReport() {
     yaBuild();
     yaSetInfo();
     const y = yaYear();
-    [yaIndicators, yaCumulative, yaTrend, yaMdr, yaCultures, yaQuality].forEach(f => { try { f(); } catch (e) { console.error('annual report:', f.name, e); } });
+    [yaIndicators, yaCumulative, yaTrend, yaAbxTrend, yaMdr, yaCultures, yaQuality].forEach(f => { try { f(); } catch (e) { console.error('annual report:', f.name, e); } });
     $('#ya_year_label').text(String(y));
 }
 
@@ -314,11 +404,13 @@ function renderAnnualReport() {
         { title: 'Cumulative antibiogram (% susceptible)', el: '#ya_cum_table', kind: 'table', landscape: true },
         { title: 'Quarterly trend', el: '#chart_y_trend' },
         { title: 'Quarterly values', el: '#ya_trend_table', kind: 'table' },
+        { title: 'Antibiotic trend', el: '#chart_y_abxtrend' },
+        { title: 'Antibiotic trend values', el: '#ya_abx_table', kind: 'table' },
         { title: 'MDR / XDR / PDR by organism group', el: '#ya_mdr_table', kind: 'table' },
         { title: 'Culture burden', el: '#ya_cult_table', kind: 'table' },
         { title: 'Data quality', el: '#ya_q_table', kind: 'table' }
     ];
     SECTIONS.year.charts = own.concat(SECTIONS.year.charts);
-    SECTIONS.year.infos = [['Key resistance indicators', 'ya_ind'], ['Cumulative antibiogram', 'ya_cum'], ['Quarterly trend', 'ya_trend'], ['MDR / XDR / PDR by organism group', 'ya_mdr'], ['Culture burden', 'ya_cult'], ['Data quality', 'ya_qual']].concat(SECTIONS.year.infos);
+    SECTIONS.year.infos = [['Key resistance indicators', 'ya_ind'], ['Cumulative antibiogram', 'ya_cum'], ['Quarterly trend', 'ya_trend'], ['Antibiotic trend', 'ya_abx'], ['MDR / XDR / PDR by organism group', 'ya_mdr'], ['Culture burden', 'ya_cult'], ['Data quality', 'ya_qual']].concat(SECTIONS.year.infos);
     SECTIONS.year.title = () => 'Annual AMR Surveillance Report (' + yaYear() + ')';
 })();
