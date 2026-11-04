@@ -375,82 +375,87 @@ function triggerDataExtractor() {
     document.getElementById('extractorFileInput').click();
 }
 
+function readTableFile(file) {
+    return new Promise((resolve, reject) => {
+        const name = file.name.toLowerCase();
+        const reader = new FileReader();
+        if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+            reader.onload = async (e) => {
+                try {
+                    const workbook = await XlsxPopulate.fromDataAsync(e.target.result);
+                    const values = workbook.sheet(0).usedRange().value();
+                    resolve(values.map(row => row ? row.map(cell => cell != null ? String(cell).trim() : "") : []));
+                } catch (err) { reject(err); }
+            };
+            reader.onerror = reject;
+            reader.readAsArrayBuffer(file);
+        } else {
+            reader.onload = e => {
+                const lines = e.target.result.split(/\r?\n/);
+                if (lines.length < 2) { reject(new Error('empty')); return; }
+                let separator = '\t';
+                if (lines[0].split('\t').length <= 1) separator = ',';
+                resolve(lines.filter(line => line.trim() !== '').map(line => line.split(separator).map(c => c.trim())));
+            };
+            reader.onerror = reject;
+            reader.readAsText(file);
+        }
+    });
+}
+
+// A WHONET "values" export has numeric MIC cells; the "interpretations" export has S/I/R letters.
+function tableHasNumericMics(table) {
+    const h = (table[0] || []).map(x => String(x || '').toLowerCase());
+    const micCols = h.map((x, i) => x.endsWith('_nm') ? i : -1).filter(i => i > -1);
+    let numeric = 0;
+    for (let r = 1; r < Math.min(table.length, 400); r++) {
+        micCols.forEach(c => { if (/^[<>≤≥=]*\s*\d/.test(String(table[r][c] || ''))) numeric++; });
+    }
+    return numeric > 0;
+}
+
 async function processDataExtraction(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
 
     Swal.fire({ title: 'Processing File...', text: 'Loading dictionaries and extracting records...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
-    // 1. Fetch Organisms Dictionary
-    let externalOrgMap = {};
+    const loadDict = async (url) => {
+        const map = {};
+        try {
+            const response = await fetch(url);
+            if (response.ok) {
+                const jsonDict = await response.json();
+                Object.keys(jsonDict).forEach(key => { map[key.toLowerCase()] = jsonDict[key]; });
+            } else console.warn(url + " not found on server.");
+        } catch (error) { console.warn("Could not fetch " + url); }
+        return map;
+    };
+    const externalOrgMap = await loadDict('organisms_dictionary.json');
+    const externalSpecimenMap = await loadDict('specimens_dictionary.json');
+
     try {
-        const response = await fetch('organisms_dictionary.json');
-        if (response.ok) {
-            const jsonDict = await response.json();
-            Object.keys(jsonDict).forEach(key => { externalOrgMap[key.toLowerCase()] = jsonDict[key]; });
-        } else {
-            console.warn("organisms_dictionary.json not found on server.");
+        const tables = [];
+        for (const f of files.slice(0, 2)) tables.push(await readTableFile(f));
+        let main = tables[0], valuesTable = null;
+        if (tables.length === 2) {
+            const firstHasMic = tableHasNumericMics(tables[0]), secondHasMic = tableHasNumericMics(tables[1]);
+            if (firstHasMic && !secondHasMic) { main = tables[1]; valuesTable = tables[0]; }
+            else if (!firstHasMic && secondHasMic) { main = tables[0]; valuesTable = tables[1]; }
+            else { main = tables[0]; valuesTable = null; }
+        } else if (tableHasNumericMics(tables[0])) {
+            valuesTable = tables[0];      // single raw-values file: MIC numbers only usable for vancomycin
         }
-    } catch (error) { console.warn("Could not fetch organisms_dictionary.json."); }
-
-    // 2. Fetch Specimens Dictionary
-    let externalSpecimenMap = {};
-    try {
-        const response = await fetch('specimens_dictionary.json');
-        if (response.ok) {
-            const jsonDict = await response.json();
-            Object.keys(jsonDict).forEach(key => { externalSpecimenMap[key.toLowerCase()] = jsonDict[key]; });
-        } else {
-            console.warn("specimens_dictionary.json not found on server.");
-        }
-    } catch (error) { console.warn("Could not fetch specimens_dictionary.json."); }
-
-    const fileName = file.name.toLowerCase();
-
-    // 3. Process Excel Files
-    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const arrayBuffer = e.target.result;
-                const workbook = await XlsxPopulate.fromDataAsync(arrayBuffer);
-                const values = workbook.sheet(0).usedRange().value();
-                
-                // Convert 2D Excel array to standardized string array (handling empty rows and cells safely)
-                const rawData = values.map(row => row ? row.map(cell => cell != null ? String(cell).trim() : "") : []);
-                parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event);
-            } catch (err) {
-                console.error(err);
-                Swal.fire('Error', 'Failed to read Excel file. Make sure it is not corrupted.', 'error');
-                event.target.value = '';
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    } 
-    // 4. Process TXT/CSV Files
-    else {
-        const reader = new FileReader();
-        reader.onload = e => {
-            const text = e.target.result;
-            const lines = text.split(/\r?\n/);
-            if(lines.length < 2) {
-                Swal.fire('Error', 'File appears to be empty or invalid.', 'error');
-                event.target.value = ''; return;
-            }
-
-            let separator = '\t';
-            if(lines[0].split('\t').length <= 1) { separator = ','; }
-            
-            // Convert to 2D array
-            const rawData = lines.filter(line => line.trim() !== '').map(line => line.split(separator).map(c => c.trim()));
-            parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event);
-        };
-        reader.readAsText(file);
+        parseAndInjectData(main, externalOrgMap, externalSpecimenMap, event, valuesTable);
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'Failed to read the file. Make sure it is not corrupted.', 'error');
+        event.target.value = '';
     }
 }
 
 // --- UNIFIED INJECTION LOGIC ---
-function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event) {
+function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event, valuesTable) {
     if (!rawData || rawData.length < 2 || !rawData[0]) {
         Swal.fire('Error', 'No valid data found to extract.', 'error');
         event.target.value = ''; return;
@@ -477,6 +482,28 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
     const idxSample = actualHeaders.findIndex(h => h === 'specimen' || h === 'sample' || h === 'spec_type' || h === 'specimen type');
     const idxDate = actualHeaders.findIndex(h => h === 'spec_date' || h === 'specimen date' || h === 'date');
     const idxOrg = actualHeaders.findIndex(h => h === 'organism' || h === 'org');
+    // Laboratory-confirmed flags exported by WHONET
+    const idxEsbl = actualHeaders.findIndex(h => h === 'esbl');
+    const idxCarba = actualHeaders.findIndex(h => h === 'carbapenemase');
+    const idxMrsaFlag = actualHeaders.findIndex(h => h === 'mrsa');
+    const idxVrsa = actualHeaders.findIndex(h => h === 'x_vrsa');
+    // Vancomycin disk (_nd) and MIC (_nm) columns are handled separately (CLSI: staphylococci by MIC only)
+    const vanDiskIdx = actualHeaders.findIndex(h => h.startsWith('van_nd'));
+    const vanMicIdx = actualHeaders.findIndex(h => h.startsWith('van_nm'));
+    // Optional raw-values file: same export, same row order
+    let valuesAligned = false, valuesVanIdx = -1;
+    if (valuesTable && valuesTable[0]) {
+        const vh = valuesTable[0].map(h => h ? h.toLowerCase() : "");
+        valuesVanIdx = vh.findIndex(h => h.startsWith('van_nm'));
+        const vId = vh.findIndex(h => h === 'identification number'), vOrg = vh.findIndex(h => h === 'organism');
+        valuesAligned = valuesTable.length === rawData.length && valuesVanIdx > -1 && vId > -1 && vOrg > -1;
+        if (valuesAligned) {
+            for (let r = 1; r < rawData.length; r++) {
+                if ((rawData[r][idxPatientID] || '') !== (valuesTable[r][vId] || '') || (rawData[r][idxOrg] || '') !== (valuesTable[r][vOrg] || '')) { valuesAligned = false; break; }
+            }
+        }
+    }
+    const report = { added: 0, noGrowth: 0, noSri: 0, noDate: 0, vancDisk: 0, vancTypedIR: 0, vancInvalidMic: 0, vancMismatch: 0, vancCandidates: [], vancNeedsMic: 0, vancFromMic: 0, valuesFile: valuesAligned, valuesFileIgnored: !!valuesTable && !valuesAligned };
 
     const abxColumns = [];
     const allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
@@ -525,6 +552,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
             if(directMatch) matchedName = directMatch;
         }
 
+        if (matchedName === 'Vancomycin' && (i === vanDiskIdx || i === vanMicIdx)) continue;
         if(matchedName) {
             abxColumns.push({ index: i, name: matchedName });
         }
@@ -533,6 +561,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
     let addedCount = 0;
     let skippedCount = 0;
+    const newRecords = [];
 
     const wardMap = {
         'ped': 'Pediatrics', 'ped in': 'Pediatrics',
@@ -560,7 +589,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
 
         let orgCode = idxOrg > -1 && cols[idxOrg] ? cols[idxOrg].toLowerCase() : "";
         if(!orgCode || orgCode === 'xxx' || orgCode === 'con' || orgCode === 'no growth') {
-            skippedCount++; continue;
+            skippedCount++; report.noGrowth++; continue;
         }
 
         let hasSRIData = false;
@@ -577,7 +606,30 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
             }
         });
 
-        if (!hasSRIData) { skippedCount++; continue; }
+        // Vancomycin: handled by organism-specific CLSI rules
+        const vDisk = vanDiskIdx > -1 ? String(cols[vanDiskIdx] || '').trim().toUpperCase() : '';
+        const vMicLetter = vanMicIdx > -1 ? String(cols[vanMicIdx] || '').trim().toUpperCase() : '';
+        const vSources = {};
+        if (/^[SIR]$/.test(vDisk)) vSources.disk = vDisk;
+        if (/^[SIR]$/.test(vMicLetter)) vSources.mic = vMicLetter;
+        let vancFlag = null, vancMicText = null;
+        if (vSources.disk || vSources.mic) {
+            const orgForVan = String(externalOrgMap[orgCode] || whonetOrgMap[orgCode] || orgCode).toLowerCase();
+            const rawMic = valuesAligned ? String(valuesTable[i][valuesVanIdx] || '').trim() : null;
+            const dec = resolveStaphVancomycin(orgForVan, vSources, rawMic);
+            vancFlag = dec.flag; vancMicText = dec.micText;
+            if (dec.action !== 'set') vancMicText = null;
+            if (dec.action === 'drop') { /* not stored */ }
+            else if (dec.action === 'set') { abxResults['Vancomycin'] = dec.value; hasSRIData = true; report.vancFromMic++; }
+            else { abxResults['Vancomycin'] = vSources.mic || vSources.disk; hasSRIData = true; }
+            if (vancFlag === 'vanc_disk') report.vancDisk++;
+            else if (vancFlag === 'vanc_typed_IR') report.vancTypedIR++;
+            else if (vancFlag === 'vanc_mic_invalid') report.vancInvalidMic++;
+            else if (vancFlag === 'vanc_interp_mismatch') report.vancMismatch++;
+            else if (vancFlag === 'vanc_needs_mic') report.vancNeedsMic++;
+        }
+
+        if (!hasSRIData) { skippedCount++; report.noSri++; continue; }
 
         let patientID = idxPatientID > -1 && cols[idxPatientID] ? String(cols[idxPatientID]).trim() : "";
         let fName = idxFName > -1 && cols[idxFName] ? cols[idxFName] : "";
@@ -600,13 +652,14 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
 
         let rawDate = idxDate > -1 && cols[idxDate] ? String(cols[idxDate]).trim() : "";
         let formattedDate = ""; 
+        let fullDate = "";
         
         if(rawDate) {
             try {
                 // Excel Date Fix: Converts Excel serial dates (e.g. 45293) to JS format natively
                 if (!isNaN(rawDate) && Number(rawDate) > 10000 && !rawDate.includes('-') && !rawDate.includes('/')) {
                     let d = new Date((Number(rawDate) - 25569) * 86400 * 1000);
-                    if (!isNaN(d)) formattedDate = d.toISOString().slice(0, 7);
+                    if (!isNaN(d)) { formattedDate = d.toISOString().slice(0, 7); fullDate = d.toISOString().slice(0, 10); }
                 } else {
                     let dateParts = rawDate.split(/[\/\-]/);
                     if(dateParts.length >= 3) {
@@ -616,9 +669,11 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
                         
                         let year = part1.length === 4 ? part1 : (part3.length === 2 ? "20" + part3 : part3);
                         formattedDate = `${year}-${part2}`;
+                        if (part1.length <= 2) fullDate = `${formattedDate}-${part1.padStart(2, '0')}`;   // d/m/yyyy (WHONET)
+                        else if (part3.length <= 2) fullDate = `${formattedDate}-${part3.padStart(2, '0')}`; // yyyy-mm-dd
                     } else {
                         let d = new Date(rawDate);
-                        if(!isNaN(d)) formattedDate = d.toISOString().slice(0, 7);
+                        if(!isNaN(d)) { formattedDate = d.toISOString().slice(0, 7); fullDate = d.toISOString().slice(0, 10); }
                     }
                 }
             } catch (e) {
@@ -626,7 +681,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
             }
         }
 
-        if(!formattedDate) { skippedCount++; continue; }
+        if(!formattedDate) { skippedCount++; report.noDate++; continue; }
         let fullOrgName = externalOrgMap[orgCode] || whonetOrgMap[orgCode] || (orgCode.charAt(0).toUpperCase() + orgCode.slice(1));
         const orgNameCleanup = {
             "Escherichia coli (E.coli)": "Escherichia coli", "Klebsiella pneumoniae ss. pneumoniae": "Klebsiella pneumoniae",
@@ -644,8 +699,18 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
         };
 
         Object.assign(record, abxResults);
+        if (fullDate) record['Specimen Date'] = fullDate;
+        const flagVal = (idx) => { const v = idx > -1 ? String(cols[idx] || '').trim() : ''; return (v === '+' || v === '-') ? v : ''; };
+        if (flagVal(idxEsbl)) record['Lab ESBL'] = flagVal(idxEsbl);
+        if (flagVal(idxCarba)) record['Lab Carbapenemase'] = flagVal(idxCarba);
+        if (flagVal(idxMrsaFlag)) record['Lab MRSA'] = flagVal(idxMrsaFlag);
+        if (flagVal(idxVrsa)) record['VRSA Confirmation'] = flagVal(idxVrsa);
+        if (vancMicText && vancFlag !== 'vanc_mic_invalid' && fullOrgName === 'Staphylococcus aureus') record['Vancomycin MIC'] = vancMicText;
+        if (vancFlag === 'vanc_candidate') report.vancCandidates.push(patientID + ' (MIC ' + vancMicText + ')');
+        newRecords.push(record);
         records.push(record);
         addedCount++;
+        report.added++;
     }
 
     localStorage.setItem('amr_records', JSON.stringify(records));
@@ -655,9 +720,38 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event)
     if (!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
     if (!$('#viewLive').hasClass('hidden')) generateLiveSurveillance();
     
-    Swal.fire('Success!', `Extraction complete: ${addedCount} isolates added.\nIgnored ${skippedCount} samples (No growth or invalid format).`, 'success');
+    const conflicts = findIdNameConflicts(newRecords);
+    const lines = [
+        `<b>${report.added}</b> isolates added`,
+        `Ignored ${skippedCount}: no growth/contaminant ${report.noGrowth}, no S/I/R result ${report.noSri}, no valid date ${report.noDate}`
+    ];
+    if (report.vancDisk) lines.push(`Staphylococcus vancomycin by disk ignored (CLSI: MIC only): <b>${report.vancDisk}</b>`);
+    if (report.vancTypedIR) lines.push(`Staphylococcus vancomycin R/I without a numeric MIC ignored: <b>${report.vancTypedIR}</b>`);
+    if (report.vancInvalidMic) lines.push(`Invalid vancomycin MIC values ignored (not on 2-fold scale): <b>${report.vancInvalidMic}</b>`);
+    if (report.vancNeedsMic) lines.push(`S. aureus vancomycin R/I without MIC kept as reported (upload the raw-values file to verify): <b>${report.vancNeedsMic}</b>`);
+    if (report.vancMismatch) lines.push(`Vancomycin interpretation differed from CLSI MIC breakpoints (CLSI used): <b>${report.vancMismatch}</b>`);
+    if (report.vancCandidates.length) lines.push(`<span style="color:#b91c1c">VRSA candidates (MIC ≥16) need reference-lab confirmation: ${report.vancCandidates.join(', ')}</span>`);
+    if (report.valuesFile) lines.push('Raw-values file matched row by row: MIC values used.');
+    if (report.valuesFileIgnored) lines.push('Raw-values file did not match the interpretation file row by row - it was not used.');
+    if (conflicts.length) lines.push(`<span style="color:#b45309">${conflicts.length} Identification numbers share one year with different patient names - please review.</span>`);
+    Swal.fire({ title: 'Import report', html: '<div style="text-align:left;font-size:13px;line-height:1.7">' + lines.join('<br>') + '</div>', icon: 'success' });
     event.target.value = ''; 
 }
+// Live CLSI interpretation hint for the vancomycin MIC field
+$(document).on('input', '#p_van_mic', function() {
+    const org = String($('#p_organism').val() || '').toLowerCase();
+    const mic = parseMicValue($(this).val());
+    let txt = '';
+    if (mic && mic.numeric !== undefined && mic.numeric !== null) {
+        if (!mic.valid) txt = 'Not a valid 2-fold MIC value';
+        else {
+            const r = interpretStaphVancomycinMic(org.includes('staphylococcus aureus'), mic);
+            txt = r ? 'CLSI M100: ' + r + (org.includes('staphylococcus aureus') && r === 'R' ? ' - VRSA candidate, confirm at reference lab' : '') : '';
+        }
+    }
+    $('#p_van_mic_hint').text(txt);
+});
+
 // --- 3. Initialization ---
 $(document).ready(function() {
     runDatabaseMigration();
@@ -1398,6 +1492,9 @@ function openModal() {
     $('#editIndex').val('-1');
     $('#p_id').val('');
     $('#p_date').val(new Date().toISOString().slice(0, 7));
+    $('#p_specimen_date, #p_van_mic').val('');
+    $('#p_lab_esbl, #p_lab_carba, #p_lab_mrsa, #p_vrsa_conf').val('');
+    $('#p_van_mic_hint').text('');
     $('#active_abx_container').empty();
     selectedAbxMap = {};
     
@@ -1514,6 +1611,19 @@ $('#entryForm').submit(function(e) {
         return;
     }
 
+    // Optional full specimen date: must fall in the selected month (keeps first-isolate ordering consistent)
+    const specDate = $('#p_specimen_date').val();
+    if (specDate) {
+        if (specDate.substring(0, 7) !== record['Date']) {
+            Swal.fire({ icon: 'error', title: 'Date mismatch', text: 'Specimen date must be inside the selected Month / Year.' });
+            return;
+        }
+        record['Specimen Date'] = specDate;
+    }
+    [['#p_lab_esbl', 'Lab ESBL'], ['#p_lab_carba', 'Lab Carbapenemase'], ['#p_lab_mrsa', 'Lab MRSA'], ['#p_vrsa_conf', 'VRSA Confirmation']].forEach(([sel, key]) => {
+        const v = $(sel).val(); if (v) record[key] = v;
+    });
+
     Object.keys(selectedAbxMap).forEach(abx => {
         record[abx] = selectedAbxMap[abx];
     });
@@ -1522,6 +1632,23 @@ $('#entryForm').submit(function(e) {
         const val = $(this).val();
         if (val && val !== "") { record[$(this).attr('data-abx')] = val; }
     });
+
+    // Staphylococcus vancomycin: MIC only (CLSI M100); S/I/R is derived from the MIC, never from disk
+    const orgLowerSave = String(record['Selective organism']).toLowerCase();
+    if (orgLowerSave.startsWith('staphylococcus')) {
+        const micText = ($('#p_van_mic').val() || '').trim();
+        delete record['Vancomycin'];
+        if (micText) {
+            const mic = parseMicValue(micText);
+            if (!mic || mic.numeric === undefined || mic.numeric === null || !mic.valid) {
+                Swal.fire({ icon: 'error', title: 'Invalid vancomycin MIC', text: 'Use a standard 2-fold dilution value (0.5, 1, 2, 4, 8, 16, 32 ...).' });
+                return;
+            }
+            const interp = interpretStaphVancomycinMic(orgLowerSave.includes('staphylococcus aureus'), mic);
+            if (interp) record['Vancomycin'] = interp;
+            if (orgLowerSave.includes('staphylococcus aureus')) record['Vancomycin MIC'] = micText;
+        }
+    }
 
 
 if (editIndex > -1) {
@@ -1576,6 +1703,12 @@ function editRecord(index) {
     }
 
     $('#p_date').val(record['Date'] ? record['Date'].substring(0, 7) : '');
+    $('#p_specimen_date').val(record['Specimen Date'] || '');
+    $('#p_lab_esbl').val(record['Lab ESBL'] || '');
+    $('#p_lab_carba').val(record['Lab Carbapenemase'] || '');
+    $('#p_lab_mrsa').val(record['Lab MRSA'] || '');
+    $('#p_vrsa_conf').val(record['VRSA Confirmation'] || '');
+    $('#p_van_mic').val(record['Vancomycin MIC'] || '');
     
     if ($('#p_organism').find("option[value='" + record['Selective organism'] + "']").length) {
         $('#p_organism').val(record['Selective organism']).trigger('change');
@@ -1591,7 +1724,7 @@ function editRecord(index) {
     }
 
     // 🔒 Fixed: Added _uid and Patient ID so they never become antibiotic dropdowns again
-    const standardProps = ['_uid', 'Patient ID', 'Name', 'Age', 'Age Unit', 'Sex', 'Ward', 'Sample', 'Date', 'Selective organism', 'Antibiogram organism'];
+    const standardProps = ['_uid', 'Patient ID', 'Name', 'Age', 'Age Unit', 'Sex', 'Ward', 'Sample', 'Date', 'Selective organism', 'Antibiogram organism'].concat(RECORD_META_FIELDS);
     
     Object.keys(record).forEach(key => {
         if (!standardProps.includes(key)) {

@@ -194,6 +194,34 @@
                             <input type="month" id="p_date" dir="ltr" required class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none">
                         </div>
 
+                        <div class="md:col-span-1">
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Specimen date (optional)</label>
+                            <input type="date" id="p_specimen_date" dir="ltr" class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div class="md:col-span-1">
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Lab ESBL</label>
+                            <select id="p_lab_esbl" class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="">Not done</option><option value="+">Positive (+)</option><option value="-">Negative (-)</option></select>
+                        </div>
+                        <div class="md:col-span-1">
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Lab Carbapenemase</label>
+                            <select id="p_lab_carba" class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="">Not done</option><option value="+">Positive (+)</option><option value="-">Negative (-)</option></select>
+                        </div>
+                        <div class="md:col-span-1">
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Lab MRSA</label>
+                            <select id="p_lab_mrsa" class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="">Not done</option><option value="+">Positive (+)</option><option value="-">Negative (-)</option></select>
+                        </div>
+
+                        <div class="md:col-span-1">
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Vancomycin MIC (staph.)</label>
+                            <input type="text" id="p_van_mic" dir="ltr" placeholder="e.g. 1, 2, 4, 32" class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                            <p id="p_van_mic_hint" class="text-[10px] text-slate-500 mt-1"></p>
+                        </div>
+                        <div class="md:col-span-1">
+                            <label class="block text-xs font-bold text-slate-600 mb-1">VRSA confirmed (reference lab)</label>
+                            <select id="p_vrsa_conf" class="w-full border-slate-300 border rounded-lg p-2.5 h-[42px] text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="">Not done</option><option value="+">Positive (+)</option><option value="-">Negative (-)</option></select>
+                        </div>
+
+
                         <!-- Section: Clinical -->
                         <div class="md:col-span-4 border-b border-slate-100 pb-2 mt-2">
                             <h4 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Clinical Origin</h4>
@@ -418,7 +446,7 @@
                     <h4 class="font-bold text-slate-800 mb-1 flex items-center gap-2 text-lg">📥 AMR Data Extractor & Injector</h4>
                     <p class="text-xs text-slate-500 mb-4">Extract isolates directly from WHONET or standard CSV/TXT laboratory exports.</p>
                     <button onclick="triggerDataExtractor()" class="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm transition">Select File to Extract</button>
-                    <input type="file" id="extractorFileInput" accept=".txt,.csv,.xlsx,.xls" class="hidden" onchange="processDataExtraction(event)">
+                    <input type="file" id="extractorFileInput" multiple accept=".txt,.csv,.xlsx,.xls" class="hidden" onchange="processDataExtraction(event)">
                 </div>
 
                 <!-- AMR Text to Excel Converter -->

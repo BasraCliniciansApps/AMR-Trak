@@ -231,7 +231,7 @@ function applyDeduplication(records) {
         const key = keyOf(r);
         if (key === null) return;
         const cur = winners.get(key);
-        if (!cur || String(r['Date']) < String(cur['Date'])) winners.set(key, r);
+        if (!cur || String(r['Specimen Date'] || r['Date']) < String(cur['Specimen Date'] || cur['Date'])) winners.set(key, r);
     });
 
     return records.filter(r => {
@@ -369,31 +369,143 @@ function classifyMDR(r) {
 
 
 // =====================================================================
+// MIC helpers and staphylococcal vancomycin rules (CLSI M100)
+// - Vancomycin for Staphylococcus must be tested by MIC; disk diffusion has no
+//   valid breakpoints, so disk results for staphylococci are not used.
+// - MIC values must be on the 2-fold dilution scale (0.5, 1, 2, 4 ... 32);
+//   anything else (e.g. 116, 23) is a data-entry error.
+// - Breakpoints: S. aureus S<=2, I 4-8, R>=16 | other staphylococci S<=4, I 8-16, R>=32.
+// Set EXCLUDE_INVALID_STAPH_VANCOMYCIN = false to keep staphylococcal
+// vancomycin results exactly as reported by the lab (the Ministry template
+// contains a Vancomycin column and would then be fed as before).
+// =====================================================================
+const EXCLUDE_INVALID_STAPH_VANCOMYCIN = true;
+
+// Returns { letter } for S/I/R typed in an MIC field, { numeric, op, valid, text } for numbers, or null.
+function parseMicValue(raw) {
+    const t = String(raw === undefined || raw === null ? '' : raw).trim();
+    if (!t) return null;
+    const up = t.toUpperCase();
+    if (up === 'S' || up === 'I' || up === 'R') return { letter: up };
+    const m = t.match(/^(<=|>=|<|>|≤|≥)?\s*(\d+(?:\.\d+)?)$/);
+    if (!m) return { numeric: null, valid: false, text: t };
+    const num = parseFloat(m[2]);
+    const lg = Math.log2(num);
+    const valid = num > 0 && Math.abs(lg - Math.round(lg)) < 0.1;
+    let op = m[1] || '';
+    if (op === '≤') op = '<='; if (op === '≥') op = '>=';
+    return { numeric: num, op: op, valid: valid, text: t };
+}
+
+// S/I/R for staphylococcal vancomycin from an MIC (CLSI M100 breakpoints)
+function interpretStaphVancomycinMic(isAureus, mic) {
+    if (!mic || mic.numeric === null || !mic.valid) return null;
+    let v = mic.numeric;
+    if (mic.op === '<') v = v / 2;      // "<4" means 2 or lower on the dilution scale
+    if (mic.op === '>') v = v * 2;      // ">8" means 16 or higher
+    const sMax = isAureus ? 2 : 4, rMin = isAureus ? 16 : 32;
+    if (v <= sMax) return 'S';
+    if (v >= rMin) return 'R';
+    return 'I';
+}
+
+// Decide what to store for Vancomycin on a staphylococcal isolate.
+// vanSources: { disk: 'S'|'I'|'R', mic: 'S'|'I'|'R' } as reported in the WHONET interpretation file
+// rawMicText: the raw MIC text from the WHONET values file (or null when that file was not provided)
+// Returns { action: 'keep'|'drop'|'set', value, micText, flag }
+function resolveStaphVancomycin(orgLower, vanSources, rawMicText) {
+    const keep = { action: 'keep', flag: null, micText: null };
+    if (!orgLower.startsWith('staphylococcus')) return keep;
+    const isAureus = orgLower.includes('staphylococcus aureus');
+    const dropOrKeep = (flag) => ({ action: EXCLUDE_INVALID_STAPH_VANCOMYCIN ? 'drop' : 'keep', flag: flag, micText: null });
+    const hasMic = vanSources.mic !== undefined, hasDisk = vanSources.disk !== undefined;
+
+    if (!hasMic && hasDisk && !rawMicText) return dropOrKeep('vanc_disk');
+
+    const mic = parseMicValue(rawMicText);
+    if (mic && mic.letter) {
+        if (mic.letter === 'S') return keep;
+        return dropOrKeep('vanc_typed_IR');
+    }
+    if (mic && mic.numeric !== undefined) {
+        if (!mic.valid) { const r = dropOrKeep('vanc_mic_invalid'); r.micText = mic.text; return r; }
+        const derived = interpretStaphVancomycinMic(isAureus, mic);
+        let flag = null;
+        if (vanSources.mic && vanSources.mic !== derived) flag = 'vanc_interp_mismatch';
+        else if (isAureus && derived === 'R') flag = 'vanc_candidate';
+        return { action: 'set', value: derived, micText: isAureus ? mic.text : null, flag: flag };
+    }
+    if (isAureus && (vanSources.mic === 'R' || vanSources.mic === 'I')) return { action: 'keep', flag: 'vanc_needs_mic', micText: null };
+    return keep;
+}
+
+// Patient ID + year conflicts: the same Identification number in the same year with different names
+function normalizePersonName(n) {
+    return String(n || '').toLowerCase().replace(/[^a-z؀-ۿ ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function findIdNameConflicts(records) {
+    const groups = new Map();
+    records.forEach(r => {
+        const id = String(r['Patient ID'] || '').trim().toLowerCase();
+        const year = String(r['Date'] || '').substring(0, 4);
+        const nm = normalizePersonName(r['Name']);
+        if (!id || id === 'unknown' || !/^\d{4}$/.test(year) || !nm || nm === 'unknown patient') return;
+        const key = id + '|' + year;
+        if (!groups.has(key)) groups.set(key, new Set());
+        groups.get(key).add(nm);
+    });
+    const out = [];
+    groups.forEach((names, key) => { if (names.size > 1) out.push({ id: key.split('|')[0], year: key.split('|')[1], names: names.size }); });
+    return out;
+}
+
+// =====================================================================
 // Critical resistance markers - defined ONCE for the dashboard and the PC app.
 // Based on WHO GLASS / WHO bacterial priority pathogens and CLSI M100.
-//  - "3GC-R" is a phenotypic PROXY for ESBL (ESBL itself needs confirmatory testing).
-//  - CRE covers all Enterobacterales; CRAB and CRPA follow the WHO priority list.
-//  - MRSA is decided by cefoxitin (CLSI); oxacillin is used only when cefoxitin
-//    was not tested.
+//  - "3GC-R" is a phenotypic PROXY for ESBL; "ESBL (lab)" uses the laboratory's
+//    confirmed ESBL flag imported from WHONET.
+//  - CRE covers all Enterobacterales; "CPE (lab)" uses the lab carbapenemase flag.
+//  - CRAB and CRPA follow the WHO priority list.
+//  - MRSA is decided by cefoxitin (CLSI), oxacillin only if cefoxitin was not
+//    tested, and the lab MRSA flag only if neither was tested.
 //  - VRE is decided by vancomycin only (teicoplanin-R alone is not VRE).
-//  - Vancomycin for S. aureus must be confirmed by MIC (disk diffusion is not valid).
-// A marker is counted per first isolate; "tested" = isolates with a result for the marker.
+//  - VRSA = S. aureus with a numeric vancomycin MIC >= 16. It stays a
+//    candidate until confirmed (VRSA Confirmation = '+').
+// A marker is counted per first isolate; "tested" = isolates with a usable result.
 // =====================================================================
+function labFlagResult(v) {
+    v = String(v || '').trim();
+    if (v === '+') return { tested: true, resistant: true };
+    if (v === '-') return { tested: true, resistant: false };
+    return null;
+}
+
 const CRITICAL_MARKERS = [
     { label: "3GC-R\n(ESBL proxy)", abxPriority: [["Ceftriaxone", "Cefotaxime", "Ceftazidime"]],
       match: o => o.includes("escherichia coli") || o.includes("klebsiella pneumoniae") },
+    { label: "ESBL\n(lab-confirmed)",
+      match: o => o.includes("escherichia coli") || o.includes("klebsiella pneumoniae"),
+      evaluate: r => labFlagResult(r['Lab ESBL']) },
     { label: "CRE\n(Enterobacterales)", abxPriority: [["Ertapenem", "Meropenem", "Imipenem", "Doripenem"]],
       match: o => getMdrGroup(o) === 'Enterobacterales' },
+    { label: "CPE\n(lab carbapenemase)",
+      match: o => getMdrGroup(o) === 'Enterobacterales',
+      evaluate: r => labFlagResult(r['Lab Carbapenemase']) },
     { label: "CRAB\n(A. baumannii)", abxPriority: [["Imipenem", "Meropenem", "Doripenem"]],
       match: o => o.includes("acinetobacter baumannii") || o.includes("acinetobacter calcoaceticus") },
     { label: "CRPA\n(P. aeruginosa)", abxPriority: [["Imipenem", "Meropenem", "Doripenem"]],
       match: o => o.includes("pseudomonas aeruginosa") },
-    { label: "MRSA\n(Cefoxitin)", abxPriority: [["Cefoxitin", "Cefoxitin screen"], ["Oxacillin"]],
+    { label: "MRSA\n(Cefoxitin)", abxPriority: [["Cefoxitin", "Cefoxitin screen"], ["Oxacillin"]], fallbackFlag: 'Lab MRSA',
       match: o => o.includes("staphylococcus aureus") },
     { label: "VRE\n(Vancomycin)", abxPriority: [["Vancomycin"]],
       match: o => o.includes("enterococcus") },
-    { label: "VRSA*\n(confirm by MIC)", abxPriority: [["Vancomycin"]],
-      match: o => o.includes("staphylococcus aureus") }
+    { label: "VRSA\n(MIC ≥16)",
+      match: o => o.includes("staphylococcus aureus"),
+      evaluate: r => {
+          const mic = parseMicValue(r['Vancomycin MIC']);
+          if (!mic || mic.numeric === undefined || mic.numeric === null || !mic.valid) return null;
+          return { tested: true, resistant: interpretStaphVancomycinMic(true, mic) === 'R' };
+      } }
 ];
 
 function evaluateCriticalMarkers(records) {
@@ -402,15 +514,27 @@ function evaluateCriticalMarkers(records) {
         const orgLower = String(r['Selective organism'] || '').trim().toLowerCase();
         CRITICAL_MARKERS.forEach((m, i) => {
             if (!m.match(orgLower)) return;
+            if (m.evaluate) {
+                const res = m.evaluate(r);
+                if (res) { stats[i].tested++; if (res.resistant) stats[i].resistant++; }
+                return;
+            }
             for (const group of m.abxPriority) {
                 const results = group.map(a => String(r[a] || '').trim().toUpperCase())
                                      .filter(v => v === 'S' || v === 'I' || v === 'R' || v === 'SDD');
                 if (results.length === 0) continue;   // try next agent group
                 stats[i].tested++;
                 if (results.includes('R')) stats[i].resistant++;
-                break;
+                return;
+            }
+            if (m.fallbackFlag) {
+                const res = labFlagResult(r[m.fallbackFlag]);
+                if (res) { stats[i].tested++; if (res.resistant) stats[i].resistant++; }
             }
         });
     });
     return stats;
 }
+
+// Non-antibiotic fields stored on a record (must never be rendered as antibiotic dropdowns)
+const RECORD_META_FIELDS = ['Specimen Date', 'Lab ESBL', 'Lab Carbapenemase', 'Lab MRSA', 'VRSA Confirmation', 'Vancomycin MIC'];
