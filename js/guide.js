@@ -167,7 +167,8 @@
     ];
 
     window.aboutHtml = function () {
-        const role = (k, v) => `<div class="gd-role"><span>${k}</span><b>${v}</b></div>`;
+        const chip = t => `<span class="gd-chip">${t}</span>`;
+        const org = (n, d) => `<div class="gd-org"><div class="gd-org-n">${n}</div><div class="gd-org-d">${d}</div></div>`;
         return `
             <div class="gd-about">
                 <div class="gd-logo"><img src="icon.png" alt="AMR Tracker"></div>
@@ -176,13 +177,16 @@
                 <div class="gd-card">
                     <div class="gd-card-t">Concept, design and development</div>
                     <div class="gd-person">Saad Al Hamady</div>
-                    <div class="gd-title2">Clinical Pharmacist<br>Head of the Antibiotic Committee and the Antibiogram<br>Al-Mawani Teaching Hospital</div>
-                    <div class="gd-roles">${role('Idea', 'Founder of the concept')}${role('Design', 'Designer')}${role('Development', 'Developer')}${role('Data analysis', 'Analysis and presentation of the laboratory data')}</div>
+                    <div class="gd-line">Clinical Pharmacist</div>
+                    <div class="gd-line">Member, Antibiotic Committee</div>
+                    <div class="gd-line">Lead, Antibiogram Programme</div>
+                    <div class="gd-hosp">Al-Mawani Teaching Hospital</div>
+                    <div class="gd-chips">${chip('Concept')}${chip('Design')}${chip('Development')}${chip('Laboratory data analysis')}</div>
                 </div>
                 <div class="gd-card">
                     <div class="gd-card-t">Data and scientific collaboration</div>
-                    <div class="gd-roles">${role('Microbiology Laboratory', 'Culture and susceptibility data')}${role('AMR Unit', 'Surveillance data and follow-up')}</div>
-                    <div class="gd-hosp">Al-Mawani Teaching Hospital</div>
+                    ${org('Microbiology Laboratory', 'Culture and susceptibility data')}
+                    ${org('AMR Unit', 'Surveillance data and follow-up')}
                 </div>
                 <div class="gd-legal"><b>Legal notice:</b> This tool supports epidemiological surveillance and the generation of accurate clinical statistics. All intellectual and software rights reserved &copy; 2026.</div>
             </div>`;
