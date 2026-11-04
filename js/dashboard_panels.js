@@ -4,6 +4,11 @@
 // Loaded after dashboard.js (shares its globals).
 // =====================================================================
 
+setInfo('scope', 'Unit scope', `<p>The switch filters every chart on the dashboard by the ward where the specimen was collected.</p>
+<ul><li><b>All units:</b> every ward, including outpatients.</li><li><b>ICU:</b> only the wards counted as intensive care units. The list is set in the data-entry app; neonatal and paediatric ICUs are included only if they are selected there.</li><li><b>Non-ICU:</b> all other wards, including outpatients and neonatal units.</li></ul>
+<p><b>Why separate ICU?</b> Antimicrobial exposure, invasive device use and patient risk differ between intensive care and other wards, so pooled results can hide ICU-specific resistance. CLSI M39 supports stratifying cumulative susceptibility data by patient location.</p>
+<p>First-isolate de-duplication is applied within the selected scope.</p>`);
+
 // ---------- settings (written by the data-entry app, delivered in the public document) ----------
 function getDashSettings() {
     try { return JSON.parse(localStorage.getItem('amr_live_settings')) || {}; } catch (e) { return {}; }
@@ -350,7 +355,7 @@ function renderLabQuality() {
           </div>
           <p class="text-[9px] text-slate-400 mt-1">Reference value: 3% or less.</p>
         </div>` : '<p class="text-xs text-slate-400 text-center">No blood cultures in this period.</p>');
-    setInfo('lab_blood', 'Blood cultures: contamination indicators', `<p>Contamination means growth that does not represent true bloodstream infection. The commonly cited reference value is <b>3% or less</b> of blood cultures (ASM Cumitech 1C; CLSI M47).</p>
+    setInfo('lab_blood', 'Blood cultures: contamination indicators', `<p>Contamination means growth that does not represent true bloodstream infection. The commonly used benchmark is <b>3% or less</b> of blood cultures (see CLSI M47 and the ASM practice guideline below).</p>
         <p style="margin-top:8px"><b>Reported as contaminated:</b> cultures the laboratory itself recorded as contaminated. This figure is certain.</p>
         <p style="margin-top:8px"><b>Possible skin-flora growth:</b> blood cultures that grew organisms that are usually skin flora (coagulase-negative staphylococci, <i>Corynebacterium</i>, <i>Micrococcus</i>, viridans streptococci...). These organisms can also cause genuine infection, and a single result cannot be classified without knowing how many blood-culture sets were positive and the clinical picture, which are not recorded. They are therefore labelled <i>possible</i> and are not counted as contaminated.</p>
         <p style="margin-top:8px"><b>Possible contamination, upper estimate:</b> reported contaminated plus possible skin-flora growth, divided by all blood cultures. The true rate lies between the reported figure and this estimate.</p>`);
@@ -422,3 +427,105 @@ function renderLabQuality() {
     $('#lab_sample_table').html(`<table class="w-full text-[10px]"><thead><tr class="text-slate-500"><th class="text-left pb-1">Specimen</th><th>n</th><th>Positive</th><th>No growth</th><th>Contaminated</th></tr></thead><tbody>${srows}</tbody></table><p class="text-[9px] text-slate-400 mt-1">Grey ward bars: fewer than 30 cultures.</p>`);
 }
 function escapeHtmlDash(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+
+// =====================================================================
+// Printing: every chart gets a small printer button (Lucide "printer" icon, monochrome).
+// The result is a one-page, print-ready sheet (save as PDF from the print dialog).
+// =====================================================================
+const PRINTER_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>';
+
+function headingBefore(el) {
+    const nodes = document.querySelectorAll('h3, h4, canvas, #heatmapWrapper');
+    let last = '';
+    for (const n of nodes) {
+        if (n === el) break;
+        if (n.tagName === 'H3' || n.tagName === 'H4') {
+            const c = n.cloneNode(true);
+            c.querySelectorAll('.info-btn, .print-btn').forEach(x => x.remove());
+            const t = c.textContent.replace(/\s+/g, ' ').trim();
+            if (t) last = t;
+        }
+    }
+    return last;
+}
+function infoKeyFor(el) {
+    if (el.closest('[data-sec="mdr"], #mdrPanel')) return 'mdr_panel';
+    let p = el.parentElement;
+    while (p && p !== document.body) {
+        const b = p.querySelector(':scope > .info-btn');
+        if (b) return b.dataset.key;
+        p = p.parentElement;
+    }
+    return null;
+}
+function escHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+window.printChart = function (el) {
+    const isTable = el.id === 'heatmapWrapper';
+    const title = isTable ? 'Advanced Heatmap' : (headingBefore(el) || 'Chart');
+    const card = el.closest('.mobile-card') || document.body;
+    const labelEl = card.querySelector('#mdr_range_label, #lab_range_label, #live_month_title, #live_q_title');
+    const context = [document.getElementById('headerTitle').textContent, labelEl ? labelEl.textContent : '', 'Unit scope: ' + scopeLabel()].filter(Boolean).join('  |  ');
+    const key = infoKeyFor(el);
+    const info = key && INFO_STORE[key] ? INFO_STORE[key] : null;
+    let body;
+    if (isTable) body = '<div class="tbl">' + el.innerHTML + '</div>';
+    else {
+        const c = document.createElement('canvas');
+        c.width = el.width; c.height = el.height;
+        const g = c.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(el, 0, 0);
+        body = `<img class="chart" src="${c.toDataURL('image/png')}" alt="${escHtml(title)}">`;
+    }
+    const refKeys = info ? info.refs : refsFor(key);
+    const when = new Date().toLocaleString([], { dateStyle: 'long', timeStyle: 'short' });
+    const doc = `<!doctype html><html><head><meta charset="utf-8"><title>${escHtml(title)}</title><style>
+        @page { size: ${isTable ? 'A4 landscape' : 'A4 portrait'}; margin: 14mm; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #0f172a; margin: 0; }
+        .brand { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #64748b; font-weight: 700; }
+        h1 { font-size: 20px; margin: 4px 0 4px; letter-spacing: -0.01em; }
+        .ctx { font-size: 11px; color: #475569; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #cbd5e1; }
+        .chart { display: block; max-width: 100%; max-height: 520px; margin: 0 auto 14px; object-fit: contain; }
+        .tbl table { border-collapse: collapse; font-size: 9px; } .tbl td, .tbl th { border: 1px solid #cbd5e1; padding: 3px 5px; text-align: center; }
+        h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin: 16px 0 6px; }
+        .notes { font-size: 11px; line-height: 1.6; color: #334155; } .notes p { margin: 0 0 6px; } .notes ul { margin: 4px 0 6px 16px; padding: 0; }
+        ol { margin: 0; padding-left: 16px; font-size: 9.5px; line-height: 1.5; color: #475569; } li { margin-bottom: 3px; word-break: break-word; }
+        .foot { margin-top: 18px; padding-top: 8px; border-top: 1px solid #cbd5e1; font-size: 9px; color: #94a3b8; }
+    </style></head><body>
+        <div class="brand">AMR Trak &middot; Antimicrobial Resistance Surveillance</div>
+        <h1>${escHtml(title)}</h1>
+        <div class="ctx">${escHtml(context)}</div>
+        ${body}
+        ${info ? `<h2>Notes and definitions</h2><div class="notes">${info.html}</div>` : ''}
+        <h2>References</h2><ol>${refKeys.map(k => REFS[k]).filter(Boolean).map(r => `<li>${escHtml(r.t)} ${escHtml(r.u)}</li>`).join('')}</ol>
+        <div class="foot">Generated ${escHtml(when)}. De-identified surveillance data: first isolate per patient, organism and year (CLSI M39); screening cultures excluded. Interpretation: CLSI M100.</div>
+    </body></html>`;
+    const f = document.createElement('iframe');
+    f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+    document.body.appendChild(f);
+    f.contentDocument.open(); f.contentDocument.write(doc); f.contentDocument.close();
+    setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { console.error(e); } }, 350);
+    setTimeout(() => f.remove(), 120000);
+};
+
+function attachPrintButtons() {
+    const targets = [...document.querySelectorAll('canvas')].map(cv => ({ el: cv, host: cv.parentElement }));
+    const hm = document.getElementById('heatmapWrapper');
+    if (hm && hm.querySelector('table')) targets.push({ el: hm, host: hm.parentElement });
+    targets.forEach(t => {
+        if (!t.host || t.host.querySelector(':scope > .print-btn')) return;
+        if (getComputedStyle(t.host).position === 'static') t.host.style.position = 'relative';
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'print-btn'; b.title = 'Print / save as PDF'; b.setAttribute('aria-label', 'Print this chart');
+        b.innerHTML = PRINTER_SVG;
+        b.addEventListener('click', () => printChart(t.el));
+        t.host.appendChild(b);
+    });
+}
+(function () {
+    let timer = null;
+    const run = () => { clearTimeout(timer); timer = setTimeout(attachPrintButtons, 200); };
+    if (document.body) new MutationObserver(run).observe(document.body, { childList: true, subtree: true });
+    document.addEventListener('DOMContentLoaded', run);
+})();
