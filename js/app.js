@@ -864,6 +864,13 @@ function buildImportReport(report, audit, newRecords, skippedCount) {
     if (report.vancMismatch) auto.push(`Vancomycin result re-interpreted from MIC using CLSI breakpoints: ${report.vancMismatch}`);
     if (report.valuesFile) auto.push('Raw-values file matched row by row: MIC values used');
     if (audit.renamed.size) auto.push(`Old organism names updated: ${topList(audit.renamed)}`);
+    // Laboratory-confirmed flags found in the file (counts of positive / negative)
+    const flagLine = (field, label) => {
+        const pos = newRecords.filter(r => r[field] === '+').length, neg = newRecords.filter(r => r[field] === '-').length;
+        return (pos || neg) ? `${label}: ${pos} positive, ${neg} negative` : null;
+    };
+    const flagLines = [flagLine('Lab ESBL', 'Lab ESBL'), flagLine('Lab Carbapenemase', 'Lab carbapenemase'), flagLine('Lab MRSA', 'Lab MRSA'), flagLine('VRSA Confirmation', 'VRSA confirmation (X_VRSA)')].filter(Boolean);
+    if (flagLines.length) auto.unshift('Laboratory flags imported - ' + flagLines.join(' | '));
     const screening = newRecords.filter(isScreeningSpecimen).length;
     if (screening) auto.push(`Screening specimens stored but excluded from analysis (CLSI M39): ${screening}`);
 
