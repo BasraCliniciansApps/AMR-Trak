@@ -519,9 +519,9 @@ if (settings.show_amr === false) {
             responsive: true, 
             maintainAspectRatio: false, 
             plugins: { legend: { display: false } }, 
-            scales: { y: { max: 100, beginAtZero: true } } 
+            scales: { y: { max: 100, beginAtZero: true }, x: { ticks: { maxRotation: 90, minRotation: 90, autoSkip: false, color: 'rgba(0,0,0,0)', font: { size: 10, weight: 'bold' }, callback: function(v) { return wrapAbxLabel(this.getLabelForValue(v)); } } } } 
         },
-        plugins: [errorBarsPlugin]
+        plugins: [errorBarsPlugin, centredAbxLabels]
     }));
     
     let bloodRecords = records.filter(r => r.Sample && r.Sample.toLowerCase() === 'blood');
@@ -1078,7 +1078,7 @@ const centredAbxLabels = {
         ctx.fillStyle = '#475569'; ctx.font = "bold 10px Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif";
         ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
         labels.forEach((l, i) => {
-            const t = wrapAbxLabel(l), lines = Array.isArray(t) ? t : [t];
+            const t = wrapAbxLabel(l), lines = Array.isArray(t) ? t : [t]; // marker labels already arrive as arrays
             const x = sc.getPixelForTick(i), y = sc.top + 8;
             ctx.save(); ctx.translate(x, y); ctx.rotate(-Math.PI / 2);
             // rotated: text runs bottom-to-top, so the first line sits on the left
@@ -1091,6 +1091,7 @@ const centredAbxLabels = {
 
 // Long combination names (e.g. Trimethoprim/Sulfamethoxazole) are split into two lines at "/" so they fit under the bars
 function wrapAbxLabel(l) {
+    if (Array.isArray(l)) return l;
     l = String(l == null ? '' : l);
     const i = l.indexOf('/');
     if (i < 0 || l.length < 16) return l;
