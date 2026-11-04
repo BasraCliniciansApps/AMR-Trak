@@ -228,6 +228,9 @@ function attachInfo(hostSel, key) {
     $h.children(`.info-btn[data-key="${key}"]`).remove();
     $h.append(`<button type="button" class="info-btn" data-key="${key}" onclick="showInfo('${key}')" aria-label="Details">i</button>`);
 }
+function mdrInfoHtml(px, pp) {
+    return `<p>Magiorakos et al. 2012 (ECDC/CDC consensus), applied to first isolates of Enterobacterales, P. aeruginosa, Acinetobacter and S. aureus.</p><ul style="margin:6px 0 0 16px;list-style:disc"><li><b>MDR:</b> non-susceptible (I or R) to at least one agent in 3 or more antimicrobial categories.</li><li><b>XDR:</b> non-susceptible to at least one agent in all but 2 or fewer categories.</li><li><b>PDR:</b> non-susceptible to all agents in all categories (every category tested, no susceptible result).</li><li>Intrinsic resistance is not counted. Untested categories are unknown, not resistant.</li></ul><p style="margin-top:8px">Only confirmed XDR/PDR are shown. <b>${px}</b> isolate(s) are possible XDR and <b>${pp}</b> possible PDR, but the tested panel was too limited to confirm.</p>`;
+}
 const AWARE_NAMES = { A: 'Access', W: 'Watch', R: 'Reserve' };
 
 // Antibiotic chart details: how to read the chart, selective testing, AWaRe, contaminants
@@ -249,8 +252,7 @@ function renderChartNotes(containerSel, selectiveNotes, contaminantCount, shownA
 
 function fetchCloudData() {
     if (!db) {
-        loadAnalyticsFilters();
-        generateLiveSurveillance();
+        refreshAll();
         return;
     }
     
@@ -258,21 +260,30 @@ function fetchCloudData() {
     
     // The dashboard reads ONLY the pseudonymised public copy (no names, hashed patient ids).
     // The private document (amr_sync) requires sign-in and is used by the data-entry app.
-    db.collection("amr_public").doc("dashboard").onSnapshot((doc) => {
-        if (doc.exists) {
-            const data = doc.data();
-            const cloudRecords = data.records || [];
+    db.collection("amr_public").onSnapshot((snap) => {
+        const docsById = {};
+        snap.forEach(d => { docsById[d.id] = d.data(); });
+        const data = docsById['dashboard'];
+        if (data) {
+            // Records live in year chunks (r_<year>_<n>); the meta document lists them.
+            let cloudRecords;
+            if (Array.isArray(data.records)) cloudRecords = data.records;            // old single-document copy
+            else {
+                cloudRecords = [];
+                for (const id of Object.keys(data.chunks || {}).sort()) {
+                    if (!docsById[id]) return;                                       // a chunk is still arriving
+                    cloudRecords = cloudRecords.concat(docsById[id].records || []);
+                }
+            }
             normalizeOrganismNames(cloudRecords);   // show current taxonomy names even if the cloud copy is older
-            // سحب الإعدادات السحابية أو استخدام الافتراضية
             const cloudSettings = data.settings || { profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
-            
-            // حفظ البيانات محلياً في الهاتف
-            localStorage.setItem('amr_dash_records', JSON.stringify(cloudRecords));
-            localStorage.setItem('amr_live_settings', JSON.stringify(cloudSettings));
-            
-            // إعادة رسم المخططات فوراً بناءً على الإعدادات الجديدة
-            loadAnalyticsFilters();
-            generateLiveSurveillance();
+            try {
+                localStorage.setItem('amr_dash_records', JSON.stringify(cloudRecords));
+                localStorage.setItem('amr_live_settings', JSON.stringify(cloudSettings));
+                localStorage.setItem('amr_dash_lab', JSON.stringify(data.labQuality || {}));
+            } catch (e) { console.warn('Local cache full', e); }
+
+            refreshAll();
             Swal.close();
         } else {
             Swal.close();
@@ -282,8 +293,7 @@ function fetchCloudData() {
         console.error("Firebase Error:", error);
         Swal.close();
         Swal.fire({ icon: 'warning', title: 'Offline Mode', text: 'Could not connect to cloud.', timer: 2000, showConfirmButton: false });
-        loadAnalyticsFilters();
-        generateLiveSurveillance();
+        refreshAll();
     });
 }
 $(document).ready(function() {
@@ -315,28 +325,8 @@ $(document).ready(function() {
     fetchCloudData();
 });
 
-window.switchTab = function(tab) {
-    $('#viewAnalytics, #viewLastMonth, #viewLastQuarter').addClass('hidden');
-    $('#btnNavAnalytics, #btnNavLastMonth, #btnNavLastQuarter').removeClass('active');
-    
-    if(tab === 'analytics') {
-        $('#viewAnalytics').removeClass('hidden');
-        $('#btnNavAnalytics').addClass('active');
-        $('#headerTitle').text('Surveillance Analytics');
-        if(!isUpdatingFilters) loadAnalyticsFilters();
-    } else if(tab === 'last_month') {
-        $('#viewLastMonth').removeClass('hidden');
-        $('#btnNavLastMonth').addClass('active');
-        $('#headerTitle').text('Last Month Surveillance');
-    } else if(tab === 'last_quarter') {
-        $('#viewLastQuarter').removeClass('hidden');
-        $('#btnNavLastQuarter').addClass('active');
-        $('#headerTitle').text('Last Quarter Surveillance');
-    }
-};
-
 function generateLiveSurveillance() {
-    let allRecords = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
+    let allRecords = getDashRecords();
     let settings = JSON.parse(localStorage.getItem('amr_live_settings')) || {};
     
     const blacklist = ["xxx", "con", "no growth", "contaminated", "normal flora", "mixed flora", "no significant growth"];
@@ -371,8 +361,8 @@ function generateLiveSurveillance() {
         return parseInt(parts[0]) === qYear && qMonths.includes(parts[1]);
     });
 
-    $('#live_month_title').text(`Surveillance Overview (${targetMonthPrefix})`);
-    $('#live_q_title').text(`Surveillance Overview (${qLabel} ${qYear})`);
+    $('#live_month_title').text(`Surveillance Overview (${targetMonthPrefix}) - ${scopeLabel()}`);
+    $('#live_q_title').text(`Surveillance Overview (${qLabel} ${qYear}) - ${scopeLabel()}`);
 
     liveCharts.forEach(c => c.destroy());
     liveCharts = [];
@@ -595,8 +585,8 @@ if (settings.show_amr === false) {
     let p1 = settings.profile1_abx || 'Meropenem';
     let p2 = settings.profile2_abx || 'Ceftriaxone';
 // --- 🚨 MDR / XDR Classification Algorithm ---
-    let mdrStats = { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0 };
-    let possibleXdrCount = 0;
+    let mdrStats = { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0, 'PDR': 0 };
+    let possibleXdrCount = 0, possiblePdrCount = 0;
     let wardMdrStats = {};
 
     // MDR/XDR is evaluated on first isolates only (deduplicated), classifiable organisms only
@@ -607,20 +597,21 @@ if (settings.show_amr === false) {
 
         let classification = res.cls;
         if (res.possibleXDR) possibleXdrCount++;
+        if (res.possiblePDR) possiblePdrCount++;
         mdrStats[classification]++;
 
         // حساب التوزيع حسب الردهات
         if (!wardMdrStats[ward]) {
-            wardMdrStats[ward] = { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0, total: 0 };
+            wardMdrStats[ward] = { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0, 'PDR': 0, total: 0 };
         }
         wardMdrStats[ward][classification]++;
         wardMdrStats[ward].total++;
     });
 
     // 1. بناء مخطط الدونات (MDR/XDR Overall Burden)
-    let mdrData = [mdrStats['Non-MDR'], mdrStats['MDR'], mdrStats['XDR']];
-    let mdrLabels = ['Non-MDR', 'MDR', 'XDR'];
-    let mdrColors = ['#10b981', '#f59e0b', '#e11d48'];
+    let mdrData = [mdrStats['Non-MDR'], mdrStats['MDR'], mdrStats['XDR'], mdrStats['PDR']];
+    let mdrLabels = ['Non-MDR', 'MDR', 'XDR', 'PDR'];
+    let mdrColors = ['#10b981', '#f59e0b', '#e11d48', '#7f1d1d'];
 
     if (mdrData.reduce((a, b) => a + b, 0) === 0) {
         mdrData = [1]; mdrLabels = ['No Valid Data']; mdrColors = ['#e2e8f0'];
@@ -639,19 +630,20 @@ if (settings.show_amr === false) {
         }
     }));
 
-    setInfo('mdr_' + prefix, 'MDR / XDR classification', `<p>Magiorakos et al. 2012, on first isolates of E. coli and other Enterobacterales, P. aeruginosa, Acinetobacter and S. aureus.</p><ul style="margin:6px 0 0 16px;list-style:disc"><li><b>MDR:</b> non-susceptible (I or R) to at least one agent in 3 or more antimicrobial categories.</li><li><b>XDR:</b> non-susceptible in all but 2 or fewer categories.</li><li>Intrinsic resistance is not counted. Untested categories are unknown, not resistant.</li></ul><p style="margin-top:8px">XDR shown here is confirmed only. <b>${possibleXdrCount}</b> more isolate(s) are possible XDR but the tested panel was too limited to confirm.</p>`);
+    setInfo('mdr_' + prefix, 'MDR / XDR / PDR classification', mdrInfoHtml(possibleXdrCount, possiblePdrCount));
     attachInfo($(`#chart_${prefix}_mdr_pie`).parent().parent(), 'mdr_' + prefix);
 
     // 2. بناء مخطط الأعمدة المتراكمة (Top Wards by MDR/XDR)
     // فرز الردهات حسب عدد حالات (MDR + XDR) التراكمي
     let sortedWards = Object.keys(wardMdrStats)
-        .sort((a, b) => (wardMdrStats[b]['MDR'] + wardMdrStats[b]['XDR']) - (wardMdrStats[a]['MDR'] + wardMdrStats[a]['XDR']))
+        .sort((a, b) => (wardMdrStats[b]['MDR'] + wardMdrStats[b]['XDR'] + wardMdrStats[b]['PDR']) - (wardMdrStats[a]['MDR'] + wardMdrStats[a]['XDR'] + wardMdrStats[a]['PDR']))
         .slice(0, 5); // أخذ أخطر 5 ردهات فقط
 
     let stackLabels = sortedWards.map(w => w.length > 12 ? w.slice(0, 10) + '..' : w);
     let stackNonMDR = sortedWards.map(w => wardMdrStats[w]['Non-MDR']);
     let stackMDR = sortedWards.map(w => wardMdrStats[w]['MDR']);
     let stackXDR = sortedWards.map(w => wardMdrStats[w]['XDR']);
+    let stackPDR = sortedWards.map(w => wardMdrStats[w]['PDR']);
 
     liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_mdr_bar`), {
         type: 'bar',
@@ -660,7 +652,8 @@ if (settings.show_amr === false) {
             datasets: [
                 { label: 'Non-MDR', data: stackNonMDR, backgroundColor: '#10b981', borderRadius: 2 },
                 { label: 'MDR', data: stackMDR, backgroundColor: '#f59e0b', borderRadius: 2 },
-                { label: 'XDR', data: stackXDR, backgroundColor: '#e11d48', borderRadius: 2 }
+                { label: 'XDR', data: stackXDR, backgroundColor: '#e11d48', borderRadius: 2 },
+                { label: 'PDR', data: stackPDR, backgroundColor: '#7f1d1d', borderRadius: 2 }
             ]
         },
         options: {
@@ -942,7 +935,7 @@ window.toggleAdvancedSearch = function() {
     
     // Populate the all specimens dropdown when opened
     if(!$('#adv_content').hasClass('hidden')) {
-        let allRecords = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
+        let allRecords = getDashRecords();
         let allSamples = new Set(allRecords.map(r => r.Sample).filter(Boolean));
         let currentAdvSample = $('#adv_sample').val();
         $('#adv_sample').empty().append(new Option("All Specimens", ""));
@@ -956,7 +949,7 @@ function loadAnalyticsFilters() {
     isUpdatingFilters = true;
 
     let period = $('input[name="guided_period"]:checked').val() || 'all';
-    let allRecords = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
+    let allRecords = getDashRecords();
     
     // 1. الفلترة حسب الوقت فقط للقوائم المنسدلة (لا تتأثر بالـ Inpatient/Outpatient)
     let dateRecords = filterByPeriod(allRecords, period); 
@@ -1052,7 +1045,7 @@ function generateGuidedAnalytics() {
     }
 
     let period = $('input[name="guided_period"]:checked').val() || 'all';
-    let allRecords = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
+    let allRecords = getDashRecords();
     let records = filterByPeriod(allRecords, period);
 
     if (targetSample !== "all") { 
@@ -1139,7 +1132,7 @@ function renderGuidedAST() {
     const targetSample = $('#guided_sample').val();
     let period = $('input[name="guided_period"]:checked').val() || 'all';
 
-    let allRecords = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
+    let allRecords = getDashRecords();
     let records = filterByPeriod(allRecords, period);
     records = records.filter(r => r['Selective organism'] === currentGuidedBug);
     
@@ -1235,7 +1228,7 @@ $(document).on('change', 'input[name="patho_metric"]', function() {
 function updatePathoDropdowns() {
     let period = $('input[name="patho_period"]:checked').val() || 'all';
 
-    let records = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
+    let records = getDashRecords();
     records = filterByPeriod(records, period);
     // فصلنا فلتر الردهة عن القائمة المنسدلة لتبقى ثابتة
 
@@ -1268,7 +1261,7 @@ function renderPathoChart() {
     }
 
     let period = $('input[name="patho_period"]:checked').val() || 'all';
-    let records = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
+    let records = getDashRecords();
     records = filterByPeriod(records, period);
     records = records.filter(r => r['Selective organism'] === bug);
     records = applyWardFilter(records, $('input[name="patho_ward"]:checked').val() || 'total');
@@ -1362,7 +1355,7 @@ $(document).on('change', 'input[name="abx_metric"]', function() {
 function updateAbxDropdowns() {
     let period = $('input[name="abx_period"]:checked').val() || 'all';
 
-    let records = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
+    let records = getDashRecords();
     records = filterByPeriod(records, period);
     // تم فصل فلتر الردهة للحفاظ على قائمة المضادات
 
@@ -1398,7 +1391,7 @@ function renderAbxChart() {
     }
 
     let period = $('input[name="abx_period"]:checked').val() || 'all';
-    let records = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
+    let records = getDashRecords();
     records = filterByPeriod(records, period);
     records = applyWardFilter(records, $('input[name="abx_ward"]:checked').val() || 'total');
 
@@ -1471,7 +1464,7 @@ window.generateAdvancedAnalytics = function() {
     let targetAbxs = $('#adv_antibiotic').val() || [];
     const metric = $('#adv_metric').val() || 'R'; 
 
-    let allRecords = JSON.parse(localStorage.getItem('amr_dash_records')) || [];
+    let allRecords = getDashRecords();
     let records = allRecords; // Start with entire database
 
     // Filter ONLY if the user selected a date

@@ -343,7 +343,7 @@ function classifyMDR(r) {
     const excluded = new Set();
     MDR_INTRINSIC_RULES.forEach(rule => { if (rule.test.test(orgLower)) rule.exclude.forEach(c => excluded.add(c)); });
 
-    let tested = 0, ns = 0, total = 0;
+    let tested = 0, ns = 0, total = 0, anySusceptible = false;
     Object.keys(MDR_TABLES[group]).forEach(cat => {
         if (excluded.has(cat)) return;
         total++;
@@ -352,19 +352,25 @@ function classifyMDR(r) {
             const v = String(r[abx] || '').trim().toUpperCase();
             if (v === 'S' || v === 'I' || v === 'R' || v === 'SDD') {
                 anyTested = true;
-                if (v !== 'S') anyNS = true;
+                if (v !== 'S') anyNS = true; else anySusceptible = true;
             }
         });
         if (anyTested) { tested++; if (anyNS) ns++; }
     });
 
-    let cls = 'Non-MDR', possibleXDR = false;
+    // Magiorakos 2012: MDR = NS to >=1 agent in >=3 categories; XDR = NS to >=1 agent in all but <=2 categories;
+    // PDR = NS to ALL agents of ALL categories (here: every applicable category tested, and no tested agent is susceptible).
+    let cls = 'Non-MDR', possibleXDR = false, possiblePDR = false;
     if (ns >= 3) {
         cls = 'MDR';
         if (ns >= total - 2) cls = 'XDR';
         else if (tested >= MDR_MIN_TESTED_FOR_POSSIBLE_XDR && (tested - ns) <= 2) possibleXDR = true;
     }
-    return { cls, ns, tested, total, group, possibleXDR };
+    if (cls === 'XDR' && !anySusceptible) {
+        if (tested === total) cls = 'PDR';
+        else if (tested >= MDR_MIN_TESTED_FOR_POSSIBLE_XDR) possiblePDR = true;   // panel incomplete: cannot be called PDR
+    }
+    return { cls, ns, tested, total, group, possibleXDR, possiblePDR };
 }
 
 
@@ -750,4 +756,77 @@ function getMinistryCategory(name) {
     ];
     for (const [re, cat] of rules) if (re.test(o)) return cat;
     return '';
+}
+
+
+// =====================================================================
+// LAB QUALITY AGGREGATES (No growth / Contaminated / Growth cultures)
+// Rows without an organism are NOT stored as isolates. Only counts are kept:
+//   { v:1, months: { "2026-10": { "Ward|Sample": [growth, noGrowth, contaminated] } } }
+// A "culture" = one patient + date + specimen type (polymicrobial rows count once).
+// Status priority: growth > contaminated > no growth.
+// =====================================================================
+function parseWhonetDateParts(rawDate) {
+    rawDate = String(rawDate || '').trim();
+    if (!rawDate) return '';
+    try {
+        if (!isNaN(rawDate) && Number(rawDate) > 10000 && !rawDate.includes('-') && !rawDate.includes('/')) {
+            const d = new Date((Number(rawDate) - 25569) * 86400 * 1000);
+            return isNaN(d) ? '' : d.toISOString().slice(0, 7);
+        }
+        const p = rawDate.split(/[\/\-]/);
+        if (p.length >= 3) {
+            const p3 = p[2].split(' ')[0];
+            const year = p[0].length === 4 ? p[0] : (p3.length === 2 ? '20' + p3 : p3);
+            return `${year}-${p[1].padStart(2, '0')}`;
+        }
+        const d = new Date(rawDate);
+        return isNaN(d) ? '' : d.toISOString().slice(0, 7);
+    } catch (e) { return ''; }
+}
+
+// ctx: { idx: {org, ward, sample, date, pid}, wardMap, specimenMap }
+function buildLabQualityFromRows(rows, ctx) {
+    const cultures = new Map();
+    const rank = { growth: 3, con: 2, ng: 1 };
+    for (let i = 1; i < rows.length; i++) {
+        const cols = rows[i];
+        if (!cols || !cols.length) continue;
+        const org = ctx.idx.org > -1 && cols[ctx.idx.org] ? String(cols[ctx.idx.org]).trim().toLowerCase() : '';
+        const rawSample = ctx.idx.sample > -1 && cols[ctx.idx.sample] ? String(cols[ctx.idx.sample]).toLowerCase() : '';
+        const month = parseWhonetDateParts(ctx.idx.date > -1 ? cols[ctx.idx.date] : '');
+        if (!rawSample || !month) continue;
+        const sample = ctx.specimenMap[rawSample] || (rawSample.charAt(0).toUpperCase() + rawSample.slice(1));
+        const rawWard = ctx.idx.ward > -1 && cols[ctx.idx.ward] ? String(cols[ctx.idx.ward]).toLowerCase() : '';
+        const ward = ctx.wardMap[rawWard] || (rawWard ? rawWard.charAt(0).toUpperCase() + rawWard.slice(1) : '-');
+        const status = (!org || org === 'xxx' || org === 'no growth') ? 'ng' : (org === 'con' ? 'con' : 'growth');
+        const pid = ctx.idx.pid > -1 && cols[ctx.idx.pid] ? String(cols[ctx.idx.pid]).trim().toLowerCase() : ('row' + i);
+        const fullDate = ctx.idx.date > -1 ? String(cols[ctx.idx.date] || '').trim() : '';
+        const key = [pid, fullDate, sample.toLowerCase()].join('|');
+        const prev = cultures.get(key);
+        if (!prev || rank[status] > rank[prev.status]) cultures.set(key, { month, ward, sample, status });
+    }
+    const months = {};
+    cultures.forEach(c => {
+        const m = (months[c.month] = months[c.month] || {});
+        const k = c.ward + '|' + c.sample;
+        const a = (m[k] = m[k] || [0, 0, 0]);
+        if (c.status === 'growth') a[0]++; else if (c.status === 'ng') a[1]++; else a[2]++;
+    });
+    return { v: 1, months };
+}
+function labMonthTotal(monthObj) {
+    let t = 0;
+    Object.values(monthObj || {}).forEach(a => { t += a[0] + a[1] + a[2]; });
+    return t;
+}
+// Replaces a month only when the new import holds at least as many cultures (a partial file never shrinks a complete month)
+function mergeLabQuality(existing, incoming) {
+    const out = { v: 1, months: Object.assign({}, (existing && existing.months) || {}) };
+    const kept = [];
+    Object.keys(incoming.months || {}).forEach(m => {
+        if (!out.months[m] || labMonthTotal(incoming.months[m]) >= labMonthTotal(out.months[m])) out.months[m] = incoming.months[m];
+        else kept.push(m);
+    });
+    return { merged: out, keptMonths: kept };
 }

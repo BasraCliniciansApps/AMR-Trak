@@ -24,6 +24,8 @@ auth.onAuthStateChanged((user) => {
         // إذا كان مسجلاً، أخفِ شاشة الدخول وأظهر التطبيق
         $('#loginOverlay').addClass('hidden');
         $('#mainAppContainer').removeClass('hidden');
+        // Start listening to the private cloud copy only once signed in (rules require it)
+        if (!window._cloudListenerStarted) { window._cloudListenerStarted = true; syncCloudToLocal(); }
     } else {
         // Not signed in: show the sign-in screen (the dashboard is a separate page)
         $('#loginOverlay').removeClass('hidden');
@@ -60,68 +62,216 @@ function logoutUser() {
 }
         
         // تفعيل المزامنة التلقائية عند الاتصال بالإنترنت
-        window.addEventListener('online', syncLocalToCloud);
-        // سحب البيانات من السحابة عند بدء التشغيل
-        syncCloudToLocal();
+        window.addEventListener('online', () => syncLocalToCloud({ auto: true }));
     }
 } catch(e) {
     console.warn("Firebase not loaded, running strictly offline.");
 }
 
-// دالة لدفع البيانات المحلية إلى السحابة
-async function syncLocalToCloud() {
-    if (!db) return;
-    try {
-        let localRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
-        
-        // 🔒 استقطاع الأسماء لحماية خصوصية المرضى قبل رفع البيانات للسحابة
-        let cloudReadyRecords = localRecords.map(r => {
-            let recordCopy = { ...r };
-            delete recordCopy['Name']; 
-            delete recordCopy['Name Original'];   // never leaves the device
-            return recordCopy;
-        });
+// ---------------------------------------------------------
+// CLOUD SYNC (schema v2): the records are split into chunks (one or more per year) so no
+// Firestore document ever approaches the 1 MB limit. A small "meta" document lists the chunks.
+//   private : amr_sync/hospital_main (meta)  + amr_sync/r_<year>_<n>  (no patient names)
+//   public  : amr_public/dashboard  (meta)   + amr_public/r_<year>_<n> (pseudonymised)
+// ---------------------------------------------------------
+const CHUNK_MAX_CHARS = 600000;      // ~600 KB of JSON per document (limit is 1 MiB)
 
-        let liveSettings = JSON.parse(localStorage.getItem('amr_live_settings')) || { profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
-        
-        // Pseudonymisation salt: generated once, kept in the private (signed-in only) document
-        let salt = localStorage.getItem('amr_hash_salt');
-        if (!salt) {
-            const snap = await db.collection("amr_sync").doc("hospital_main").get();
-            salt = (snap.exists && snap.data().salt) ? snap.data().salt : Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
-            localStorage.setItem('amr_hash_salt', salt);
+function recordYear(r) {
+    const y = String(r['Date'] || r['Specimen Date'] || '').slice(0, 4);
+    return /^\d{4}$/.test(y) ? y : '0000';
+}
+function quickHash(str) {
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+    return (h >>> 0).toString(36) + '.' + str.length.toString(36);
+}
+// -> [{ id, year, n, hash, json, records }]
+function buildChunks(records) {
+    const byYear = {};
+    records.forEach(r => { (byYear[recordYear(r)] = byYear[recordYear(r)] || []).push(r); });
+    const out = [];
+    Object.keys(byYear).sort().forEach(year => {
+        let part = [], size = 0, idx = 1;
+        const flush = () => {
+            if (!part.length) return;
+            const json = JSON.stringify(part);
+            out.push({ id: `r_${year}_${idx}`, year, n: part.length, hash: quickHash(json), records: part });
+            idx++; part = []; size = 0;
+        };
+        byYear[year].forEach(r => {
+            const len = JSON.stringify(r).length + 1;
+            if (size + len > CHUNK_MAX_CHARS) flush();
+            part.push(r); size += len;
+        });
+        flush();
+    });
+    return out;
+}
+function chunkMetaOf(chunks) {
+    const m = {};
+    chunks.forEach(c => { m[c.id] = { year: c.year, n: c.n, hash: c.hash }; });
+    return m;
+}
+// Reads every chunk listed by the meta document from a collection snapshot.  null = incomplete.
+function assembleRecords(meta, docsById) {
+    if (Array.isArray(meta.records)) return meta.records;           // legacy single-document format
+    const ids = Object.keys(meta.chunks || {}).sort();
+    let out = [];
+    for (const id of ids) {
+        const d = docsById[id];
+        if (!d) return null;                                        // chunk not delivered yet
+        out = out.concat(d.records || []);
+    }
+    return out;
+}
+
+let _syncBusy = false;
+let _syncQueued = null;
+function setSyncStatus(kind, text) {
+    try { localStorage.setItem('amr_sync_status', JSON.stringify({ kind, text, at: Date.now() })); } catch (e) {}
+    const el = document.getElementById('syncStatus');
+    if (el) {
+        el.textContent = text;
+        el.className = 'text-[11px] font-bold ' + (kind === 'ok' ? 'text-emerald-600' : kind === 'warn' ? 'text-amber-600' : 'text-red-600');
+    }
+}
+
+// opts.auto  : triggered automatically (never shows dialogs, never overwrites on doubt)
+// opts.force : the user explicitly confirmed overwriting the cloud (e.g. Clear All Records)
+async function syncLocalToCloud(opts) {
+    opts = (opts && typeof opts === 'object' && !(opts instanceof Event)) ? opts : {};
+    if (!db) return;
+    try { if (!firebase.auth().currentUser) return; } catch (e) { return; }
+    if (_syncBusy) { _syncQueued = opts; return; }
+    _syncBusy = true;
+    try {
+        const localRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
+        // Names never leave the device
+        const cloudReadyRecords = localRecords.map(r => {
+            const c = { ...r };
+            delete c['Name']; delete c['Name Original'];
+            return c;
+        });
+        const liveSettings = JSON.parse(localStorage.getItem('amr_live_settings')) || { profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
+
+        const privMetaRef = db.collection("amr_sync").doc("hospital_main");
+        const privSnap = await privMetaRef.get();
+        const privMeta = privSnap.exists ? privSnap.data() : {};
+        const cloudTotal = Array.isArray(privMeta.records) ? privMeta.records.length : (privMeta.total || 0);
+
+        // ---- Safety guard: never silently shrink or replace newer cloud data ----
+        if (!opts.force && cloudTotal > 0) {
+            const lostTooMuch = localRecords.length < cloudTotal * 0.7;
+            const knownRev = localStorage.getItem('amr_cloud_rev');
+            const cloudChanged = !!(privMeta.rev && knownRev && privMeta.rev !== knownRev);
+            if (lostTooMuch || cloudChanged) {
+                const msg = lostTooMuch
+                    ? `This device holds ${localRecords.length} records but the cloud holds ${cloudTotal}.`
+                    : 'The cloud was updated from another device since this device last synced.';
+                if (opts.auto) {
+                    setSyncStatus('warn', 'Sync paused: ' + msg);
+                    return;
+                }
+                const choice = await Swal.fire({
+                    icon: 'warning', title: 'Sync stopped to protect the cloud data',
+                    html: `<p style="font-size:13px">${msg}</p><p style="font-size:12px;margin-top:6px">Overwriting would replace the cloud copy with this device's data.</p>`,
+                    showDenyButton: true, showCancelButton: true,
+                    confirmButtonText: 'Keep cloud (pull it)', denyButtonText: 'Overwrite cloud', cancelButtonText: 'Cancel',
+                    confirmButtonColor: '#0d9488', denyButtonColor: '#dc2626'
+                });
+                if (choice.isConfirmed) {
+                    localStorage.removeItem('amr_cloud_rev');
+                    setSyncStatus('warn', 'Pulling the cloud copy...');
+                    await pullCloudNow();
+                    return;
+                }
+                if (!choice.isDenied) { setSyncStatus('warn', 'Sync cancelled'); return; }
+            }
         }
 
-        await db.collection("amr_sync").doc("hospital_main").set({
-            records: cloudReadyRecords,
-            settings: liveSettings,
-            salt: salt,
-            last_updated: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true }); 
-
-        // Public dashboard copy: no names, no internal ids, Patient ID replaced by a salted hash
+        // ---- Pseudonymisation salt ----
+        let salt = localStorage.getItem('amr_hash_salt');
+        if (!salt) {
+            salt = privMeta.salt || Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+            localStorage.setItem('amr_hash_salt', salt);
+        }
         const publicRecords = await buildPublicRecords(cloudReadyRecords, salt);
-        await db.collection("amr_public").doc("dashboard").set({
-            records: publicRecords,
-            settings: liveSettings,
-            last_updated: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        const labQuality = JSON.parse(localStorage.getItem('amr_lab_quality') || '{}');
+
+        const rev = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const stamp = firebase.firestore.FieldValue.serverTimestamp();
+        const DEL = firebase.firestore.FieldValue.delete();
+
+        // Writes one family (private or public): changed chunks + meta, and removes orphaned chunks
+        const writeFamily = async (collection, metaDocId, records, metaExtra) => {
+            const metaRef = db.collection(collection).doc(metaDocId);
+            const oldMeta = (collection === 'amr_sync') ? privMeta : ((await metaRef.get()).data() || {});
+            const oldChunks = oldMeta.chunks || {};
+            const chunks = buildChunks(records);
+            const sameChunks = chunks.length === Object.keys(oldChunks).length &&
+                chunks.every(c => oldChunks[c.id] && oldChunks[c.id].hash === c.hash);
+            const sameExtra = Object.keys(metaExtra).every(k => k === 'salt' || JSON.stringify(oldMeta[k] || null) === JSON.stringify(metaExtra[k] || null));
+            if (sameChunks && sameExtra && JSON.stringify(oldMeta.settings || null) === JSON.stringify(liveSettings) && oldMeta.schema === 2) return false;
+            const batch = db.batch();
+            chunks.forEach(c => {
+                if (!oldChunks[c.id] || oldChunks[c.id].hash !== c.hash) {
+                    batch.set(db.collection(collection).doc(c.id), { year: c.year, n: c.n, records: c.records });
+                }
+            });
+            Object.keys(oldChunks).forEach(id => {
+                if (!chunks.find(c => c.id === id)) batch.delete(db.collection(collection).doc(id));
+            });
+            batch.set(metaRef, Object.assign({
+                schema: 2, rev: rev, total: records.length, years: [...new Set(chunks.map(c => c.year))],
+                chunks: chunkMetaOf(chunks), records: DEL, settings: liveSettings, last_updated: stamp
+            }, metaExtra), { merge: true });
+            await batch.commit();
+            return true;
+        };
+
+        const w1 = await writeFamily("amr_sync", "hospital_main", cloudReadyRecords, { salt: salt });
+        const w2 = await writeFamily("amr_public", "dashboard", publicRecords, { labQuality: labQuality });
+
+        if (w1) localStorage.setItem('amr_cloud_rev', rev);
+        const t = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        setSyncStatus('ok', `Synced ${t} - ${localRecords.length} records`);
         console.log("Data synced to cloud successfully (names excluded; public copy pseudonymised).");
-    } catch(e) {
+    } catch (e) {
         console.error("Error syncing to cloud:", e);
+        setSyncStatus('err', 'Sync failed - will retry when online');
+    } finally {
+        _syncBusy = false;
+        if (_syncQueued) { const q = _syncQueued; _syncQueued = null; setTimeout(() => syncLocalToCloud(q), 300); }
     }
+}
+
+// Forces a fresh read of the private collection (used after "Keep cloud")
+async function pullCloudNow() {
+    const snap = await db.collection("amr_sync").get();
+    handlePrivateSnapshot(snap);
 }
 
 // دالة لسحب البيانات من السحابة ودمجها مع المحلي بأمان
 function syncCloudToLocal() {
     if (!db) return;
-    
-    db.collection("amr_sync").doc("hospital_main").onSnapshot((doc) => {
+    db.collection("amr_sync").onSnapshot(handlePrivateSnapshot, (error) => {
+        console.error("Error fetching live data from cloud:", error);
+    });
+}
+
+function handlePrivateSnapshot(snap) {
+    {
+        const docsById = {};
+        snap.forEach(d => { docsById[d.id] = d.data(); });
+        const metaData = docsById['hospital_main'];
+        const doc = { exists: !!metaData, metadata: snap.metadata };
         if (doc.exists) {
             if (doc.metadata.hasPendingWrites) return;
-
-            const cloudRecords = doc.data().records || [];
-            const cloudSettings = doc.data().settings || null;
+            const assembled = assembleRecords(metaData, docsById);
+            if (assembled === null) return;            // chunks still arriving
+            const cloudRecords = assembled;
+            const cloudSettings = metaData.settings || null;
+            const legacyFormat = Array.isArray(metaData.records);
             
             let localRecordsStr = localStorage.getItem('amr_records') || "[]";
             let localRecords = JSON.parse(localRecordsStr);
@@ -194,16 +344,16 @@ function syncCloudToLocal() {
                 localStorage.setItem('amr_live_settings', JSON.stringify(cloudSettings));
             }
             
-            // معالجة البيانات المعطوبة في السحابة فوراً إن وجدت
+            if (metaData.rev) localStorage.setItem('amr_cloud_rev', metaData.rev);
+            // Convert an old single-document cloud copy to the chunked format
+            if (legacyFormat) needsCloudFix = true;
             if (needsCloudFix && typeof syncLocalToCloud === 'function') {
-                syncLocalToCloud();
+                syncLocalToCloud({ auto: true });
             }
             
             console.log("Real-time sync: Data synchronized and names secured in Vault.");
         }
-    }, (error) => {
-        console.error("Error fetching live data from cloud:", error);
-    });
+    }
 }
 // ---------------------------------------------------------
 let dataTable;
@@ -215,51 +365,6 @@ let liveCharts = [];
 let isUpdatingFilters = false;
 
 
-// --- 1. COLOR PALETTE & CUSTOM PLUGINS ---
-const extendedPalette = [
-    { bg: 'rgba(13, 148, 136, 0.9)', faded: 'rgba(13, 148, 136, 0.25)' }, // Teal
-    { bg: 'rgba(14, 165, 233, 0.9)', faded: 'rgba(14, 165, 233, 0.25)' }, // Light Blue
-    { bg: 'rgba(59, 130, 246, 0.9)', faded: 'rgba(59, 130, 246, 0.25)' }, // Blue
-    { bg: 'rgba(139, 92, 246, 0.9)', faded: 'rgba(139, 92, 246, 0.25)' }, // Violet
-    { bg: 'rgba(217, 70, 239, 0.9)', faded: 'rgba(217, 70, 239, 0.25)' }, // Fuchsia
-    { bg: 'rgba(244, 63, 94, 0.9)', faded: 'rgba(244, 63, 94, 0.25)' }, // Rose
-    { bg: 'rgba(249, 115, 22, 0.9)', faded: 'rgba(249, 115, 22, 0.25)' }, // Orange
-    { bg: 'rgba(234, 179, 8, 0.9)', faded: 'rgba(234, 179, 8, 0.25)' }, // Yellow
-    { bg: 'rgba(132, 204, 22, 0.9)', faded: 'rgba(132, 204, 22, 0.25)' }, // Lime
-    { bg: 'rgba(220, 38, 38, 0.9)', faded: 'rgba(220, 38, 38, 0.25)' }   // Red
-];
-
-
-// إضافة مخصصة لرسم خطوط فترة الثقة (Confidence Intervals)
-const errorBarsPlugin = {
-    id: 'errorBars',
-    afterDatasetsDraw(chart) {
-        const ctx = chart.ctx;
-        if (!chart.scales || !chart.scales.y) return;
-        chart.data.datasets.forEach((dataset, i) => {
-            const meta = chart.getDatasetMeta(i);
-            if (!meta.hidden && dataset.ciData) {
-                meta.data.forEach((element, index) => {
-                    const ci = dataset.ciData[index];
-                    if (!ci || (ci.lower === 0 && ci.upper === 0 && dataset.data[index] === 0)) return;
-                    const yLower = chart.scales.y.getPixelForValue(ci.lower);
-                    const yUpper = chart.scales.y.getPixelForValue(ci.upper);
-                    let x = element.x;
-                    if (x === undefined) return;
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.lineWidth = 1; ctx.strokeStyle = '#334155';
-                    ctx.moveTo(x, yLower); ctx.lineTo(x, yUpper);
-                    ctx.moveTo(x - 3, yUpper); ctx.lineTo(x + 3, yUpper);
-                    ctx.moveTo(x - 3, yLower); ctx.lineTo(x + 3, yLower);
-                    ctx.stroke(); ctx.restore();
-                });
-            }
-        });
-    }
-};
-
-// دالة ذكية للاختصار العلمي للبكتيريا (تحول Staphylococcus aureus إلى S. aureus)
 function formatScientificName(name) {
     if (!name || typeof name !== 'string') return name;
     let cleanName = name.replace(/\(E\.coli\)/gi, "").trim(); // إزالة الزوائد
@@ -626,6 +731,9 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         'picu': 'Pediatric ICU'
     };
 
+    // Lab-quality counts (growth / no growth / contaminated cultures): stored as aggregates only, never as isolates
+    const labAgg = buildLabQualityFromRows(rawData, { idx: { org: idxOrg, ward: idxWard, sample: idxSample, date: idxDate, pid: idxPatientID }, wardMap: wardMap, specimenMap: externalSpecimenMap });
+
     for(let i = 1; i < rawData.length; i++) {
         const cols = rawData[i];
         
@@ -775,6 +883,12 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
     const fileNames = Array.from(event.target.files || []).map(f => f.name);
     const finalize = () => {
         localStorage.setItem('amr_records', JSON.stringify(records));
+        try {
+            const mergedLab = mergeLabQuality(JSON.parse(localStorage.getItem('amr_lab_quality') || '{}'), labAgg);
+            localStorage.setItem('amr_lab_quality', JSON.stringify(mergedLab.merged));
+            report.labMonths = Object.keys(labAgg.months).length;
+            report.labKept = mergedLab.keptMonths;
+        } catch (e) { console.warn('Lab quality aggregate failed', e); }
         initDataTable();
         if (typeof syncLocalToCloud === "function" && navigator.onLine) syncLocalToCloud();
         showImportReport(report, audit, newRecords, skippedCount, fileNames);
@@ -862,6 +976,8 @@ function buildImportReport(report, audit, newRecords, skippedCount) {
 
     // --- applied automatically ---
     if (report.noGrowth) auto.push(`No growth / contaminant / no organism rows not imported: ${report.noGrowth}`);
+    if (report.labMonths) auto.push(`Lab quality counts (growth / no growth / contaminated cultures) updated for ${report.labMonths} month(s); shown in the dashboard Lab Quality tab`);
+    if (report.labKept && report.labKept.length) auto.push(`Lab quality kept the existing counts for ${report.labKept.join(', ')} (the new file held fewer cultures for those months)`);
     if (report.noSri) auto.push(`Identified organisms without susceptibility results not imported: ${report.noSri}`);
     if (report.duplicates) auto.push(`Already in the database, not added again: ${report.duplicates}`);
     if (report.strepPenDisk) auto.push(`Beta-haemolytic streptococci: penicillin/ampicillin R/I by disk ignored (no valid CLSI disk breakpoints): ${report.strepPenDisk}`);
@@ -1004,16 +1120,6 @@ $(document).ready(function() {
     let today = new Date().toISOString().slice(0, 7);
     $('#p_date').val(today);
     
-    let currentYear = new Date().getFullYear();
-    $('#ana_start').val(`${currentYear}-01-01`);
-    $('#ana_end').val(`${currentYear}-12-31`);
-
-    loadAnalyticsFilters();
-
-    $('#ana_start, #ana_end, #ana_sample').on('change', function() {
-        loadAnalyticsFilters(); 
-    });
-
     initDataTable();
 
     let isSelect2Closing = false;
@@ -1152,7 +1258,8 @@ window.downloadBackup = function() {
             amr_wards: JSON.parse(localStorage.getItem('amr_wards')) || (typeof defaultWards !== 'undefined' ? defaultWards : []),
             amr_organisms: JSON.parse(localStorage.getItem('amr_organisms')) || [],
             amr_custom_abx_v2: JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [],
-            amr_live_settings: JSON.parse(localStorage.getItem('amr_live_settings')) || null
+            amr_live_settings: JSON.parse(localStorage.getItem('amr_live_settings')) || null,
+            amr_lab_quality: JSON.parse(localStorage.getItem('amr_lab_quality')) || null
         };
 
         const dataStr = JSON.stringify(data, null, 2);
@@ -1277,6 +1384,14 @@ window.processRestore = function() {
                     mergeArray('amr_wards', importedData.amr_wards);
                     mergeArray('amr_organisms', importedData.amr_organisms);
 
+                    if (importedData.amr_lab_quality && importedData.amr_lab_quality.months) {
+                        const lq = mergeLabQuality(JSON.parse(localStorage.getItem('amr_lab_quality') || '{}'), importedData.amr_lab_quality);
+                        localStorage.setItem('amr_lab_quality', JSON.stringify(lq.merged));
+                    }
+                    if (!localStorage.getItem('amr_live_settings') && importedData.amr_live_settings) {
+                        localStorage.setItem('amr_live_settings', JSON.stringify(importedData.amr_live_settings));
+                    }
+
                     if (importedData.amr_custom_abx_v2) {
                         let localAbx = JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [];
                         importedData.amr_custom_abx_v2.forEach(impAbx => {
@@ -1292,8 +1407,6 @@ window.processRestore = function() {
                     if (typeof loadWardOptions === 'function') loadWardOptions();
                     if (typeof renderDefaultAntibiotics === 'function') renderDefaultAntibiotics();
                     if (typeof initDataTable === 'function') initDataTable();
-                    if (!$('#viewAnalytics').hasClass('hidden') && typeof loadAnalyticsFilters === 'function') loadAnalyticsFilters();
-                    if (!$('#viewLive').hasClass('hidden') && typeof generateLiveSurveillance === 'function') generateLiveSurveillance();
 
                     if (typeof syncLocalToCloud === "function" && navigator.onLine) {
                         syncLocalToCloud();
@@ -1384,9 +1497,9 @@ function clearAllDatabase() {
             // Refresh the data table to show it is empty
             initDataTable();
             
-            // Sync the empty table to the cloud to overwrite old data
+            // Sync the empty table to the cloud to overwrite old data (explicitly confirmed above)
             if (typeof syncLocalToCloud === "function" && navigator.onLine) {
-                syncLocalToCloud();
+                syncLocalToCloud({ force: true });
             }
 
             Swal.fire('Cleared!', 'All patient records have been successfully deleted.', 'success');
@@ -1517,7 +1630,6 @@ function loadWardOptions() {
     savedWards.forEach(ward => { wardSelect.append(new Option(ward, ward)); });
 }
 
-function loadAnalyticsFilters() { /* analytics now live on the dashboard only */ }
 
 function initDataTable() {
     let records = JSON.parse(localStorage.getItem('amr_records')) || [];
@@ -1815,7 +1927,6 @@ if (editIndex > -1) {
     closeModal();
     initDataTable();
     
-    if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters();
 
     // السطور التي يجب إضافتها لرفع السجل الجديد فوراً للسحابة
     if (typeof syncLocalToCloud === "function" && navigator.onLine) {
@@ -1945,7 +2056,6 @@ window.deleteCustomSample = function(sample) {
     let s = JSON.parse(localStorage.getItem('amr_samples')) || defaultSamples;
     localStorage.setItem('amr_samples', JSON.stringify(s.filter(x => x !== sample)));
     loadSampleOptions(); 
-    if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters(); 
     manageSamples();
 };
 
@@ -1987,7 +2097,6 @@ window.deleteCustomOrganism = function(org) {
     let savedOrgs = JSON.parse(localStorage.getItem('amr_organisms')) || [];
     localStorage.setItem('amr_organisms', JSON.stringify(savedOrgs.filter(x => x !== org)));
     loadBacteriaOptions(); 
-    if(!$('#viewAnalytics').hasClass('hidden')) loadAnalyticsFilters(); 
     manageOrganisms();
 };
 
@@ -2084,23 +2193,6 @@ window.updateAbxGroupInDB = function(name, newGroup) {
     }
 };
 
-// --- 6. Analytics ---
-function wilsonScoreCI(r, n) {
-    if (n === 0) return { lower: 0, upper: 0 };
-    const p = r / n;
-    const z = 1.96; 
-    const z2 = z * z;
-    const denominator = 1 + z2 / n;
-    const center = p + z2 / (2 * n);
-    const spread = z * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n));
-    const lower = (center - spread) / denominator;
-    const upper = (center + spread) / denominator;
-    return { lower: Math.max(0, Math.round(lower * 100)), upper: Math.min(100, Math.round(upper * 100)) };
-}
-
-
-window.clearAnalyticsFilters = function() {};
-function generateAnalytics() { /* analytics now live on the dashboard only */ }
 
 function showExportModal() {
     let allRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
@@ -2244,127 +2336,89 @@ async function processAntibiogramExport(year, quarter) {
 
 // --- Live Settings Logic ---
 // --- Live Settings Logic ---
+// Sections of the mobile dashboard that can be switched on/off (key -> label)
+const DASH_TOGGLES = [
+    { group: 'Tabs', items: [['tab_month', 'Last Month tab'], ['tab_quarter', 'Last Quarter tab'], ['tab_lab', 'Lab Quality tab']] },
+    { group: 'Analytics tab', items: [['sec_prevalence', 'Clinical Prevalence & AST Profile'], ['sec_patho', 'Bacteria Resistance Profile'], ['sec_abx', 'Antimicrobial Efficacy Profile'], ['sec_heatmap', 'Advanced Heatmap'], ['sec_mdr_panel', 'MDR / XDR / PDR Analysis']] },
+    { group: 'Last Month and Last Quarter tabs', items: [['show_amr', 'Critical Resistance Markers'], ['sec_pies', 'Blood and Urine prevalence'], ['sec_top5', 'Top 5 Specimens'], ['sec_mdr', 'MDR / XDR / PDR card'], ['show_top3', 'Top 3 Specimens breakdown'], ['sec_profiles', 'Resistance profiles (2 antibiotics)']] }
+];
+function toggleSwitchHtml(id, label) {
+    return `<div class="flex items-center justify-between py-1"><label for="${id}" class="text-sm font-bold text-slate-700 cursor-pointer pr-3">${label}</label>
+        <label class="relative inline-flex items-center cursor-pointer flex-shrink-0"><input type="checkbox" id="${id}" class="dash-toggle sr-only peer"><span class="w-10 h-5 bg-slate-300 peer-checked:bg-blue-600 rounded-full transition-all after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></span></label></div>`;
+}
+
 function loadLiveSettings() {
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().toISOString().slice(0, 7);
     let s = JSON.parse(localStorage.getItem('amr_live_settings')) || {};
-    
-    $('#pc_live_month').val(s.pc_live_month || currentMonth);
-    $('#pc_live_quarter').val(s.pc_live_quarter || 'Q1');
-    $('#pc_live_year').val(s.pc_live_year || currentYear);
-    
+
     $('#mobile_dash_month').val(s.mobile_dash_month || currentMonth);
     $('#mobile_dash_quarter').val(s.mobile_dash_quarter || 'Q1');
     $('#mobile_dash_year').val(s.mobile_dash_year || currentYear);
 
-    $('#live_toggle_amr').prop('checked', s.show_amr !== false);
-    $('#live_toggle_top3').prop('checked', s.show_top3 !== false);
+    // Section / tab switches (everything is ON unless it was switched off)
+    let html = '';
+    DASH_TOGGLES.forEach(g => {
+        html += `<div class="md:col-span-2 text-[11px] font-black text-slate-400 uppercase tracking-wide mt-2">${g.group}</div>`;
+        g.items.forEach(it => { html += toggleSwitchHtml('dt_' + it[0], it[1]); });
+    });
+    $('#dash_sections_box').html(html);
+    DASH_TOGGLES.forEach(g => g.items.forEach(it => $('#dt_' + it[0]).prop('checked', s[it[0]] !== false)));
 
-    // 1. جلب قائمة كل المضادات (الأساسية + المضافة يدوياً) وترتيبها أبجدياً
+    // Unit scope
+    $('#dash_show_scope').prop('checked', s.dash_show_scope !== false);
+    $('#dash_default_scope').val(s.dash_default_scope || 'all');
+    $('#dash_default_period').val(s.dash_default_period || 'month');
+    const wardSet = new Set([...(JSON.parse(localStorage.getItem('amr_wards')) || defaultWards), ...defaultWards,
+        ...(JSON.parse(localStorage.getItem('amr_records')) || []).map(r => r.Ward).filter(Boolean)]);
+    const icuSel = Array.isArray(s.dash_icu_wards) && s.dash_icu_wards.length ? s.dash_icu_wards : ['ICU'];
+    $('#dash_icu_wards').html([...wardSet].sort().map(w => `<label class="flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 cursor-pointer"><input type="checkbox" class="icu-ward-cb" value="${escapeHtml(w)}" ${icuSel.some(x => x.toLowerCase() === w.toLowerCase()) ? 'checked' : ''}> ${escapeHtml(w)}</label>`).join(''));
+
+    // Antibiotics for the two resistance profiles
     let allAbx = [...abxList, ...getCustomAntibiotics().map(a => a.name)].sort();
-    
-    // 2. بناء نص HTML متكامل للخيارات دفعة واحدة (أسرع وأكثر استقراراً)
     let optionsHtml = '';
     allAbx.forEach(a => { optionsHtml += `<option value="${a}">${a}</option>`; });
-    
     $('#live_profile1_abx').html(optionsHtml).val(s.profile1_abx || 'Meropenem');
     $('#live_profile2_abx').html(optionsHtml).val(s.profile2_abx || 'Ceftriaxone');
     let allOrgs = [];
     if (typeof bacteriaLibrary !== 'undefined') allOrgs = bacteriaLibrary.map(b => b.name);
     let customOrgs = JSON.parse(localStorage.getItem('amr_organisms')) || [];
     let combinedOrgs = [...new Set([...allOrgs, ...customOrgs])].sort();
-    
     let orgsHtml = '<option value="">None (Disable Watchlist)</option>';
     combinedOrgs.forEach(o => { orgsHtml += `<option value="${o}">${o}</option>`; });
     $('#live_watchlist_bug').html(orgsHtml).val(s.watchlist_bug || '');
+
+    try {
+        const st = JSON.parse(localStorage.getItem('amr_sync_status') || 'null');
+        if (st) setSyncStatus(st.kind, st.text);
+    } catch (e) {}
 }
 
 function saveLiveSettings() {
-    let s = {
-        pc_live_month: $('#pc_live_month').val(),
-        pc_live_quarter: $('#pc_live_quarter').val(),
-        pc_live_year: $('#pc_live_year').val(),
+    const old = JSON.parse(localStorage.getItem('amr_live_settings')) || {};
+    let s = Object.assign({}, old, {
         mobile_dash_month: $('#mobile_dash_month').val(),
         mobile_dash_quarter: $('#mobile_dash_quarter').val(),
         mobile_dash_year: $('#mobile_dash_year').val(),
-        show_amr: $('#live_toggle_amr').is(':checked'),
-        show_top3: $('#live_toggle_top3').is(':checked'),
         profile1_abx: $('#live_profile1_abx').val(),
         profile2_abx: $('#live_profile2_abx').val(),
-        watchlist_bug: $('#live_watchlist_bug').val() // الكود الجديد المضاف
-    };
-    
+        watchlist_bug: $('#live_watchlist_bug').val(),
+        dash_show_scope: $('#dash_show_scope').is(':checked'),
+        dash_default_scope: $('#dash_default_scope').val(),
+        dash_default_period: $('#dash_default_period').val(),
+        dash_icu_wards: $('.icu-ward-cb:checked').map(function () { return this.value; }).get()
+    });
+    DASH_TOGGLES.forEach(g => g.items.forEach(it => { s[it[0]] = $('#dt_' + it[0]).is(':checked'); }));
+    delete s.pc_live_month; delete s.pc_live_quarter; delete s.pc_live_year;   // PC analytics no longer exist
+    if (!s.dash_icu_wards.length) s.dash_icu_wards = ['ICU'];
+
     localStorage.setItem('amr_live_settings', JSON.stringify(s));
-    
-    // تم حذف استدعاء generateLiveSurveillance لمنع الانهيار
-    
+
     if (typeof syncLocalToCloud === "function" && navigator.onLine) {
         syncLocalToCloud();
     }
-    
-    Swal.fire({icon:'success', title:'Saved', timer:1000, showConfirmButton:false});
+
+    Swal.fire({icon:'success', title:'Saved', text: 'The dashboard will show the new settings after it refreshes.', timer:1800, showConfirmButton:false});
 }
 
-// --- 🔴 LIVE SURVEILLANCE LOGIC (PC WEBAPP) ---
-function generateLiveSurveillance() { /* live surveillance now lives on the dashboard only */ }
 
-// --- WHONET TEXT TO EXCEL CONVERTER ---
-function convertTextToExcel() {
-    const fileInput = document.getElementById('converterFileInput');
-    const statusDiv = document.getElementById('converterStatus');
-    
-    // Check if file is selected
-    if (!fileInput.files.length) {
-        statusDiv.className = 'text-xs font-bold mt-3 text-red-500 block';
-        statusDiv.innerText = "⚠️ Please select a file first!";
-        return;
-    }
-
-    // Show loading status
-    statusDiv.className = 'text-xs font-bold mt-3 text-amber-500 block';
-    statusDiv.innerText = "⏳ Converting...";
-
-    const file = fileInput.files[0];
-    const reader = new FileReader();
-
-    reader.onload = function(e) {
-        try {
-            const text = e.target.result;
-            // Auto-detect if it's tab-separated (WHONET default) or comma-separated
-            const delimiter = text.indexOf('\t') !== -1 ? '\t' : ',';
-            
-            // Parse text into an array of rows and columns
-            const rows = text.split('\n').map(row => row.split(delimiter));
-            
-            // Build the Excel file
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.aoa_to_sheet(rows);
-            XLSX.utils.book_append_sheet(wb, ws, "AMR Data");
-            
-            // Generate Download Name
-            const originalName = file.name.replace(/\.[^/.]+$/, "");
-            const outputName = originalName + "_Converted.xlsx";
-            
-            XLSX.writeFile(wb, outputName);
-            
-            // Update status to success
-            statusDiv.className = 'text-xs font-bold mt-3 text-emerald-600 block';
-            statusDiv.innerText = "✅ Success! File converted and downloaded.";
-            
-            // Clear the file input after a short delay
-            setTimeout(() => { fileInput.value = ''; }, 2000);
-            
-        } catch (error) {
-            statusDiv.className = 'text-xs font-bold mt-3 text-red-500 block';
-            statusDiv.innerText = "❌ An error occurred during conversion.";
-            console.error(error);
-        }
-    };
-
-    reader.onerror = function() {
-        statusDiv.className = 'text-xs font-bold mt-3 text-red-500 block';
-        statusDiv.innerText = "❌ Failed to read the file.";
-    };
-
-    reader.readAsText(file);
-}

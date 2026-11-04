@@ -1,14 +1,16 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Private working copy (data-entry app): signed-in users only
+    // Private working copy (data-entry app): only the owner. Holds the meta document (hospital_main)
+    // and the year chunks (r_<year>_<n>) - no patient names.
     match /amr_sync/{docId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if request.auth != null && request.auth.token.email == 'ph.saadalhamady@gmail.com';
     }
-    // Pseudonymised copy for the public dashboard: anyone can read, only signed-in users can write
+    // Pseudonymised copy for the public dashboard (meta document + year chunks):
+    // anyone can read, only the owner can write.
     match /amr_public/{docId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email == 'ph.saadalhamady@gmail.com';
     }
   }
 }
