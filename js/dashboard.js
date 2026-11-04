@@ -239,6 +239,7 @@ function fetchCloudData() {
         if (doc.exists) {
             const data = doc.data();
             const cloudRecords = data.records || [];
+            normalizeOrganismNames(cloudRecords);   // show current taxonomy names even if the cloud copy is older
             // سحب الإعدادات السحابية أو استخدام الافتراضية
             const cloudSettings = data.settings || { profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
             

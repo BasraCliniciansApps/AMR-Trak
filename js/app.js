@@ -281,6 +281,8 @@ function runDatabaseMigration() {
             migrated = true;
         }
 
+        const canonOrg = canonicalOrganismName(r['Selective organism']);
+        if (canonOrg !== r['Selective organism']) { r['Selective organism'] = canonOrg; migrated = true; }
         if (r['Selective organism'] === "Escherichia coli (E.coli)") {
             r['Selective organism'] = "Escherichia coli";
             migrated = true;
@@ -346,6 +348,15 @@ function runDatabaseMigration() {
             }
         });
     });
+
+    // Saved organism list (dropdown): replace old names with current names
+    try {
+        const savedOrgs = JSON.parse(localStorage.getItem('amr_organisms')) || [];
+        const canonOrgs = [...new Set(savedOrgs.map(canonicalOrganismName))];
+        if (canonOrgs.length !== savedOrgs.length || canonOrgs.some((x, i) => x !== savedOrgs[i])) {
+            localStorage.setItem('amr_organisms', JSON.stringify(canonOrgs));
+        }
+    } catch (e) {}
 
     if (migrated) {
         localStorage.setItem('amr_records', JSON.stringify(records));
@@ -710,13 +721,14 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
             "Staphylococcus capitis ss. capitis": "Staphylococcus capitis", "Staphylococcus saprophyticus ss. saprophyticus": "Staphylococcus saprophyticus"
         };
         if (orgNameCleanup[fullOrgName]) fullOrgName = orgNameCleanup[fullOrgName];
+        const selectiveOrgName = canonicalOrganismName(fullOrgName);   // current taxonomy name for analytics
 
         let record = {
             '_uid': Date.now().toString(36) + Math.random().toString(36).substr(2, 5) + i,
             'Patient ID': patientID,
             'Name': name, 'Age': ageNum, 'Age Unit': ageUnit, 'Sex': sex,
             'Ward': ward, 'Sample': sample, 'Date': formattedDate,
-            'Selective organism': fullOrgName, 'Antibiogram organism': fullOrgName 
+            'Selective organism': selectiveOrgName, 'Antibiogram organism': fullOrgName 
         };
 
         Object.assign(record, abxResults);
@@ -1036,6 +1048,7 @@ window.processRestore = function() {
                         }
                     }
 
+                    normalizeOrganismNames(importedRecords);   // old organism names in old backups -> current names
                     importedRecords.forEach(importedRecord => {
                         let matchIndex = currentRecords.findIndex(r => {
                             // 1. Exact match using hidden _uid (Safe Update for edited records)
@@ -1627,7 +1640,7 @@ $('#entryForm').submit(function(e) {
         'Ward': currentWard || "-",
         'Sample': currentSample,
         'Date': $('#p_date').val(),
-        'Selective organism': currentOrganism,
+        'Selective organism': canonicalOrganismName(currentOrganism),
         'Antibiogram organism': $('#p_antibiogram_org').val() 
     };
 

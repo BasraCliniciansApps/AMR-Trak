@@ -610,3 +610,51 @@ async function buildPublicRecords(records, salt) {
     }
     return out;
 }
+
+// =====================================================================
+// Organism nomenclature: old / synonym names -> current accepted names.
+// Applied to 'Selective organism' (all analytics and charts). 'Antibiogram organism'
+// (used only by the Ministry export) is never changed by this.
+// Candida glabrata is kept (CLSI M60 / WHO still use it; Nakaseomyces glabratus is the taxonomic synonym).
+// =====================================================================
+const ORGANISM_SYNONYMS = {
+    "xanthomonas maltophilia": "Stenotrophomonas maltophilia",
+    "pseudomonas maltophilia": "Stenotrophomonas maltophilia",
+    "proteus morganii": "Morganella morganii",
+    "morganella morgani": "Morganella morganii",
+    "klebsiella mobilis": "Klebsiella aerogenes",
+    "enterobacter aerogenes": "Klebsiella aerogenes",
+    "enterobacter sakazakii": "Cronobacter sakazakii",
+    "enterobacter agglomerans": "Pantoea agglomerans",
+    "erwinia agglomerans": "Pantoea agglomerans",
+    "citrobacter diversus": "Citrobacter koseri",
+    "pseudomonas cepacia": "Burkholderia cepacia complex",
+    "alcaligenes xylosoxidans": "Achromobacter xylosoxidans",
+    "flavobacterium meningosepticum": "Elizabethkingia meningoseptica",
+    "chryseobacterium meningosepticum": "Elizabethkingia meningoseptica",
+    "torulopsis glabrata": "Candida glabrata",
+    "nakaseomyces glabratus": "Candida glabrata",
+    "candida krusei": "Pichia kudriavzevii",
+    "candida guilliermondii": "Meyerozyma guilliermondii",
+    "pichia guilliermondii": "Meyerozyma guilliermondii",
+    "micrococcus kristinae": "Kocuria kristinae",
+    "streptococcus, beta-haem. group b": "Streptococcus agalactiae",
+    "streptococcus group b": "Streptococcus agalactiae",
+    "streptococcus, beta-haem. group a": "Streptococcus pyogenes",
+    "streptococcus group a": "Streptococcus pyogenes",
+    "clostridium difficile": "Clostridioides difficile",
+    "propionibacterium acnes": "Cutibacterium acnes"
+};
+function canonicalOrganismName(name) {
+    const key = String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    return ORGANISM_SYNONYMS[key] || name;
+}
+// Returns the number of records whose organism name was updated (in place)
+function normalizeOrganismNames(records) {
+    let n = 0;
+    records.forEach(r => {
+        const c = canonicalOrganismName(r['Selective organism']);
+        if (c !== r['Selective organism']) { r['Selective organism'] = c; n++; }
+    });
+    return n;
+}
