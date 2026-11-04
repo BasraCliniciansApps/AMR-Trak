@@ -176,7 +176,7 @@
                 <div class="gd-card">
                     <div class="gd-card-t">Concept, design and development</div>
                     <div class="gd-person">Saad Al Hamady</div>
-                    <div class="gd-title2">Clinical Pharmacist<br>Member of the Antibiotic Committee</div>
+                    <div class="gd-title2">Clinical Pharmacist<br>Head of the Antibiotic Committee and the Antibiogram<br>Al-Mawani Teaching Hospital</div>
                     <div class="gd-roles">${role('Idea', 'Founder of the concept')}${role('Design', 'Designer')}${role('Development', 'Developer')}${role('Data analysis', 'Analysis and presentation of the laboratory data')}</div>
                 </div>
                 <div class="gd-card">
