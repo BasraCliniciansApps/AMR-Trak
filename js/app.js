@@ -943,13 +943,15 @@ window.showImportHistory = function() {
     Swal.fire({ title: 'Import history', html: html, width: 'min(94vw, 600px)', confirmButtonText: 'Close', confirmButtonColor: '#0d9488' });
 };
 
-// Manual entry: suggest the Ministry antibiogram category from the organism (only if none chosen yet)
+// Manual entry: choosing the organism selects the matching Ministry antibiogram category automatically
+// (it can still be changed by hand afterwards). Not applied while an existing record is being loaded or saved.
+window._ministryAutoSuspended = false;
 $(document).on('change', '#p_organism', function() {
+    if (window._ministryAutoSuspended) return;
     const target = $('#p_antibiogram_org');
-    if (target.length && !target.val()) {
-        const cat = getMinistryCategory($(this).val());
-        if (cat) target.val(cat).trigger('change');
-    }
+    const org = $(this).val();
+    if (!target.length || !org) return;
+    target.val(getMinistryCategory(org) || '').trigger('change');
 });
 
 // Live CLSI interpretation hint for the vancomycin MIC field
@@ -1732,7 +1734,9 @@ $('#entryForm').submit(function(e) {
     if (currentOrganism && !isDefaultOrg && !savedOrgs.includes(currentOrganism)) {
         savedOrgs.push(currentOrganism);
         localStorage.setItem('amr_organisms', JSON.stringify(savedOrgs));
+        window._ministryAutoSuspended = true;   // do not overwrite the category chosen for this record
         $('#p_organism').append(new Option(currentOrganism, currentOrganism, true, true)).trigger('change');
+        window._ministryAutoSuspended = false;
     }
 
     // Retrieve records and index FIRST before building the record
@@ -1857,12 +1861,14 @@ function editRecord(index) {
     $('#p_vrsa_conf').val(record['VRSA Confirmation'] || '');
     $('#p_van_mic').val(record['Vancomycin MIC'] || '');
     
+    window._ministryAutoSuspended = true;   // keep the saved Ministry category while loading
     if ($('#p_organism').find("option[value='" + record['Selective organism'] + "']").length) {
         $('#p_organism').val(record['Selective organism']).trigger('change');
     } else {
         var newOrgOption = new Option(record['Selective organism'], record['Selective organism'], true, true);
         $('#p_organism').append(newOrgOption).trigger('change');
     }
+    window._ministryAutoSuspended = false;
 
     if (record['Antibiogram organism']) {
         $('#p_antibiogram_org').val(record['Antibiogram organism']).trigger('change');
