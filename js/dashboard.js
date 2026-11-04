@@ -213,15 +213,38 @@ function wilsonScoreCI(r, n) {
 }
 
 // دالة جلب البيانات من السحابة وتحديثها في الوقت الفعلي (Real-time)
-// Footnote under the antibiotic charts: selective testing, AWaRe legend, possible contaminants
-function renderChartNotes(containerSel, selectiveNotes, contaminantCount) {
-    const $c = $(containerSel);
-    const host = $c.parent();
-    host.find('.amr-chart-note').remove();
-    let parts = ['<b>*</b> n&lt;30 (interpret with caution)', '<b>[A]/[W]/[R]</b> = WHO AWaRe Access / Watch / Reserve'];
-    if (selectiveNotes.length) parts.push('<b>†</b> selectively tested (tested/total isolates): ' + selectiveNotes.join(', ') + ' - %R may be overestimated');
-    if (contaminantCount > 0) parts.push(`<b>${contaminantCount}</b> blood isolate(s) of this organism are possible skin-flora contaminants - review clinically`);
-    host.append('<p class="amr-chart-note text-[10px] text-slate-500 leading-snug mt-1">' + parts.join(' &middot; ') + '</p>');
+// ---- Info (i) system: details live in a popup instead of cluttering the screen ----
+const INFO_STORE = {};
+function setInfo(key, title, html) { INFO_STORE[key] = { title: title, html: html }; }
+window.showInfo = function(key) {
+    const i = INFO_STORE[key];
+    if (!i) return;
+    Swal.fire({ title: i.title, html: '<div style="text-align:left;font-size:13px;line-height:1.55">' + i.html + '</div>', confirmButtonText: 'Close', confirmButtonColor: '#0d9488', width: 'min(92vw, 420px)' });
+};
+function attachInfo(hostSel, key) {
+    const $h = $(hostSel);
+    if (!$h.length) return;
+    $h.css('position', 'relative');
+    $h.children(`.info-btn[data-key="${key}"]`).remove();
+    $h.append(`<button type="button" class="info-btn" data-key="${key}" onclick="showInfo('${key}')" aria-label="Details">i</button>`);
+}
+const AWARE_NAMES = { A: 'Access', W: 'Watch', R: 'Reserve' };
+
+// Antibiotic chart details: how to read the chart, selective testing, AWaRe, contaminants
+function renderChartNotes(containerSel, selectiveNotes, contaminantCount, shownAbx) {
+    const key = 'abx_' + containerSel.replace('#', '');
+    let html = '<p><b>*</b> fewer than 30 isolates tested: interpret with caution (grey bars).</p>';
+    if (selectiveNotes.length) html += `<p style="margin-top:8px"><b>†</b> Selectively tested (tested / isolates): ${selectiveNotes.join(', ')}.<br>Only part of the isolates were tested, so the resistance rate may be overestimated.</p>`;
+    const groups = { A: [], W: [], R: [] };
+    (shownAbx || []).forEach(a => { if (AWARE_CLASS[a]) groups[AWARE_CLASS[a]].push(a); });
+    if (groups.A.length || groups.W.length || groups.R.length) {
+        html += '<p style="margin-top:8px"><b>WHO AWaRe</b></p><ul style="margin-left:16px;list-style:disc">';
+        ['A', 'W', 'R'].forEach(k => { if (groups[k].length) html += `<li><b>${AWARE_NAMES[k]}:</b> ${groups[k].join(', ')}</li>`; });
+        html += '</ul>';
+    }
+    if (contaminantCount > 0) html += `<p style="margin-top:8px"><b>${contaminantCount}</b> blood isolate(s) of this organism are possible skin-flora contaminants. Review clinically.</p>`;
+    setInfo(key, 'About this chart', html);
+    attachInfo($(containerSel).parent().parent(), key);
 }
 
 function fetchCloudData() {
@@ -375,6 +398,9 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     $(`#live_${prefix}_profiles_wrapper`).removeClass('hidden');
 
     $(`#live_${prefix}_amr_title`).text(`Critical Resistance Markers (${timeLabel})`);
+    const markerHtml = '<ul style="margin-left:16px;list-style:disc">' + CRITICAL_MARKERS.map(m => `<li style="margin-bottom:4px"><b>${m.label}</b>: ${m.info || ''}</li>`).join('') + '</ul><p style="margin-top:8px">Counted on first isolates only. Grey bars: fewer than 30 isolates tested.</p>';
+    setInfo('markers_' + prefix, 'Critical resistance markers', markerHtml);
+    attachInfo(`#live_${prefix}_amr_wrapper`, 'markers_' + prefix);
     $(`#live_${prefix}_blood_subtitle`).text(timeLabel);
     $(`#live_${prefix}_urine_subtitle`).text(timeLabel);
     $(`#live_${prefix}_bar_title`).text(`Top 5 Specimens (${timeLabel})`);
@@ -384,12 +410,12 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     const surveillanceRecords = records;
     $(`#live_${prefix}_total`).text(records.length);
 
-    // Possible skin-flora contaminants in blood cultures (flagged, not removed)
+    // Overview details (i): method + possible contaminants (flagged, not removed)
     const contamN = records.filter(isPossibleContaminant).length;
-    $(`#live_${prefix}_contam_note`).remove();
-    if (contamN > 0) {
-        $(`#live_${prefix}_total`).parent().after(`<p id="live_${prefix}_contam_note" class="text-[10px] text-amber-700 bg-amber-50 border border-amber-100 rounded px-2 py-1 mt-1">${contamN} blood isolate(s) are possible skin-flora contaminants (CoNS, Corynebacterium, Micrococcus, viridans streptococci...) - review clinically.</p>`);
-    }
+    let overviewHtml = `<p><b>${records.length}</b> first isolates (one per patient, per organism, per year - CLSI M39). Screening cultures are excluded.</p>`;
+    if (contamN > 0) overviewHtml += `<p style="margin-top:8px"><b>${contamN}</b> blood isolate(s) are possible skin-flora contaminants (CoNS, Corynebacterium, Micrococcus, viridans streptococci...). They are counted, not removed: review clinically.</p>`;
+    setInfo('overview_' + prefix, 'Surveillance overview', overviewHtml);
+    attachInfo($(`#live_${prefix}_total`).closest('.grid').prev(), 'overview_' + prefix);
 
     let orgCounts = {}, specCounts = {};
 
@@ -593,7 +619,7 @@ if (settings.show_amr === false) {
 
     // 1. بناء مخطط الدونات (MDR/XDR Overall Burden)
     let mdrData = [mdrStats['Non-MDR'], mdrStats['MDR'], mdrStats['XDR']];
-    let mdrLabels = ['Non-MDR', 'MDR (≥3 categories)', 'XDR (all but ≤2 categories)'];
+    let mdrLabels = ['Non-MDR', 'MDR', 'XDR'];
     let mdrColors = ['#10b981', '#f59e0b', '#e11d48'];
 
     if (mdrData.reduce((a, b) => a + b, 0) === 0) {
@@ -608,10 +634,13 @@ if (settings.show_amr === false) {
             cutout: '65%',
             plugins: { 
                 legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9, weight: 'bold' } } },
-                title: { display: true, text: ['Overall Resistance Classification', `n=${mdrData.reduce((x, y) => x + y, 0)} first isolates | XDR = confirmed only (${possibleXdrCount} possible, limited panel)`], font: { size: 10, weight: 'bold' }, padding: { bottom: 10 } }
+                title: { display: true, text: ['Resistance Classification', `n=${mdrData.reduce((x, y) => x + y, 0)}`], font: { size: 10, weight: 'bold' }, padding: { bottom: 10 } }
             } 
         }
     }));
+
+    setInfo('mdr_' + prefix, 'MDR / XDR classification', `<p>Magiorakos et al. 2012, on first isolates of E. coli and other Enterobacterales, P. aeruginosa, Acinetobacter and S. aureus.</p><ul style="margin:6px 0 0 16px;list-style:disc"><li><b>MDR:</b> non-susceptible (I or R) to at least one agent in 3 or more antimicrobial categories.</li><li><b>XDR:</b> non-susceptible in all but 2 or fewer categories.</li><li>Intrinsic resistance is not counted. Untested categories are unknown, not resistant.</li></ul><p style="margin-top:8px">XDR shown here is confirmed only. <b>${possibleXdrCount}</b> more isolate(s) are possible XDR but the tested panel was too limited to confirm.</p>`);
+    attachInfo($(`#chart_${prefix}_mdr_pie`).parent().parent(), 'mdr_' + prefix);
 
     // 2. بناء مخطط الأعمدة المتراكمة (Top Wards by MDR/XDR)
     // فرز الردهات حسب عدد حالات (MDR + XDR) التراكمي
@@ -1156,7 +1185,7 @@ function renderGuidedAST() {
 
         const selective = isSelectivelyTested(s.tested, records.length);
         if (selective) selectiveNotes.push(`${abx} (${s.tested}/${records.length})`);
-        labels.push(abx + awareTag(abx) + (selective ? ' †' : '') + (isReliable ? '' : ' *'));
+        labels.push(abx + (selective ? ' †' : '') + (isReliable ? '' : ' *'));
         data.push(p);
         bgColors.push(isReliable ? baseColor : 'rgba(148, 163, 184, 0.5)'); 
         ciData.push(wilsonScoreCI(targetVal, s.tested));
@@ -1169,7 +1198,7 @@ function renderGuidedAST() {
         return;
     }
 
-    renderChartNotes('#guidedAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length);
+    renderChartNotes('#guidedAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length, testedAbxs);
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#guidedAmrContainer').css('width', chartWidth);
 
@@ -1290,14 +1319,14 @@ function renderPathoChart() {
 
         const selective = isSelectivelyTested(s.tested, records.length);
         if (selective) selectiveNotes.push(`${abx} (${s.tested}/${records.length})`);
-        labels.push(abx + awareTag(abx) + (selective ? ' †' : '') + (isReliable ? '' : ' *'));
+        labels.push(abx + (selective ? ' †' : '') + (isReliable ? '' : ' *'));
         data.push(p);
         bgColors.push(isReliable ? baseColor : 'rgba(148, 163, 184, 0.5)'); 
         ciData.push(wilsonScoreCI(targetVal, s.tested));
         nDataArr.push(s.tested);
     });
 
-    renderChartNotes('#pathoAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length);
+    renderChartNotes('#pathoAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length, testedAbxs);
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#pathoAmrContainer').css('width', chartWidth);
 
