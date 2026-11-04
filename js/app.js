@@ -25,12 +25,7 @@ auth.onAuthStateChanged((user) => {
         $('#loginOverlay').addClass('hidden');
         $('#mainAppContainer').removeClass('hidden');
     } else {
-        // Not signed in: open the public dashboard by default. The sign-in screen is only shown
-        // when the data-entry mode is requested explicitly (index.html?entry=1).
-        if (!new URLSearchParams(location.search).has('entry')) {
-            location.replace('dashboard.html');
-            return;
-        }
+        // Not signed in: show the sign-in screen (the dashboard is a separate page)
         $('#loginOverlay').removeClass('hidden');
         $('#mainAppContainer').addClass('hidden');
     }
