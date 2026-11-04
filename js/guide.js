@@ -186,7 +186,7 @@
                 <div class="gd-card">
                     <div class="gd-card-t">Data and scientific collaboration</div>
                     ${org('Microbiology Laboratory', 'Culture and susceptibility data')}
-                    ${org('AMR Unit', 'Surveillance data and follow-up')}
+                    ${org('AMR Unit', 'Coordination with the laboratory')}
                 </div>
                 <div class="gd-legal"><b>Legal notice:</b> This tool supports epidemiological surveillance and the generation of accurate clinical statistics. All intellectual and software rights reserved &copy; 2026.</div>
             </div>`;
