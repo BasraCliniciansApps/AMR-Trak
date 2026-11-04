@@ -163,15 +163,30 @@
             return P('The rules used in this dashboard come from the following sources.') + (typeof refsHtml === 'function' ? refsHtml(keys, true) : '');
         }],
 
-        ['about', 'About', () => `
+        ['about', 'About', () => window.aboutHtml()]
+    ];
+
+    window.aboutHtml = function () {
+        const role = (k, v) => `<div class="gd-role"><span>${k}</span><b>${v}</b></div>`;
+        return `
             <div class="gd-about">
-                <div class="gd-logo"><img src="icon.png" alt="AMR Icon"></div>
+                <div class="gd-logo"><img src="icon.png" alt="AMR Tracker"></div>
                 <h3>AMR Tracker Dashboard</h3>
                 <p class="gd-sub">Antimicrobial Resistance Surveillance System</p>
-                <div class="gd-box">This platform was designed and developed by a member of the Antibiotic Committee, <b>Clinical Pharmacist Saad Nabeel Al-Hamadi</b>, in collaboration with the <b>AMR Unit</b> and the <b>Microbiology Laboratory</b> staff at <b>Al-Mawani Teaching Hospital</b>.</div>
+                <div class="gd-card">
+                    <div class="gd-card-t">Concept, design and development</div>
+                    <div class="gd-person">Saad Al Hamady</div>
+                    <div class="gd-title2">Clinical Pharmacist<br>Member of the Antibiotic Committee</div>
+                    <div class="gd-roles">${role('Idea', 'Founder of the concept')}${role('Design', 'Designer')}${role('Development', 'Developer')}</div>
+                </div>
+                <div class="gd-card">
+                    <div class="gd-card-t">Data and scientific collaboration</div>
+                    <div class="gd-roles">${role('Microbiology Laboratory', 'Culture and susceptibility data')}${role('AMR Unit', 'Surveillance data and follow-up')}</div>
+                    <div class="gd-hosp">Al-Mawani Teaching Hospital</div>
+                </div>
                 <div class="gd-legal"><b>Legal notice:</b> This tool supports epidemiological surveillance and the generation of accurate clinical statistics. All intellectual and software rights reserved &copy; 2026.</div>
-            </div>`]
-    ];
+            </div>`;
+    };
 
     function build() {
         const items = SECTIONS.map(([id, title, body], i) => `

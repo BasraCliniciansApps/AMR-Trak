@@ -1557,30 +1557,8 @@ window.generateAdvancedAnalytics = function() {
 // --- Modal: About App ---
 function showAboutModal() {
     Swal.fire({
-        html: `
-            <div class="text-sm text-slate-600 leading-relaxed text-center space-y-4">
-                <!-- تم تحديث هذا القسم: إزالة الخلفية والحدود لضمان الشفافية، وزيادة الحجم -->
-                <div class="mx-auto w-24 h-24 mb-4 flex items-center justify-center overflow-hidden">
-                    <img src="icon.png" alt="AMR Icon" class="w-full h-full object-contain filter drop-shadow-md">
-                </div>
-                
-                <h3 class="text-xl font-bold text-slate-800">AMR Tracker Dashboard</h3>
-                <p class="font-medium text-teal-700">Antimicrobial Resistance Surveillance System</p>
-                
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center text-sm leading-loose mt-4">
-                    This platform was designed and developed by a member of the Antibiotic Committee, <b>Clinical Pharmacist Saad Nabeel Al-Hamadi</b>,
-                    in collaboration with the <b>AMR Unit</b> and the <b>Microbiology Laboratory</b> staff at <b>Al-Mawani Teaching Hospital</b>.
-                </div>
-                
-                <p class="text-[11px] text-slate-500 mt-4 leading-relaxed bg-amber-50 p-3 rounded-lg border border-amber-100 text-center">
-                    <b>Legal notice:</b> This tool supports epidemiological surveillance and the generation of accurate clinical statistics. All intellectual and software rights reserved &copy; 2026.
-                </p>
-            </div>
-        `,
-        showConfirmButton: true,
-        confirmButtonText: 'Close',
-        confirmButtonColor: '#0d9488',
-        width: '90%'
+        html: '<div class="gd-about-wrap">' + (window.aboutHtml ? window.aboutHtml() : '') + '</div>',
+        showConfirmButton: true, confirmButtonText: 'Close', confirmButtonColor: '#0d9488', width: 'min(92vw, 420px)'
     });
 }
 // --- Modal: Install Guide ---
