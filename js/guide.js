@@ -184,8 +184,16 @@
             H('Why it matters') + P('Contaminated blood cultures lead to unnecessary antibiotics, longer stay and cost. The rate is a quality indicator for blood collection.')],
 
         ['scope', 'Unit scope and ICU', () =>
-            P('The switch at the top filters every chart by ward: <b>All units</b>, <b>ICU</b> only, or <b>Non-ICU</b>.') +
-            L(['The wards counted as ICU are set by the surveillance team.', 'The first isolate per patient is chosen across all wards first, and the ward filter is applied afterwards. A patient who moves between wards is therefore not counted twice.', 'The Last Quarter ICU comparison always shows both units, whatever the switch is set to.'])],
+            P('The switch under the top bar filters <b>every chart and table on every tab</b> by the ward where the specimen was collected.') +
+            H('The three options') + L([
+                '<b>All units:</b> every ward, including outpatients.',
+                '<b>ICU:</b> only the wards counted as intensive care units. The surveillance team chooses which wards count as ICU.',
+                '<b>Non-ICU:</b> all other wards, including outpatients and neonatal units.']) +
+            H('Why ICU is shown separately') + P('Antimicrobial use, invasive devices and patient risk differ between intensive care and other wards, so a pooled result can hide ICU-specific resistance. CLSI M39 supports stratifying cumulative susceptibility data by patient location.') +
+            H('How it is applied') + L([
+                'The first isolate per patient and organism is chosen across all wards first, and the ward filter is applied afterwards. A patient who moves between wards is therefore not counted twice.',
+                'The Last Quarter ICU comparison always shows both units, whatever the switch is set to.',
+                'The switch may be hidden by the surveillance team; in that case the dashboard opens on the chosen default scope.'])],
 
         ['install', 'Install the app on your phone', () =>
             P('Installing gives a home-screen icon, full-screen use and faster opening, and the app can open the last saved data when the connection is weak.') +
