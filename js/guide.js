@@ -179,7 +179,7 @@
                     <div class="gd-person">Saad Al Hamady</div>
                     <div class="gd-line">Clinical Pharmacist</div>
                     <div class="gd-line">Member, Antibiotic Committee</div>
-                    <div class="gd-line">Lead, Antibiogram Programme</div>
+                    <div class="gd-line">Head of Antibiogram Program</div>
                     <div class="gd-hosp">Al-Mawani Teaching Hospital</div>
                     <div class="gd-chips">${chip('Concept')}${chip('Design')}${chip('Development')}${chip('Laboratory data analysis')}</div>
                 </div>
