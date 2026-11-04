@@ -39,6 +39,18 @@
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-around; padding: 10px 0; z-index: 50; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
         .nav-btn { display: flex; flex-direction: column; align-items: center; font-size: 11px; font-weight: 600; color: #64748b; transition: color 0.2s; background: transparent; border: none; }
         .nav-btn.active { color: #0d9488; }
+        .nav-btn svg { width: 24px; height: 24px; margin-bottom: 4px; }
+        .select2-container .select2-selection--single, .select2-container .select2-selection--multiple { min-height: 42px; border-radius: 8px; border-color: #cbd5e1; }
+        
+        .heatmap-table { border-collapse: separate; border-spacing: 0; min-width: max-content; width: 100%; }
+        .heatmap-table th, .heatmap-table td { padding: 8px 12px; text-align: center; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; font-size: 0.75rem; }
+        .heatmap-table thead th { background-color: #f1f5f9; position: sticky; top: 0; z-index: 10; border-top: 1px solid #e2e8f0; }
+        .heatmap-table tbody th { position: sticky; left: 0; z-index: 20; background-color: #ffffff; text-align: left; border-left: 1px solid #e2e8f0; }
+        .heatmap-table thead th:first-child { position: sticky; left: 0; top: 0; z-index: 30; background-color: #f1f5f9; border-left: 1px solid #e2e8f0; }
+        .heatmap-table th:first-child, .heatmap-table td:first-child { width: 160px; min-width: 160px; max-width: 160px; white-space: normal; word-wrap: break-word; line-height: 1.3; }
+        
+        .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .sec-off { display: none !important; }
         /* Information popups */
         .swal2-popup.info-popup { font-family: inherit; border-radius: 16px; padding: 22px 20px 18px; text-align: left; }
@@ -56,13 +68,15 @@
         .info-refs a { color: #0f766e; text-decoration: underline; text-underline-offset: 2px; }
         .info-close { background: #0f766e; color: #fff; border: 0; border-radius: 10px; padding: 9px 26px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 14px; }
         /* Section toolbar: information + print (Lucide icons, monochrome) */
-        .sec-head { position: relative; }
-        .sec-tools { display: inline-flex; gap: 6px; align-items: center; }
-        .sec-tools-head { position: absolute; right: 40px; top: 50%; transform: translateY(-50%); z-index: 5; }
-        .sec-tools-title { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); z-index: 5; }
-        .sec-tool { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; color: #475569; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; padding: 0; transition: color .15s, border-color .15s, background .15s; }
-        .sec-tool:hover, .sec-tool:active { color: #0f172a; border-color: #94a3b8; background: #f8fafc; }
-        .sec-tool svg { width: 15px; height: 15px; }
+        .sec-head { display: flex; align-items: center; }
+        .sec-head > .sec-main { flex: 1; min-width: 0; background: transparent !important; border: 0 !important; }
+        .sec-tools { display: inline-flex; gap: 4px; align-items: center; flex-shrink: 0; }
+        .sec-head > .sec-tools { padding: 0 4px 0 6px; }
+        .sec-head > .sec-chev { padding: 0 12px 0 6px; align-self: stretch; display: flex; align-items: center; background: transparent; border: 0; cursor: pointer; }
+        h3.sec-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .sec-tool { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; color: #64748b; background: transparent; border: 0; border-radius: 7px; cursor: pointer; padding: 0; transition: color .15s, border-color .15s, background .15s; }
+        .sec-tool:hover, .sec-tool:active { color: #0f172a; background: rgba(15,23,42,.07); }
+        .sec-tool svg { width: 16px; height: 16px; }
         /* collapsible information entries */
         .info-acc-wrap { text-align: left; }
         .info-acc { border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 8px; background: #fff; }
@@ -133,7 +147,7 @@
                     <svg id="guided_icon" class="w-4 h-4 text-teal-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 </button>
                 
-                <div id="guided_content" class="p-4 space-y-3 bg-white">
+                <div id="guided_content" class="hidden p-4 space-y-3 bg-white">
                     <div class="mb-3">
                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Time Period</label>
                         <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-inner w-full">
@@ -474,8 +488,15 @@
             </div>
 
             <!-- MDR / XDR / PDR analysis with its own period selector -->
-            <div id="mdrPanel" data-sec="mdr_panel" class="mobile-card border-t-4 border-t-rose-500">
-                <h3 class="mdr-title text-sm font-bold text-rose-900 mb-1 pr-8">MDR / XDR / PDR Analysis</h3>
+            <div id="mdrPanel" data-sec="mdr_panel" class="mobile-card border border-slate-200 p-0 overflow-hidden mb-4 border-t-4 border-t-rose-500">
+                <button onclick="toggleMdrPanel()" class="mdr-title w-full flex justify-between items-center bg-rose-50 p-3 text-left focus:outline-none border-b border-rose-100">
+                    <span class="text-xs font-bold text-rose-900 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.6-4.1A12 12 0 0112 3a12 12 0 01-8.6 3.9A12 12 0 003 12c0 5.6 3.8 10.3 9 11.6 5.2-1.3 9-6 9-11.6 0-1.7-.3-3.3-.4-4.1z"></path></svg>
+                        MDR / XDR / PDR Analysis
+                    </span>
+                    <svg id="mdr_icon" class="w-4 h-4 text-rose-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div id="mdr_content" class="hidden p-4 bg-white">
                 <p id="mdr_range_label" class="text-[10px] font-bold text-slate-500 mb-3"></p>
                 <div id="mdr_picker" class="mb-3"></div>
                 <h4 id="mdr_tiles_title" class="text-[10px] font-bold text-slate-600 mb-1 pr-8">Summary</h4>
@@ -494,6 +515,7 @@
                 </div>
                 <h4 id="mdr_group_title" class="text-[10px] font-bold text-slate-600 mb-1 pr-8">By organism group</h4>
                 <div id="mdr_group_table" class="bg-slate-50 border border-slate-100 rounded-lg p-2"></div>
+                </div>
             </div>
 
         </div>
@@ -704,9 +726,9 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=7.0"></script>
-    <script src="js/dashboard.js?v=7.0"></script>
-    <script src="js/dashboard_panels.js?v=7.0"></script>
+    <script src="js/data.js?v=7.1"></script>
+    <script src="js/dashboard.js?v=7.1"></script>
+    <script src="js/dashboard_panels.js?v=7.1"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>

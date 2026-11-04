@@ -1067,6 +1067,12 @@ function loadAnalyticsFilters() {
     
     generateGuidedAnalytics();
 }
+window.toggleMdrPanel = function() {
+    $('#mdr_content').toggleClass('hidden');
+    $('#mdr_icon').toggleClass('rotate-180');
+    if (!$('#mdr_content').hasClass('hidden')) { try { window.dispatchEvent(new Event('resize')); } catch (e) {} }
+};
+
 window.toggleGuidedSearch = function() {
     $('#guided_content').toggleClass('hidden');
     $('#guided_icon').toggleClass('rotate-180');

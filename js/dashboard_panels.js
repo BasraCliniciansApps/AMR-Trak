@@ -585,6 +585,13 @@ window.openPrintDialog = function (secId) {
 };
 
 function runPrint(sec, picked, o) {
+    // collapsed cards hold zero-size canvases: open them briefly so charts render at full size, then restore
+    const reopened = [];
+    picked.forEach(({ el }) => { let p = el.parentElement; while (p) { if (p.classList && p.classList.contains('hidden') && !reopened.includes(p)) { p.classList.remove('hidden'); reopened.push(p); } p = p.parentElement; } });
+    if (reopened.length) picked.forEach(({ el }) => { try { const ch = el.tagName === 'CANVAS' && window.Chart && Chart.getChart(el); if (ch) { ch.resize(); ch.update('none'); } } catch (e) {} });
+    try { return runPrintInner(sec, picked, o); } finally { reopened.forEach(p => p.classList.add('hidden')); }
+}
+function runPrintInner(sec, picked, o) {
     const labelEl = sec.labelSel ? document.querySelector(sec.labelSel) : null;
     const context = [sectionTitle(sec), labelEl ? labelEl.textContent : '', 'Unit scope: ' + scopeLabel()].filter(Boolean).join('  |  ');
     const landscape = o.orient === 'landscape' || (o.orient === 'auto' && picked.some(x => x.c.landscape));
@@ -647,22 +654,27 @@ function toolbarHtml(secId) {
         `<button type="button" class="sec-tool" onclick="openPrintDialog('${secId}')" title="Print / save as PDF" aria-label="Print or save as PDF">${ICON_PRINTER}</button>`;
 }
 function mountSectionToolbars() {
-    // collapsible cards: header button is wrapped so the toolbar can sit beside the chevron
-    [['prevalence', 'toggleGuidedSearch()'], ['patho', 'togglePathoSearch()'], ['abx', 'toggleAbxSearch()'], ['heatmap', 'toggleAdvancedSearch()']].forEach(([id, fn]) => {
+    // Collapsible card headers: [ title .......... print info  chevron ]
+    [['prevalence', 'toggleGuidedSearch()'], ['patho', 'togglePathoSearch()'], ['abx', 'toggleAbxSearch()'], ['heatmap', 'toggleAdvancedSearch()'], ['mdr', 'toggleMdrPanel()']].forEach(([id, fn]) => {
         const btn = document.querySelector(`button[onclick="${fn}"]`);
         if (!btn || btn.parentElement.classList.contains('sec-head')) return;
-        const wrap = document.createElement('div'); wrap.className = 'sec-head';
+        const cls = btn.className.split(/\s+/);
+        const wrap = document.createElement('div');
+        wrap.className = 'sec-head ' + cls.filter(c => /^(bg-|border-b$|border-[a-z]+-\d+$)/.test(c)).join(' ');
         btn.parentNode.insertBefore(wrap, btn); wrap.appendChild(btn);
-        const tb = document.createElement('div'); tb.className = 'sec-tools sec-tools-head'; tb.innerHTML = toolbarHtml(id); wrap.appendChild(tb);
+        btn.classList.add('sec-main');
+        const chev = btn.querySelector(':scope > svg');
+        const tb = document.createElement('div'); tb.className = 'sec-tools'; tb.innerHTML = toolbarHtml(id); wrap.appendChild(tb);
+        const cb = document.createElement('button'); cb.className = 'sec-chev'; cb.setAttribute('aria-label', 'Expand or collapse');
+        cb.setAttribute('onclick', fn); if (chev) cb.appendChild(chev); wrap.appendChild(cb);
     });
-    // card titles
-    [['mdr', '#mdrPanel .mdr-title'], ['lab', '#lab_title'], ['month', '#live_month_title'], ['quarter', '#live_q_title']].forEach(([id, sel]) => {
+    // Card titles (tabs): title on the left, toolbar on the right
+    [['lab', '#lab_title'], ['month', '#live_month_title'], ['quarter', '#live_q_title']].forEach(([id, sel]) => {
         let h = document.querySelector(sel);
-        if (h && h.tagName === 'SPAN') h = h.parentElement;      // month / quarter: the title text sits in a span inside the heading
+        if (h && h.tagName === 'SPAN') h = h.parentElement;
         if (!h || h.querySelector('.sec-tools')) return;
-        h.style.position = 'relative'; h.style.paddingRight = '76px';
-        if (id === 'month' || id === 'quarter') h.style.paddingLeft = '76px';
-        const tb = document.createElement('div'); tb.className = 'sec-tools sec-tools-title'; tb.innerHTML = toolbarHtml(id); h.appendChild(tb);
+        h.classList.remove('text-center', 'pr-8'); h.classList.add('sec-title-row');
+        const tb = document.createElement('div'); tb.className = 'sec-tools'; tb.innerHTML = toolbarHtml(id); h.appendChild(tb);
     });
 }
 document.addEventListener('DOMContentLoaded', mountSectionToolbars);
