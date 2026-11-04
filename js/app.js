@@ -25,7 +25,11 @@ auth.onAuthStateChanged((user) => {
         $('#loginOverlay').addClass('hidden');
         $('#mainAppContainer').removeClass('hidden');
         // Start listening to the private cloud copy only once signed in (rules require it)
-        if (!window._cloudListenerStarted) { window._cloudListenerStarted = true; syncCloudToLocal(); }
+        if (!window._cloudListenerStarted) {
+            window._cloudListenerStarted = true;
+            syncCloudToLocal();
+            setTimeout(() => syncLocalToCloud({ auto: true }), 4000);   // make sure the dashboard copy is current
+        }
     } else {
         // Not signed in: show the sign-in screen (the dashboard is a separate page)
         $('#loginOverlay').removeClass('hidden');
@@ -129,10 +133,31 @@ let _syncBusy = false;
 let _syncQueued = null;
 function setSyncStatus(kind, text) {
     try { localStorage.setItem('amr_sync_status', JSON.stringify({ kind, text, at: Date.now() })); } catch (e) {}
+    const tone = kind === 'ok' ? 'text-emerald-600' : kind === 'warn' ? 'text-amber-600' : 'text-red-600';
     const el = document.getElementById('syncStatus');
-    if (el) {
-        el.textContent = text;
-        el.className = 'text-[11px] font-bold ' + (kind === 'ok' ? 'text-emerald-600' : kind === 'warn' ? 'text-amber-600' : 'text-red-600');
+    if (el) { el.textContent = text; el.className = 'text-[11px] font-bold ' + tone; }
+    const pill = document.getElementById('syncPill');
+    if (pill) {
+        pill.textContent = (kind === 'ok' ? 'Dashboard: ' : 'Dashboard: ') + (kind === 'ok' ? 'up to date' : kind === 'warn' ? 'needs attention' : 'not published');
+        pill.title = text + ' (click to publish now)';
+        pill.className = 'hidden sm:inline-flex items-center text-[10px] font-bold px-2.5 py-1 rounded-full border cursor-pointer ' +
+            (kind === 'ok' ? 'text-emerald-700 bg-emerald-50 border-emerald-100' : kind === 'warn' ? 'text-amber-800 bg-amber-50 border-amber-200' : 'text-red-700 bg-red-50 border-red-200');
+    }
+}
+
+// Manual "publish now": runs a sync and tells the user exactly what happened
+async function publishNow() {
+    Swal.fire({ title: 'Publishing to dashboard...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    const result = await syncLocalToCloud({ manual: true });
+    Swal.close();
+    if (result && result.ok) {
+        Swal.fire({ icon: 'success', title: 'Published', text: result.wrote ? `${result.count} isolates are now on the dashboard.` : `Already up to date (${result.count} isolates).`, timer: 2200, showConfirmButton: false });
+    } else if (result && result.error) {
+        Swal.fire({ icon: 'error', title: 'Could not publish', text: result.error });
+    } else if (!result) {
+        let st = null; try { st = JSON.parse(localStorage.getItem('amr_sync_status') || 'null'); } catch (e) {}
+        if (!navigator.onLine) Swal.fire({ icon: 'info', title: 'Offline', text: 'Connect to the internet and try again.' });
+        else if (st && st.kind !== 'ok') Swal.fire({ icon: 'info', title: 'Nothing was published', text: st.text });
     }
 }
 
@@ -144,6 +169,7 @@ async function syncLocalToCloud(opts) {
     try { if (!firebase.auth().currentUser) return; } catch (e) { return; }
     if (_syncBusy) { _syncQueued = opts; return; }
     _syncBusy = true;
+    let result = null;
     try {
         const localRecords = JSON.parse(localStorage.getItem('amr_records')) || [];
         // Names never leave the device
@@ -233,16 +259,20 @@ async function syncLocalToCloud(opts) {
         const w2 = await writeFamily("amr_public", "dashboard", publicRecords, { labQuality: labQuality });
 
         if (w1) localStorage.setItem('amr_cloud_rev', rev);
+        result = { ok: true, wrote: !!(w1 || w2), count: localRecords.length };
         const t = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         setSyncStatus('ok', `Synced ${t} - ${localRecords.length} records`);
         console.log("Data synced to cloud successfully (names excluded; public copy pseudonymised).");
     } catch (e) {
         console.error("Error syncing to cloud:", e);
-        setSyncStatus('err', 'Sync failed - will retry when online');
+        const code = (e && (e.code || e.message)) ? String(e.code || e.message) : 'unknown error';
+        setSyncStatus('err', 'Sync failed: ' + code);
+        result = { ok: false, error: code + (/permission/i.test(code) ? ' - check that you are signed in with the owner account and that the Firestore rules are published.' : '') };
     } finally {
         _syncBusy = false;
         if (_syncQueued) { const q = _syncQueued; _syncQueued = null; setTimeout(() => syncLocalToCloud(q), 300); }
     }
+    return result;
 }
 
 // Forces a fresh read of the private collection (used after "Keep cloud")
@@ -1093,6 +1123,7 @@ $(document).on('input', '#p_van_mic', function() {
 
 // --- 3. Initialization ---
 $(document).ready(function() {
+    try { const st = JSON.parse(localStorage.getItem('amr_sync_status') || 'null'); if (st) setSyncStatus(st.kind, st.text); } catch (e) {}
     runDatabaseMigration();
 
     let oldCustom = JSON.parse(localStorage.getItem('amr_custom_abx'));

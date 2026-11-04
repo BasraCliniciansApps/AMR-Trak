@@ -256,6 +256,13 @@ function renderChartNotes(containerSel, selectiveNotes, contaminantCount, shownA
     attachInfo($(containerSel).parent().parent(), key);
 }
 
+function setDashStatus(kind, text) {
+    const el = document.getElementById('dashStatus');
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'text-[10px] font-bold rounded-lg px-3 py-1.5 mb-3 border ' + (kind === 'ok' ? 'text-emerald-700 bg-emerald-50 border-emerald-100' : kind === 'warn' ? 'text-amber-800 bg-amber-50 border-amber-200' : 'text-red-700 bg-red-50 border-red-200');
+}
+
 function fetchCloudData() {
     if (!db) {
         refreshAll();
@@ -276,10 +283,15 @@ function fetchCloudData() {
             if (Array.isArray(data.records)) cloudRecords = data.records;            // old single-document copy
             else {
                 cloudRecords = [];
-                for (const id of Object.keys(data.chunks || {}).sort()) {
-                    if (!docsById[id]) return;                                       // a chunk is still arriving
-                    cloudRecords = cloudRecords.concat(docsById[id].records || []);
+                const ids = Object.keys(data.chunks || {}).sort();
+                const have = ids.filter(id => docsById[id]).length;
+                if (have < ids.length) {                                             // a part is still arriving or missing
+                    Swal.close();
+                    setDashStatus('warn', `Data is incomplete in the cloud (${have} of ${ids.length} parts). Open the data-entry app and use "Publish now".`);
+                    refreshAll();
+                    return;
                 }
+                ids.forEach(id => { cloudRecords = cloudRecords.concat(docsById[id].records || []); });
             }
             normalizeOrganismNames(cloudRecords);   // show current taxonomy names even if the cloud copy is older
             const cloudSettings = data.settings || { profile1_abx: 'Meropenem', profile2_abx: 'Ceftriaxone' };
@@ -291,13 +303,18 @@ function fetchCloudData() {
 
             refreshAll();
             Swal.close();
+            let when = '';
+            try { when = data.last_updated && data.last_updated.toDate ? data.last_updated.toDate().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : ''; } catch (e) {}
+            setDashStatus(cloudRecords.length ? 'ok' : 'warn', `${cloudRecords.length} isolates${when ? ' - published ' + when : ''}`);
         } else {
             Swal.close();
+            setDashStatus('warn', 'No published data found in the cloud.');
             Swal.fire({ icon: 'info', title: 'No data yet', text: 'The public dashboard data has not been published. Open the data-entry app and sign in once to publish it.' });
         }
     }, (error) => {
         console.error("Firebase Error:", error);
         Swal.close();
+        setDashStatus('err', `Could not read the cloud (${error && error.code ? error.code : 'error'}). Showing the last saved data on this phone.`);
         Swal.fire({ icon: 'warning', title: 'Offline Mode', text: 'Could not connect to cloud.', timer: 2000, showConfirmButton: false });
         refreshAll();
     });
