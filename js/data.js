@@ -493,7 +493,7 @@ const CRITICAL_MARKERS = [
     { label: "ESBL", info: "ESBL confirmed by the laboratory (WHONET flag) in E. coli and K. pneumoniae.",
       match: o => o.includes("escherichia coli") || o.includes("klebsiella pneumoniae"),
       evaluate: r => labFlagResult(r['Lab ESBL']) },
-    { label: "CRE", info: "Carbapenem-resistant Enterobacterales: resistant to ertapenem, meropenem, imipenem or doripenem.", abxPriority: [["Ertapenem", "Meropenem", "Imipenem", "Doripenem"]],
+    { label: "CRE", info: "Carbapenem-resistant Enterobacterales: resistant to ertapenem, meropenem, imipenem or doripenem (imipenem is not used for Proteus, Morganella and Providencia, which have intrinsically reduced imipenem susceptibility).", abxPriority: [["Ertapenem", "Meropenem", "Imipenem", "Doripenem"]],
       match: o => getMdrGroup(o) === 'Enterobacterales' },
     { label: "CPE", info: "Carbapenemase production confirmed by the laboratory (WHONET flag) in Enterobacterales.",
       match: o => getMdrGroup(o) === 'Enterobacterales',
@@ -530,7 +530,9 @@ function evaluateCriticalMarkers(records) {
                 return;
             }
             for (const group of m.abxPriority) {
-                const results = group.map(a => String(r[a] || '').trim().toUpperCase())
+                // CRE: imipenem is intrinsically unreliable for Proteus / Morganella / Providencia, so it is not used for them (CDC/CLSI practice)
+                const agents = (m.label === 'CRE' && /^(proteus|morganella|providencia)/.test(orgLower)) ? group.filter(a => a !== 'Imipenem') : group;
+                const results = agents.map(a => String(r[a] || '').trim().toUpperCase())
                                      .filter(v => v === 'S' || v === 'I' || v === 'R' || v === 'SDD');
                 if (results.length === 0) continue;   // try next agent group
                 stats[i].tested++;
