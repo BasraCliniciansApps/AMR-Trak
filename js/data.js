@@ -697,3 +697,56 @@ function auditRecord(r) {
         issues.push({ code: 'flag_mismatch', text: 'Lab carbapenemase positive but all tested carbapenems are susceptible' });
     return issues;
 }
+
+// =====================================================================
+// Ministry antibiogram category for an organism (value stored in 'Antibiogram organism').
+// The Ministry export matches this field EXACTLY against orgMapExport, so a long name such as
+// "Escherichia coli" never matched ("E.coli") and the exported sheet came out empty.
+// This function only FILLS the field; the export code and orgMapExport are untouched.
+// Returns '' when the organism has no category in the Ministry template.
+// =====================================================================
+function getMinistryCategory(name) {
+    const o = String(name || '').trim().toLowerCase();
+    if (!o) return '';
+    if (orgMapExport[name] !== undefined) return name;                       // already a valid Ministry key
+    const exact = Object.keys(orgMapExport).find(k => k.toLowerCase() === o);
+    if (exact) return exact;
+    const rules = [
+        [/^escherichia coli/, 'E.coli'],
+        [/^klebsiella pneumoniae/, 'klebsiella pneumoniae'],
+        [/^proteus mirabilis/, 'proteus mirabillis'],
+        [/^proteus/, 'proteus (other spp)'],
+        [/^citrobacter/, 'citrobacter (spp)'],
+        [/^(enterobacter|klebsiella aerogenes|klebsiella mobilis)/, 'enterobacter (spp)'],
+        [/^providencia/, 'providencia spp'],
+        [/^salmonella/, 'salmonella spp'],
+        [/^shigella/, 'shigella (spp)'],
+        [/^serratia/, 'serratia'],
+        [/^yersinia/, 'yersinia enterocoliticae'],
+        [/^(klebsiella|raoultella|morganella|pantoea|cronobacter|hafnia|edwardsiella|enterobacteriaceae)/, 'enterobacteriaceae (other spp)'],
+        [/^acinetobacter baumannii/, 'acinetobacter baumannii'],
+        [/^acinetobacter/, 'acinetobacter spp.'],
+        [/^burkholderia cepacia/, 'burkholderia cepacia complex'],
+        [/^pseudomonas aeruginosa/, 'pseudomonas aeruginosa'],
+        [/^(haemophilus|hemophilus) influenzae/, 'hemophilus influenzae'],
+        [/^neisseria gonorrhoeae/, 'neisseria gonorrhoeae'],
+        [/^neisseria meningitidis/, 'neisseria meningitis'],
+        [/^bacteroides fragilis/, 'bacteroides fragilis'],
+        [/^staphylococcus aureus/, 'staphylococcus aureus'],
+        [/^staphylococcus/, 'staphylococcus non-aureus (spp)'],
+        [/^streptococcus pneumoniae/, 'streptococcus pneumoniae'],
+        [/^streptococcus pyogenes/, 'streptococcus pyogenes (groupnA)'],
+        [/^streptococcus (agalactiae|dysgalactiae)|^streptococcus,? beta/, 'streptococcus spp (β-hemolytic group)'],
+        [/^streptococcus (viridans|mitis|oralis|sanguinis|salivarius|mutans|anginosus)/, 'streptococcus viridans'],
+        [/^enterococcus faecalis/, 'enterococcus faecalis'],
+        [/^enterococcus faecium/, 'Enterococcus faecium'],
+        [/^enterococcus (gallinarum|casseliflavus)/, 'Enterococcus gallinarum/E. casseliflavus'],
+        [/^enterococcus/, 'enterococcus spp'],
+        [/^listeria/, 'listeria'],
+        [/^clostridium/, 'clostridium Spp'],
+        [/^bacillus/, 'bacillus'],
+        [/^mycobacterium tuberculosis/, 'mycobacterium tuberculosis']
+    ];
+    for (const [re, cat] of rules) if (re.test(o)) return cat;
+    return '';
+}

@@ -282,6 +282,11 @@ function runDatabaseMigration() {
             migrated = true;
         }
 
+        // Ministry category: keep a valid manual choice, otherwise derive it from the organism
+        if (!r['Antibiogram organism'] || orgMapExport[r['Antibiogram organism']] === undefined) {
+            const cat = getMinistryCategory(r['Antibiogram organism']) || getMinistryCategory(r['Selective organism']);
+            if (cat && cat !== r['Antibiogram organism']) { r['Antibiogram organism'] = cat; migrated = true; }
+        }
         const canonOrg = canonicalOrganismName(r['Selective organism']);
         if (canonOrg !== r['Selective organism']) { r['Selective organism'] = canonOrg; migrated = true; }
         if (r['Selective organism'] === "Escherichia coli (E.coli)") {
@@ -746,7 +751,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
             'Patient ID': patientID,
             'Name': name, 'Age': ageNum, 'Age Unit': ageUnit, 'Sex': sex,
             'Ward': ward, 'Sample': sample, 'Date': formattedDate,
-            'Selective organism': selectiveOrgName, 'Antibiogram organism': fullOrgName 
+            'Selective organism': selectiveOrgName, 'Antibiogram organism': getMinistryCategory(fullOrgName) 
         };
 
         Object.assign(record, abxResults);
@@ -937,6 +942,15 @@ window.showImportHistory = function() {
     const html = log.map((e, i) => `<details style="text-align:left;margin-bottom:6px;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px"><summary style="cursor:pointer;font-weight:600">${new Date(e.when).toLocaleString()} &middot; ${e.added} added${e.attention.length ? ` &middot; <span style="color:#b45309">${e.attention.length} to review</span>` : ''}</summary>${renderImportReportHtml(e)}</details>`).join('');
     Swal.fire({ title: 'Import history', html: html, width: 'min(94vw, 600px)', confirmButtonText: 'Close', confirmButtonColor: '#0d9488' });
 };
+
+// Manual entry: suggest the Ministry antibiogram category from the organism (only if none chosen yet)
+$(document).on('change', '#p_organism', function() {
+    const target = $('#p_antibiogram_org');
+    if (target.length && !target.val()) {
+        const cat = getMinistryCategory($(this).val());
+        if (cat) target.val(cat).trigger('change');
+    }
+});
 
 // Live CLSI interpretation hint for the vancomycin MIC field
 $(document).on('input', '#p_van_mic', function() {
