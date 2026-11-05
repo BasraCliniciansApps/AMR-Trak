@@ -117,6 +117,15 @@
         .pv-bar button { height: 34px; border: 1px solid rgba(255,255,255,.45); background: rgba(255,255,255,.12); color: #fff; border-radius: 10px; padding: 0 12px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
         .pv-bar .pv-go { background: #fff; color: #0f766e; border-color: #fff; }
         #pvFrame { flex: 1; width: 100%; border: 0; background: #fff; }
+
+        html, body { overscroll-behavior-y: contain; }
+        #ptr { position: fixed; left: 50%; top: 0; margin-left: -19px; width: 38px; height: 38px; border-radius: 50%; background: #fff; color: #94a3b8; border: 1px solid #e2e8f0; box-shadow: 0 4px 14px rgba(15,23,42,.15); display: flex; align-items: center; justify-content: center; z-index: 60; opacity: 0; pointer-events: none; transition: opacity .15s, color .15s; }
+        #ptr svg { width: 22px; height: 22px; }
+        #ptr.ready { color: #0f766e; }
+        #ptr.spin { color: #0f766e; animation: ptrSpin .8s linear infinite; transition: none; }
+        @keyframes ptrSpin { to { transform: translateY(44px) rotate(360deg); } }
+        #exitToast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%) translateY(10px); background: #1e293b; color: #fff; font-size: 12px; font-weight: 600; padding: 8px 16px; border-radius: 999px; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; max-width: 90vw; text-align: center; }
+        #exitToast.show { opacity: .95; transform: translateX(-50%) translateY(0); }
         body.gd-lock { overflow: hidden; }
         #guideView { position: fixed; inset: 0; z-index: 9000; background: #f8fafc; display: none; flex-direction: column; }
         #guideView.open { display: flex; }
@@ -817,13 +826,14 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=9.9"></script>
-    <script src="js/dashboard.js?v=9.9"></script>
-    <script src="js/info_texts.js?v=9.9"></script>
-    <script src="js/dashboard_panels.js?v=9.9"></script>
-    <script src="js/dashboard_year.js?v=9.9"></script>
-    <script src="js/dashboard_period.js?v=9.9"></script>
-    <script src="js/guide.js?v=9.9"></script>
+    <script src="js/data.js?v=10.0"></script>
+    <script src="js/dashboard.js?v=10.0"></script>
+    <script src="js/info_texts.js?v=10.0"></script>
+    <script src="js/dashboard_panels.js?v=10.0"></script>
+    <script src="js/dashboard_year.js?v=10.0"></script>
+    <script src="js/dashboard_period.js?v=10.0"></script>
+    <script src="js/guide.js?v=10.0"></script>
+    <script src="js/nav.js?v=10.0"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>

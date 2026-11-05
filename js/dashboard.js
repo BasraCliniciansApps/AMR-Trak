@@ -376,7 +376,11 @@ function fetchCloudData() {
     
     // The dashboard reads ONLY the pseudonymised public copy (no names, hashed patient ids).
     // The private document (amr_sync) requires sign-in and is used by the data-entry app.
-    db.collection("amr_public").onSnapshot((snap) => {
+    db.collection("amr_public").onSnapshot(applyCloudSnap, cloudError);
+}
+
+// Processes a snapshot of the public collection (used by the live listener and by pull-to-refresh)
+function applyCloudSnap(snap) {
         const docsById = {};
         snap.forEach(d => { docsById[d.id] = d.data(); });
         const data = docsById['dashboard'];
@@ -414,14 +418,22 @@ function fetchCloudData() {
             setDashStatus('warn', 'No published data found in the cloud.');
             Swal.fire({ icon: 'info', title: 'No data yet', text: 'The public dashboard data has not been published. Open the data-entry app and sign in once to publish it.' });
         }
-    }, (error) => {
+}
+function cloudError(error) {
         console.error("Firebase Error:", error);
         hideLoading();
         setDashStatus('err', `Could not read the cloud (${error && error.code ? error.code : 'error'}). Showing the last saved data on this phone.`);
         Swal.fire({ icon: 'warning', title: 'Offline Mode', text: 'Could not connect to cloud.', timer: 2000, showConfirmButton: false });
         refreshAll();
-    });
 }
+
+// Pull-to-refresh: one fresh read from the server, no loading screen
+window.pullRefresh = function () {
+    if (!db) { refreshAll(); return Promise.resolve(true); }
+    return db.collection("amr_public").get({ source: 'server' })
+        .then(snap => { applyCloudSnap(snap); return true; })
+        .catch(() => false);
+};
 $(document).ready(function() {
     $('.select2-mobile').select2({ width: '100%' });
     $('.select2-multiple').select2({ width: '100%', allowClear: true });
