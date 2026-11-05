@@ -49,6 +49,15 @@ function opCell(r, n, extra) {
     return `<td style="${low ? 'color:#94a3b8' : ''}"><b>${r}/${n}${low ? '*' : ''}</b><div class="ya-mute">${opFmt(opPct(r, n))}%${extra || ''}</div></td>`;
 }
 
+// Difference cell (first group minus second, in percentage points). Always shown; called significant only when both n >= 30 and z >= 1.96.
+function opDiff(r1, n1, r2, n2) {
+    if (!n1 || !n2) return '<td class="ya-mute">-</td>';
+    const d = Math.round((r1 / n1 - r2 / n2) * 1000) / 10, txt = (d > 0 ? '+' : '') + d + ' pp';
+    if (n1 < 30 || n2 < 30) return `<td style="color:#94a3b8">${txt}<div class="ya-mute">n&lt;30: descriptive only</div></td>`;
+    if (opZ(r1, n1, r2, n2) >= 1.96) return `<td><b style="color:#dc2626">${txt}</b><div style="color:#dc2626;font-size:10px;font-weight:700">differs *</div></td>`;
+    return `<td>${txt}<div class="ya-mute">no clear difference</div></td>`;
+}
+
 // ---------------------------------------------------------------- skeleton
 const OP_CARDS = {
     m: [['alerts', 'Priority alerts', true], ['clusters', 'Possible clusters (14 days)', true], ['compare', 'Comparison with earlier periods', true], ['bloodq', 'Blood isolates: possible contaminants', false]],
@@ -230,12 +239,11 @@ function opIcu(q, qy) {
     const rows = [`<tr><td class="ya-l"><b>First isolates</b></td><td><b>${icu.length}</b></td><td><b>${non.length}</b></td><td></td></tr>`];
     CRITICAL_MARKERS.forEach((m, i) => {
         if (!si[i].tested && !sn[i].tested) return;
-        const s = sig(si[i].resistant, si[i].tested, sn[i].resistant, sn[i].tested);
-        rows.push(`<tr><td class="ya-l"><b>${m.label}</b></td>${opCell(si[i].resistant, si[i].tested)}${opCell(sn[i].resistant, sn[i].tested)}<td>${s ? 'differs' + s : '<span class="ya-mute">-</span>'}</td></tr>`);
+        rows.push(`<tr><td class="ya-l"><b>${m.label}</b></td>${opCell(si[i].resistant, si[i].tested)}${opCell(sn[i].resistant, sn[i].tested)}${opDiff(si[i].resistant, si[i].tested, sn[i].resistant, sn[i].tested)}</tr>`);
     });
-    rows.push(`<tr><td class="ya-l"><b>MDR / XDR / PDR</b></td>${opCell(mi.plus, mi.n)}${opCell(mn.plus, mn.n)}<td>${sig(mi.plus, mi.n, mn.plus, mn.n) ? 'differs' + sig(mi.plus, mi.n, mn.plus, mn.n) : '<span class="ya-mute">-</span>'}</td></tr>`);
-    $('#op_q_icu_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Indicator</th><th>ICU</th><th>Non-ICU</th><th>Difference</th></tr></thead><tbody>${rows.join('')}</tbody></table>`);
-    setNote('#op_q_icu_note', ['Each cell shows resistant / tested, with the percentage below it. <b>*</b> (grey) = fewer than 30 tested.', 'Both units are always shown, whatever unit filter is selected at the top.', 'The first isolate per patient and organism is chosen across all wards before the split.', 'A red <b style="color:#dc2626">*</b> in the last column = a statistically significant difference (p &lt; 0.05), calculated only when both groups have 30 or more tested.', `Wards counted as ICU: ${escHtml(icuWardList().join(', '))}.`]);
+    rows.push(`<tr><td class="ya-l"><b>MDR / XDR / PDR</b></td>${opCell(mi.plus, mi.n)}${opCell(mn.plus, mn.n)}${opDiff(mi.plus, mi.n, mn.plus, mn.n)}</tr>`);
+    $('#op_q_icu_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Indicator</th><th>ICU</th><th>Non-ICU</th><th>Difference (ICU &minus; non-ICU)</th></tr></thead><tbody>${rows.join('')}</tbody></table>`);
+    setNote('#op_q_icu_note', ['Each cell shows resistant / tested, with the percentage below it. <b>*</b> (grey) = fewer than 30 tested.', 'Both units are always shown, whatever unit filter is selected at the top.', 'The first isolate per patient and organism is chosen across all wards before the split.', '<b>Difference</b> = ICU minus non-ICU, in percentage points (pp). <b style="color:#dc2626">differs *</b> = statistically significant (p &lt; 0.05); tested only when both groups have 30 or more isolates tested, otherwise it is shown as descriptive (n&lt;30).', `Wards counted as ICU: ${escHtml(icuWardList().join(', '))}.`]);
 }
 
 // ---------------------------------------------------------------- QUARTER: ward ranking

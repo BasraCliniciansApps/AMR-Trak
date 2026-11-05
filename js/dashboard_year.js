@@ -2,7 +2,7 @@
 // Reference methods: CLSI M39 (first isolate per patient, organism and year; n >= 30), CLSI M100 (interpretation),
 // WHO GLASS (priority indicators, specimen-specific reporting), Magiorakos 2012 (MDR / XDR / PDR).
 
-const YA = { spec: 'all', cumSpec: 'all', noContam: true, trend: null, abxChart: null, abx: { abx: 'Meropenem', org: 'top', mode: 'year', metric: 'R' } };
+const YA = { icuOrg: '', spec: 'all', cumSpec: 'all', noContam: true, trend: null, abxChart: null, abx: { abx: 'Meropenem', org: 'top', mode: 'year', metric: 'R' } };
 try { const sv = JSON.parse(localStorage.getItem('amr_trend_sel') || 'null'); if (sv && typeof sv === 'object') Object.assign(YA.abx, sv); } catch (e) {}
 const YA_EXCLUDED_ORGS = ['xxx', 'con', 'no growth', 'contaminated', 'normal flora', 'mixed flora', 'no significant growth'];
 const YA_MARKER_NAMES = {
@@ -55,6 +55,7 @@ const yaFmt = v => v === null || v === undefined ? '-' : (Math.round(v * 10) / 1
 // ---------------------------------------------------------------- skeleton (built once)
 const YA_CARDS = [
     ['ind', 'Key resistance indicators', true],
+    ['icu', 'ICU compared with non-ICU', true],
     ['cum', 'Cumulative antibiogram (% susceptible)', false],
     ['trend', 'Quarterly trend', false],
     ['abx', 'Antibiotic trend', false],
@@ -75,6 +76,7 @@ function yaBuild() {
         cum: '<div id="ya_cum_seg" class="ya-seg ya-seg-wrap"></div><label class="ya-opt"><span>Exclude possible skin-flora contaminants</span><span class="ya-sw"><input type="checkbox" id="ya_nocontam" checked onchange="yaSetNoContam(this.checked)"><i></i></span></label><div id="ya_cum_table" class="ya-scroll"></div><p class="ya-note" id="ya_cum_note"></p>',
         trend: '<div class="ya-chart"><canvas id="chart_y_trend"></canvas></div><div id="ya_trend_table" class="ya-scroll"></div><p class="ya-note" id="ya_trend_note"></p>',
         abx: '<div id="ya_abx_ctl"></div><div class="ya-chart"><canvas id="chart_y_abxtrend"></canvas></div><div id="ya_abx_table" class="ya-scroll"></div><p class="ya-note" id="ya_abx_note"></p>',
+        icu: '<div id="ya_icu_table" class="ya-scroll"></div><p class="ya-note" id="ya_icu_note"></p><div class="ya-sub">Susceptibility (% S) by organism</div><div id="ya_icu_seg" class="ya-seg ya-seg-wrap"></div><div id="ya_icu_abx" class="ya-scroll"></div><p class="ya-note" id="ya_icu_abx_note"></p>',
         mdr: '<div id="ya_mdr_table" class="ya-scroll"></div><p class="ya-note" id="ya_mdr_note"></p>',
         cult: '<div id="ya_cult_table" class="ya-scroll"></div><p class="ya-note" id="ya_cult_note"></p>',
         qual: '<div id="ya_q_table" class="ya-scroll"></div><p class="ya-note" id="ya_q_note"></p>'
@@ -102,6 +104,62 @@ function yaSpecOptions(year) {
     yaRaw(year).forEach(r => { const s = String(r.Sample || '').trim(); if (s) names[s.toLowerCase()] = s; });
     return Object.keys(names).map(k => ({ key: k, label: names[k], n: yaFirst(year, k, false).length }))
         .filter(o => o.n >= 30).sort((a, b) => b.n - a.n).slice(0, 8);
+}
+
+
+// ---------------------------------------------------------------- 1b. ICU compared with non-ICU (whole year)
+// First isolate per patient, organism and year is chosen across ALL wards, then split by unit.
+function yaIcuSplit(year) {
+    const raw = getAllDashRecordsUnscoped().filter(r => {
+        if (!r.Date || !String(r.Date).startsWith(year + '-')) return false;
+        const o = String(r['Selective organism'] || '').trim().toLowerCase();
+        return o && !YA_EXCLUDED_ORGS.some(b => o.includes(b));
+    });
+    const all = applyDeduplication(raw);
+    return { all, icu: all.filter(r => wardInScope(r.Ward, 'icu')), non: all.filter(r => wardInScope(r.Ward, 'nonicu')) };
+}
+window.yaSetIcuOrg = function (v) { YA.icuOrg = v; yaIcu(); };
+function yaIcu() {
+    const y = yaYear(), { all, icu, non } = yaIcuSplit(y);
+    if (!all.length) { $('#ya_icu_table').html('<div class="ya-empty">No isolates for ' + y + '.</div>'); $('#ya_icu_seg,#ya_icu_abx').html(''); setNote('#ya_icu_note', []); setNote('#ya_icu_abx_note', []); return; }
+    const si = evaluateCriticalMarkers(icu), sn = evaluateCriticalMarkers(non), mi = opMdrCount(icu), mn = opMdrCount(non);
+    const rows = [`<tr><td class="ya-l"><b>First isolates</b></td><td><b>${icu.length}</b></td><td><b>${non.length}</b></td><td></td></tr>`];
+    CRITICAL_MARKERS.forEach((m, i) => {
+        if (!si[i].tested && !sn[i].tested) return;
+        rows.push(`<tr><td class="ya-l"><b>${m.label}</b></td>${opCell(si[i].resistant, si[i].tested)}${opCell(sn[i].resistant, sn[i].tested)}${opDiff(si[i].resistant, si[i].tested, sn[i].resistant, sn[i].tested)}</tr>`);
+    });
+    rows.push(`<tr><td class="ya-l"><b>MDR / XDR / PDR</b></td>${opCell(mi.plus, mi.n)}${opCell(mn.plus, mn.n)}${opDiff(mi.plus, mi.n, mn.plus, mn.n)}</tr>`);
+    $('#ya_icu_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Indicator</th><th>ICU</th><th>Non-ICU</th><th>Difference (ICU &minus; non-ICU)</th></tr></thead><tbody>${rows.join('')}</tbody></table>`);
+    setNote('#ya_icu_note', [
+        `${y}: first isolate per patient and organism, chosen across all wards before the split (CLSI M39).`,
+        'Each cell shows resistant / tested, with the percentage below it. <b>*</b> (grey) = fewer than 30 tested.',
+        '<b>Difference</b> = ICU minus non-ICU in percentage points (pp). <b style="color:#dc2626">differs *</b> = statistically significant (two-proportion z-test, p &lt; 0.05), calculated only when both groups have 30 or more tested; otherwise it is descriptive only.',
+        'Both units are always shown, whatever unit filter is selected at the top.',
+        `Wards counted as ICU: ${escHtml(icuWardList().join(', '))}.`]);
+
+    // susceptibility by organism
+    const byOrg = {};
+    all.forEach(r => { const o = r['Selective organism']; (byOrg[o] = byOrg[o] || []).push(r); });
+    const orgs = Object.keys(byOrg).filter(o => byOrg[o].length >= 30).sort((a, b) => byOrg[b].length - byOrg[a].length).slice(0, 8);
+    if (!orgs.length) { $('#ya_icu_seg').html(''); $('#ya_icu_abx').html('<div class="ya-empty">No organism reached 30 first isolates in ' + y + '.</div>'); setNote('#ya_icu_abx_note', []); return; }
+    if (!orgs.includes(YA.icuOrg)) YA.icuOrg = orgs[0];
+    $('#ya_icu_seg').html(orgs.map(o => `<button type="button" data-v="${escHtml(o)}" class="${o === YA.icuOrg ? 'on' : ''}" onclick="yaSetIcuOrg(this.getAttribute('data-v'))">${escHtml(formatOrgName(o))} <span class="ya-mute">(${byOrg[o].length})</span></button>`).join(''));
+    const gi = byOrg[YA.icuOrg].filter(r => wardInScope(r.Ward, 'icu')), gn = byOrg[YA.icuOrg].filter(r => wardInScope(r.Ward, 'nonicu'));
+    const cnt = (g, a) => { let t = 0, sc = 0; g.forEach(r => { const v = String(r[a] || '').trim().toUpperCase(); if (yaIsSIR(v)) { t++; if (v === 'S') sc++; } }); return { t, s: sc }; };
+    const body = [];
+    abxList.forEach(a => {
+        const ci = cnt(gi, a), cn = cnt(gn, a);
+        if (ci.t + cn.t < 30) return;
+        body.push(`<tr><td class="ya-l"><b>${escHtml(a)}</b></td>${opCell(ci.s, ci.t)}${opCell(cn.s, cn.t)}${opDiff(ci.s, ci.t, cn.s, cn.t)}</tr>`);
+    });
+    $('#ya_icu_abx').html(body.length
+        ? `<table class="ya-table"><thead><tr><th class="ya-l">Antibiotic</th><th>ICU<div class="ya-mute">n=${gi.length}</div></th><th>Non-ICU<div class="ya-mute">n=${gn.length}</div></th><th>Difference (pp)</th></tr></thead><tbody>${body.join('')}</tbody></table>`
+        : '<div class="ya-empty">No antibiotic has enough results for this organism.</div>');
+    setNote('#ya_icu_abx_note', [
+        'Values are <b>susceptible</b> / tested, with % S below. Only S counts as susceptible (CLSI M100).',
+        'Antibiotics with fewer than 30 results in total for this organism are not listed.',
+        'A <b>negative</b> difference means the ICU has lower susceptibility than the other wards.',
+        'Reading advice: when the ICU group has fewer than 30 isolates, treat the ICU figures as a signal to watch, not as a conclusion.']);
 }
 
 // ---------------------------------------------------------------- 1. key resistance indicators (+ year on year)
@@ -391,7 +449,7 @@ function renderAnnualReport() {
     yaBuild();
     yaSetInfo();
     const y = yaYear();
-    [yaIndicators, yaCumulative, yaTrend, yaAbxTrend, yaMdr, yaCultures, yaQuality].forEach(f => { try { f(); } catch (e) { console.error('annual report:', f.name, e); } });
+    [yaIndicators, yaIcu, yaCumulative, yaTrend, yaAbxTrend, yaMdr, yaCultures, yaQuality].forEach(f => { try { f(); } catch (e) { console.error('annual report:', f.name, e); } });
     $('#ya_year_label').text(String(y));
 }
 
@@ -400,6 +458,8 @@ function renderAnnualReport() {
     if (typeof SECTIONS === 'undefined' || !SECTIONS.year) return;
     const own = [
         { title: 'Key resistance indicators', el: '#ya_ind_table', kind: 'table' },
+        { title: 'ICU compared with non-ICU', el: '#ya_icu_table', kind: 'table' },
+        { title: 'ICU compared with non-ICU: susceptibility by organism', el: '#ya_icu_abx', kind: 'table' },
         { title: 'Cumulative antibiogram (% susceptible)', el: '#ya_cum_table', kind: 'table', landscape: true },
         { title: 'Quarterly trend', el: '#chart_y_trend' },
         { title: 'Quarterly values', el: '#ya_trend_table', kind: 'table' },
@@ -410,6 +470,6 @@ function renderAnnualReport() {
         { title: 'Data quality', el: '#ya_q_table', kind: 'table' }
     ];
     SECTIONS.year.charts = own.concat(SECTIONS.year.charts);
-    SECTIONS.year.infos = [['Key resistance indicators', 'ya_ind'], ['Cumulative antibiogram', 'ya_cum'], ['Quarterly trend', 'ya_trend'], ['Antibiotic trend', 'ya_abx'], ['MDR / XDR / PDR by organism group', 'ya_mdr'], ['Culture burden', 'ya_cult'], ['Data quality', 'ya_qual']].concat(SECTIONS.year.infos);
+    SECTIONS.year.infos = [['Key resistance indicators', 'ya_ind'], ['ICU compared with non-ICU', 'ya_icu'], ['Cumulative antibiogram', 'ya_cum'], ['Quarterly trend', 'ya_trend'], ['Antibiotic trend', 'ya_abx'], ['MDR / XDR / PDR by organism group', 'ya_mdr'], ['Culture burden', 'ya_cult'], ['Data quality', 'ya_qual']].concat(SECTIONS.year.infos);
     SECTIONS.year.title = () => 'Annual AMR Surveillance Report (' + yaYear() + ')';
 })();
