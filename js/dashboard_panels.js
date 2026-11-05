@@ -473,13 +473,13 @@ function monthSection(p, label) {
 }
 const SECTIONS = {
     prevalence: { id: 'prevalence', title: 'Clinical Prevalence & AST Profile', infos: [['Organism prevalence', 'sec_prevalence'], ['AST profile of the selected organism', 'abx_guidedAmrContainer']],
-        charts: [{ title: 'Organism Prevalence', el: '#chartGuidedPie' }, { title: 'AST Profile of the selected organism', el: '#chartGuidedAMR' }] },
+        charts: [{ title: 'Organism Prevalence', el: '#chartGuidedPie', hint: 'Choose a specimen in this section first.' }, { title: 'AST Profile of the selected organism', el: '#chartGuidedAMR', hint: 'Choose a specimen in this section first.' }] },
     patho: { id: 'patho', title: 'Bacteria/Fungi Susceptibility Profile', infos: [['How to read this chart', 'sec_patho'], ['Sample size and AWaRe', 'abx_pathoAmrContainer']],
-        charts: [{ title: 'Bacteria/Fungi Susceptibility Profile', el: '#chartPathoAMR' }] },
+        charts: [{ title: 'Bacteria/Fungi Susceptibility Profile', el: '#chartPathoAMR', hint: 'Choose a bacteria in this section first.' }] },
     abx: { id: 'abx', title: 'Antimicrobial Efficacy Profile', infos: [['How to read this chart', 'sec_abx']],
         charts: [{ title: 'Antimicrobial Efficacy Profile', el: '#chartAbxAMR' }] },
     heatmap: { id: 'heatmap', title: 'Advanced Cross-Search (Heatmap)', infos: [['How to read the heatmap', 'sec_heatmap']],
-        charts: [{ title: 'Advanced Heatmap', el: '#heatmapWrapper', kind: 'table', landscape: true }] },
+        charts: [{ title: 'Advanced Heatmap', el: '#heatmapWrapper', kind: 'table', landscape: true, hint: 'Run the search in this section first.' }] },
     mdr: { id: 'mdr', title: 'MDR / XDR / PDR Analysis', labelSel: '#mdr_range_label',
         infos: [['Definitions and method', 'mdr_panel'], ['Summary figures', 'mdr_tiles'], ['Monthly trend', 'mdr_trend'], ['Distribution by ward', 'mdr_wards'], ['By organism group', 'mdr_group']],
         charts: [{ title: 'Summary', el: '#mdr_tiles', kind: 'tiles' }, { title: 'Resistance classification', el: '#chart_mdr_panel_pie' }, { title: 'Monthly trend (% of classified isolates)', el: '#chart_mdr_panel_trend' }, { title: 'All wards', el: '#chart_mdr_panel_wards' }, { title: 'By organism group', el: '#mdr_group_table', kind: 'table' }] },
@@ -496,12 +496,12 @@ function chartElement(c) {
     const el = document.querySelector(c.alt || c.el);
     if (!el) return null;
     // collapsed cards are still printable: only switched-off sections and tabs that are not open are skipped
-    if (el.closest('.sec-off, .res-collapsed')) return null;
+    if (el.closest('.sec-off')) return null;
     const view = el.closest('#viewAnalytics, #viewLastYear, #viewLastMonth, #viewLastQuarter, #viewLab');
     if (view && view.classList.contains('hidden')) return null;
     if (el.tagName === 'CANVAS') {
-        let chart = null; try { chart = window.Chart && Chart.getChart && Chart.getChart(el); } catch (e) {}
-        if (!chart && !el.width) return null;
+        let chart = null, canAsk = false; try { canAsk = !!(window.Chart && Chart.getChart); chart = canAsk && Chart.getChart(el); } catch (e) {}
+        if (canAsk ? !chart : !el.width) return null;       // an empty canvas (nothing selected yet) is not printable
     }
     if (c.kind === 'table' && !el.querySelector('table')) return null;
     if (c.kind === 'tiles' && !el.children.length) return null;
@@ -549,19 +549,27 @@ function tilesToHtml(el) {
 
 const TAB_SECTIONS = { analytics: ['prevalence', 'patho', 'abx', 'heatmap', 'mdr'], last_year: ['year'], last_month: ['month'], last_quarter: ['quarter'], lab: ['lab'] };
 
-function printGroups() {
+function printGroups(withWaiting) {
     const tab = window._currentTab || 'analytics';
     return (TAB_SECTIONS[tab] || []).map(id => SECTIONS[id]).filter(Boolean)
-        .map(sec => ({ sec, items: sec.charts.map(c => ({ sec, c, el: chartElement(c) })).filter(x => x.el) })).filter(g => g.items.length);
+        .map(sec => {
+            const off = !!document.querySelector('[data-sec="' + (sec.id === 'mdr' ? 'mdr_panel' : sec.id) + '"].sec-off');
+            const items = off ? [] : sec.charts.map(c => ({ sec, c, el: chartElement(c), hint: c.hint || 'Nothing to show yet.' }))
+                .filter(x => x.el || (withWaiting && document.querySelector(x.c.alt || x.c.el)));
+            return { sec, items };
+        }).filter(g => g.items.length);
 }
 
 // Printer button (top bar): choose exactly what to print from the open tab, then preview before printing
 window.openPrintDialog = function () {
-    const groups = printGroups();
-    if (!groups.length) { Swal.fire({ icon: 'info', title: 'Nothing to print yet', text: 'There are no charts on screen in this tab. Wait for the results to load.', confirmButtonText: 'OK', buttonsStyling: false, customClass: { popup: 'info-popup', title: 'info-title', htmlContainer: 'info-container', confirmButton: 'info-close' } }); return; }
+    const groups = printGroups(true);
+    if (!groups.some(g => g.items.some(x => x.el))) { Swal.fire({ icon: 'info', title: 'Nothing to print yet', text: 'There are no charts on screen in this tab. Wait for the results to load.', confirmButtonText: 'OK', buttonsStyling: false, customClass: { popup: 'info-popup', title: 'info-title', htmlContainer: 'info-container', confirmButton: 'info-close' } }); return; }
     const flat = [];
     const saved = (() => { try { return JSON.parse(localStorage.getItem('amr_print_opts')) || {}; } catch (e) { return {}; } })();
-    const rows = groups.map(g => `<div class="pd-h">${escHtml(sectionTitle(g.sec))}</div>` + g.items.map(x => { const i = flat.push(x) - 1; return `<label class="pd-row"><input type="checkbox" class="pd-chart" value="${i}" checked><span>${escHtml(chartTitleOf(x.c.title))}</span></label>`; }).join('')).join('');
+    const rows = groups.map(g => `<div class="pd-h">${escHtml(sectionTitle(g.sec))}</div>` + g.items.map(x => {
+        if (!x.el) return `<label class="pd-row pd-off"><input type="checkbox" disabled><span>${escHtml(chartTitleOf(x.c.title))}<small>${escHtml(x.hint)}</small></span></label>`;
+        const i = flat.push(x) - 1; return `<label class="pd-row"><input type="checkbox" class="pd-chart" value="${i}" checked><span>${escHtml(chartTitleOf(x.c.title))}</span></label>`;
+    }).join('')).join('');
     const sel = (id, opts, cur) => `<select id="${id}" class="pd-sel">${opts.map(o => `<option value="${o[0]}" ${o[0] === cur ? 'selected' : ''}>${o[1]}</option>`).join('')}</select>`;
     const chk = (id, label, on) => `<label class="pd-row"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><span>${label}</span></label>`;
     Swal.fire({
@@ -607,9 +615,10 @@ window.openPrintDialog = function () {
 // collapsed cards hold zero-size canvases: open them briefly so charts render at full size, then restore
 function withOpened(items, fn) {
     const reopened = [];
-    items.forEach(({ el }) => { let p = el.parentElement; while (p) { if (p.classList && p.classList.contains('hidden') && !reopened.includes(p)) { p.classList.remove('hidden'); reopened.push(p); } p = p.parentElement; } });
-    if (reopened.length) items.forEach(({ el }) => { try { const ch = el.tagName === 'CANVAS' && window.Chart && Chart.getChart(el); if (ch) { ch.resize(); ch.update('none'); } } catch (e) {} });
-    try { return fn(); } finally { reopened.forEach(p => p.classList.add('hidden')); }
+    const restore = [];   // [element, class] pairs removed temporarily (collapsed cards and collapsed result areas)
+    items.forEach(({ el }) => { let p = el; while (p) { if (p.classList) ['hidden', 'res-collapsed'].forEach(k => { if (p.classList.contains(k) && !restore.some(r => r[0] === p && r[1] === k)) { p.classList.remove(k); restore.push([p, k]); } }); p = p.parentElement; } });
+    if (restore.length) items.forEach(({ el }) => { try { const ch = el.tagName === 'CANVAS' && window.Chart && Chart.getChart(el); if (ch) { ch.resize(); ch.update('none'); } } catch (e) {} });
+    try { return fn(); } finally { restore.forEach(([p, k]) => p.classList.add(k)); }
 }
 
 function buildPrintDoc(items, o) {
