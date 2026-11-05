@@ -69,6 +69,10 @@ function applyDashboardSettings() {
 function refreshAll() {
     applyDashboardSettings();
     try { loadAnalyticsFilters(); } catch (e) { console.error(e); }
+    // The unit scope applies to every Analytics chart, so the open ones are redrawn with the new scope
+    try { updatePathoDropdowns(); } catch (e) { console.error(e); }
+    try { updateAbxDropdowns(); } catch (e) { console.error(e); }
+    try { if (!$('#advContainer').hasClass('hidden') && $('#advContainer').children().length) generateAdvancedAnalytics(); } catch (e) { console.error(e); }
     try { generateLiveSurveillance(); } catch (e) { console.error(e); }
     try { renderMdrPanel(); } catch (e) { console.error(e); }
     try { renderLabQuality(); } catch (e) { console.error(e); }
