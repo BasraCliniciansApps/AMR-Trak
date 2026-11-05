@@ -1463,6 +1463,21 @@ window.processRestore = function() {
     reader.readAsText(file);
 };
 
+
+// --- DASHBOARD CONTROL (same settings page as the phone, embedded) ---
+// Both devices edit the same cloud settings; each save is time-stamped and the newest change wins.
+function showDashControl() {
+    const f = document.getElementById('ctlFrame');
+    if (f && !f.getAttribute('src')) f.setAttribute('src', 'control.html?embedded=1');
+    $('#ctlModal').removeClass('hidden');
+}
+function closeDashControl() { $('#ctlModal').addClass('hidden'); }
+window.addEventListener('message', function (e) {
+    if (e.origin !== location.origin || !e.data || e.data.type !== 'amr-settings' || !e.data.settings) return;
+    try { localStorage.setItem('amr_live_settings', JSON.stringify(e.data.settings)); } catch (err) {}
+    if (typeof toast === 'function') { try { toast('Dashboard settings published'); } catch (err2) {} }
+});
+
 // --- APP MODALS ---
 function showSettingsModal() {
     loadAbbreviations();
@@ -2375,7 +2390,7 @@ async function processAntibiogramExport(year, quarter) {
     }
 }
 
-// Dashboard display settings are edited on their own page; this page only publishes them with the data.
+// Dashboard display settings are edited in the Dashboard Control window (same page as on the phone); this page publishes the newest copy with the data.
 function restoreSyncStatus() {
     try {
         const st = JSON.parse(localStorage.getItem('amr_sync_status') || 'null');

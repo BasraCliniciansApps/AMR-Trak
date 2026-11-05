@@ -221,6 +221,8 @@ $('#saveBtn').addEventListener('click', async () => {
         batch.set(db.collection('amr_public').doc('dashboard'), { settings: merged, settings_updated: stamp }, { merge: true });
         await batch.commit();
         rawSettings = merged; base = JSON.parse(JSON.stringify(cur));
+        try { localStorage.setItem('amr_live_settings', JSON.stringify(merged)); } catch (e) {}   // same-device copy (dashboard, data-entry app)
+        try { if (window.parent !== window) window.parent.postMessage({ type: 'amr-settings', settings: merged }, location.origin); } catch (e) {}
         toast('Published. The dashboard updates automatically.');
     } catch (err) {
         console.error(err);
@@ -284,3 +286,5 @@ auth.onAuthStateChanged(user => {
     $('#appView').classList.toggle('hidden', !user);
     if (user) loadSettings(); else { loaded = false; }
 });
+
+if (/[?&]embedded=1/.test(location.search)) { document.body.classList.add('embedded'); const so = document.getElementById('signOutBtn'); if (so) so.style.display = 'none'; }
