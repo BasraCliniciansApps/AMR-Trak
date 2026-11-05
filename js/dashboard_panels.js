@@ -674,13 +674,22 @@ function buildPrintDoc(items, o) {
 }
 
 // Preview before printing: the exact document is shown first; nothing is sent to the printer until the user confirms
+// Scroll lock is released whenever no full-screen panel (guide or print preview) is open, however the panel was closed
+window.unlockScrollIfIdle = function () {
+    const gd = document.getElementById('guideView');
+    if (!document.getElementById('printPreview') && !(gd && gd.classList.contains('open'))) document.body.classList.remove('gd-lock');
+};
+window.closePrintPreview = function () {
+    const el = document.getElementById('printPreview'); if (el) el.remove();
+    window.unlockScrollIfIdle();
+};
 function showPrintPreview(doc) {
     const old = document.getElementById('printPreview'); if (old) old.remove();
     const el = document.createElement('div'); el.id = 'printPreview';
     el.innerHTML = `<div class="pv-bar"><button type="button" id="pvBack">&lsaquo; Options</button><div class="pv-t">Print preview</div><button type="button" id="pvGo" class="pv-go">Print / Save PDF</button></div><iframe id="pvFrame" title="Print preview"></iframe>`;
     document.body.appendChild(el); document.body.classList.add('gd-lock');
     const f = el.querySelector('#pvFrame'); f.srcdoc = doc;
-    const close = () => { el.remove(); document.body.classList.remove('gd-lock'); };
+    const close = () => window.closePrintPreview();
     el.querySelector('#pvBack').onclick = () => { close(); openPrintDialog(); };
     el.querySelector('#pvGo').onclick = () => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { console.error(e); } };
 }

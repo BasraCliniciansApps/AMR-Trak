@@ -13,7 +13,7 @@
     }
     function closeOverlay() {
         const pv = document.getElementById('printPreview');
-        if (pv && pv.parentNode) { pv.parentNode.removeChild(pv); return true; }
+        if (pv && pv.parentNode) { if (window.closePrintPreview) window.closePrintPreview(); else pv.parentNode.removeChild(pv); return true; }
         const gd = document.getElementById('guideView');
         if (gd && gd.classList.contains('open')) { if (window.hideGuide) window.hideGuide(); return true; }
         if (window.Swal && Swal.isVisible && Swal.isVisible()) { Swal.close(); return true; }
@@ -62,6 +62,7 @@
     function reset() { if (ptr) { ptr.classList.remove('spin', 'ready'); ptr.style.opacity = 0; ptr.style.transform = 'translateY(0)'; } }
 
     document.addEventListener('touchstart', function (e) {
+        if (window.unlockScrollIfIdle) window.unlockScrollIfIdle();      // never leave the page locked after a panel is closed
         if (e.touches.length !== 1 || blocked()) { startY = null; return; }
         if (e.target.closest && e.target.closest('select, input, textarea, .select2-container, .custom-scroll')) { startY = null; return; }
         startY = e.touches[0].clientY; pulling = false;
