@@ -187,6 +187,23 @@ const errorBarsPlugin = {
         });
     }
 };
+// Shared bar tooltip: percentage, number tested (n) and 95% Wilson CI
+function ciTooltip(metricName) {
+    return {
+        callbacks: {
+            title: items => items.length ? String(items[0].label).replace(/\s*[*\u2020]+$/, '') : '',
+            label: ctx => {
+                const ds = ctx.dataset, i = ctx.dataIndex;
+                const m = typeof metricName === 'function' ? metricName() : metricName;
+                const n = ds.nData ? ds.nData[i] : null, ci = ds.ciData ? ds.ciData[i] : null;
+                const out = [m + ': ' + ctx.raw + '%'];
+                if (n !== null && n !== undefined) out.push('n = ' + n + ' tested' + (n < 30 ? ' (n<30, interpret with caution)' : ''));
+                if (ci && n) out.push('95% CI: ' + ci.lower + '\u2013' + ci.upper + '%');
+                return out;
+            }
+        }
+    };
+}
 // تم حذف barLabelsPlugin نهائياً لمنع أي كتابة فوق الأعمدة
 
 function getCustomAntibiotics() { 
@@ -296,7 +313,7 @@ function renderChartNotes(containerSel, selectiveNotes, contaminantCount, shownA
         '<li><b>Solid bar:</b> 30 or more isolates were tested. The result is considered reliable.</li>' +
         '<li><b>Faded grey bar, name ending with *:</b> fewer than 30 isolates were tested. Interpret with caution (CLSI M39).</li>' +
         '<li><b>Name ending with &dagger;:</b> selective test. The antibiotic was tested on fewer than half of the isolates, so the percentage may be biased.</li>' +
-        '<li>Tap a bar to see the number tested and the 95% confidence interval.</li></ul>';
+        '<li>Tap a bar: shows n (number of isolates tested) and the 95% CI. The bar height is always the selected percentage.</li></ul>';
     if (selectiveNotes.length) html += `<h5>Selectively tested agents (tested / isolates)</h5><ul>${selectiveNotes.map(n => '<li>' + n + '</li>').join('')}</ul><p>Only part of the isolates were tested, so the resistance rate may be overestimated.</p>`;
     const groups = { A: [], W: [], R: [] };
     (shownAbx || []).forEach(a => { if (AWARE_CLASS[a]) groups[AWARE_CLASS[a]].push(a); });
@@ -776,14 +793,7 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
                     maintainAspectRatio: false,
                     plugins: {
                         legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(ctx) {
-                                    let idx = ctx.dataIndex;
-                                    return `Resistance: ${ctx.raw}% (Tested n=${abxN[idx]})`;
-                                }
-                            }
-                        }
+                        tooltip: ciTooltip('% Resistance')
                     },
                     scales: {
                         y: { beginAtZero: true, max: 100, ticks: { font: { size: 9 } } },
@@ -849,7 +859,7 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
         },
         options: {
             responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: { legend: { display: false }, tooltip: ciTooltip('% Resistance') },
             scales: { 
                 y: { beginAtZero: true, max: 100 }, 
                 x: vAxisX(84)
@@ -1186,7 +1196,7 @@ function renderGuidedAST() {
         type: 'bar',
         data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
         options: { 
-            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
+            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false , tooltip: ciTooltip(()=>'% '+currentGuidedMetric) } }, 
             scales: { y: { max: 100, beginAtZero: true }, x: vAxisX(112) } 
         },
         plugins: [errorBarsPlugin, centredAbxLabels]
@@ -1313,7 +1323,7 @@ function renderPathoChart() {
         type: 'bar',
         data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
         options: { 
-            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
+            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false , tooltip: ciTooltip(()=>'% '+currentPathoMetric) } }, 
             scales: { y: { max: 100, beginAtZero: true }, x: vAxisX(112) } 
         },
         plugins: [errorBarsPlugin, centredAbxLabels]
@@ -1435,7 +1445,7 @@ function renderAbxChart() {
         type: 'bar',
         data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
         options: { 
-            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
+            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false , tooltip: ciTooltip(()=>'% '+currentAbxMetric) } }, 
             scales: { y: { max: 100, beginAtZero: true }, x: vAxisX(112) } 
         },
         plugins: [errorBarsPlugin, centredAbxLabels]

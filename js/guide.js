@@ -121,7 +121,7 @@
                 ['<span class="gd-sw gd-sw-solid"></span> Solid bar', '30 or more isolates were tested.', 'The result is reliable.'],
                 ['<span class="gd-sw gd-sw-grey"></span> Faded grey bar, name ending with <b>*</b>', 'Fewer than 30 isolates were tested.', 'Interpret with caution. Use the switch "Hide n &lt; 30" to hide them.'],
                 ['<b>&dagger;</b> after the antibiotic name', 'Selective test: tested on fewer than half of the isolates.', 'The percentage may be biased. The antibiotics concerned are listed under the chart key.'],
-                ['<b>Tap a bar</b>', 'Shows the number tested and the 95% confidence interval.', 'Use it to judge precision.']]) +
+                ['<b>Tap a bar</b>', 'Shows the percentage, n (isolates tested) and the 95% CI. The bar height is always the selected percentage.', 'Use it to judge precision.']]) +
             H('In trend charts') + L(['A <b>hollow point</b> and a <b>dashed line</b> mean fewer than 30 isolates were tested in that period.', 'In tables, <b>*</b> beside a number carries the same meaning.']) +
             H('WHO AWaRe') + P('Antibiotics are grouped by the WHO into <b>Access</b> (first choice, low resistance risk), <b>Watch</b> (higher resistance potential, should be monitored) and <b>Reserve</b> (last resort). The group of each antibiotic shown is listed under the chart key.')],
 
