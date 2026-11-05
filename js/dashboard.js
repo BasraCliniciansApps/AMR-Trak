@@ -1196,7 +1196,7 @@ function renderGuidedAST() {
         type: 'bar',
         data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
         options: { 
-            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false , tooltip: ciTooltip(()=>'% '+currentGuidedMetric) } }, 
+            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: ciTooltip(()=>'% '+currentGuidedMetric) }, 
             scales: { y: { max: 100, beginAtZero: true }, x: vAxisX(112) } 
         },
         plugins: [errorBarsPlugin, centredAbxLabels]
@@ -1323,7 +1323,7 @@ function renderPathoChart() {
         type: 'bar',
         data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
         options: { 
-            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false , tooltip: ciTooltip(()=>'% '+currentPathoMetric) } }, 
+            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: ciTooltip(()=>'% '+currentPathoMetric) }, 
             scales: { y: { max: 100, beginAtZero: true }, x: vAxisX(112) } 
         },
         plugins: [errorBarsPlugin, centredAbxLabels]
@@ -1445,7 +1445,7 @@ function renderAbxChart() {
         type: 'bar',
         data: { labels, datasets: [{ data, backgroundColor: bgColors, ciData, nData: nDataArr, borderRadius: 4 }] },
         options: { 
-            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false , tooltip: ciTooltip(()=>'% '+currentAbxMetric) } }, 
+            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: ciTooltip(()=>'% '+currentAbxMetric) }, 
             scales: { y: { max: 100, beginAtZero: true }, x: vAxisX(112) } 
         },
         plugins: [errorBarsPlugin, centredAbxLabels]
