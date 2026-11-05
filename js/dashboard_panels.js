@@ -58,6 +58,7 @@ function applyDashboardSettings() {
     [['year', 'LastYear'], ['month', 'LastMonth'], ['quarter', 'LastQuarter'], ['lab', 'Lab']].forEach(([t, id]) => {
         $('#btnNav' + id).toggleClass('sec-off', s['tab_' + t] === false);
     });
+    $('#ya_card_mdr').toggleClass('sec-off', s.sec_mdr === false);          // the annual MDR card follows the same switch
     $('#scopeBar').toggleClass('sec-off', s.dash_show_scope === false);
     updateScopeBar();
     // leave a tab that was switched off
@@ -120,14 +121,15 @@ function completeQuarterOf(latest) {
     return { y, q };
 }
 function initPeriodState(id, months) {
-    if (PERIOD_STATE[id]) return PERIOD_STATE[id];
+    const defNow = getDashSettings().dash_default_period || '';
+    if (PERIOD_STATE[id] && PERIOD_STATE[id]._def === defNow) return PERIOD_STATE[id];   // a changed default (from the Control page) applies without a reload
     const latest = months[months.length - 1] || new Date().toISOString().slice(0, 7);
     const cq = completeQuarterOf(latest);
     const def = getDashSettings().dash_default_period;
     PERIOD_STATE[id] = {
         type: ['month', 'quarter', 'year', 'range', 'all'].includes(def) ? def : 'month',
         month: latest, qYear: cq.y, q: cq.q, year: latest.slice(0, 4),
-        from: months[Math.max(0, months.length - 6)] || latest, to: latest
+        from: months[Math.max(0, months.length - 6)] || latest, to: latest, _def: defNow
     };
     return PERIOD_STATE[id];
 }

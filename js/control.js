@@ -130,7 +130,7 @@ function render() {
         card('periods', 'calendar', 'Reporting periods', periods) +
         card('tabs', 'tabs', 'Tabs', `<div>${toggleRows(TOGGLES.tabs)}</div>`) +
         card('analytics', 'chart', 'Analytics sections', `<div>${toggleRows(TOGGLES.analytics)}</div>`) +
-        card('content', 'layers', 'Period tab content', `<div>${toggleRows(TOGGLES.content)}</div><p class="hint" style="margin-top:8px">Applies to the Last Year, Last Quarter and Last Month tabs.</p>`) +
+        card('content', 'layers', 'Period tab content', `<div>${toggleRows(TOGGLES.content)}</div><p class="hint" style="margin-top:8px">Applies to the Last Month, Last Quarter and Last Year tabs.</p>`) +
         card('scope', 'building', 'Unit scope', scope) +
         card('profiles', 'flask', 'Threat watchlist', profiles);
     open.forEach(id => $('#card_' + id) && $('#card_' + id).classList.add('open'));
