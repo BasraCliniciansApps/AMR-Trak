@@ -237,7 +237,11 @@ async function syncLocalToCloud(opts) {
             const sameChunks = chunks.length === Object.keys(oldChunks).length &&
                 chunks.every(c => oldChunks[c.id] && oldChunks[c.id].hash === c.hash);
             const sameExtra = Object.keys(metaExtra).every(k => k === 'salt' || JSON.stringify(oldMeta[k] || null) === JSON.stringify(metaExtra[k] || null));
-            if (sameChunks && sameExtra && JSON.stringify(oldMeta.settings || null) === JSON.stringify(liveSettings) && oldMeta.schema === 2) return false;
+            // Last change wins: never overwrite settings saved from the Control page after this device's copy
+            const cloudNewer = oldMeta.settings && (oldMeta.settings._ts || 0) > (liveSettings._ts || 0);
+            const effSettings = cloudNewer ? oldMeta.settings : liveSettings;
+            if (cloudNewer) localStorage.setItem('amr_live_settings', JSON.stringify(effSettings));
+            if (sameChunks && sameExtra && JSON.stringify(oldMeta.settings || null) === JSON.stringify(effSettings) && oldMeta.schema === 2) return false;
             const batch = db.batch();
             chunks.forEach(c => {
                 if (!oldChunks[c.id] || oldChunks[c.id].hash !== c.hash) {
@@ -249,7 +253,7 @@ async function syncLocalToCloud(opts) {
             });
             batch.set(metaRef, Object.assign({
                 schema: 2, rev: rev, total: records.length, years: [...new Set(chunks.map(c => c.year))],
-                chunks: chunkMetaOf(chunks), records: DEL, settings: liveSettings, last_updated: stamp
+                chunks: chunkMetaOf(chunks), records: DEL, settings: effSettings, last_updated: stamp
             }, metaExtra), { merge: true });
             await batch.commit();
             return true;
@@ -372,7 +376,9 @@ function handlePrivateSnapshot(snap) {
             }
 
             if (cloudSettings) {
-                localStorage.setItem('amr_live_settings', JSON.stringify(cloudSettings));
+                // Last change wins: keep this device's copy only if it carries a newer stamp than the cloud copy
+                let localCopy = null; try { localCopy = JSON.parse(localStorage.getItem('amr_live_settings') || 'null'); } catch (e) {}
+                if (!(localCopy && (localCopy._ts || 0) > (cloudSettings._ts || 0))) localStorage.setItem('amr_live_settings', JSON.stringify(cloudSettings));
             }
             
             if (metaData.rev) localStorage.setItem('amr_cloud_rev', metaData.rev);

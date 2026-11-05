@@ -214,6 +214,7 @@ $('#saveBtn').addEventListener('click', async () => {
     busy(true);
     try {
         const merged = Object.assign({}, rawSettings, cur);
+        merged._ts = Date.now();   // last change wins: the data-entry app keeps whichever copy has the newer stamp
         const stamp = firebase.firestore.FieldValue.serverTimestamp();
         const batch = db.batch();
         batch.set(db.collection('amr_sync').doc('hospital_main'), { settings: merged, settings_updated: stamp }, { merge: true });

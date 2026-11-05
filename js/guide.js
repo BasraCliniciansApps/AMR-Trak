@@ -162,7 +162,45 @@
             H('5. Antibiotic trend') + L(['<b>Why:</b> to follow one drug, for example meropenem, over the years or by quarter, for all organisms or one organism.', '<b>How to read:</b> choose the drug, the organism, the period and %R or %S. Tap a point for n and the confidence interval.']) +
             H('6. MDR / XDR / PDR by organism group') + L(['<b>Why:</b> it measures the burden of the most limited-option infections.', '<b>How to read:</b> "Any" is MDR, XDR and PDR together.']) +
             H('7. Culture burden') + L(['<b>Why:</b> resistance percentages mean little without knowing how many cultures were taken.', '<b>How to read:</b> check the blood culture contamination against the 3% benchmark.']) +
-            H('8. Data quality') + L(['<b>Why:</b> an estimate is only as good as its data.', '<b>How to read:</b> low completeness means the indicators should be read with caution.'])],
+            H('8. Data quality') + L(['<b>Why:</b> an estimate is only as good as its data.', '<b>How to read:</b> low completeness means the indicators should be read with caution.', 'Every line of this card is explained in the next section, <b>Data quality metrics explained</b>.'])],
+
+        ['dq', 'Data quality metrics explained (Last Year tab)', () =>
+            P('At the bottom of the Last Year tab is a <b>Data quality</b> card. It does not describe bacteria. It describes <b>how good the data are</b> that everything else is built on. A beautiful chart made from incomplete data can mislead, so these lines tell you how far you can trust the report. If you are new to surveillance, read this section once.') +
+            TIP('These lines follow the unit switch at the top (All units, ICU, Non-ICU), like the rest of the tab.') +
+            H('Part 1. How the records are counted') +
+            P('The first four lines are a small funnel. Each line is smaller than, or equal to, the one before it. A worked example: <b>290</b> records, <b>0</b> screening cultures, <b>2</b> repeats, leaving <b>288</b> first isolates.') +
+            T(['Line', 'What it means', 'Why it matters'], [
+                ['<b>Records in the year</b>', 'Every result line dated in the selected year that has a real organism. Lines labelled no growth, contaminated, normal flora or mixed flora are not counted.', 'This is the starting size of the data for the year.'],
+                ['<b>Screening cultures excluded</b>', 'Swabs taken to look for <i>carriage</i> of a resistant organism in a patient who has no infection (rectal, nasal, axillary or groin swabs, or any specimen labelled screening or surveillance). They are removed.', 'A carrier is not an infection. Mixing screening swabs with clinical cultures inflates resistance (CLSI M39). A value of <b>0</b> means none were found in the data; it does not mean the check failed.'],
+                ['<b>Repeat isolates removed (CLSI M39)</b>', 'The same patient and the same organism in the same year is counted <b>once</b>, using the first isolate. Later ones are removed.', 'A patient with a long stay has many cultures. Without this rule the same resistant bacterium is counted again and again and resistance looks higher than it is.'],
+                ['<b>First isolates analysed</b>', 'Records minus screening cultures minus repeats. <b>This is the number used by every other table and chart of the year.</b>', 'This is the real <b>n</b> of the report.']]) +
+            P('<b>Rule of thumb:</b> a large number of repeats is normal in a hospital with many long-stay patients. A number of repeats that is zero while patient identifiers are missing is suspicious (see Part 2).') +
+            H('Part 2. Completeness of the data fields') +
+            P('Each line shows the <b>percentage of records that have that piece of information</b>. Missing information cannot be recovered by the dashboard.') +
+            T(['Line', 'What it means', 'What goes wrong if it is low'], [
+                ['<b>With patient identifier</b>', 'The record has a patient number that lets the app recognise the same patient again. It is needed for de-duplication.', 'Repeats cannot be found, so the same patient may be counted several times and resistance is overestimated.'],
+                ['<b>With ward</b>', 'The record shows which ward the patient was in. It is needed for the unit switch and the ICU comparison.', 'Records without a ward cannot be placed in ICU or non-ICU, so the unit views are incomplete.'],
+                ['<b>With specimen type</b>', 'The record shows the specimen (blood, urine, wound...). It is needed for specimen reports such as blood-only.', 'Specimen-specific antibiograms (for example blood) leave out these records.'],
+                ['<b>With at least one AST result</b>', 'The isolate has at least one susceptibility result (S, I or R) for any antibiotic. AST means antimicrobial susceptibility testing.', 'An isolate with no AST result adds to the count of isolates but cannot add to any resistance percentage.']]) +
+            P('<b>What is a good value?</b> Aim for close to 100%. There is no single official cut-off; as a practical rule, treat a result with caution when a field is missing for more than about 1 record in 10, and ask the laboratory or data-entry team to check the source file.') +
+            H('Part 3. Testing coverage for the priority indicators') +
+            P('A resistance percentage is calculated only among the isolates that were <b>actually tested</b>. These lines show how many isolates of a group were tested for the antibiotic that defines each indicator. The figure is the percentage, with the counts in brackets.') +
+            T(['Line', 'Tested means at least one of', 'Indicator it supports'], [
+                ['<b>Enterobacterales tested for a carbapenem</b>', 'Meropenem, imipenem, ertapenem or doripenem', 'CRE (carbapenem-resistant Enterobacterales)'],
+                ['<b>Enterobacterales tested for a 3rd-gen. cephalosporin</b>', 'Ceftriaxone, cefotaxime or ceftazidime', '3GC-R (third-generation cephalosporin resistance)'],
+                ['<b><i>S. aureus</i> tested for cefoxitin or oxacillin</b>', 'Cefoxitin, oxacillin or the cefoxitin screen', 'MRSA (methicillin-resistant <i>S. aureus</i>)'],
+                ['<b><i>Enterococcus</i> tested for vancomycin</b>', 'Vancomycin', 'VRE (vancomycin-resistant enterococci)']]) +
+            H('How to read a coverage line') + L([
+                '<b>99.3% (136/137)</b> means 136 of 137 Enterobacterales had a carbapenem result. One was not tested, so it cannot be classified. The CRE figure is based on 136 isolates.',
+                '<b>100% (44/44)</b> means every <i>S. aureus</i> was tested, so the MRSA figure covers all of them.',
+                '<b>A dash (-)</b> means there were no isolates of that group in the year, so there is nothing to measure.']) +
+            H('Why testing coverage matters') + P('Laboratories do not always test every antibiotic on every isolate. If an antibiotic is tested mainly on isolates already suspected to be resistant, the percentage will look worse than it really is. If it is tested mainly on easy, susceptible isolates, it will look better. The higher the coverage, the less this bias. WHO GLASS also asks that results are reported together with the number of isolates tested.') +
+            H('What to do when a value is low') + L([
+                'Do not delete the indicator; read it with caution and say so when you present it.',
+                'Ask the laboratory whether the antibiotic was really tested and whether it was exported from WHONET.',
+                'Check whether the field was entered in the data-entry app. A missing ward or specimen is usually a data-entry gap, not a laboratory problem.',
+                'Repeat the check next year and see whether coverage improved. Improvement is itself a useful result.']) +
+            TIP('These lines measure whether a result <b>exists</b>. They do not tell you whether testing was appropriate or correct. Quality of testing is checked by the laboratory with quality control strains (CLSI M100).')],
 
         ['quarter', 'Last Quarter tab: trend and where the burden is', () =>
             P('A quarter has enough isolates to judge direction and to compare units, which a single month usually cannot.') +
@@ -212,6 +250,7 @@
                 ['CLSI', 'Clinical and Laboratory Standards Institute: publishes the breakpoints (M100) and the rules for antibiograms (M39).'],
                 ['GLASS', 'WHO Global Antimicrobial Resistance and Use Surveillance System.'], ['MIC', 'Minimum inhibitory concentration: the lowest drug concentration that stops growth.'],
                 ['n', 'Number of isolates (or cultures) tested.'], ['ns', 'Not statistically significant.'], ['pp', 'Percentage points: the difference between two percentages.'],
+                ['First isolate', 'The first result for a patient and organism in the reported period. Repeats are not counted (CLSI M39).'], ['De-duplication', 'Removing repeat isolates so each patient and organism is counted once.'], ['Screening culture', 'A swab taken to detect carriage of a resistant organism, not to diagnose infection. Excluded from the analysis.'], ['Completeness', 'The share of records in which a field (patient identifier, ward, specimen, AST) is filled in.'], ['Testing coverage', 'The share of isolates that were actually tested for the antibiotic an indicator depends on.'], ['Patient identifier', 'A code that lets the app recognise the same patient again; names are never shown.'],
                 ['WHONET', 'Free WHO software used by laboratories to record and analyse susceptibility data.'], ['ESBL', 'Extended-spectrum beta-lactamase.']])],
 
         ['refs', 'References', () => {
