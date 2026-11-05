@@ -338,6 +338,29 @@ function mdrInfoHtml(px, pp) {
 const AWARE_NAMES = { A: 'Access', W: 'Watch', R: 'Reserve' };
 
 // Antibiotic chart details: how to read the chart, selective testing, AWaRe, contaminants
+// Chart-specific notes under the chart key: selective tests, WHO AWaRe groups and possible contaminants
+function chartNoteBlocks(selectiveNotes, groups, contaminantCount) {
+    const H = t => `<div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;margin:14px 0 6px">${t}</div>`;
+    let out = '';
+    if (selectiveNotes.length) {
+        const rows = selectiveNotes.map(n => {
+            const m = String(n).match(/^(.*?)\s*\((\d+\s*\/\s*\d+)\)\s*$/);
+            const name = m ? m[1] : n, cnt = m ? m[2].replace(/\s+/g, '') : '';
+            return `<div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;border-bottom:1px solid #f1f5f9"><span style="color:#334155">${name}</span><span style="color:#64748b;font-variant-numeric:tabular-nums;white-space:nowrap">${cnt}</span></div>`;
+        }).join('');
+        out += H('&dagger; Selective tests <span style="text-transform:none;letter-spacing:0;font-weight:500">(tested / isolates)</span>') + `<div style="font-size:11px;line-height:1.4">${rows}</div>`;
+    }
+    const col = { A: ['#d1fae5', '#065f46'], W: ['#fef3c7', '#92400e'], R: ['#fee2e2', '#991b1b'] };
+    const keys = ['A', 'W', 'R'].filter(k => groups[k].length);
+    if (keys.length) {
+        out += H('WHO AWaRe groups') + keys.map(k => `<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px">
+            <span style="flex:none;width:64px;text-align:center;font-size:10px;font-weight:700;padding:3px 0;border-radius:6px;background:${col[k][0]};color:${col[k][1]}">${AWARE_NAMES[k]}</span>
+            <span style="flex:1;line-height:1.9">${groups[k].map(a => `<span style="display:inline-block;font-size:11px;padding:0 8px;margin:0 4px 0 0;border-radius:999px;background:#f1f5f9;color:#334155;line-height:1.7">${a}</span>`).join('')}</span></div>`).join('');
+    }
+    if (contaminantCount > 0) out += H('Possible contaminants') + `<div style="font-size:11px;line-height:1.45;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;color:#92400e"><b>${contaminantCount}</b> blood isolate(s) of this organism are possible skin-flora contaminants. Review them clinically.</div>`;
+    return out;
+}
+
 function renderChartNotes(containerSel, selectiveNotes, contaminantCount, shownAbx) {
     const key = 'abx_' + containerSel.replace('#', '');
     let html = '<h5>How to read the bars</h5><ul>' +
@@ -345,21 +368,14 @@ function renderChartNotes(containerSel, selectiveNotes, contaminantCount, shownA
         '<li><b>Faded grey bar, name ending with *:</b> fewer than 30 isolates were tested. Interpret with caution (CLSI M39).</li>' +
         '<li><b>Name ending with &dagger;:</b> selective test. The antibiotic was tested on fewer than half of the isolates, so the percentage may be biased.</li>' +
         '<li>Tap a bar: shows n (number of isolates tested) and the 95% CI. The bar height is always the selected percentage.</li></ul>';
-    if (selectiveNotes.length) html += `<h5>Selectively tested agents (tested / isolates)</h5><ul>${selectiveNotes.map(n => '<li>' + n + '</li>').join('')}</ul><p>Only part of the isolates were tested, so the resistance rate may be overestimated.</p>`;
     const groups = { A: [], W: [], R: [] };
     (shownAbx || []).forEach(a => { if (AWARE_CLASS[a]) groups[AWARE_CLASS[a]].push(a); });
-    if (groups.A.length || groups.W.length || groups.R.length) {
-        html += '<h5>WHO AWaRe classification</h5><ul>';
-        ['A', 'W', 'R'].forEach(k => { if (groups[k].length) html += `<li><b>${AWARE_NAMES[k]}:</b> ${groups[k].join(', ')}</li>`; });
-        html += '</ul>';
-    }
-    if (contaminantCount > 0) html += `<h5>Possible contaminants</h5><p><b>${contaminantCount}</b> blood isolate(s) of this organism are possible skin-flora contaminants. Review them clinically.</p>`;
+    // organised blocks (inline styles so they look the same on screen and in the printed report)
+    const blocks = chartNoteBlocks(selectiveNotes, groups, contaminantCount);
+    html += blocks;
     setInfo(key, 'About this chart', html);
     // the details that matter for this particular chart are shown under the chart key
-    let extra = '';
-    if (selectiveNotes.length) extra += `<div><b>&dagger; Selective tests here</b> (tested / isolates): ${selectiveNotes.join(', ')}.</div>`;
-    if (groups.A.length || groups.W.length || groups.R.length) extra += '<div style="margin-top:6px"><b>WHO AWaRe groups</b></div><ul>' + ['A', 'W', 'R'].filter(k => groups[k].length).map(k => `<li><b>${AWARE_NAMES[k]}:</b> ${groups[k].join(', ')}</li>`).join('') + '</ul>';
-    if (contaminantCount > 0) extra += `<div style="margin-top:6px"><b>${contaminantCount}</b> blood isolate(s) of this organism are possible skin-flora contaminants. Review them clinically.</div>`;
+    const extra = blocks;
     $('#extra_' + containerSel.replace('#', '')).html(extra);
 }
 
