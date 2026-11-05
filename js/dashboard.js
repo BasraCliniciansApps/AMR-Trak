@@ -204,6 +204,34 @@ function ciTooltip(metricName) {
         }
     };
 }
+
+// Wide bar charts scroll sideways: keep the value axis (and its title) visible on the left while scrolling.
+// A copy of the axis area is drawn on a sticky overlay canvas; it adds nothing to the layout and is ignored by printing.
+const stickyYAxis = {
+    id: 'stickyYAxis',
+    afterRender(chart) {
+        const cv = chart.canvas, wrap = cv && cv.parentElement, sc = wrap && wrap.parentElement;
+        const old = sc && sc.querySelector(':scope > canvas.y-sticky');
+        const scrolls = sc && /overflow-x-auto/.test(sc.className) && wrap.offsetWidth > sc.clientWidth + 4 && chart.chartArea && chart.config.type === 'bar';
+        if (!scrolls) { if (old && old._owner === chart) old.remove(); return; }
+        const ca = chart.chartArea, dpr = chart.currentDevicePixelRatio || window.devicePixelRatio || 1;
+        const w = Math.ceil(ca.left), h = cv.clientHeight, bottom = Math.ceil(ca.bottom + 6);
+        const ov = old || document.createElement('canvas');
+        if (!old) { ov.className = 'y-sticky'; sc.insertBefore(ov, wrap); }
+        ov._owner = chart;
+        ov.width = Math.round(w * dpr); ov.height = Math.round(h * dpr);
+        ov.style.cssText = 'position:sticky;left:0;display:block;z-index:5;pointer-events:none;width:' + w + 'px;height:' + h + 'px;margin-bottom:-' + h + 'px;';
+        const c2 = ov.getContext('2d');
+        c2.fillStyle = '#ffffff'; c2.fillRect(0, 0, ov.width, Math.round(bottom * dpr));
+        c2.drawImage(cv, 0, 0, ov.width, Math.round(bottom * dpr), 0, 0, ov.width, Math.round(bottom * dpr));
+    },
+    beforeDestroy(chart) {
+        const wrap = chart.canvas && chart.canvas.parentElement, sc = wrap && wrap.parentElement;
+        const old = sc && sc.querySelector(':scope > canvas.y-sticky');
+        if (old && old._owner === chart) old.remove();
+    }
+};
+try { if (window.Chart && Chart.register) Chart.register(stickyYAxis); } catch (e) { console.warn('stickyYAxis', e); }
 // تم حذف barLabelsPlugin نهائياً لمنع أي كتابة فوق الأعمدة
 
 function getCustomAntibiotics() { 
