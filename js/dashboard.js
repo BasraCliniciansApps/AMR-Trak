@@ -222,7 +222,10 @@ const stickyYAxis = {
         ov.width = Math.round(w * dpr); ov.height = Math.round(h * dpr);
         ov.style.cssText = 'position:sticky;left:0;display:block;z-index:5;pointer-events:none;width:' + w + 'px;height:' + h + 'px;margin-bottom:-' + h + 'px;';
         const c2 = ov.getContext('2d');
-        c2.fillStyle = '#ffffff'; c2.fillRect(0, 0, ov.width, Math.round(bottom * dpr));
+        // opaque strip over the whole height: bars AND their labels disappear at the axis line instead of sliding under the numbers
+        let bg = '#ffffff';
+        for (let el = sc; el; el = el.parentElement) { const col = getComputedStyle(el).backgroundColor; if (col && col !== 'transparent' && !/rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0\s*\)/.test(col)) { bg = col; break; } }
+        c2.fillStyle = bg; c2.fillRect(0, 0, ov.width, ov.height);
         c2.drawImage(cv, 0, 0, ov.width, Math.round(bottom * dpr), 0, 0, ov.width, Math.round(bottom * dpr));
     },
     beforeDestroy(chart) {
