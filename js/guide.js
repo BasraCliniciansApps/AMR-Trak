@@ -27,19 +27,19 @@
             T(['Tab', 'Purpose', 'Typical question'], [
                 ['<b>Analytics</b>', 'Free exploration of all data with filters.', 'How resistant is <i>K. pneumoniae</i> to meropenem in blood?'],
                 ['<b>Last Year</b>', 'The annual report: the formal reference for the year.', 'What is our cumulative antibiogram and are we improving?'],
-                ['<b>Last Quarter</b>', 'Medium-term trend and where resistance concentrates.', 'Is resistance rising over the last quarters? Which wards carry the burden?'],
+                ['<b>Last 3 Months</b>', 'Medium-term trend and where resistance concentrates.', 'Is resistance rising over the last quarters? Which wards carry the burden?'],
                 ['<b>Last Month</b>', 'Operational follow-up and alerts.', 'Did anything urgent happen this month?'],
                 ['<b>Cultures</b>', 'Laboratory activity and blood culture quality.', 'How many cultures grew, and how many were contaminated?']]) +
             P('The month, quarter and year shown in the three "Last" tabs are chosen by the surveillance team, so everyone reads the same reporting period.')],
 
         ['tools', 'How to use the tools', () =>
             H('Moving around') + L([
-                '<b>Bottom bar:</b> switches between Analytics, Last Year, Last Quarter, Last Month and Cultures.',
+                '<b>Bottom bar:</b> switches between Analytics, Last Year, Last 3 Months, Last Month and Cultures.',
                 '<b>Top bar:</b> (i) About, the open book is this Guide, the printer prints the open tab, and the green dot shows the live connection.',
                 '<b>Unit scope</b> (All units, ICU, Non-ICU) filters everything on every tab.',
                 '<b>Section headers</b> in Analytics open and close when tapped. Open only the one you need.']) +
             H('Choosing the data (Analytics)') + L([
-                '<b>Time Period:</b> All Times, Last Year, Last Quarter or Last Month. Start with a wider period when numbers are small, because more isolates give more reliable percentages.',
+                '<b>Time Period:</b> All Times, Last Year, Last 3 Months or Last Month. Start with a wider period when numbers are small, because more isolates give more reliable percentages.',
                 '<b>Specimen:</b> restricts to blood, urine, wound and so on. Resistance often differs by site, so choose the specimen that matches the patient\'s infection.',
                 '<b>Ward (All, In, Out):</b> all patients, inpatients, or outpatients. The emergency department is counted with the outpatients (patients seen without admission).',
                 '<b>Bacteria or Antimicrobial:</b> the organism or the drug you want to examine.',
@@ -113,7 +113,7 @@
                 'They are the most widely used standards for hospital laboratories worldwide, and the WHO surveillance system (GLASS) and WHONET are built to work with them.',
                 'M100 and M39 fit together: M100 decides the result of each isolate, and M39 decides how the isolates are counted.',
                 'Using one recognised standard also makes the dashboard defensible when results are audited or shared with the Ministry or the WHO.']) +
-            TIP('One deliberate adaptation: M39 is designed for a yearly analysis. The Last Year tab follows it (a 12-month analysis period). The Last Quarter and Last Month tabs apply the same first-isolate rule within the quarter or month, for follow-up and early warning, so their percentages should be read as indicators, not as a formal antibiogram.')],
+            TIP('One deliberate adaptation: M39 is designed for a yearly analysis. The Last Year tab follows it (a 12-month analysis period). The Last 3 Months and Last Month tabs apply the same first-isolate rule within the quarter or month, for follow-up and early warning, so their percentages should be read as indicators, not as a formal antibiogram.')],
 
         ['marks', 'How to read the bars: colours and symbols', () =>
             P('The three antibiotic charts in the Analytics tab use the same key. It is shown under each chart.') +
@@ -136,7 +136,7 @@
             H('MDR / XDR / PDR panel') + P('Explained in the section on multidrug resistance below.')],
 
         ['markers', 'Priority resistance indicators', () =>
-            P('These indicators are the ones recommended by the WHO (GLASS and the Bacterial Priority Pathogens List) because they identify the resistance that is most dangerous or most difficult to treat. They appear in the Last Year, Last Quarter and Last Month tabs.') +
+            P('These indicators are the ones recommended by the WHO (GLASS and the Bacterial Priority Pathogens List) because they identify the resistance that is most dangerous or most difficult to treat. They appear in the Last Year, Last 3 Months and Last Month tabs.') +
             T(['Indicator', 'Organisms', 'Definition'], [
                 ['<b>3GC-R</b>', '<i>E. coli</i>, <i>K. pneumoniae</i>', 'Resistant to ceftriaxone, cefotaxime or ceftazidime. A practical marker for ESBL production.'],
                 ['<b>ESBL</b>', '<i>E. coli</i>, <i>K. pneumoniae</i>', 'Extended-spectrum beta-lactamase confirmed by the laboratory.'],
@@ -204,7 +204,7 @@
                 'Repeat the check next year and see whether coverage improved. Improvement is itself a useful result.']) +
             TIP('These lines measure whether a result <b>exists</b>. They do not tell you whether testing was appropriate or correct. Quality of testing is checked by the laboratory with quality control strains (CLSI M100).')],
 
-        ['quarter', 'Last Quarter tab: trend and where the burden is', () =>
+        ['quarter', 'Last 3 Months tab: trend and where the burden is', () =>
             P('A quarter has enough isolates to judge direction and to compare units, which a single month usually cannot.') +
             H('Trend over the last 8 quarters') + L(['<b>Why:</b> one quarter can be a fluctuation; a direction over several quarters is a real signal.', '<b>How to read:</b> follow each line. Hollow points mean fewer than 30 isolates. Tap a point for the confidence interval; overlapping intervals suggest no real change.']) +
             H('ICU compared with non-ICU') + L(['<b>Why:</b> ICUs have the sickest patients, the most antibiotic exposure and the most devices, so their resistance differs.', '<b>How to read:</b> compare the two columns. The last column gives the difference in percentage points and marks a statistically significant one (only when both groups have 30 or more tested).', '<b>Basis:</b> CLSI M39 supports stratifying results by location. The first isolate is chosen hospital-wide before the split.']) +
@@ -233,7 +233,7 @@
             H('Why ICU is shown separately') + P('Antimicrobial use, invasive devices and patient risk differ between intensive care and other wards, so a pooled result can hide ICU-specific resistance. CLSI M39 supports stratifying cumulative susceptibility data by patient location.') +
             H('How it is applied') + L([
                 'The first isolate per patient and organism is chosen across all wards first, and the ward filter is applied afterwards. A patient who moves between wards is therefore not counted twice.',
-                'The Last Quarter ICU comparison always shows both units, whatever the switch is set to.',
+                'The Last 3 Months ICU comparison always shows both units, whatever the switch is set to.',
                 'The switch may be hidden by the surveillance team; in that case the dashboard opens on the chosen default scope.'])],
 
         ['install', 'Install the app on your phone', () =>

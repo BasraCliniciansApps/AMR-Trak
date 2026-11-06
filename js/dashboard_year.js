@@ -27,13 +27,9 @@ const yaIsSIR = v => v === 'S' || v === 'I' || v === 'R' || v === 'SDD';
 // Rolling mode (default): the latest 12 months with data. Calendar mode: the year set by the surveillance team.
 function yaMode() { try { const v = localStorage.getItem('amr_ya_mode'); if (v === 'calendar' || v === 'rolling') return v; } catch (e) {} return 'rolling'; }
 window.yaSetMode = function (m) { try { localStorage.setItem('amr_ya_mode', m); } catch (e) {} renderAnnualReport(); };
-function yaLatestMonth() {
-    let latest = '';
-    getDashRecords().forEach(r => { const d = String(r.Date || '').slice(0, 7); if (/^\d{4}-\d{2}$/.test(d) && d > latest) latest = d; });
-    return latest;
-}
+function yaLatestMonth() { return dashAnchor(); }
 function yaYear() {
-    if (yaMode() === 'calendar') { const s = getDashSettings(); return String(parseInt(s.mobile_dash_fullyear) || (new Date().getFullYear() - 1)); }
+    if (yaMode() === 'calendar') return dashCalendarYear();
     const l = yaLatestMonth();
     return l ? ymShift(l, -11) + '..' + l : String(new Date().getFullYear() - 1);
 }
@@ -485,13 +481,13 @@ function yaWindowCtl(y) {
     const host = document.getElementById('ya_window_ctl'); if (!host) return;
     const mode = yaMode(), l = yaLatestMonth();
     const rollKey = l ? ymShift(l, -11) + '..' + l : '';
-    const calKey = String(parseInt((getDashSettings() || {}).mobile_dash_fullyear) || (new Date().getFullYear() - 1));
+    const calKey = dashCalendarYear();
     const btn = (m, t) => `<button type="button" class="${m === mode ? 'on' : ''}" onclick="yaSetMode('${m}')">${t}</button>`;
     const missing = yaMissingMonths(y);
     let h = '<div class="ya-seg ya-seg-wrap">' + btn('rolling', 'Last 12 months' + (rollKey ? ' <span class="ya-mute">(' + yaLabel(rollKey) + ')</span>' : '')) + btn('calendar', 'Calendar year <span class="ya-mute">(' + calKey + ')</span>') + '</div>';
     h += '<p class="ya-note">' + (mode === 'rolling'
-        ? 'Analysis period: the latest 12 months with data. It moves forward each time newer data are loaded. CLSI M39 (Sections 6.3 and 6.4) asks for an annual analysis with an analysis period of one year (for example), and for the first isolate per patient over that period.'
-        : 'Analysis period: the calendar year set by the surveillance team. CLSI M39 (Section 6.4) accepts a calendar year as an analysis period; a fixed year is easier to compare between reports.') + '</p>';
+        ? 'Analysis period: the 12 months ending at the "Report data up to" month (or the latest month with data if none is set). It moves forward when that month changes. CLSI M39 (Sections 6.3 and 6.4) asks for an annual analysis with an analysis period of one year (for example), and for the first isolate per patient over that period.'
+        : 'Analysis period: the last complete calendar year before the "Report data up to" month. CLSI M39 (Section 6.4) accepts a calendar year as an analysis period; a fixed year is easier to compare between reports.') + '</p>';
     if (missing.length) h += '<p class="ya-note" style="color:#b45309"><b>Incomplete period:</b> no data for ' + missing.map(ymLabel).join(', ') + '. Percentages may be biased by seasonality and do not meet the one-year analysis period recommended by CLSI M39 (Sections 6.3 and 6.4).</p>';
     host.innerHTML = h;
 }

@@ -135,14 +135,14 @@ const INFO_OVERRIDE = (function () {
         ['WHO_GLASS']);
     add('op_m_compare', 'Comparison with earlier periods',
         H('What it shows') + P('The same indicators for this month, the previous month and the same month last year. The last column helps separate real change from seasonal effects.') +
-        H('How to read it') + L(['Each cell shows resistant / tested, with the percentage below it.', 'A single month rarely reaches 30 tested isolates, so no trend is claimed from one month.', 'Use the Last Quarter and Last Year tabs to judge trends.']),
+        H('How to read it') + L(['Each cell shows resistant / tested, with the percentage below it.', 'A single month rarely reaches 30 tested isolates, so no trend is claimed from one month.', 'Use the Last 3 Months and Last Year tabs to judge trends.']),
         ['CLSI_M39', 'WHO_GLASS']);
     add('op_m_bloodq', 'Possible blood contaminants',
         H('What it shows') + P('The share of blood isolates that are organisms usually found on skin (coagulase-negative staphylococci, <i>Corynebacterium</i>, <i>Micrococcus</i> and similar). A high share suggests a problem in blood collection.') +
         H('Cautions') + P('The CLSI M47 benchmark (3% or less) is defined per blood culture collected, not per isolate. The Cultures tab gives the proper rate.'),
         ['CLSI_M47']);
 
-    // ---------------------------------------------------------------- Last Quarter
+    // ---------------------------------------------------------------- Last 3 Months
     add('op_q_run', 'Trend over the last 8 quarters',
         H('What it shows') + P('The percentage of resistant first isolates for the priority indicators over the eight quarters ending at the selected one.') +
         H('How to read it') + L(['A hollow point and a dashed line mean fewer than 30 isolates were tested.', 'Tap a point to see the counts and the 95% Wilson confidence interval.', 'Follow a change over several quarters rather than a single point.']),

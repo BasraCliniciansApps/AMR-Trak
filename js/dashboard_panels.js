@@ -13,6 +13,20 @@ setInfo('scope', 'Unit scope', `<p>The switch filters every chart on the dashboa
 function getDashSettings() {
     try { return JSON.parse(localStorage.getItem('amr_live_settings')) || {}; } catch (e) { return {}; }
 }
+// The month all period windows end at: the "Report data up to" setting, or else the latest month with data
+function dashAnchor(records) {
+    const v = getDashSettings().mobile_dash_lastmonth;
+    if (/^\d{4}-\d{2}$/.test(v || '')) return v;
+    let latest = '';
+    (records || getDashRecords()).forEach(r => { const d = String(r.Date || '').slice(0, 7); if (/^\d{4}-\d{2}$/.test(d) && d > latest) latest = d; });
+    return latest;
+}
+// Last complete calendar year at or before the anchor month
+function dashCalendarYear(records) {
+    const a = dashAnchor(records);
+    if (!a) return String(new Date().getFullYear() - 1);
+    return String(a.slice(5, 7) === '12' ? parseInt(a.slice(0, 4), 10) : parseInt(a.slice(0, 4), 10) - 1);
+}
 function dashFlag(key) { return getDashSettings()[key] !== false; }
 function icuWardList() {
     const w = getDashSettings().dash_icu_wards;
@@ -97,7 +111,7 @@ window.switchTab = function (tab) {
         $('#headerTitle').text('Last Month Surveillance');
     } else if (tab === 'last_quarter') {
         $('#viewLastQuarter').removeClass('hidden'); $('#btnNavLastQuarter').addClass('active');
-        $('#headerTitle').text('Last Quarter Surveillance');
+        $('#headerTitle').text('Last 3 Months Surveillance');
     } else if (tab === 'lab') {
         $('#viewLab').removeClass('hidden'); $('#btnNavLab').addClass('active');
         $('#headerTitle').text('Culture Overview');
@@ -462,7 +476,7 @@ const profTitle = (p, n) => () => $('#live_' + p + '_profile' + n + '_title').te
 
 function monthSection(p, label) {
     return {
-        id: 'sec_' + label, title: () => $('#live_' + (p === 'm' ? 'month' : p) + '_title').text() || (p === 'm' ? 'Last Month' : 'Last Quarter'),
+        id: 'sec_' + label, title: () => $('#live_' + (p === 'm' ? 'month' : p) + '_title').text() || (p === 'm' ? 'Last Month' : 'Last 3 Months'),
         infos: [['Overview', 'overview_' + p], ['MDR / XDR / PDR classification', 'mdr_' + p], ['Threat watchlist', 'sec_watch']],
         charts: [
             { title: 'MDR / XDR / PDR: Overall', el: '#chart_' + p + '_mdr_pie' },

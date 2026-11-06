@@ -19,7 +19,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 
 // ---------------------------------------------------------------- configuration
 const TOGGLES = {
-    tabs: [['tab_year', 'Last Year'], ['tab_quarter', 'Last Quarter'], ['tab_month', 'Last Month'], ['tab_lab', 'Culture Overview']],
+    tabs: [['tab_year', 'Last Year'], ['tab_quarter', 'Last 3 Months'], ['tab_month', 'Last Month'], ['tab_lab', 'Culture Overview']],
     analytics: [['sec_prevalence', 'Clinical Prevalence & AST Profile'], ['sec_patho', 'Bacteria / Fungi Susceptibility Profile'], ['sec_abx', 'Antimicrobial In Vitro Activity Profile'], ['sec_heatmap', 'Advanced Cross-Search (Heatmaps)'], ['sec_mdr_panel', 'MDR / XDR / PDR Analysis']],
     content: [['sec_mdr', 'MDR / XDR / PDR card']]
 };
@@ -53,10 +53,7 @@ function normalise(s) {
     s = s || {};
     const now = new Date(), lq = lastCompleteQuarter();
     const o = {
-        mobile_dash_fullyear: parseInt(s.mobile_dash_fullyear) || now.getFullYear() - 1,
-        mobile_dash_quarter: /^Q[1-4]$/.test(s.mobile_dash_quarter) ? s.mobile_dash_quarter : lq.q,
-        mobile_dash_year: parseInt(s.mobile_dash_year) || lq.y,
-        mobile_dash_month: /^\d{4}-\d{2}$/.test(s.mobile_dash_month || '') ? s.mobile_dash_month : now.toISOString().slice(0, 7),
+        mobile_dash_lastmonth: /^\d{4}-\d{2}$/.test(s.mobile_dash_lastmonth || '') ? s.mobile_dash_lastmonth : '',
         dash_show_scope: s.dash_show_scope !== false,
         dash_default_scope: ['all', 'icu', 'nonicu'].includes(s.dash_default_scope) ? s.dash_default_scope : 'all',
         dash_default_period: ['month', 'quarter', 'year', 'all'].includes(s.dash_default_period) ? s.dash_default_period : 'month',
@@ -100,23 +97,17 @@ function render() {
     const open = $$('.card.open').map(c => c.dataset.card);
 
     const periods = `
-        <div class="field"><label>Last Year tab</label>
-            <div class="stepper"><button type="button" data-step="mobile_dash_fullyear" data-d="-1" aria-label="Previous year">&minus;</button>
-            <input type="number" inputmode="numeric" data-k="mobile_dash_fullyear" value="${cur.mobile_dash_fullyear}"><button type="button" data-step="mobile_dash_fullyear" data-d="1" aria-label="Next year">+</button></div>
-            <p class="hint">A full calendar year: the reference period for CLSI M39 and WHO GLASS reporting.</p></div>
-        <div class="field"><label>Last Quarter tab</label>
-            <div class="seg" id="qSeg">${['Q1', 'Q2', 'Q3', 'Q4'].map(q => `<button type="button" data-q="${q}" class="${cur.mobile_dash_quarter === q ? 'on' : ''}">${q}</button>`).join('')}</div>
-            <div class="stepper" style="margin-top:8px"><button type="button" data-step="mobile_dash_year" data-d="-1" aria-label="Previous year">&minus;</button>
-            <input type="number" inputmode="numeric" data-k="mobile_dash_year" value="${cur.mobile_dash_year}"><button type="button" data-step="mobile_dash_year" data-d="1" aria-label="Next year">+</button></div></div>
-        <div class="field"><label>Last Month tab</label>
-            <input type="month" class="input" data-k="mobile_dash_month" value="${cur.mobile_dash_month}"></div>`;
+        <div class="field"><label>Report data up to (last complete month)</label>
+            <input type="month" class="input" data-k="mobile_dash_lastmonth" value="${cur.mobile_dash_lastmonth}">
+            <p class="hint">Every period in the dashboard ends at this month: Last Month is this month, Last 3 Months and Last 12 Months end here, and the calendar year is the last complete year before it. Set it to the latest month for which the full laboratory file has been loaded. Leave it empty to use the latest month that has data (a partly entered month would then count as the latest).</p>
+            <button type="button" class="btn" id="clearLastMonth" style="margin-top:8px;width:100%;background:#e2e8f0;color:#334155">Use latest month with data</button></div>`;
 
     const scope = `
         <div class="row" style="margin-top:4px"><span>Show the All / ICU / Non-ICU switch</span><label class="sw"><input type="checkbox" data-k="dash_show_scope" ${cur.dash_show_scope ? 'checked' : ''}><i></i></label></div>
         <div class="field"><label>Scope when the dashboard opens</label>
             <div class="seg" id="scopeSeg">${[['all', 'All units'], ['icu', 'ICU'], ['nonicu', 'Non-ICU']].map(([v, t]) => `<button type="button" data-scope="${v}" class="${cur.dash_default_scope === v ? 'on' : ''}">${t}</button>`).join('')}</div></div>
         <div class="field"><label>Default period for MDR and Culture Overview</label>
-            <select class="select" data-k="dash_default_period">${[['month', 'Latest month'], ['quarter', 'Latest complete quarter'], ['year', 'Latest year'], ['all', 'All data']].map(([v, t]) => `<option value="${v}" ${cur.dash_default_period === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+            <select class="select" data-k="dash_default_period">${[['month', 'Latest month'], ['quarter', 'Latest 3 months'], ['year', 'Latest year'], ['all', 'All data']].map(([v, t]) => `<option value="${v}" ${cur.dash_default_period === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
         <div class="field"><label>Wards counted as ICU</label>
             <button type="button" class="wd-btn" id="wardBtn" aria-expanded="false"><span id="wardSummary">${esc(wardSummary(cur.dash_icu_wards))}</span><span aria-hidden="true">&#9662;</span></button>
             <div class="wd-list" id="wardList">${wards.map(w => `<label class="wd-row"><input type="checkbox" data-ward="${esc(w)}" ${cur.dash_icu_wards.includes(w) ? 'checked' : ''}><span>${esc(w)}</span></label>`).join('')}</div>
@@ -130,7 +121,7 @@ function render() {
         card('periods', 'calendar', 'Reporting periods', periods) +
         card('tabs', 'tabs', 'Tabs', `<div>${toggleRows(TOGGLES.tabs)}</div>`) +
         card('analytics', 'chart', 'Analytics sections', `<div>${toggleRows(TOGGLES.analytics)}</div>`) +
-        card('content', 'layers', 'Period tab content', `<div>${toggleRows(TOGGLES.content)}</div><p class="hint" style="margin-top:8px">Applies to the Last Month, Last Quarter and Last Year tabs.</p>`) +
+        card('content', 'layers', 'Period tab content', `<div>${toggleRows(TOGGLES.content)}</div><p class="hint" style="margin-top:8px">Applies to the Last Month, Last 3 Months and Last Year tabs.</p>`) +
         card('scope', 'building', 'Unit scope', scope) +
         card('profiles', 'flask', 'Threat watchlist', profiles);
     open.forEach(id => $('#card_' + id) && $('#card_' + id).classList.add('open'));
@@ -145,7 +136,7 @@ function count(list) { const on = list.filter(([k]) => cur[k]).length; return `$
 function summaries() {
     if (!cur) return;
     const set = (id, t) => { const el = $('#sum_' + id); if (el) el.textContent = t; };
-    set('periods', `${cur.mobile_dash_fullyear}  ·  ${cur.mobile_dash_quarter} ${cur.mobile_dash_year}  ·  ${monthName(cur.mobile_dash_month)}`);
+    set('periods', cur.mobile_dash_lastmonth ? 'Up to ' + monthName(cur.mobile_dash_lastmonth) : 'Latest month with data');
     set('tabs', count(TOGGLES.tabs));
     set('analytics', count(TOGGLES.analytics));
     set('content', count(TOGGLES.content));
@@ -175,8 +166,8 @@ document.addEventListener('click', e => {
         const k = step.dataset.step, v = Math.min(2100, Math.max(2000, (parseInt(cur[k]) || new Date().getFullYear()) + parseInt(step.dataset.d)));
         cur[k] = v; $(`input[data-k="${k}"]`).value = v; refreshState(); return;
     }
-    const q = e.target.closest('[data-q]');
-    if (q) { cur.mobile_dash_quarter = q.dataset.q; $$('#qSeg button').forEach(b => b.classList.toggle('on', b === q)); refreshState(); return; }
+    if (e.target.id === 'clearLastMonth') { setVal('mobile_dash_lastmonth', ''); const inp = $('input[data-k="mobile_dash_lastmonth"]'); if (inp) inp.value = ''; return; }
+
     const sc = e.target.closest('[data-scope]');
     if (sc) { cur.dash_default_scope = sc.dataset.scope; $$('#scopeSeg button').forEach(b => b.classList.toggle('on', b === sc)); refreshState(); return; }
     if (e.target.closest('#wardBtn')) { const l = $('#wardList'), o = l.classList.toggle('open'); $('#wardBtn').setAttribute('aria-expanded', o); return; }
@@ -193,13 +184,9 @@ document.addEventListener('change', e => {
     if (!el) return;
     const k = el.dataset.k;
     if (el.type === 'checkbox') setVal(k, el.checked);
-    else if (k === 'mobile_dash_fullyear' || k === 'mobile_dash_year') {
-        const v = parseInt(el.value);
-        if (!v || v < 2000 || v > 2100) { el.value = cur[k]; toast('Enter a valid year (2000-2100).'); return; }
-        setVal(k, v);
-    } else if (k === 'mobile_dash_month') {
-        if (!/^\d{4}-\d{2}$/.test(el.value)) { el.value = cur[k]; return; }
-        setVal(k, el.value);
+    else if (k === 'mobile_dash_lastmonth') {
+        if (el.value && !/^\d{4}-\d{2}$/.test(el.value)) { el.value = cur[k]; return; }
+        setVal(k, el.value || '');
     } else setVal(k, el.value);
 });
 

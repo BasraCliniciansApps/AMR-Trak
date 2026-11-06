@@ -1,5 +1,5 @@
 // =====================================================================
-// Last Month and Last Quarter panels (operational and analytical views)
+// Last Month and Last 3 Months panels (operational and analytical views)
 //   Month   : priority alerts, possible clusters, comparison with the previous month and the same month last year
 //   Quarter : run chart of the last 8 quarters, ICU vs non-ICU, ward ranking
 // All figures use first isolates per patient and organism within the reported period (CLSI M39).
@@ -21,10 +21,8 @@ function opShiftMonth(ym, d) { let [y, m] = ym.split('-').map(Number); m += d; w
 function opQuarterRange(y, q) { const a = (q - 1) * 3 + 1; return [y + '-' + String(a).padStart(2, '0'), y + '-' + String(a + 2).padStart(2, '0')]; }
 function opSettingsPeriods() {
     const s = getDashSettings();
-    const month = s.mobile_dash_month || new Date().toISOString().slice(0, 7);
-    const q = parseInt(String(s.mobile_dash_quarter || 'Q1').replace('Q', '')) || 1;
-    const qy = parseInt(s.mobile_dash_year) || new Date().getFullYear();
-    return { month, q, qy };
+    const month = dashAnchor();
+    return { month, q: [month ? opShiftMonth(month, -2) : '', month], qy: 0 };
 }
 // first isolates inside [from, to] (months); de-duplication is applied within the reported period
 function opFirst(records, from, to) { return applyDeduplication(opInRange(opClean(records), from, to)); }
@@ -61,7 +59,7 @@ function opDiff(r1, n1, r2, n2) {
 // ---------------------------------------------------------------- skeleton
 const OP_CARDS = {
     m: [['alerts', 'Priority alerts', true], ['clusters', 'Possible clusters (14 days)', true], ['compare', 'Comparison with earlier periods', true], ['bloodq', 'Blood isolates: possible contaminants', false]],
-    q: [['run', 'Trend over the last 8 quarters', true], ['icu', 'ICU compared with non-ICU', true], ['wards', 'Ward ranking by MDR / XDR / PDR', true]]
+    q: [['run', 'Trend over the last 8 three-month periods', true], ['icu', 'ICU compared with non-ICU', true], ['wards', 'Ward ranking by MDR / XDR / PDR', true]]
 };
 function opBody(p, id) {
     if (id === 'run') return '<div class="ya-chart"><canvas id="chart_q_run"></canvas></div><div id="op_q_run_table" class="ya-scroll"></div><p class="ya-note" id="op_q_run_note"></p>';
@@ -179,7 +177,7 @@ function opCompare(month) {
     rows.push(`<tr><td class="ya-l"><b>MDR / XDR / PDR</b></td>${cols.map(c => opCell(c.mdr.plus, c.mdr.n)).join('')}</tr>`);
     rows.push(`<tr><td class="ya-l"><b>XDR / PDR</b></td>${cols.map(c => opCell(c.mdr.xp, c.mdr.n)).join('')}</tr>`);
     $('#op_m_compare_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Indicator</th>${head}</tr></thead><tbody>${rows.join('')}</tbody></table>`);
-    setNote('#op_m_compare_note', ['Each cell shows resistant / tested, with the percentage below it.', '<b>*</b> (grey) = fewer than 30 isolates tested. A single month is a count to watch, not a trend: small numbers change a lot by chance.', 'Use the Last Quarter and Last Year tabs to judge trends.']);
+    setNote('#op_m_compare_note', ['Each cell shows resistant / tested, with the percentage below it.', '<b>*</b> (grey) = fewer than 30 isolates tested. A single month is a count to watch, not a trend: small numbers change a lot by chance.', 'Use the Last 3 Months and Last Year tabs to judge trends.']);
 }
 
 // ---------------------------------------------------------------- MONTH: blood contaminants
@@ -197,10 +195,9 @@ function opRun(q, qy) {
     const src = getDashRecords();
     const per = [];
     for (let i = 7; i >= 0; i--) {
-        let idx = qy * 4 + (q - 1) - i, y = Math.floor(idx / 4), qq = (idx % 4) + 1;
-        const [a, b] = opQuarterRange(y, qq);
+        const b = opShiftMonth(q[1], -3 * i), a = opShiftMonth(b, -2);
         const f = opFirst(src, a, b);
-        per.push({ label: 'Q' + qq + ' ' + String(y).slice(2), f, st: opMarkerStats(f) });
+        per.push({ label: ymLabel(a).slice(0, 3) + '\u2013' + ymLabel(b).slice(0, 3) + ' ' + b.slice(2, 4), f, st: opMarkerStats(f) });
     }
     if (OP.chart) { try { OP.chart.destroy(); } catch (e) {} OP.chart = null; }
     const labels = CRITICAL_MARKERS.map(m => m.label);
@@ -225,12 +222,12 @@ function opRun(q, qy) {
     const head = per.map(p => `<th>${escHtml(p.label)}</th>`).join('');
     const rows = use.map(l => { const i = labels.indexOf(l); return `<tr><td class="ya-l"><b>${l}</b></td>${per.map(p => opCell(p.st[i].resistant, p.st[i].tested)).join('')}</tr>`; }).join('');
     $('#op_q_run_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Indicator</th>${head}</tr></thead><tbody>${rows}</tbody></table>`);
-    setNote('#op_q_run_note', ['Each quarter uses its own first isolates (CLSI M39).', '<b>Hollow point and dashed line</b> = fewer than 30 isolates tested: indicative only.', 'Tap a point to see the counts and the 95% confidence interval.', 'A change deserves attention when it persists over several quarters and the intervals do not overlap.']);
+    setNote('#op_q_run_note', ['Each 3-month block uses its own first isolates (CLSI M39).', '<b>Hollow point and dashed line</b> = fewer than 30 isolates tested: indicative only.', 'Tap a point to see the counts and the 95% confidence interval.', 'A change deserves attention when it persists over several quarters and the intervals do not overlap.']);
 }
 
 // ---------------------------------------------------------------- QUARTER: ICU vs non-ICU
 function opIcu(q, qy) {
-    const [a, b] = opQuarterRange(qy, q);
+    const [a, b] = q;
     const all = opFirst(getAllDashRecordsUnscoped(), a, b);       // first isolate chosen across all wards, then split by unit
     const icu = all.filter(r => wardInScope(r.Ward, 'icu')), non = all.filter(r => wardInScope(r.Ward, 'nonicu'));
     const si = opMarkerStats(icu), sn = opMarkerStats(non);
@@ -248,7 +245,7 @@ function opIcu(q, qy) {
 
 // ---------------------------------------------------------------- QUARTER: ward ranking
 function opWards(q, qy) {
-    const [a, b] = opQuarterRange(qy, q);
+    const [a, b] = q;
     const first = opFirst(getDashRecords(), a, b);
     const by = {};
     first.forEach(r => {
@@ -272,10 +269,10 @@ function opSetInfo() {
     setInfo('op_m_clusters', 'Possible clusters', P + 'Flags a ward where 3 or more different patients had the same organism with the same resistance type (CRE, CRAB, CRPA, MRSA, VRE, VRSA or XDR/PDR) within 14 days.' + E +
         P + 'This is a screening signal built from first isolates; it cannot prove transmission. Review the cases with the infection control team, and use typing if available.' + E, ['WHO_GLASS']);
     setInfo('op_m_compare', 'Comparison with earlier periods', P + 'Shows the same indicators for this month, the previous month, and the same month last year, so seasonal effects are visible.' + E +
-        P + 'A single month rarely has 30 tested isolates, so the numbers are shown as counts with the percentage below; no trend is claimed from one month. Use the Last Quarter and Last Year tabs for trends.' + E, ['CLSI_M39', 'WHO_GLASS']);
+        P + 'A single month rarely has 30 tested isolates, so the numbers are shown as counts with the percentage below; no trend is claimed from one month. Use the Last 3 Months and Last Year tabs for trends.' + E, ['CLSI_M39', 'WHO_GLASS']);
     setInfo('op_m_bloodq', 'Possible blood contaminants', P + 'Share of blood isolates that are organisms usually found on skin (coagulase-negative staphylococci, <i>Corynebacterium</i>, <i>Micrococcus</i>, and similar). A high share suggests sampling or collection problems.' + E +
         P + 'The CLSI M47 benchmark (3% or less) is defined per blood cultures collected, not per isolates; the Culture Overview tab gives the proper rate.' + E, ['CLSI_M47']);
-    setInfo('op_q_run', 'Trend over the last 8 quarters', P + 'The percentage of resistant first isolates for the priority indicators over the eight quarters ending at the selected one.' + E +
+    setInfo('op_q_run', 'Trend over the last 8 three-month periods', P + 'The percentage of resistant first isolates for the priority indicators over the eight consecutive three-month periods ending at the latest month.' + E +
         P + 'Quarters with fewer than 30 tested isolates are drawn hollow and dashed. The tooltip shows the counts and the 95% Wilson confidence interval. Follow a change over several quarters rather than one point.' + E, ['WHO_GLASS', 'CLSI_M39']);
     setInfo('op_q_icu', 'ICU compared with non-ICU', P + 'Intensive care units usually have higher resistance. This table compares the priority indicators between ICU and all other wards for the quarter.' + E +
         P + 'The first isolate per patient and organism is chosen across the whole hospital before the split, as CLSI M39 requires. Which wards count as ICU is set on the Dashboard Control page.' + E, ['CLSI_M39']);
@@ -309,7 +306,7 @@ function renderPeriodPanels() {
     ].concat(SECTIONS.month.charts);
     SECTIONS.month.infos = [['Priority alerts', 'op_m_alerts'], ['Possible clusters', 'op_m_clusters'], ['Comparison', 'op_m_compare'], ['Blood contaminants', 'op_m_bloodq']].concat(SECTIONS.month.infos);
     SECTIONS.quarter.charts = [
-        { title: 'Trend over the last 8 quarters', el: '#chart_q_run' },
+        { title: 'Trend over the last 8 three-month periods', el: '#chart_q_run' },
         { title: 'Trend values', el: '#op_q_run_table', kind: 'table' },
         { title: 'ICU compared with non-ICU', el: '#op_q_icu_table', kind: 'table' },
         { title: 'Ward ranking by MDR / XDR / PDR', el: '#op_q_wards_table', kind: 'table' }

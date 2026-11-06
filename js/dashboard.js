@@ -87,8 +87,9 @@ function uoLine(name, s, metric, p) {
 }
 // Period definitions (anchored to the latest month of data, so they do not depend on the device clock):
 //  year    = the latest 12 months with data (rolling), e.g. Oct 2025 - Sep 2026 (CLSI M39: analysis period, eg one year)
-//  quarter = the last COMPLETE calendar quarter
-//  month   = the latest month that has data
+//  quarter = the latest 3 months (rolling), e.g. Jul - Sep 2026
+//  month   = the latest month
+//  The latest month is the "Report data up to" setting, or else the latest month with data.
 //  all     = only calendar years with data in all 12 months (older incomplete years are left out)
 const MON3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function ymShift(ym, n) { let y = parseInt(ym.slice(0, 4), 10), m = parseInt(ym.slice(5, 7), 10) - 1 + n; y += Math.floor(m / 12); m = ((m % 12) + 12) % 12; return y + '-' + String(m + 1).padStart(2, '0'); }
@@ -103,9 +104,8 @@ function completeYearsInfo(records) {
     return { complete: ys.filter(y => years[y] === 12), omitted: ys.filter(y => years[y] < 12).map(y => ({ year: y, months: years[y] })) };
 }
 function periodWindow(records, periodType) {
-    const dates = records.map(r => r.Date).filter(Boolean).sort();
-    if (!dates.length) return null;
-    const latest = dates[dates.length - 1].substring(0, 7);
+    const latest = dashAnchor(records);
+    if (!latest) return null;
     const lYear = parseInt(latest.slice(0, 4), 10), lMonth = parseInt(latest.slice(5, 7), 10);
     const pad = n => String(n).padStart(2, '0');
     if (periodType === 'year') {
@@ -113,19 +113,20 @@ function periodWindow(records, periodType) {
         return { from: from, to: latest, label: ymLabel(from) + ' \u2013 ' + ymLabel(latest) };
     }
     if (periodType === 'quarter') {
-        let q = Math.ceil(lMonth / 3), y = lYear;
-        if (lMonth % 3 !== 0) { q -= 1; if (q === 0) { q = 4; y -= 1; } }
-        return { from: `${y}-${pad((q - 1) * 3 + 1)}`, to: `${y}-${pad(q * 3)}`, label: `Q${q} ${y}` };
+        const from = ymShift(latest, -2);
+        return { from: from, to: latest, label: ymLabel(from) + ' \u2013 ' + ymLabel(latest) };
     }
-    if (periodType === 'month') return { from: latest, to: latest, label: latest };
+    if (periodType === 'month') return { from: latest, to: latest, label: ymLabel(latest) };
     return null;
 }
 function filterByPeriod(records, periodType) {
     if (!periodType) return records;
     if (periodType === 'all') {
-        const info = completeYearsInfo(records);
-        if (!info.complete.length) return records;
-        return records.filter(r => info.complete.indexOf(String(r.Date || '').slice(0, 4)) !== -1);
+        const cap = dashAnchor(records);
+        const upTo = records.filter(r => !r.Date || String(r.Date).slice(0, 7) <= cap);
+        const info = completeYearsInfo(upTo);
+        if (!info.complete.length) return upTo;
+        return upTo.filter(r => info.complete.indexOf(String(r.Date || '').slice(0, 4)) !== -1);
     }
     const valid = records.filter(r => r.Date);
     if (!valid.length) return records;
@@ -142,7 +143,8 @@ function refreshPeriodHints() {
         if (!el) return;
         const t = $('input[name="' + g + '_period"]:checked').val() || 'year';
         if (t === 'all') {
-            const info = completeYearsInfo(recs);
+            const cap = dashAnchor(recs);
+            const info = completeYearsInfo(recs.filter(r => String(r.Date || '').slice(0, 7) <= cap));
             el.className = 'period-hint text-[10px] mt-1.5 rounded-md px-2 py-1.5 bg-amber-50 text-amber-800 border border-amber-200';
             let h = '<b>Exploratory view: several years combined.</b> CLSI M39 (Section 6.4): when several years are combined, the first isolate per patient per calendar year is used and a footnote should alert readers that the data are combined. For the routine report use Last 12 Months (M39 recommends analysing cumulative data at least annually, Section 6.3).';
             if (info.complete.length) h += ' <b>Years included (data in all 12 months): ' + info.complete.join(', ') + '.</b>';
@@ -151,7 +153,7 @@ function refreshPeriodHints() {
         }
         const w = periodWindow(recs, t);
         el.className = 'period-hint text-[10px] mt-1.5 rounded-md px-2 py-1.5 bg-slate-50 text-slate-600 border border-slate-200';
-        el.innerHTML = w ? (t === 'year' ? 'Latest 12 months with data: <b>' + w.label + '</b>. CLSI M39 recommends analysing cumulative data at least annually (Section 6.3); the analysis period is typically one year (Section 6.4). The window moves forward when newer data are loaded.' : (t === 'quarter' ? 'Last complete quarter: <b>' + w.label + '</b>. ' : 'Latest month with data: <b>' + w.label + '</b>. ') + 'This is shorter than one year. CLSI M39 (Section 6.3): presenting data more often may be complicated by seasonal variation in resistance rates and imprecise estimates when isolate numbers are small. Use as an indication only.') : 'No data.';
+        el.innerHTML = w ? (t === 'year' ? '12 months ending at the report month: <b>' + w.label + '</b>. CLSI M39 recommends analysing cumulative data at least annually (Section 6.3); the analysis period is typically one year (Section 6.4). The window moves forward when the "Report data up to" month changes.' : (t === 'quarter' ? 'Latest 3 months: <b>' + w.label + '</b>. ' : 'Latest month: <b>' + w.label + '</b>. ') + 'This is shorter than one year. CLSI M39 (Section 6.3): presenting data more often may be complicated by seasonal variation in resistance rates and imprecise estimates when isolate numbers are small. Use as an indication only.') : 'No data.';
     });
 }
 
@@ -570,37 +572,26 @@ function generateLiveSurveillance() {
         return;
     }
 
-    // Apply strict manual overrides mapped from Mobile Dash Settings
-    let targetMonthPrefix = settings.mobile_dash_month || new Date().toISOString().slice(0, 7);
-    let qLabel = settings.mobile_dash_quarter || "Q1";
-    let qYear = parseInt(settings.mobile_dash_year) || new Date().getFullYear();
-    let qMonths = [];
+    // All windows end at the "Report data up to" month (or the latest month with data)
+    const anchor = dashAnchor(cleanRecords);
+    const targetMonthPrefix = anchor;
+    const q3from = ymShift(anchor, -2);
+    const qLabel = ymLabel(q3from) + ' \u2013 ' + ymLabel(anchor);
+    let monthRecords = cleanRecords.filter(r => r.Date && String(r.Date).slice(0, 7) === targetMonthPrefix);
+    let quarterRecords = cleanRecords.filter(r => { const m = String(r.Date || '').slice(0, 7); return m >= q3from && m <= anchor; });
 
-    if (qLabel === "Q1") qMonths = ["01","02","03"];
-    else if (qLabel === "Q2") qMonths = ["04","05","06"];
-    else if (qLabel === "Q3") qMonths = ["07","08","09"];
-    else if (qLabel === "Q4") qMonths = ["10","11","12"];
-
-    let monthRecords = cleanRecords.filter(r => r.Date && r.Date.startsWith(targetMonthPrefix));
-    let quarterRecords = cleanRecords.filter(r => {
-        if(!r.Date) return false;
-        let parts = r.Date.split('-');
-        return parseInt(parts[0]) === qYear && qMonths.includes(parts[1]);
-    });
-
-    // Last Year tab: a full calendar year (CLSI M39 / WHO GLASS reference period); defaults to the previous calendar year
-    let fullYear = String(parseInt(settings.mobile_dash_fullyear) || (new Date().getFullYear() - 1));
-    let yearRecords = cleanRecords.filter(r => r.Date && String(r.Date).startsWith(fullYear + '-'));
+    // Last Year tab: rolling 12 months by default (see dashboard_year.js)
+    const fullYear = (typeof yaLabel === 'function' && typeof yaYear === 'function') ? yaLabel(yaYear()) : dashCalendarYear(cleanRecords);
 
     $('#live_y_title').text(`Surveillance Overview (${fullYear})`);
-    $('#live_month_title').text(`Surveillance Overview (${targetMonthPrefix})`);
-    $('#live_q_title').text(`Surveillance Overview (${qLabel} ${qYear})`);
+    $('#live_month_title').text(`Surveillance Overview (${ymLabel(targetMonthPrefix)})`);
+    $('#live_q_title').text(`Surveillance Overview (${qLabel})`);
 
     liveCharts.forEach(c => c.destroy());
     liveCharts = [];
 
     buildMobileLiveSection(monthRecords, 'm', settings, targetMonthPrefix);
-    buildMobileLiveSection(quarterRecords, 'q', settings, `${qLabel} ${qYear}`);
+    buildMobileLiveSection(quarterRecords, 'q', settings, qLabel);
 }
 
 function buildMobileLiveSection(records, prefix, settings, timeLabel) {
