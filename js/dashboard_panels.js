@@ -115,8 +115,8 @@ function refreshAll() {
 window.switchTab = function (tab) {
     window._currentTab = tab;
     $('#periodBar').toggleClass('hidden', tab !== 'analytics');
-    $('#viewAnalytics, #viewLastYear, #viewLastMonth, #viewLastQuarter, #viewLab').addClass('hidden');
-    $('#btnNavAnalytics, #btnNavLastYear, #btnNavLastMonth, #btnNavLastQuarter, #btnNavLab').removeClass('active');
+    $('#viewAnalytics, #viewLastYear, #viewLastMonth, #viewLastQuarter, #viewMdr, #viewLab').addClass('hidden');
+    $('#btnNavAnalytics, #btnNavLastYear, #btnNavLastMonth, #btnNavLastQuarter, #btnNavMdr, #btnNavLab').removeClass('active');
     if (tab === 'analytics') {
         $('#viewAnalytics').removeClass('hidden'); $('#btnNavAnalytics').addClass('active');
         $('#headerTitle').text('Surveillance Analytics');
@@ -130,6 +130,11 @@ window.switchTab = function (tab) {
     } else if (tab === 'last_quarter') {
         $('#viewLastQuarter').removeClass('hidden'); $('#btnNavLastQuarter').addClass('active');
         $('#headerTitle').text('Last 3 Months Surveillance');
+    } else if (tab === 'mdr') {
+        $('#viewMdr').removeClass('hidden'); $('#btnNavMdr').addClass('active');
+        $('#headerTitle').text('MDR / XDR / PDR');
+        try { renderMdrPanel(); } catch (e) { console.error(e); }
+        try { window.dispatchEvent(new Event('resize')); } catch (e) {}
     } else if (tab === 'lab') {
         $('#viewLab').removeClass('hidden'); $('#btnNavLab').addClass('active');
         $('#headerTitle').text('Culture Overview');
@@ -529,7 +534,7 @@ function chartElement(c) {
     if (!el) return null;
     // collapsed cards are still printable: only switched-off sections and tabs that are not open are skipped
     if (el.closest('.sec-off')) return null;
-    const view = el.closest('#viewAnalytics, #viewLastYear, #viewLastMonth, #viewLastQuarter, #viewLab');
+    const view = el.closest('#viewAnalytics, #viewLastYear, #viewLastMonth, #viewLastQuarter, #viewMdr, #viewLab');
     if (view && view.classList.contains('hidden')) return null;
     if (el.tagName === 'CANVAS') {
         let chart = null, canAsk = false; try { canAsk = !!(window.Chart && Chart.getChart); chart = canAsk && Chart.getChart(el); } catch (e) {}

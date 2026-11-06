@@ -551,37 +551,7 @@
                 </div>
             </div>
 
-            <!-- MDR / XDR / PDR analysis with its own period selector -->
-            <div id="mdrPanel" data-sec="mdr_panel" class="mobile-card border border-slate-200 p-0 overflow-hidden mb-4 border-t-4 border-t-rose-500">
-                <button onclick="toggleMdrPanel()" class="mdr-title w-full flex justify-between items-center bg-rose-50 p-3 text-left focus:outline-none border-b border-rose-100">
-                    <span class="text-xs font-bold text-rose-900 flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.6-4.1A12 12 0 0112 3a12 12 0 01-8.6 3.9A12 12 0 003 12c0 5.6 3.8 10.3 9 11.6 5.2-1.3 9-6 9-11.6 0-1.7-.3-3.3-.4-4.1z"></path></svg>
-                        MDR / XDR / PDR Analysis
-                    </span>
-                    <svg id="mdr_icon" class="w-4 h-4 text-rose-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                </button>
-                <div id="mdr_content" class="hidden p-4 bg-white">
-                <p id="mdr_range_label" class="text-[10px] font-bold text-slate-500 mb-3"></p>
-                <div class="mb-2" style="font-size:11px;line-height:1.45;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:8px 10px;color:#3730a3"><b>This section has its own period.</b> It does not follow the period bar at the top. Choose the period below. The unit filter at the top still applies.</div>
-                <div id="mdr_picker" class="mb-3"></div>
-                <h4 id="mdr_tiles_title" class="text-[10px] font-bold text-slate-600 mb-1 pr-8">Summary</h4>
-                <div id="mdr_tiles" class="grid grid-cols-2 gap-2 mb-3"></div>
-                <div class="bg-white border border-rose-100 p-2 rounded-lg shadow-inner mb-3">
-                    <h4 class="text-[10px] font-bold text-center text-slate-600 mb-1">Resistance classification</h4>
-                    <div class="h-[190px] relative"><canvas id="chart_mdr_panel_pie"></canvas></div>
-                </div>
-                <div id="mdr_trend_wrap" class="bg-white border border-rose-100 p-2 rounded-lg shadow-inner mb-3 hidden">
-                    <h4 id="mdr_trend_title" class="text-[10px] font-bold text-center text-slate-600 mb-1 pr-8">Monthly trend (% of classified isolates)</h4>
-                    <div class="h-[190px] relative"><canvas id="chart_mdr_panel_trend"></canvas></div>
-                </div>
-                <div class="bg-white border border-rose-100 p-2 rounded-lg shadow-inner mb-3">
-                    <h4 id="mdr_wards_title" class="text-[10px] font-bold text-center text-slate-600 mb-1 pr-8">All wards</h4>
-                    <div id="mdr_wards_box" class="relative" style="height:200px"><canvas id="chart_mdr_panel_wards"></canvas></div>
-                </div>
-                <h4 id="mdr_group_title" class="text-[10px] font-bold text-slate-600 mb-1 pr-8">By organism group</h4>
-                <div id="mdr_group_table" class="bg-slate-50 border border-slate-100 rounded-lg p-2"></div>
-                </div>
-            </div>
+
 
         </div>
         <!-- Tab 2: Last Month -->
@@ -686,6 +656,40 @@
 
 
         <!-- Tab 4: Culture Overview (growth / no growth / contaminated cultures) -->
+        <!-- Tab: MDR / XDR / PDR -->
+        <div id="viewMdr" class="hidden space-y-4">
+            <!-- MDR / XDR / PDR analysis with its own period selector -->
+            <div id="mdrPanel" data-sec="mdr_panel" class="mobile-card border border-slate-200 p-0 overflow-hidden mb-4 border-t-4 border-t-rose-500">
+                <button onclick="toggleMdrPanel()" class="mdr-title w-full flex justify-between items-center bg-rose-50 p-3 text-left focus:outline-none border-b border-rose-100">
+                    <span class="text-xs font-bold text-rose-900 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.6-4.1A12 12 0 0112 3a12 12 0 01-8.6 3.9A12 12 0 003 12c0 5.6 3.8 10.3 9 11.6 5.2-1.3 9-6 9-11.6 0-1.7-.3-3.3-.4-4.1z"></path></svg>
+                        MDR / XDR / PDR Analysis
+                    </span>
+                    <svg id="mdr_icon" class="w-4 h-4 text-rose-600 transform transition-transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div id="mdr_content" class="p-4 bg-white">
+                <p id="mdr_range_label" class="text-[10px] font-bold text-slate-500 mb-3"></p>
+                <div id="mdr_picker" class="mb-3"></div>
+                <h4 id="mdr_tiles_title" class="text-[10px] font-bold text-slate-600 mb-1 pr-8">Summary</h4>
+                <div id="mdr_tiles" class="grid grid-cols-2 gap-2 mb-3"></div>
+                <div class="bg-white border border-rose-100 p-2 rounded-lg shadow-inner mb-3">
+                    <h4 class="text-[10px] font-bold text-center text-slate-600 mb-1">Resistance classification</h4>
+                    <div class="h-[190px] relative"><canvas id="chart_mdr_panel_pie"></canvas></div>
+                </div>
+                <div id="mdr_trend_wrap" class="bg-white border border-rose-100 p-2 rounded-lg shadow-inner mb-3 hidden">
+                    <h4 id="mdr_trend_title" class="text-[10px] font-bold text-center text-slate-600 mb-1 pr-8">Monthly trend (% of classified isolates)</h4>
+                    <div class="h-[190px] relative"><canvas id="chart_mdr_panel_trend"></canvas></div>
+                </div>
+                <div class="bg-white border border-rose-100 p-2 rounded-lg shadow-inner mb-3">
+                    <h4 id="mdr_wards_title" class="text-[10px] font-bold text-center text-slate-600 mb-1 pr-8">All wards</h4>
+                    <div id="mdr_wards_box" class="relative" style="height:200px"><canvas id="chart_mdr_panel_wards"></canvas></div>
+                </div>
+                <h4 id="mdr_group_title" class="text-[10px] font-bold text-slate-600 mb-1 pr-8">By organism group</h4>
+                <div id="mdr_group_table" class="bg-slate-50 border border-slate-100 rounded-lg p-2"></div>
+                </div>
+            </div>
+        </div>
+
         <div id="viewLab" class="hidden space-y-4">
             <div class="mobile-card border-t-4 border-t-amber-500">
                 <h3 id="lab_title" class="text-sm font-bold text-amber-900 mb-1 pr-8">Culture Overview</h3>
@@ -720,16 +724,20 @@
             Analytics
         </button>
         <button onclick="switchTab('last_year')" id="btnNavLastYear" class="nav-btn">
-            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" /></svg>
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.26m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.26v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" /></svg>
             Last Year
         </button>
         <button onclick="switchTab('last_quarter')" id="btnNavLastQuarter" class="nav-btn">
-            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.26c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
             Last 3 Months
         </button>
         <button onclick="switchTab('last_month')" id="btnNavLastMonth" class="nav-btn">
             <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
             Last Month
+        </button>
+        <button onclick="switchTab('mdr')" id="btnNavMdr" class="nav-btn">
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.26 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
+            MDR
         </button>
         <button onclick="switchTab('lab')" id="btnNavLab" class="nav-btn">
             <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5m4.75-11.396c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" /></svg>
@@ -737,15 +745,15 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=11.25"></script>
-    <script src="js/dashboard.js?v=11.25"></script>
-    <script src="js/info_texts.js?v=11.25"></script>
-    <script src="js/dashboard_panels.js?v=11.25"></script>
-    <script src="js/dashboard_year.js?v=11.25"></script>
-    <script src="js/dashboard_period.js?v=11.25"></script>
-    <script src="js/guide_reviewer.js?v=11.25"></script>
-    <script src="js/guide.js?v=11.25"></script>
-    <script src="js/nav.js?v=11.25"></script>
+    <script src="js/data.js?v=11.26"></script>
+    <script src="js/dashboard.js?v=11.26"></script>
+    <script src="js/info_texts.js?v=11.26"></script>
+    <script src="js/dashboard_panels.js?v=11.26"></script>
+    <script src="js/dashboard_year.js?v=11.26"></script>
+    <script src="js/dashboard_period.js?v=11.26"></script>
+    <script src="js/guide_reviewer.js?v=11.26"></script>
+    <script src="js/guide.js?v=11.26"></script>
+    <script src="js/nav.js?v=11.26"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>
@@ -757,6 +765,6 @@
         });
     }
 </script>
-<div style="text-align:center;font-size:10px;color:#94a3b8;padding:8px 0 16px" id="app_ver">AMR Trak v11.25</div>
+<div style="text-align:center;font-size:10px;color:#94a3b8;padding:8px 0 16px" id="app_ver">AMR Trak v11.26</div>
 </body>
 </html>
