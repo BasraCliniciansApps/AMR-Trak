@@ -218,13 +218,11 @@ function isNonSusceptibleResult(v) {
 // One switch for the whole dashboard (Settings, gear button): exclude possible skin-flora contaminants from first-isolate analyses. Default: off.
 function contamExcluded() {
     try { const u = JSON.parse(localStorage.getItem('amr_user_prefs')) || {}; if (typeof u.nocontam === 'boolean') return u.nocontam; } catch (e) {}
+    try { return (JSON.parse(localStorage.getItem('amr_live_settings')) || {}).mobile_dash_nocontam === true; } catch (e) {}
     return false;
 }
-// Minimum number of isolates for a result to be called reliable (Settings, gear button). Default 30 (CLSI M39).
-function minN() {
-    try { const u = JSON.parse(localStorage.getItem('amr_user_prefs')) || {}; const n = parseInt(u.minn, 10); if (n >= 1 && n <= 200) return n; } catch (e) {}
-    return 30;
-}
+// Minimum number of isolates for a result to be called reliable: fixed at 30 (CLSI M39).
+function minN() { return 30; }
 // Rewrites the number 30 in explanation texts when the user has changed the minimum
 function nTxt(s) {
     const m = minN(); if (m === 30 || typeof s !== 'string') return s;

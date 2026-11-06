@@ -162,7 +162,7 @@ function refreshPeriodHints() {
 
 // Visual updates for period toggles
 // One Analytics period for every chart (see anPeriod)
-function anPeriod() { try { const p = (typeof getUserPrefs === 'function' ? getUserPrefs().period : '') || 'year'; return ['all', 'year', 'quarter', 'month', 'calyear', 'range'].indexOf(p) >= 0 ? p : 'year'; } catch (e) { return 'year'; } }
+function anPeriod() { try { const p = (typeof effPref === 'function' ? effPref('period', 'dash_an_period', 'year') : 'year'); return ['all', 'year', 'quarter', 'month', 'calyear', 'range'].indexOf(p) >= 0 ? p : 'year'; } catch (e) { return 'year'; } }
 
 
 function formatOrgName(org) {

@@ -25,7 +25,7 @@ const yaIsSIR = v => v === 'S' || v === 'I' || v === 'R' || v === 'SDD';
 
 // ---- Analysis window. A key is either 'YYYY' (calendar year) or 'YYYY-MM..YYYY-MM' (12 months).
 // Rolling mode (default): the latest 12 months with data. Calendar mode: the year set by the surveillance team.
-function yaMode() { try { const v = localStorage.getItem('amr_ya_mode'); if (v === 'calendar' || v === 'rolling') return v; } catch (e) {} return 'rolling'; }
+function yaMode() { try { const v = localStorage.getItem('amr_ya_mode'); if (v === 'calendar' || v === 'rolling') return v; } catch (e) {} try { if (getDashSettings().dash_ya_mode === 'calendar') return 'calendar'; } catch (e) {} return 'rolling'; }
 window.yaSetMode = function (m) { try { localStorage.setItem('amr_ya_mode', m); } catch (e) {} renderAnnualReport(); };
 function yaLatestMonth() { return dashAnchor(); }
 function yaYear() {

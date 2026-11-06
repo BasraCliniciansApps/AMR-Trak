@@ -54,7 +54,11 @@ function normalise(s) {
     const now = new Date(), lq = lastCompleteQuarter();
     const o = {
         mobile_dash_lastmonth: /^\d{4}-\d{2}$/.test(s.mobile_dash_lastmonth || '') ? s.mobile_dash_lastmonth : '',
-        mobile_dash_nocontam: s.mobile_dash_nocontam !== false,
+        mobile_dash_nocontam: s.mobile_dash_nocontam === true,
+        dash_an_period: ['year', 'all', 'calyear', 'quarter', 'month'].includes(s.dash_an_period) ? s.dash_an_period : 'year',
+        dash_ya_mode: s.dash_ya_mode === 'calendar' ? 'calendar' : 'rolling',
+        dash_hide_low: s.dash_hide_low === true,
+        dash_show_notes: s.dash_show_notes !== false,
         dash_show_scope: s.dash_show_scope !== false,
         dash_default_scope: ['all', 'icu', 'nonicuip', 'outpatient', 'nonicu'].includes(s.dash_default_scope) ? (s.dash_default_scope === 'nonicu' ? 'nonicuip' : s.dash_default_scope) : 'all',
         dash_default_period: ['month', 'quarter', 'year', 'all'].includes(s.dash_default_period) ? s.dash_default_period : 'month',
@@ -99,7 +103,15 @@ function render() {
 
     const periods = `
         <div class="field"><label>Report period</label><p class="hint">Every period in the dashboard ends automatically at the latest month that has data.</p></div>
-        <div class="field"><label>Possible skin-flora contaminants</label><p class="hint">Excluding possible skin-flora contaminants, the analysis period and the minimum number of isolates are now set by each user from the gear button in the dashboard.</p></div>`;
+        <div class="field"><label>Analysis period (Analytics tab)</label>
+            <select class="select" data-k="dash_an_period">${[['year', 'Last 12 Months'], ['all', 'All Times (complete years)'], ['calyear', 'Last complete calendar year'], ['quarter', 'Last 3 Months'], ['month', 'Last Month']].map(([v, t]) => `<option value="${v}" ${cur.dash_an_period === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
+            <p class="hint">Default for every user. A user can change it for their own device from the gear button.</p></div>
+        <div class="field"><label>Last Year tab period</label>
+            <select class="select" data-k="dash_ya_mode">${[['rolling', 'Last 12 months'], ['calendar', 'Calendar year']].map(([v, t]) => `<option value="${v}" ${cur.dash_ya_mode === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+        <div class="row"><span>Exclude possible skin-flora contaminants</span><label class="sw"><input type="checkbox" data-k="mobile_dash_nocontam" ${cur.mobile_dash_nocontam ? 'checked' : ''}><i></i></label></div>
+        <div class="row"><span>Hide results below 30 isolates</span><label class="sw"><input type="checkbox" data-k="dash_hide_low" ${cur.dash_hide_low ? 'checked' : ''}><i></i></label></div>
+        <div class="row"><span>Show explanation notes under charts</span><label class="sw"><input type="checkbox" data-k="dash_show_notes" ${cur.dash_show_notes ? 'checked' : ''}><i></i></label></div>
+        <p class="hint">These are the defaults for all users. Each user can change them for their own device only, from the gear button.</p>`;
 
     const scope = `
         <div class="row" style="margin-top:4px"><span>Show the All / ICU / Non-ICU switch</span><label class="sw"><input type="checkbox" data-k="dash_show_scope" ${cur.dash_show_scope ? 'checked' : ''}><i></i></label></div>
