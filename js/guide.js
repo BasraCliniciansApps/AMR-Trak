@@ -227,7 +227,7 @@
         ['scope', 'Unit scope and ICU', () =>
             P('The switch under the top bar filters <b>every chart and table on every tab</b> by the ward where the specimen was collected.') +
             H('The three options') + L([
-                '<b>ALL:</b> every ward.',
+                '<b>ALL:</b> every ward with a recorded ward name. Records without a ward are excluded from every unit view and counted only in Data quality.',
                 '<b>ICU:</b> only the wards counted as intensive care units. The surveillance team chooses which wards count as ICU.',
                 '<b>Non-ICU IP:</b> inpatient wards that are not ICU. IP means inpatient. Emergency is not counted as inpatient.',
                 '<b>Outpatient:</b> everything that is not inpatient, including outpatient clinics and emergency.',
