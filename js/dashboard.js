@@ -86,10 +86,22 @@ function uoLine(name, s, metric, p) {
     return `<div><b>${name}</b>: ${s.nu} of ${s.tested} results are non-urine. % ${metric}: <b>${p}%</b> with all results; <b>${pu === null ? 'no urine results' : pu + '% with urine only (n=' + u.t + ')'}</b></div>`;
 }
 // Period definitions (anchored to the latest month of data, so they do not depend on the device clock):
-//  year    = the last COMPLETE calendar year (CLSI M39 is an annual analysis)
+//  year    = the latest 12 months with data (rolling), e.g. Oct 2025 - Sep 2026 (CLSI M39: analysis period, eg one year)
 //  quarter = the last COMPLETE calendar quarter
 //  month   = the latest month that has data
-//  all     = every record (exploratory only)
+//  all     = only calendar years with data in all 12 months (older incomplete years are left out)
+const MON3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function ymShift(ym, n) { let y = parseInt(ym.slice(0, 4), 10), m = parseInt(ym.slice(5, 7), 10) - 1 + n; y += Math.floor(m / 12); m = ((m % 12) + 12) % 12; return y + '-' + String(m + 1).padStart(2, '0'); }
+function ymLabel(ym) { return MON3[parseInt(ym.slice(5, 7), 10) - 1] + ' ' + ym.slice(0, 4); }
+// Calendar years in which every one of the 12 months has at least one record
+function completeYearsInfo(records) {
+    const months = {};
+    records.forEach(r => { const d = String(r.Date || ''); if (/^\d{4}-\d{2}/.test(d)) months[d.slice(0, 7)] = 1; });
+    const years = {};
+    Object.keys(months).forEach(m => { const y = m.slice(0, 4); years[y] = (years[y] || 0) + 1; });
+    const ys = Object.keys(years).sort();
+    return { complete: ys.filter(y => years[y] === 12), omitted: ys.filter(y => years[y] < 12).map(y => ({ year: y, months: years[y] })) };
+}
 function periodWindow(records, periodType) {
     const dates = records.map(r => r.Date).filter(Boolean).sort();
     if (!dates.length) return null;
@@ -97,8 +109,8 @@ function periodWindow(records, periodType) {
     const lYear = parseInt(latest.slice(0, 4), 10), lMonth = parseInt(latest.slice(5, 7), 10);
     const pad = n => String(n).padStart(2, '0');
     if (periodType === 'year') {
-        const y = lMonth === 12 ? lYear : lYear - 1;
-        return { from: `${y}-01`, to: `${y}-12`, label: String(y) };
+        const from = ymShift(latest, -11);
+        return { from: from, to: latest, label: ymLabel(from) + ' \u2013 ' + ymLabel(latest) };
     }
     if (periodType === 'quarter') {
         let q = Math.ceil(lMonth / 3), y = lYear;
@@ -109,7 +121,12 @@ function periodWindow(records, periodType) {
     return null;
 }
 function filterByPeriod(records, periodType) {
-    if (!periodType || periodType === 'all') return records;
+    if (!periodType) return records;
+    if (periodType === 'all') {
+        const info = completeYearsInfo(records);
+        if (!info.complete.length) return records;
+        return records.filter(r => info.complete.indexOf(String(r.Date || '').slice(0, 4)) !== -1);
+    }
     const valid = records.filter(r => r.Date);
     if (!valid.length) return records;
     const w = periodWindow(valid, periodType);
@@ -124,10 +141,17 @@ function refreshPeriodHints() {
         const el = document.getElementById(g + '_period_hint');
         if (!el) return;
         const t = $('input[name="' + g + '_period"]:checked').val() || 'year';
-        if (t === 'all') { el.className = 'period-hint text-[10px] mt-1.5 rounded-md px-2 py-1.5 bg-amber-50 text-amber-800 border border-amber-200'; el.innerHTML = '<b>Exploratory view: several years combined.</b> CLSI M39 (Section 6.4): when several years are combined, the first isolate per patient per calendar year is used and a footnote should alert readers that the data are combined. For the routine report use Last Year (M39 recommends analysing cumulative data at least annually, Section 6.3).'; return; }
+        if (t === 'all') {
+            const info = completeYearsInfo(recs);
+            el.className = 'period-hint text-[10px] mt-1.5 rounded-md px-2 py-1.5 bg-amber-50 text-amber-800 border border-amber-200';
+            let h = '<b>Exploratory view: several years combined.</b> CLSI M39 (Section 6.4): when several years are combined, the first isolate per patient per calendar year is used and a footnote should alert readers that the data are combined. For the routine report use Last 12 Months (M39 recommends analysing cumulative data at least annually, Section 6.3).';
+            if (info.complete.length) h += ' <b>Years included (data in all 12 months): ' + info.complete.join(', ') + '.</b>';
+            if (info.omitted.length) h += ' <b>Left out because the year is incomplete: ' + info.omitted.map(o => o.year + ' (' + o.months + ' of 12 months)').join(', ') + '.</b> An incomplete year over-represents some seasons and does not meet the CLSI M39 recommendation of an analysis period of one year (Sections 6.3 and 6.4).';
+            el.innerHTML = h; return;
+        }
         const w = periodWindow(recs, t);
         el.className = 'period-hint text-[10px] mt-1.5 rounded-md px-2 py-1.5 bg-slate-50 text-slate-600 border border-slate-200';
-        el.innerHTML = w ? (t === 'year' ? 'Last complete calendar year: <b>' + w.label + '</b>. CLSI M39 recommends analysing cumulative data at least annually (Section 6.3); the analysis period is typically one year (Section 6.4).' : (t === 'quarter' ? 'Last complete quarter: <b>' + w.label + '</b>. ' : 'Latest month with data: <b>' + w.label + '</b>. ') + 'This is shorter than one year. CLSI M39 (Section 6.3): presenting data more often may be complicated by seasonal variation in resistance rates and imprecise estimates when isolate numbers are small. Use as an indication only.') : 'No data.';
+        el.innerHTML = w ? (t === 'year' ? 'Latest 12 months with data: <b>' + w.label + '</b>. CLSI M39 recommends analysing cumulative data at least annually (Section 6.3); the analysis period is typically one year (Section 6.4). The window moves forward when newer data are loaded.' : (t === 'quarter' ? 'Last complete quarter: <b>' + w.label + '</b>. ' : 'Latest month with data: <b>' + w.label + '</b>. ') + 'This is shorter than one year. CLSI M39 (Section 6.3): presenting data more often may be complicated by seasonal variation in resistance rates and imprecise estimates when isolate numbers are small. Use as an indication only.') : 'No data.';
     });
 }
 
