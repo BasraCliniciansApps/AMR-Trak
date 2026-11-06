@@ -89,7 +89,7 @@ function uoLine(name, s, metric, p) {
 //  year    = the latest 12 months with data (rolling), e.g. Oct 2025 - Sep 2026 (CLSI M39: analysis period, eg one year)
 //  quarter = the latest 3 months (rolling), e.g. Jul - Sep 2026
 //  month   = the latest month
-//  The latest month is the "Report data up to" setting, or else the latest month with data.
+//  The latest month is the latest month with data (automatic).
 //  all     = only calendar years with data in all 12 months (older incomplete years are left out)
 const MON3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function ymShift(ym, n) { let y = parseInt(ym.slice(0, 4), 10), m = parseInt(ym.slice(5, 7), 10) - 1 + n; y += Math.floor(m / 12); m = ((m % 12) + 12) % 12; return y + '-' + String(m + 1).padStart(2, '0'); }
@@ -141,6 +141,7 @@ function refreshPeriodHints() {
     ['an'].forEach(g => {
         const el = document.getElementById('an_period_hint');
         if (!el) return;
+        el.style.display = window._anHintOpen ? '' : 'none';
         const t = anPeriod();
         if (t === 'all') {
             const cap = dashAnchor(recs);
@@ -153,12 +154,18 @@ function refreshPeriodHints() {
         }
         const w = periodWindow(recs, t);
         el.className = 'period-hint text-[10px] mt-1.5 rounded-md px-2 py-1.5 bg-slate-50 text-slate-600 border border-slate-200';
-        el.innerHTML = w ? (t === 'year' ? '12 months ending at the report month: <b>' + w.label + '</b>. CLSI M39 recommends analysing cumulative data at least annually (Section 6.3); the analysis period is typically one year (Section 6.4). The window moves forward when the "Report data up to" month changes.' : (t === 'quarter' ? 'Latest 3 months: <b>' + w.label + '</b>. ' : 'Latest month: <b>' + w.label + '</b>. ') + 'This is shorter than one year. CLSI M39 (Section 6.3): presenting data more often may be complicated by seasonal variation in resistance rates and imprecise estimates when isolate numbers are small. Use as an indication only.') : 'No data.';
+        el.innerHTML = w ? (t === 'year' ? '12 months ending at the report month: <b>' + w.label + '</b>. CLSI M39 recommends analysing cumulative data at least annually (Section 6.3); the analysis period is typically one year (Section 6.4). The window ends at the latest month with laboratory data.' : (t === 'quarter' ? 'Latest 3 months: <b>' + w.label + '</b>. ' : 'Latest month: <b>' + w.label + '</b>. ') + 'This is shorter than one year. CLSI M39 (Section 6.3): presenting data more often may be complicated by seasonal variation in resistance rates and imprecise estimates when isolate numbers are small. Use as an indication only.') : 'No data.';
     });
 }
 
 // Visual updates for period toggles
 // One Analytics period for every chart (see anPeriod)
+// The explanation appears only after a period button is pressed; pressing the same button again hides it
+$(document).on('click', '.an-per-lbl', function () {
+    const v = $(this).find('input').val(), same = $('input[name="an_period"]:checked').val() === v;
+    window._anHintOpen = same ? !window._anHintOpen : true;
+    setTimeout(refreshPeriodHints, 0);
+});
 function anPeriod() { return $('input[name="an_period"]:checked').val() || 'year'; }
 $(document).on('change', 'input[name="an_period"]', function() { refreshPeriodHints(); loadAnalyticsFilters(); updatePathoDropdowns(); updateAbxDropdowns(); if (!$('#advContainer').hasClass('hidden')) generateAdvancedAnalytics(); });
 
@@ -603,7 +610,7 @@ function generateLiveSurveillance() {
         return;
     }
 
-    // All windows end at the "Report data up to" month (or the latest month with data)
+    // All windows end at the latest month with data
     const anchor = dashAnchor(cleanRecords);
     const targetMonthPrefix = anchor;
     const q3from = ymShift(anchor, -2);
@@ -893,8 +900,8 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
                 abxLabels.push(a + (wIntr ? ' ‡' : '') + (wSel ? ' †' : '') + (t >= 30 ? '' : ' *'));
                 abxData.push(p);
                 // تلوين ذكي حسب شدة المقاومة (أحمر للمقاومة العالية، برتقالي للمتوسطة، أخضر للمنخفضة)
-                if (p >= 60) abxColors.push('rgba(225, 29, 72, 0.85)');
-                else if (p >= 30) abxColors.push('rgba(245, 158, 11, 0.85)');
+                if (p > 50) abxColors.push('rgba(225, 29, 72, 0.85)');
+                else if (p > 20) abxColors.push('rgba(245, 158, 11, 0.85)');
                 else abxColors.push('rgba(16, 185, 129, 0.85)');
                 
                 abxCI.push(wilsonScoreCI(r, t));
@@ -1676,9 +1683,9 @@ window.generateAdvancedAnalytics = function() {
     }
 
     $('#advContainer').removeClass('hidden');
-    let hmLegend = (metric === 'R' || metric === 'NS') ? 
-        `<span class="px-1 bg-emerald-100 text-emerald-800 rounded">0-20%</span><span class="px-1 bg-yellow-100 text-yellow-800 rounded">21-40%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">41-60%</span><span class="px-1 bg-red-400 text-white rounded">61-80%</span><span class="px-1 bg-red-600 text-white rounded">81-100%</span>` :
-        `<span class="px-1 bg-red-600 text-white rounded">0-20%</span><span class="px-1 bg-red-400 text-white rounded">21-40%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">41-60%</span><span class="px-1 bg-yellow-100 text-yellow-800 rounded">61-80%</span><span class="px-1 bg-emerald-100 text-emerald-800 rounded">81-100%</span>`;
+    let hmLegend = (metric === 'R' || metric === 'NS') ?
+        `<span class="px-1 bg-emerald-100 text-emerald-800 rounded">0-20%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">21-50%</span><span class="px-1 bg-red-200 text-red-800 rounded">51-100%</span>` :
+        `<span class="px-1 bg-red-200 text-red-800 rounded">0-49%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">50-79%</span><span class="px-1 bg-emerald-100 text-emerald-800 rounded">80-100%</span>`;
     // the grey chip is added after the table is built, when it is known whether any cell is grey
     $('#heatmapLegend').html(hmLegend);
 
@@ -1740,10 +1747,8 @@ window.generateAdvancedAnalytics = function() {
                 
                 let bgClass = 'bg-white', textClass = 'text-slate-700';
                 if (dangerScore <= 20) { bgClass = 'bg-emerald-100'; textClass = 'text-emerald-800'; }
-                else if (dangerScore <= 40) { bgClass = 'bg-yellow-100'; textClass = 'text-yellow-800'; }
-                else if (dangerScore <= 60) { bgClass = 'bg-orange-200'; textClass = 'text-orange-900'; }
-                else if (dangerScore <= 80) { bgClass = 'bg-red-400'; textClass = 'text-white font-bold'; }
-                else { bgClass = 'bg-red-600'; textClass = 'text-white font-bold'; }
+                else if (dangerScore <= 50) { bgClass = 'bg-orange-200'; textClass = 'text-orange-900'; }
+                else { bgClass = 'bg-red-200'; textClass = 'text-red-800'; }
 
                 const intr = isIntrinsicResistance(o, a);
                 if (intr) irCells++;
@@ -1769,7 +1774,7 @@ window.generateAdvancedAnalytics = function() {
         lowCells ? '<b>*</b> = fewer than 30 isolates tested (CLSI M39): ' + lowCells + ' cell' + (lowCells === 1 ? '' : 's') + '.' : '',
         daggerCells ? '<b>&dagger;</b> = selective test: the agent was tested on fewer than 90% of the organism\'s isolates, so the percentage may be biased: ' + daggerCells + ' cell' + (daggerCells === 1 ? '' : 's') + '.' : '',
         irCells ? '<b>&Dagger;</b> = intrinsic resistance (expected for the organism, CLSI M100 Appendix B), not acquired resistance: ' + irCells + ' cell' + (irCells === 1 ? '' : 's') + '.' : '',
-        '<b>Colour bands</b> in steps of 20% are a visual aid only. They are not CLSI or WHO categories, and WHO does not provide a reference for these colours.',
+        '<b>Colour bands</b> (same as the antibiogram): green = 80% or more susceptible (20% or less resistant), amber = 50-79% susceptible, red = below 50% susceptible. They are a visual aid only. They are not CLSI or WHO categories, and WHO does not provide a reference for these colours.',
         'The colours are not a treatment guide or an indicator for therapy; follow the hospital antibiotic policy.',
         'Cells are in vitro results.',
         nuCells ? '<b>&sect;</b> = urine-only agent (CLSI M100-Ed36: ' + URINE_ONLY_ABX.join(', ') + '; amikacin for <i>P. aeruginosa</i>) that also includes non-urine specimens (' + nuCells + ' cell' + (nuCells === 1 ? '' : 's') + ').' : '',

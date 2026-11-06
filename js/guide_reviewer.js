@@ -107,7 +107,7 @@
                 ['Last 3 Months and Last Month', 'The 3 months, or the single month, ending at the report month.', '[R2] Section 6.3, p. 10: more frequent analysis is allowed but is "complicated by seasonal variations in resistance rates and imprecise measures due to small numbers of isolates". These periods are for follow-up and are labelled as indicators.'],
                 ['All Times', 'Only calendar years in which every one of the 12 months has data. Years with a missing month are left out, and the years left out are named on the screen.', 'An incomplete year over-represents some seasons and does not meet the one-year analysis period of [R2]. Application policy.']]) +
             H('5. The report month') + L([
-                'All periods end at one month, the <b>Report data up to</b> setting. If it is empty, the latest month with data is used.',
+                'All periods end at one month: the latest month with data (automatic, not set by the user).',
                 'Records dated after the report month are not part of any period. This allows data of a month that is still being entered, or not yet supplied in full by the laboratory, to be excluded until the laboratory file is complete.',
                 'A period in which any month has no data at all is flagged as incomplete.']) +
             H('6. Possible contaminants') + L([

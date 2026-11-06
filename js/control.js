@@ -98,10 +98,7 @@ function render() {
     const open = $$('.card.open').map(c => c.dataset.card);
 
     const periods = `
-        <div class="field"><label>Report data up to (last complete month)</label>
-            <input type="month" class="input" data-k="mobile_dash_lastmonth" value="${cur.mobile_dash_lastmonth}">
-            <p class="hint">Every period in the dashboard ends at this month: Last Month is this month, Last 3 Months and Last 12 Months end here, and the calendar year is the last complete year before it. Set it to the latest month for which the full laboratory file has been loaded. Leave it empty to use the latest month that has data (a partly entered month would then count as the latest).</p>
-            <button type="button" class="btn" id="clearLastMonth" style="margin-top:8px;width:100%;background:#e2e8f0;color:#334155">Use latest month with data</button></div>
+        <div class="field"><label>Report period</label><p class="hint">Every period in the dashboard ends automatically at the latest month that has data.</p></div>
         <div class="field"><label><input type="checkbox" data-k="mobile_dash_nocontam" ${cur.mobile_dash_nocontam ? 'checked' : ''}> Exclude possible skin-flora contaminants</label>
             <p class="hint">Applies to every analysis, tab and chart. Blood isolates of skin-flora organisms (for example coagulase-negative staphylococci) are removed before the first isolate is chosen. Turn off to include them.</p></div>`;
 
@@ -139,7 +136,7 @@ function count(list) { const on = list.filter(([k]) => cur[k]).length; return `$
 function summaries() {
     if (!cur) return;
     const set = (id, t) => { const el = $('#sum_' + id); if (el) el.textContent = t; };
-    set('periods', cur.mobile_dash_lastmonth ? 'Up to ' + monthName(cur.mobile_dash_lastmonth) : 'Latest month with data');
+    set('periods', 'Latest month with data');
     set('tabs', count(TOGGLES.tabs));
     set('analytics', count(TOGGLES.analytics));
     set('content', count(TOGGLES.content));

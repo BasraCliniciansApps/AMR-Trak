@@ -488,8 +488,8 @@ function yaWindowCtl(y) {
     const missing = yaMissingMonths(y);
     let h = '<div class="ya-seg ya-seg-wrap">' + btn('rolling', 'Last 12 months' + (rollKey ? ' <span class="ya-mute">(' + yaLabel(rollKey) + ')</span>' : '')) + btn('calendar', 'Calendar year <span class="ya-mute">(' + calKey + ')</span>') + '</div>';
     h += hintsHtml([mode === 'rolling'
-        ? 'Analysis period: the 12 months ending at the "Report data up to" month (or the latest month with data if none is set). It moves forward when that month changes. CLSI M39 (Sections 6.3 and 6.4) asks for an annual analysis with an analysis period of one year (for example), and for the first isolate per patient. Because the laboratory patient number restarts every calendar year, the first isolate is chosen within each calendar year.'
-        : 'Analysis period: the last complete calendar year before the "Report data up to" month. CLSI M39 (Section 6.4) accepts a calendar year as an analysis period; a fixed year is easier to compare between reports.'], '');
+        ? 'Analysis period: the 12 months ending at the latest month with data. It moves forward when newer data arrive. CLSI M39 (Sections 6.3 and 6.4) asks for an annual analysis with an analysis period of one year (for example), and for the first isolate per patient. Because the laboratory patient number restarts every calendar year, the first isolate is chosen within each calendar year.'
+        : 'Analysis period: the last complete calendar year before the latest month with data. CLSI M39 (Section 6.4) accepts a calendar year as an analysis period; a fixed year is easier to compare between reports.'], '');
     if (missing.length) h += hintsHtml(['<b>Incomplete period:</b> no data for ' + missing.map(ymLabel).join(', ') + '.', 'Percentages may be biased by seasonality.', 'The period does not meet the one-year analysis period recommended by CLSI M39 (Sections 6.3 and 6.4).'], 'color:#b45309');
     host.innerHTML = h;
 }

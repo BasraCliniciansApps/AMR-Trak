@@ -13,10 +13,8 @@ setInfo('scope', 'Unit scope', `<p>The switch filters every chart on the dashboa
 function getDashSettings() {
     try { return JSON.parse(localStorage.getItem('amr_live_settings')) || {}; } catch (e) { return {}; }
 }
-// The month all period windows end at: the "Report data up to" setting, or else the latest month with data
+// The month all period windows end at: the latest month with data (automatic)
 function dashAnchor(records) {
-    const v = getDashSettings().mobile_dash_lastmonth;
-    if (/^\d{4}-\d{2}$/.test(v || '')) return v;
     let latest = '';
     (records || getDashRecords()).forEach(r => { const d = String(r.Date || '').slice(0, 7); if (/^\d{4}-\d{2}$/.test(d) && d > latest) latest = d; });
     return latest;
@@ -116,6 +114,7 @@ function refreshAll() {
 // ---------- tabs ----------
 window.switchTab = function (tab) {
     window._currentTab = tab;
+    $('#periodBar').toggleClass('hidden', tab !== 'analytics');
     $('#viewAnalytics, #viewLastYear, #viewLastMonth, #viewLastQuarter, #viewLab').addClass('hidden');
     $('#btnNavAnalytics, #btnNavLastYear, #btnNavLastMonth, #btnNavLastQuarter, #btnNavLab').removeClass('active');
     if (tab === 'analytics') {
@@ -754,3 +753,32 @@ function mountSectionToolbars() {
     });
 }
 document.addEventListener('DOMContentLoaded', mountSectionToolbars);
+
+
+// ---------- user settings (gear button): kept on this device only ----------
+function getUserPrefs() { try { return JSON.parse(localStorage.getItem('amr_user_prefs')) || {}; } catch (e) { return {}; } }
+function setUserPref(k, v) { const u = getUserPrefs(); u[k] = v; try { localStorage.setItem('amr_user_prefs', JSON.stringify(u)); } catch (e) {} }
+window.showUserSettings = function () {
+    const tg = (id, on) => `<label style="display:inline-block;position:relative;width:40px;height:22px;flex:none"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} style="opacity:0;width:0;height:0"><span class="us-sl"></span></label>`;
+    const per = (typeof anPeriod === 'function') ? (getUserPrefs().period || 'year') : 'year';
+    const html = `<style>.us-sl{position:absolute;inset:0;background:#cbd5e1;border-radius:22px;transition:.2s}.us-sl:before{content:"";position:absolute;height:16px;width:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}input:checked+.us-sl{background:#0d9488}input:checked+.us-sl:before{transform:translateX(18px)}</style>
+    <div style="text-align:left;font-size:12px;color:#334155">
+      <div style="display:flex;gap:10px;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
+        <div><b>Exclude possible skin-flora contaminants</b><div style="font-size:10.5px;color:#64748b;margin-top:2px">Removes blood isolates of skin-flora organisms (for example coagulase-negative staphylococci) before the first isolate is chosen. Applies to every tab and chart.</div></div>${tg('us_contam', contamExcluded())}</div>
+      <div><b>Default analysis period (Analytics tab)</b>
+        <select id="us_period" style="width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:12px;background:#fff">
+          ${[['all', 'All Times'], ['year', 'Last 12 Months'], ['quarter', 'Last 3 Months'], ['month', 'Last Month']].map(o => `<option value="${o[0]}" ${o[0] === per ? 'selected' : ''}>${o[1]}</option>`).join('')}
+        </select>
+        <div style="font-size:10.5px;color:#64748b;margin-top:4px">Used when the dashboard opens. These settings are saved on this device only.</div></div>
+    </div>`;
+    Swal.fire({ title: 'Settings', html, confirmButtonText: 'Save', showCancelButton: true, confirmButtonColor: '#0d9488', focusConfirm: false,
+        preConfirm: () => ({ nocontam: document.getElementById('us_contam').checked, period: document.getElementById('us_period').value }) })
+    .then(r => {
+        if (!r.isConfirmed) return;
+        setUserPref('nocontam', r.value.nocontam); setUserPref('period', r.value.period);
+        $('input[name="an_period"][value="' + r.value.period + '"]').prop('checked', true);
+        try { refreshAll(); } catch (e) { console.error(e); }
+        try { loadAnalyticsFilters(); refreshPeriodHints(); } catch (e) {}
+    });
+};
+$(function () { const p = getUserPrefs().period; if (p) $('input[name="an_period"][value="' + p + '"]').prop('checked', true); });

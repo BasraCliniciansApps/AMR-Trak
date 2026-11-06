@@ -217,6 +217,7 @@ function isNonSusceptibleResult(v) {
 
 // One switch for the whole dashboard (control panel): exclude possible skin-flora contaminants from first-isolate analyses. Default: on.
 function contamExcluded() {
+    try { const u = JSON.parse(localStorage.getItem('amr_user_prefs')) || {}; if (typeof u.nocontam === 'boolean') return u.nocontam; } catch (e) {}
     try { return (JSON.parse(localStorage.getItem('amr_live_settings')) || {}).mobile_dash_nocontam !== false; } catch (e) { return true; }
 }
 function applyDeduplication(records, opts) {
