@@ -180,7 +180,7 @@ function yaIcu() {
     abxList.forEach(a => {
         const ci = cnt(gi, a), cn = cnt(gn, a);
         if (ci.t + cn.t < minN()) return;
-        body.push(`<tr><td class="ya-l"><b>${escHtml(a)}</b></td>${opCell(ci.s, ci.t)}${opCell(cn.s, cn.t)}${opDiff(ci.s, ci.t, cn.s, cn.t)}</tr>`);
+        body.push(`<tr><td class="ya-l"><b>${abxHeadLines(a).map(l => escHtml(l)).join('<br>')}</b></td>${opCell(ci.s, ci.t)}${opCell(cn.s, cn.t)}${opDiff(ci.s, ci.t, cn.s, cn.t)}</tr>`);
     });
     $('#ya_icu_abx').html(body.length
         ? `<table class="ya-table"><thead><tr><th class="ya-l">Antibiotic</th><th>ICU<div class="ya-mute">n=${gi.length}</div></th><th>Non-ICU<div class="ya-mute">n=${gn.length}</div></th><th>Difference (pp)</th></tr></thead><tbody>${body.join('')}</tbody></table>`
