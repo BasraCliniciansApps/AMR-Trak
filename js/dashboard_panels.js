@@ -58,7 +58,7 @@ function wardInScope(ward, scope) {
 function scopeRecs(recs) { const s = getUnitScope(); return s === 'all' ? recs : recs.filter(r => wardInScope(r.Ward, s)); }
 // Warning under every Analytics chart: the results follow the single unit filter at the top of the dashboard
 function scopeBanner() {
-    return '<div class="scope-note" style="font-size:11px;line-height:1.45;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:8px 10px;color:#3730a3;margin-top:10px"><b>Results for: ' + scopeLabel() + '.</b> Records without a ward are excluded and counted in Data quality. This chart follows the unit filter at the top of the dashboard. Change it there to change every chart.</div>';
+    return '<div class="scope-note" style="font-size:11px;line-height:1.45;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:8px 10px;color:#3730a3;margin-top:10px"><b>Results for: ' + scopeLabel() + '. Period: ' + ({ all: 'all complete years', year: 'last 12 months', quarter: 'last 3 months', month: 'last month' })[(typeof anPeriod === 'function' ? anPeriod() : 'year')] + '.</b> Records without a ward are excluded and counted in Data quality. This chart follows the unit filter at the top of the dashboard. Change it there to change every chart.</div>';
 }
 function scopeLabel() { const s = getUnitScope(); return s === 'icu' ? 'ICU' : s === 'nonicuip' ? 'Non-ICU IP (inpatient, excluding emergency)' : s === 'outpatient' ? 'Outpatient (including emergency)' : 'ALL'; }
 // Every chart reads records through this function so the scope applies everywhere.

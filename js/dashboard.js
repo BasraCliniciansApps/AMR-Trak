@@ -138,10 +138,10 @@ function filterByPeriod(records, periodType) {
 function refreshPeriodHints() {
     let recs = [];
     try { recs = getDashRecords(); } catch (e) {}
-    ['guided', 'patho', 'abx'].forEach(g => {
-        const el = document.getElementById(g + '_period_hint');
+    ['an'].forEach(g => {
+        const el = document.getElementById('an_period_hint');
         if (!el) return;
-        const t = $('input[name="' + g + '_period"]:checked').val() || 'year';
+        const t = anPeriod();
         if (t === 'all') {
             const cap = dashAnchor(recs);
             const info = completeYearsInfo(recs.filter(r => String(r.Date || '').slice(0, 7) <= cap));
@@ -158,10 +158,9 @@ function refreshPeriodHints() {
 }
 
 // Visual updates for period toggles
-$(document).on('change', 'input[name="guided_period"], input[name="patho_period"], input[name="abx_period"]', function() { refreshPeriodHints(); });
-$(document).on('change', 'input[name="guided_period"]', function() { loadAnalyticsFilters(); });
-$(document).on('change', 'input[name="patho_period"]', function() { updatePathoDropdowns(); });
-$(document).on('change', 'input[name="abx_period"]', function() { updateAbxDropdowns(); });
+// One Analytics period for every chart (see anPeriod)
+function anPeriod() { return $('input[name="an_period"]:checked').val() || 'year'; }
+$(document).on('change', 'input[name="an_period"]', function() { refreshPeriodHints(); loadAnalyticsFilters(); updatePathoDropdowns(); updateAbxDropdowns(); if (!$('#advContainer').hasClass('hidden')) generateAdvancedAnalytics(); });
 
 
 function formatOrgName(org) {
@@ -1020,7 +1019,7 @@ function loadAnalyticsFilters() {
     if (isUpdatingFilters) return;
     isUpdatingFilters = true;
 
-    let period = $('input[name="guided_period"]:checked').val() || 'all';
+    let period = anPeriod();
     let allRecords = getDashRecords();
     
     // 1. الفلترة حسب الوقت فقط للقوائم المنسدلة (لا تتأثر بالـ Inpatient/Outpatient)
@@ -1172,7 +1171,7 @@ function generateGuidedAnalytics() {
         return;
     }
 
-    let period = $('input[name="guided_period"]:checked').val() || 'all';
+    let period = anPeriod();
     let allRecords = getDashRecords();
     let records = filterByPeriod(allRecords, period);
 
@@ -1257,7 +1256,7 @@ function renderGuidedAST() {
     $('#guidedAmrContainer').html('<canvas id="chartGuidedAMR"></canvas>');
 
     const targetSample = $('#guided_sample').val();
-    let period = $('input[name="guided_period"]:checked').val() || 'all';
+    let period = anPeriod();
 
     let allRecords = getDashRecords();
     let records = filterByPeriod(allRecords, period);
@@ -1359,7 +1358,7 @@ $(document).on('change', 'input[name="patho_metric"]', function() {
 
 function updatePathoDropdowns() {
     refreshPeriodHints();
-    let period = $('input[name="patho_period"]:checked').val() || 'all';
+    let period = anPeriod();
 
     let records = getDashRecords();
     records = filterByPeriod(records, period);
@@ -1394,7 +1393,7 @@ function renderPathoChart() {
         return;
     }
 
-    let period = $('input[name="patho_period"]:checked').val() || 'all';
+    let period = anPeriod();
     let records = getDashRecords();
     records = filterByPeriod(records, period);
     records = records.filter(r => r['Selective organism'] === bug);
@@ -1493,7 +1492,7 @@ $(document).on('change', 'input[name="abx_metric"]', function() {
 
 function updateAbxDropdowns() {
     refreshPeriodHints();
-    let period = $('input[name="abx_period"]:checked').val() || 'all';
+    let period = anPeriod();
 
     let records = getDashRecords();
     records = filterByPeriod(records, period);
@@ -1530,7 +1529,7 @@ function renderAbxChart() {
         return;
     }
 
-    let period = $('input[name="abx_period"]:checked').val() || 'all';
+    let period = anPeriod();
     let records = getDashRecords();
     records = filterByPeriod(records, period);
     // CLSI M39: the first isolate per patient is chosen across all wards; the ward filter is applied afterwards
@@ -1649,6 +1648,8 @@ window.generateAdvancedAnalytics = function() {
     } else if (endDate) {
         records = records.filter(r => r.Date <= endDate);
     }
+    // No From/To: the Analytics period applies
+    if (!startDate && !endDate) records = filterByPeriod(records, anPeriod());
 
     // Filter ONLY if the user selected a sample
     if (targetSample) { 
