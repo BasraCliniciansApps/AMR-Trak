@@ -44,7 +44,7 @@ const opPct = (r, n) => n ? Math.round((r / n) * 1000) / 10 : null;
 const opFmt = v => v === null || v === undefined ? '-' : String(Math.round(v));
 function opCell(r, n, extra) {
     if (!n) return '<td class="ya-mute">-</td>';
-    const low = n < 30;
+    const low = n < minN();
     const ci = wilsonScoreCI(r, n);
     return `<td style="${low ? 'color:#94a3b8' : ''}"><b>${r}/${n}${low ? '*' : ''}</b><div class="ya-mute">${opFmt(opPct(r, n))}%</div><div class="ya-mute">95% CI ${ci.lower}-${ci.upper}</div>${extra || ''}</td>`;
 }
@@ -53,7 +53,7 @@ function opCell(r, n, extra) {
 function opDiff(r1, n1, r2, n2) {
     if (!n1 || !n2) return '<td class="ya-mute">-</td>';
     const d = Math.round((r1 / n1 - r2 / n2) * 1000) / 10, txt = (d > 0 ? '+' : '') + d + ' pp';
-    if (n1 < 30 || n2 < 30) return `<td style="color:#94a3b8">${txt}<div class="ya-mute">n&lt;30: descriptive only</div></td>`;
+    if (n1 < minN() || n2 < minN()) return `<td style="color:#94a3b8">${txt}<div class="ya-mute">n&lt;${minN()}: descriptive only</div></td>`;
     if (opZ(r1, n1, r2, n2) >= 1.96) return `<td><b style="color:#dc2626">${txt}</b><div style="color:#dc2626;font-size:10px;font-weight:700">differs *</div></td>`;
     return `<td>${txt}<div class="ya-mute">no clear difference</div></td>`;
 }
@@ -212,13 +212,13 @@ function opRun(q, qy) {
             data: { labels: per.map(p => p.label), datasets: use.map(l => {
                 const i = labels.indexOf(l), col = OP_COLORS[l] || '#64748b', cells = per.map(p => p.st[i]);
                 return { label: l, data: cells.map(c => c.tested ? opPct(c.resistant, c.tested) : null), borderColor: col, backgroundColor: col, spanGaps: true, tension: 0.2, borderWidth: 2,
-                    pointRadius: 4, pointBackgroundColor: cells.map(c => c.tested >= 30 ? col : '#fff'), pointBorderColor: col, pointBorderWidth: 2,
-                    segment: { borderDash: ctx => (cells[ctx.p0DataIndex].tested < 30 || cells[ctx.p1DataIndex].tested < 30) ? [5, 4] : undefined }, _cells: cells };
+                    pointRadius: 4, pointBackgroundColor: cells.map(c => c.tested >= minN() ? col : '#fff'), pointBorderColor: col, pointBorderWidth: 2,
+                    segment: { borderDash: ctx => (cells[ctx.p0DataIndex].tested < minN() || cells[ctx.p1DataIndex].tested < minN()) ? [5, 4] : undefined }, _cells: cells };
             }) },
             options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'nearest', intersect: true },
                 scales: { y: { min: 0, max: 100, title: { display: true, text: '% resistant' } } },
                 plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } },
-                    tooltip: { callbacks: { label: c => { const k = c.dataset._cells[c.dataIndex]; const ci = wilsonScoreCI(k.resistant, k.tested); return `${c.dataset.label}: ${c.parsed.y}% (${k.resistant}/${k.tested}, 95% CI ${ci.lower}-${ci.upper})${k.tested < 30 ? ' n<30' : ''}`; } } } } }
+                    tooltip: { callbacks: { label: c => { const k = c.dataset._cells[c.dataIndex]; const ci = wilsonScoreCI(k.resistant, k.tested); return `${c.dataset.label}: ${c.parsed.y}% (${k.resistant}/${k.tested}, 95% CI ${ci.lower}-${ci.upper})${k.tested < minN() ? ' n<' + minN() : ''}`; } } } } }
         });
     }
     const head = per.map(p => `<th>${escHtml(p.label)}</th>`).join('');
@@ -234,7 +234,7 @@ function opIcu(q, qy) {
     const icu = all.filter(r => wardInScope(r.Ward, 'icu')), non = all.filter(r => wardInScope(r.Ward, 'nonicu'));
     const si = opMarkerStats(icu), sn = opMarkerStats(non);
     const mi = opMdrCount(icu), mn = opMdrCount(non);
-    const sig = (r1, n1, r2, n2) => n1 >= 30 && n2 >= 30 && opZ(r1, n1, r2, n2) >= 1.96 ? ' <b style="color:#dc2626">*</b>' : '';
+    const sig = (r1, n1, r2, n2) => n1 >= minN() && n2 >= minN() && opZ(r1, n1, r2, n2) >= 1.96 ? ' <b style="color:#dc2626">*</b>' : '';
     const rows = [`<tr><td class="ya-l"><b>First isolates</b></td><td><b>${icu.length}</b></td><td><b>${non.length}</b></td><td></td></tr>`];
     CRITICAL_MARKERS.forEach((m, i) => {
         if (!si[i].tested && !sn[i].tested) return;

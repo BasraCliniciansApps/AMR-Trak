@@ -133,7 +133,7 @@ function yaSpecOptions(year) {
     const names = {};
     yaRaw(year).forEach(r => { const s = String(r.Sample || '').trim(); if (s) names[s.toLowerCase()] = s; });
     return Object.keys(names).map(k => ({ key: k, label: names[k], n: yaFirst(year, k, false).length }))
-        .filter(o => o.n >= 30).sort((a, b) => b.n - a.n).slice(0, 8);
+        .filter(o => o.n >= minN()).sort((a, b) => b.n - a.n).slice(0, 8);
 }
 
 
@@ -170,7 +170,7 @@ function yaIcu() {
     // susceptibility by organism
     const byOrg = {};
     all.forEach(r => { const o = r['Selective organism']; (byOrg[o] = byOrg[o] || []).push(r); });
-    const orgs = Object.keys(byOrg).filter(o => byOrg[o].length >= 30).sort((a, b) => byOrg[b].length - byOrg[a].length).slice(0, 8);
+    const orgs = Object.keys(byOrg).filter(o => byOrg[o].length >= minN()).sort((a, b) => byOrg[b].length - byOrg[a].length).slice(0, 8);
     if (!orgs.length) { $('#ya_icu_seg').html(''); $('#ya_icu_abx').html('<div class="ya-empty">No organism reached 30 first isolates in ' + yaLabel(y) + '.</div>'); setNote('#ya_icu_abx_note', []); return; }
     if (!orgs.includes(YA.icuOrg)) YA.icuOrg = orgs[0];
     $('#ya_icu_seg').html(orgs.map(o => `<button type="button" data-v="${escHtml(o)}" class="${o === YA.icuOrg ? 'on' : ''}" onclick="yaSetIcuOrg(this.getAttribute('data-v'))">${escHtml(formatOrgName(o))} <span class="ya-mute">(${byOrg[o].length})</span></button>`).join(''));
@@ -179,7 +179,7 @@ function yaIcu() {
     const body = [];
     abxList.forEach(a => {
         const ci = cnt(gi, a), cn = cnt(gn, a);
-        if (ci.t + cn.t < 30) return;
+        if (ci.t + cn.t < minN()) return;
         body.push(`<tr><td class="ya-l"><b>${escHtml(a)}</b></td>${opCell(ci.s, ci.t)}${opCell(cn.s, cn.t)}${opDiff(ci.s, ci.t, cn.s, cn.t)}</tr>`);
     });
     $('#ya_icu_abx').html(body.length
@@ -201,10 +201,10 @@ function yaIndicators() {
         if (!s.tested && !p.tested) return '';
         const pc = yaPct(s.resistant, s.tested), pp = yaPct(p.resistant, p.tested);
         const ci = s.tested ? wilsonScoreCI(s.resistant, s.tested) : null;
-        const low = s.tested < 30;
+        const low = s.tested < minN();
         let chg = '<span class="ya-mute">-</span>';
         if (s.tested && p.tested) {
-            const d = Math.round((pc - pp) * 10) / 10, sig = yaZ(s.resistant, s.tested, p.resistant, p.tested) >= 1.96 && s.tested >= 30 && p.tested >= 30;
+            const d = Math.round((pc - pp) * 10) / 10, sig = yaZ(s.resistant, s.tested, p.resistant, p.tested) >= 1.96 && s.tested >= minN() && p.tested >= minN();
             const col = !sig ? '#64748b' : d > 0 ? '#dc2626' : '#059669';
             chg = `<span style="color:${col};font-weight:${sig ? 700 : 500}">${d > 0 ? '+' : ''}${yaPp(d)} pp ${d > 0 ? '&#9650;' : d < 0 ? '&#9660;' : ''}</span>${sig ? '' : ' <span class="ya-mute">ns</span>'}`;
         }
@@ -231,8 +231,8 @@ function yaCumulative() {
     const exclN = yaRaw(y).filter(r => yaMatchSpec(r, YA.cumSpec) && isPossibleContaminant(r)).length;
     const byOrg = {};
     recs.forEach(r => { const o = r['Selective organism']; (byOrg[o] = byOrg[o] || []).push(r); });
-    const orgs = Object.keys(byOrg).filter(o => byOrg[o].length >= 30).sort((a, b) => byOrg[b].length - byOrg[a].length).slice(0, 15);
-    const small = Object.keys(byOrg).filter(o => byOrg[o].length < 30).sort((a, b) => byOrg[b].length - byOrg[a].length);
+    const orgs = Object.keys(byOrg).filter(o => byOrg[o].length >= minN()).sort((a, b) => byOrg[b].length - byOrg[a].length).slice(0, 15);
+    const small = Object.keys(byOrg).filter(o => byOrg[o].length < minN()).sort((a, b) => byOrg[b].length - byOrg[a].length);
     if (!orgs.length) {
         $('#ya_cum_table').html('<div class="ya-empty">No organism reached 30 first isolates in ' + yaLabel(y) + (YA.cumSpec !== 'all' ? ' for this specimen' : '') + '.</div>');
         setNote('#ya_cum_note', [YA.noContam && exclN ? `${exclN} possible contaminant isolate(s) excluded.` : '', small.length ? `Organisms below 30 isolates (not shown): ${small.slice(0, 8).map(o => `${escHtml(formatOrgName(o))} (n=${byOrg[o].length})`).join('; ')}.` : '']);
@@ -244,7 +244,7 @@ function yaCumulative() {
         abxList.forEach(a => {
             let t = 0, s = 0, nu = 0, ut = 0, us = 0;
             byOrg[o].forEach(r => { const v = String(r[a] || '').trim().toUpperCase(); if (yaIsSIR(v)) { t++; if (v === 'S') s++; if (isNonUrineUrineOnly(r, a)) nu++; else { ut++; if (v === 'S') us++; } } });
-            if (t >= 30) { stats[o][a] = { t, s, nu, ut, us }; colTotals[a] = (colTotals[a] || 0) + t; }
+            if (t >= minN()) { stats[o][a] = { t, s, nu, ut, us }; colTotals[a] = (colTotals[a] || 0) + t; }
         });
     });
     const cols = abxList.filter(a => colTotals[a]).sort((a, b) => abxList.indexOf(a) - abxList.indexOf(b)).slice(0, 30);
@@ -301,7 +301,7 @@ function yaTrend() {
     }
     const rows = markers.map(m => `<tr><td class="ya-l"><b>${m}</b></td>` + per.map(p => {
         const s = p[idx[m]];
-        return s.tested ? `<td style="${s.tested < 30 ? 'color:#94a3b8' : ''}">${yaFmt(yaPct(s.resistant, s.tested))}%<div class="ya-mute">n=${s.tested}${s.tested < 30 ? '*' : ''}</div></td>` : '<td class="ya-mute">-</td>';
+        return s.tested ? `<td style="${s.tested < minN() ? 'color:#94a3b8' : ''}">${yaFmt(yaPct(s.resistant, s.tested))}%<div class="ya-mute">n=${s.tested}${s.tested < minN() ? '*' : ''}</div></td>` : '<td class="ya-mute">-</td>';
     }).join('') + '</tr>').join('');
     $('#ya_trend_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Indicator (% R)</th>${quarters.map(q => `<th>${q[0]}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`);
     setNote('#ya_trend_note', [`${yaLabel(y)}: each isolate is counted once (the first of the period), in the quarter in which it appeared, so the quarters add up to the annual figure.`, '<b>*</b> (grey) = fewer than 30 tested: the trend is indicative only.', 'Hollow points and dashed lines on the chart carry the same meaning.']);
@@ -330,7 +330,7 @@ function yaAbxTrend() {
     const tally = (recs, org) => { let t = 0, r = 0, s = 0; recs.forEach(x => { if (org && x['Selective organism'] !== org) return; const v = String(x[S.abx] || '').trim().toUpperCase(); if (!yaIsSIR(v)) return; t++; if (v === 'R') r++; if (v === 'S') s++; }); return { t, r, s }; };
     const totalByOrg = {};
     periods.forEach(pd => pd.recs.forEach(x => { const v = String(x[S.abx] || '').trim().toUpperCase(); if (yaIsSIR(v)) totalByOrg[x['Selective organism']] = (totalByOrg[x['Selective organism']] || 0) + 1; }));
-    const orgOpts = Object.keys(totalByOrg).filter(o => totalByOrg[o] >= 30).sort((a, b) => totalByOrg[b] - totalByOrg[a]);
+    const orgOpts = Object.keys(totalByOrg).filter(o => totalByOrg[o] >= minN()).sort((a, b) => totalByOrg[b] - totalByOrg[a]);
     if (S.org !== 'top' && S.org !== 'all' && !orgOpts.includes(S.org)) S.org = 'top';
     const series = S.org === 'all' ? [{ name: 'All organisms', org: null }]
         : S.org === 'top' ? orgOpts.slice(0, 4).map(o => ({ name: formatOrgName(o), org: o }))
@@ -357,17 +357,17 @@ function yaAbxTrend() {
             data: { labels: periods.map(p => p.label), datasets: data.map((d, i) => {
                 const col = YA_ORG_COLORS[i % YA_ORG_COLORS.length];
                 return { label: d.se.name, data: d.cells.map(c => c.t ? pctOf(c) : null), borderColor: col, backgroundColor: col, spanGaps: true, tension: 0.2, borderWidth: 2,
-                    pointRadius: 4, pointBackgroundColor: d.cells.map(c => c.t >= 30 ? col : '#fff'), pointBorderColor: col, pointBorderWidth: 2,
-                    segment: { borderDash: ctx => (d.cells[ctx.p0DataIndex].t < 30 || d.cells[ctx.p1DataIndex].t < 30) ? [5, 4] : undefined }, _cells: d.cells };
+                    pointRadius: 4, pointBackgroundColor: d.cells.map(c => c.t >= minN() ? col : '#fff'), pointBorderColor: col, pointBorderWidth: 2,
+                    segment: { borderDash: ctx => (d.cells[ctx.p0DataIndex].t < minN() || d.cells[ctx.p1DataIndex].t < minN()) ? [5, 4] : undefined }, _cells: d.cells };
             }) },
             options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'nearest', intersect: true },
                 scales: { y: { min: 0, max: 100, title: { display: true, text: S.metric === 'S' ? '% susceptible' : '% resistant' } } },
                 plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } },
-                    tooltip: { callbacks: { label: c => { const k = c.dataset._cells[c.dataIndex]; const ci = wilsonScoreCI(S.metric === 'S' ? k.s : k.r, k.t); return `${c.dataset.label}: ${c.parsed.y}% (n=${k.t}, 95% CI ${ci.lower}-${ci.upper})${k.t < 30 ? ' n<30' : ''}`; } } } } }
+                    tooltip: { callbacks: { label: c => { const k = c.dataset._cells[c.dataIndex]; const ci = wilsonScoreCI(S.metric === 'S' ? k.s : k.r, k.t); return `${c.dataset.label}: ${c.parsed.y}% (n=${k.t}, 95% CI ${ci.lower}-${ci.upper})${k.t < minN() ? ' n<' + minN() : ''}`; } } } } }
         });
     }
     const head = periods.map(p => `<th>${escHtml(p.label)}</th>`).join('');
-    const rows = data.map(d => `<tr><td class="ya-l"><b>${escHtml(d.se.name)}</b></td>${d.cells.map(c => c.t ? `<td style="${c.t < 30 ? 'color:#94a3b8' : ''}"><b>${yaFmt(pctOf(c))}%</b><div class="ya-mute">n=${c.t}</div></td>` : '<td class="ya-mute">-</td>').join('')}</tr>`).join('');
+    const rows = data.map(d => `<tr><td class="ya-l"><b>${escHtml(d.se.name)}</b></td>${d.cells.map(c => c.t ? `<td style="${c.t < minN() ? 'color:#94a3b8' : ''}"><b>${yaFmt(pctOf(c))}%</b><div class="ya-mute">n=${c.t}</div></td>` : '<td class="ya-mute">-</td>').join('')}</tr>`).join('');
     $('#ya_abx_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Organism</th>${head}</tr></thead><tbody>${rows}</tbody></table>`);
     setNote('#ya_abx_note', [`${escHtml(S.abx)}: first isolate per patient and organism in each period (CLSI M39).`, '<b>Hollow point and dashed line</b> = fewer than 30 isolates tested: indicative only.', 'Only organisms with 30 or more results over the whole period are listed.', skippedOlder ? 'Earlier periods with months missing are not shown: an incomplete period does not meet the one-year analysis period recommended by CLSI M39 (Sections 6.3 and 6.4).' : '', 'Tap a point to see n and the 95% confidence interval.']);
 }
@@ -387,7 +387,7 @@ function yaMdr() {
     const rows = names.map(k => {
         const x = g[k], any = x.MDR + x.XDR + x.PDR, ci = wilsonScoreCI(any, x.n);
         T.n += x.n; T.any += any;
-        return `<tr><td class="ya-l"><b>${escHtml(k)}</b><div class="ya-mute">n=${x.n}${x.n < 30 ? '*' : ''}</div></td><td>${yaFmt(yaPct(x.MDR, x.n))}%</td><td>${yaFmt(yaPct(x.XDR, x.n))}%${x.pXDR ? `<div class="ya-mute">+${x.pXDR} possible</div>` : ''}</td><td>${yaFmt(yaPct(x.PDR, x.n))}%</td><td><b>${yaFmt(yaPct(any, x.n))}%</b><div class="ya-mute">${ci.lower}-${ci.upper}</div></td></tr>`;
+        return `<tr><td class="ya-l"><b>${escHtml(k)}</b><div class="ya-mute">n=${x.n}${x.n < minN() ? '*' : ''}</div></td><td>${yaFmt(yaPct(x.MDR, x.n))}%</td><td>${yaFmt(yaPct(x.XDR, x.n))}%${x.pXDR ? `<div class="ya-mute">+${x.pXDR} possible</div>` : ''}</td><td>${yaFmt(yaPct(x.PDR, x.n))}%</td><td><b>${yaFmt(yaPct(any, x.n))}%</b><div class="ya-mute">${ci.lower}-${ci.upper}</div></td></tr>`;
     }).join('');
     $('#ya_mdr_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Group</th><th>MDR</th><th>XDR</th><th>PDR</th><th>Any (95% CI)</th></tr></thead><tbody>${rows}</tbody></table>`);
     setNote('#ya_mdr_note', [`${yaLabel(y)}: first isolates. Each isolate is placed in its highest class (MDR, XDR or PDR).`, '"Any" = MDR + XDR + PDR (Magiorakos 2012).', 'Categories that were not tested are treated as unknown, not susceptible, so XDR and PDR counts are conservative.', '"Possible" marks isolates that look XDR on the tested categories but had too narrow a panel to confirm.', '<b>*</b> (grey) = fewer than 30 isolates.', 'Validity condition (Magiorakos 2012): the XDR and PDR definitions are valid only when isolates were tested against all or nearly all agents of each category and selective reporting or suppression of results was avoided. With incomplete testing an isolate can only be called possible XDR or possible PDR, and such results should not be compared with confirmed XDR or PDR from other studies.']);

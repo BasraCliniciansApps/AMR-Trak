@@ -259,7 +259,7 @@
 
     <header class="bg-white px-4 py-3 sticky top-0 z-40 border-b border-slate-200 shadow-sm flex flex-wrap justify-between items-center">
         <div class="flex items-center gap-2 -ml-2" id="brand">
-            <img src="img/logo.png?v=11.28" alt="AMR Trak" style="height:30px;width:auto;display:block">
+            <img src="img/logo.png?v=11.29" alt="AMR Trak" style="height:30px;width:auto;display:block">
             <span id="brandName" style="font-family:'Space Grotesk','Inter',system-ui,sans-serif;font-weight:700;font-size:21px;line-height:30px;letter-spacing:-.01em;color:#0f4c5c">AMR <span style="color:#0d9488">Trak</span></span>
             <span id="headerTitle" class="hidden">Surveillance Analytics</span>
         </div>
@@ -295,16 +295,12 @@
             
             </div>
         </div>
-        <div id="periodBar" class="w-full basis-full mt-1.5">
-            <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-inner flex-1"><label class="an-per-lbl flex-1 text-center cursor-pointer mb-0"><input type="radio" name="an_period" value="all" class="peer sr-only"><div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-teal-700 peer-checked:shadow-sm text-slate-500 transition-all">All Times</div></label><label class="an-per-lbl flex-1 text-center cursor-pointer mb-0"><input type="radio" name="an_period" value="year" class="peer sr-only" checked><div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-teal-700 peer-checked:shadow-sm text-slate-500 transition-all">Last 12 Months</div></label><label class="an-per-lbl flex-1 text-center cursor-pointer mb-0"><input type="radio" name="an_period" value="quarter" class="peer sr-only"><div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-teal-700 peer-checked:shadow-sm text-slate-500 transition-all">Last 3 Months</div></label><label class="an-per-lbl flex-1 text-center cursor-pointer mb-0"><input type="radio" name="an_period" value="month" class="peer sr-only"><div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-teal-700 peer-checked:shadow-sm text-slate-500 transition-all">Last Month</div></label></div>
-        </div>
     </header>
     <div class="px-3 mt-4 max-w-lg mx-auto">
         <div id="dashStatus" class="hidden text-[10px] font-bold rounded-lg px-3 py-1.5 mb-3 border"></div>
         
         <!-- Tab 1: Analytics (Guided & Advanced) -->
         <div id="viewAnalytics" class="space-y-4">
-            <div id="an_period_hint" style="display:none"></div>
 
             <!-- 1. CLINICAL PREVALENCE SEARCH (Collapsible) -->
             <div data-sec="prevalence" class="mobile-card border border-slate-200 p-0 overflow-hidden mb-4 border-t-4 border-t-teal-500">
@@ -729,11 +725,11 @@
             Analytics
         </button>
         <button onclick="switchTab('last_year')" id="btnNavLastYear" class="nav-btn">
-            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.28m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.28v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" /></svg>
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.29m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.29v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" /></svg>
             Last Year
         </button>
         <button onclick="switchTab('last_quarter')" id="btnNavLastQuarter" class="nav-btn">
-            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.28c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.29c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
             Last 3 Months
         </button>
         <button onclick="switchTab('last_month')" id="btnNavLastMonth" class="nav-btn">
@@ -741,7 +737,7 @@
             Last Month
         </button>
         <button onclick="switchTab('mdr')" id="btnNavMdr" class="nav-btn">
-            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.28 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.29 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
             MDR
         </button>
         <button onclick="switchTab('lab')" id="btnNavLab" class="nav-btn">
@@ -750,15 +746,15 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=11.28"></script>
-    <script src="js/dashboard.js?v=11.28"></script>
-    <script src="js/info_texts.js?v=11.28"></script>
-    <script src="js/dashboard_panels.js?v=11.28"></script>
-    <script src="js/dashboard_year.js?v=11.28"></script>
-    <script src="js/dashboard_period.js?v=11.28"></script>
-    <script src="js/guide_reviewer.js?v=11.28"></script>
-    <script src="js/guide.js?v=11.28"></script>
-    <script src="js/nav.js?v=11.28"></script>
+    <script src="js/data.js?v=11.29"></script>
+    <script src="js/dashboard.js?v=11.29"></script>
+    <script src="js/info_texts.js?v=11.29"></script>
+    <script src="js/dashboard_panels.js?v=11.29"></script>
+    <script src="js/dashboard_year.js?v=11.29"></script>
+    <script src="js/dashboard_period.js?v=11.29"></script>
+    <script src="js/guide_reviewer.js?v=11.29"></script>
+    <script src="js/guide.js?v=11.29"></script>
+    <script src="js/nav.js?v=11.29"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>
@@ -770,6 +766,6 @@
         });
     }
 </script>
-<div style="text-align:center;font-size:10px;color:#94a3b8;padding:8px 0 16px" id="app_ver">AMR Trak v11.28</div>
+<div style="text-align:center;font-size:10px;color:#94a3b8;padding:8px 0 16px" id="app_ver">AMR Trak v11.29</div>
 </body>
 </html>

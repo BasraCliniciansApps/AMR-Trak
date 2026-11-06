@@ -55,8 +55,14 @@ function wardInScope(ward, scope) {
 // Applies the unit filter to records that are already de-duplicated (see applyDeduplication)
 function scopeRecs(recs) { const s = getUnitScope(); return s === 'all' ? recs : recs.filter(r => wardInScope(r.Ward, s)); }
 // Warning under every Analytics chart: the results follow the single unit filter at the top of the dashboard
+function periodText() {
+    const t = (typeof anPeriod === 'function') ? anPeriod() : 'year', u = getUserPrefs();
+    if (t === 'calyear') return 'calendar year ' + (u.pyear || 'last complete');
+    if (t === 'range') return (u.pfrom || '?') + ' to ' + (u.pto || '?');
+    return ({ all: 'all complete years (several years combined)', year: 'last 12 months', quarter: 'last 3 months', month: 'last month' })[t] || 'last 12 months';
+}
 function scopeBanner() {
-    return '<div class="scope-note" style="font-size:11px;line-height:1.45;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:8px 10px;color:#3730a3;margin-top:10px"><b>Results for: ' + scopeLabel() + '. Period: ' + ({ all: 'all complete years', year: 'last 12 months', quarter: 'last 3 months', month: 'last month' })[(typeof anPeriod === 'function' ? anPeriod() : 'year')] + '.</b> Records without a ward are excluded and counted in Data quality. This chart follows the unit filter at the top of the dashboard. Change it there to change every chart.</div>';
+    return '<div class="scope-note" style="font-size:11px;line-height:1.45;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:8px 10px;color:#3730a3;margin-top:10px"><b>Results for: ' + scopeLabel() + '. Period: ' + periodText() + '.</b> Records without a ward are excluded and counted in Data quality. This chart follows the unit filter at the top of the dashboard and the period set in Settings.' + (minN() !== 30 ? ' <b>Minimum isolates set to ' + minN() + ' in Settings (CLSI M39: 30). Percentages from small numbers are less reliable.</b>' : '') + '</div>';
 }
 function scopeLabel() { const s = getUnitScope(); return s === 'icu' ? 'ICU' : s === 'nonicuip' ? 'Non-ICU IP (inpatient, excluding emergency)' : s === 'outpatient' ? 'Outpatient (including emergency)' : 'ALL'; }
 // Every chart reads records through this function so the scope applies everywhere.
@@ -114,7 +120,6 @@ function refreshAll() {
 // ---------- tabs ----------
 window.switchTab = function (tab) {
     window._currentTab = tab;
-    $('#periodBar').toggleClass('hidden', tab !== 'analytics');
     $('#viewAnalytics, #viewLastYear, #viewLastMonth, #viewLastQuarter, #viewMdr, #viewLab').addClass('hidden');
     $('#btnNavAnalytics, #btnNavLastYear, #btnNavLastMonth, #btnNavLastQuarter, #btnNavMdr, #btnNavLab').removeClass('active');
     if (tab === 'analytics') {
@@ -324,7 +329,7 @@ function renderMdrPanel() {
     const rows = Object.keys(byGroup).sort((a, b) => byGroup[b].total - byGroup[a].total).map(g => {
         const x = byGroup[g], w = x.MDR + x.XDR + x.PDR;
         const poss = (x.px || x.pp) ? ` <span class="text-slate-400">(+${x.px} poss. XDR${x.pp ? ', +' + x.pp + ' poss. PDR' : ''})</span>` : '';
-        return `<tr class="border-t border-slate-100"><td class="py-1.5 pr-2 font-bold text-slate-700">${gnames[g] || g}</td><td class="text-center">${x.total}${x.total < 30 ? '*' : ''}</td><td class="text-center text-amber-600 font-bold">${pct(w, x.total)}%</td><td class="text-center text-rose-600 font-bold">${x.XDR + x.PDR}${poss}</td><td class="text-center text-red-900 font-bold">${x.PDR}</td></tr>`;
+        return `<tr class="border-t border-slate-100"><td class="py-1.5 pr-2 font-bold text-slate-700">${gnames[g] || g}</td><td class="text-center">${x.total}${x.total < minN() ? '*' : ''}</td><td class="text-center text-amber-600 font-bold">${pct(w, x.total)}%</td><td class="text-center text-rose-600 font-bold">${x.XDR + x.PDR}${poss}</td><td class="text-center text-red-900 font-bold">${x.PDR}</td></tr>`;
     }).join('');
     $('#mdr_group_table').html(rows ? `<table class="w-full text-[10px]"><thead><tr class="text-slate-500"><th class="text-left pb-1">Group</th><th>n</th><th>MDR+</th><th>XDR+</th><th>PDR</th></tr></thead><tbody>${rows}</tbody></table><p class="text-[9px] text-slate-400 mt-1">* fewer than 30 isolates: interpret with caution. MDR+ = MDR, XDR or PDR.</p>` : '<p class="text-xs text-slate-400 text-center">No classifiable isolates in this period.</p>');
 }
@@ -459,7 +464,7 @@ function renderLabQuality() {
         type: 'bar',
         data: {
             labels: wards.map(w => (w.length > 22 ? w.slice(0, 20) + '..' : w) + ` (${wt(w)})`),
-            datasets: [{ label: 'Positivity %', data: wards.map(w => pct(perWard[w].g, wt(w))), backgroundColor: wards.map(w => wt(w) >= 30 ? '#0d9488' : '#94a3b8'), borderRadius: 3 }]
+            datasets: [{ label: 'Positivity %', data: wards.map(w => pct(perWard[w].g, wt(w))), backgroundColor: wards.map(w => wt(w) >= minN() ? '#0d9488' : '#94a3b8'), borderRadius: 3 }]
         },
         options: Object.assign({}, opt, {
             indexAxis: 'y',
@@ -763,6 +768,7 @@ document.addEventListener('DOMContentLoaded', mountSectionToolbars);
 // ---------- user settings (gear button): kept on this device only ----------
 function getUserPrefs() { try { return JSON.parse(localStorage.getItem('amr_user_prefs')) || {}; } catch (e) { return {}; } }
 function setUserPref(k, v) { const u = getUserPrefs(); u[k] = v; try { localStorage.setItem('amr_user_prefs', JSON.stringify(u)); } catch (e) {} }
+function usYears() { const set = {}; (getUserPrefs && getAllDashRecordsUnscoped()).forEach(r => { const y = String(r.Date || '').slice(0, 4); if (/^\d{4}$/.test(y)) set[y] = 1; }); const ys = Object.keys(set).sort().reverse(); return ys.length ? ys : [String(new Date().getFullYear())]; }
 window.showUserSettings = function () {
     const u = getUserPrefs();
     const tg = (id, on) => `<label style="display:inline-block;position:relative;width:40px;height:22px;flex:none"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} style="opacity:0;width:0;height:0"><span class="us-sl"></span></label>`;
@@ -773,21 +779,21 @@ window.showUserSettings = function () {
     <div style="text-align:left;font-size:12px;color:#334155;max-height:62vh;overflow-y:auto;padding-right:4px">
       ${row('Exclude possible skin-flora contaminants', 'Removes blood isolates of skin-flora organisms (for example coagulase-negative staphylococci) before the first isolate is chosen. Applies to every tab and chart.', tg('us_contam', contamExcluded()))}
       ${blk('Default unit filter', 'The unit filter selected when the dashboard opens.', sel('us_scope', [['all', 'ALL'], ['icu', 'ICU'], ['nonicuip', 'Non-ICU IP'], ['outpatient', 'Outpatient']], getUnitScope()))}
-      ${blk('Default analysis period (Analytics tab)', 'The period selected when the dashboard opens.', sel('us_period', [['all', 'All Times'], ['year', 'Last 12 Months'], ['quarter', 'Last 3 Months'], ['month', 'Last Month']], u.period || 'year'))}
+      ${blk('Analysis period (Analytics tab)', 'One period for every Analytics chart. All Times combines complete calendar years only. The Heatmap From/To fields, when filled, override it.', sel('us_period', [['year', 'Last 12 Months (default)'], ['all', 'All Times'], ['calyear', 'Calendar year'], ['quarter', 'Last 3 Months'], ['month', 'Last Month'], ['range', 'Specific period']], anPeriod()) + `<div id="us_cal" style="display:none;margin-top:6px">${sel('us_pyear', usYears().map(y => [y, y]), String(u.pyear || usYears()[0]))}</div><div id="us_rng" style="display:none;margin-top:6px;gap:6px"><input type="month" id="us_pfrom" value="${u.pfrom || ''}" style="flex:1;border:1px solid #cbd5e1;border-radius:8px;padding:7px;font-size:12px"><input type="month" id="us_pto" value="${u.pto || ''}" style="flex:1;border:1px solid #cbd5e1;border-radius:8px;padding:7px;font-size:12px"></div>`)}
       ${blk('Last Year tab period', 'Last 12 months moves forward with the data. Calendar year is the last complete calendar year (CLSI M39, Section 6.4).', sel('us_yamode', [['rolling', 'Last 12 months'], ['calendar', 'Calendar year']], (typeof yaMode === 'function') ? yaMode() : 'rolling'))}
-      ${row('Hide results with fewer than 30 isolates', 'Switches on the "Hide n &lt; 30" option in every Analytics chart when the dashboard opens. The threshold of 30 follows CLSI M39 and cannot be lowered.', tg('us_hidelow', !!u.hidelow))}
+      ${blk('Minimum isolates for a reliable result', 'Default 30 (CLSI M39). Results below this number are marked with * and grey. Lower values make percentages less reliable; the banner under each chart says when it is changed.', `<input type="number" id="us_minn" min="1" max="200" value="${minN()}" style="width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:12px">`)}
+      ${row('Hide results below the minimum', 'Switches on the "Hide n &lt; minimum" option in every Analytics chart when the dashboard opens.', tg('us_hidelow', !!u.hidelow))}
       ${row('Show explanation notes under charts', 'Notes about symbols, colours and sample size. Warnings about incomplete periods and the unit banner always stay.', tg('us_notes', u.notes !== false))}
       <div style="font-size:10.5px;color:#64748b">These settings are saved on this device only.</div>
     </div>`;
-    Swal.fire({ title: 'Settings', html, confirmButtonText: 'Save', showCancelButton: true, confirmButtonColor: '#0d9488', focusConfirm: false,
-        preConfirm: () => ({ nocontam: document.getElementById('us_contam').checked, period: document.getElementById('us_period').value, scope: document.getElementById('us_scope').value,
+    Swal.fire({ title: 'Settings', html, didOpen: () => { const f = () => { const v = document.getElementById('us_period').value; document.getElementById('us_cal').style.display = v === 'calyear' ? '' : 'none'; document.getElementById('us_rng').style.display = v === 'range' ? 'flex' : 'none'; }; document.getElementById('us_period').addEventListener('change', f); f(); }, confirmButtonText: 'Save', showCancelButton: true, confirmButtonColor: '#0d9488', focusConfirm: false,
+        preConfirm: () => ({ nocontam: document.getElementById('us_contam').checked, period: document.getElementById('us_period').value, pyear: document.getElementById('us_pyear').value, pfrom: document.getElementById('us_pfrom').value, pto: document.getElementById('us_pto').value, minn: parseInt(document.getElementById('us_minn').value, 10) || 30, scope: document.getElementById('us_scope').value,
             yamode: document.getElementById('us_yamode').value, hidelow: document.getElementById('us_hidelow').checked, notes: document.getElementById('us_notes').checked }) })
     .then(r => {
         if (!r.isConfirmed) return;
         const v = r.value;
-        ['nocontam', 'period', 'scope', 'hidelow', 'notes'].forEach(k => setUserPref(k, v[k]));
+        ['nocontam', 'period', 'pyear', 'pfrom', 'pto', 'minn', 'scope', 'hidelow', 'notes'].forEach(k => setUserPref(k, v[k]));
         try { localStorage.setItem('amr_ya_mode', v.yamode); } catch (e) {}
-        $('input[name="an_period"][value="' + v.period + '"]').prop('checked', true);
         applyUserPrefsUI(true);
         _unitScope = v.scope;
         try { refreshAll(); } catch (e) { console.error(e); }
@@ -801,9 +807,9 @@ function applyUserPrefsUI(fire) {
     ['guided', 'patho', 'abx', 'adv'].forEach(k => {
         const el = document.getElementById(k + '_hide_low');
         if (el && !!u.hidelow !== el.checked) { el.checked = !!u.hidelow; if (fire) $(el).trigger('change'); }
+        const lb = document.querySelector('label[for="' + k + '_hide_low"]'); if (lb) lb.innerHTML = 'Hide n &lt; ' + minN();
     });
 }
 $(function () {
-    const p = getUserPrefs().period; if (p) $('input[name="an_period"][value="' + p + '"]').prop('checked', true);
     applyUserPrefsUI(false);
 });

@@ -215,11 +215,22 @@ function isNonSusceptibleResult(v) {
     return v === 'R' || v === 'I' || v === 'SDD';
 }
 
-// One switch for the whole dashboard (control panel): exclude possible skin-flora contaminants from first-isolate analyses. Default: on.
+// One switch for the whole dashboard (Settings, gear button): exclude possible skin-flora contaminants from first-isolate analyses. Default: off.
 function contamExcluded() {
     try { const u = JSON.parse(localStorage.getItem('amr_user_prefs')) || {}; if (typeof u.nocontam === 'boolean') return u.nocontam; } catch (e) {}
-    try { return (JSON.parse(localStorage.getItem('amr_live_settings')) || {}).mobile_dash_nocontam !== false; } catch (e) { return true; }
+    return false;
 }
+// Minimum number of isolates for a result to be called reliable (Settings, gear button). Default 30 (CLSI M39).
+function minN() {
+    try { const u = JSON.parse(localStorage.getItem('amr_user_prefs')) || {}; const n = parseInt(u.minn, 10); if (n >= 1 && n <= 200) return n; } catch (e) {}
+    return 30;
+}
+// Rewrites the number 30 in explanation texts when the user has changed the minimum
+function nTxt(s) {
+    const m = minN(); if (m === 30 || typeof s !== 'string') return s;
+    return s.replace(/(fewer than |below |at least |reach(?:ed|es)? |rarely has |n ?(?:&lt;|<|>=|&ge;|≥) ?|&lt; ?)30\b/g, '$1' + m).replace(/\b30 (or more|first isolates|cultures)/g, m + ' $1');
+}
+(function () { if (!window.jQuery) return; const h = jQuery.fn.html; jQuery.fn.html = function (v) { return arguments.length ? h.call(this, nTxt(v)) : h.call(this); }; })();
 function applyDeduplication(records, opts) {
     records = records.filter(r => !isScreeningSpecimen(r));
     if (contamExcluded()) records = records.filter(r => !isPossibleContaminant(r));
@@ -712,7 +723,7 @@ function isIntrinsicResistance(org, abx) { return intrinsicResistanceSet(org).ha
 // (threshold used by the ACSQHC hospital cumulative antibiogram specification, which is based on CLSI M39).
 const SELECTIVE_TESTING_THRESHOLD = 0.9;
 function isSelectivelyTested(testedCount, totalIsolates) {
-    return totalIsolates >= 30 && testedCount > 0 && (testedCount / totalIsolates) < SELECTIVE_TESTING_THRESHOLD;
+    return totalIsolates >= minN() && testedCount > 0 && (testedCount / totalIsolates) < SELECTIVE_TESTING_THRESHOLD;
 }
 
 // =====================================================================

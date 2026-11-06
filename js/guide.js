@@ -39,7 +39,7 @@
                 '<b>Unit filter</b> (ALL, ICU, Non-ICU IP, Outpatient) filters everything on every tab.',
                 '<b>Section headers</b> in Analytics open and close when tapped. Open only the one you need.']) +
             H('Choosing the data (Analytics)') + L([
-                '<b>Analysis period:</b> one period for every Analytics chart, set by the switch above the charts: All Times (complete years only), Last 12 Months, Last 3 Months or Last Month. The Heatmap From/To fields, when filled, override it. Start with a wider period when numbers are small, because more isolates give more reliable percentages.',
+                '<b>Analysis period:</b> one period for every Analytics chart, set in Settings (gear button): Last 12 Months (default), All Times (complete years only), Calendar year, Last 3 Months, Last Month or a specific period. The Heatmap From/To fields, when filled, override it. Start with a wider period when numbers are small, because more isolates give more reliable percentages.',
                 '<b>Specimen:</b> restricts to blood, urine, wound and so on. Resistance often differs by site, so choose the specimen that matches the patient\'s infection.',
                 '<b>Ward (All, In, Out):</b> all patients, inpatients, or outpatients. The emergency department is counted with the outpatients (patients seen without admission).',
                 '<b>Bacteria or Antimicrobial:</b> the organism or the drug you want to examine.',

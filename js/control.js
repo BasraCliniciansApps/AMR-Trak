@@ -99,8 +99,7 @@ function render() {
 
     const periods = `
         <div class="field"><label>Report period</label><p class="hint">Every period in the dashboard ends automatically at the latest month that has data.</p></div>
-        <div class="field"><label><input type="checkbox" data-k="mobile_dash_nocontam" ${cur.mobile_dash_nocontam ? 'checked' : ''}> Exclude possible skin-flora contaminants</label>
-            <p class="hint">Applies to every analysis, tab and chart. Blood isolates of skin-flora organisms (for example coagulase-negative staphylococci) are removed before the first isolate is chosen. Turn off to include them.</p></div>`;
+        <div class="field"><label>Possible skin-flora contaminants</label><p class="hint">Excluding possible skin-flora contaminants, the analysis period and the minimum number of isolates are now set by each user from the gear button in the dashboard.</p></div>`;
 
     const scope = `
         <div class="row" style="margin-top:4px"><span>Show the All / ICU / Non-ICU switch</span><label class="sw"><input type="checkbox" data-k="dash_show_scope" ${cur.dash_show_scope ? 'checked' : ''}><i></i></label></div>

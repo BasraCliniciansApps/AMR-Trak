@@ -117,6 +117,8 @@ function periodWindow(records, periodType) {
         return { from: from, to: latest, label: ymLabel(from) + ' \u2013 ' + ymLabel(latest) };
     }
     if (periodType === 'month') return { from: latest, to: latest, label: ymLabel(latest) };
+    if (periodType === 'calyear') { const y = String(getUserPrefs().pyear || (lMonth === 12 ? lYear : lYear - 1)); return { from: y + '-01', to: y + '-12', label: y }; }
+    if (periodType === 'range') { let a = getUserPrefs().pfrom || ymShift(latest, -11), b = getUserPrefs().pto || latest; if (a > b) { const t = a; a = b; b = t; } return { from: a, to: b, label: ymLabel(a) + ' \u2013 ' + ymLabel(b) }; }
     return null;
 }
 function filterByPeriod(records, periodType) {
@@ -160,14 +162,7 @@ function refreshPeriodHints() {
 
 // Visual updates for period toggles
 // One Analytics period for every chart (see anPeriod)
-// The explanation appears only after a period button is pressed; pressing the same button again hides it
-$(document).on('click', '.an-per-lbl', function () {
-    const v = $(this).find('input').val(), same = $('input[name="an_period"]:checked').val() === v;
-    window._anHintOpen = same ? !window._anHintOpen : true;
-    setTimeout(refreshPeriodHints, 0);
-});
-function anPeriod() { return $('input[name="an_period"]:checked').val() || 'year'; }
-$(document).on('change', 'input[name="an_period"]', function() { refreshPeriodHints(); loadAnalyticsFilters(); updatePathoDropdowns(); updateAbxDropdowns(); if (!$('#advContainer').hasClass('hidden')) generateAdvancedAnalytics(); });
+function anPeriod() { try { const p = (typeof getUserPrefs === 'function' ? getUserPrefs().period : '') || 'year'; return ['all', 'year', 'quarter', 'month', 'calyear', 'range'].indexOf(p) >= 0 ? p : 'year'; } catch (e) { return 'year'; } }
 
 
 function formatOrgName(org) {
@@ -239,7 +234,7 @@ function ciTooltip(metricName) {
                 const m = typeof metricName === 'function' ? metricName() : metricName;
                 const n = ds.nData ? ds.nData[i] : null, ci = ds.ciData ? ds.ciData[i] : null;
                 const out = [m + ': ' + ctx.raw + '%'];
-                if (n !== null && n !== undefined) out.push('n = ' + n + ' tested' + (n < 30 ? ' (n<30, interpret with caution)' : ''));
+                if (n !== null && n !== undefined) out.push('n = ' + n + ' tested' + (n < minN() ? ' (n<' + minN() + ', interpret with caution)' : ''));
                 if (ci && n) out.push('95% CI: ' + ci.lower + '\u2013' + ci.upper + '%');
                 return out;
             }
@@ -381,7 +376,7 @@ window.showInfo = function(key) {
     if (!i) return;
     Swal.fire({
         title: i.title,
-        html: '<div class="info-body">' + paraHints(i.html) + '</div>' + refsHtml(i.refs, true),
+        html: nTxt('<div class="info-body">' + paraHints(i.html) + '</div>' + refsHtml(i.refs, true)),
         showConfirmButton: true, confirmButtonText: 'Close', width: 'min(92vw, 440px)',
         customClass: { popup: 'info-popup', title: 'info-title', htmlContainer: 'info-container', confirmButton: 'info-close' },
         buttonsStyling: false
@@ -897,7 +892,7 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
                 const wOrgs = [...(wAbxOrgs[a] || [])].filter(Boolean);
                 const wIntr = wOrgs.length > 0 && wOrgs.every(o => isIntrinsicResistance(o, a));   // intrinsic only when every organism tested for it is intrinsically resistant
                 const wSel = isSelectivelyTested(t, watchRecords.length);
-                abxLabels.push(a + (wIntr ? ' ‡' : '') + (wSel ? ' †' : '') + (t >= 30 ? '' : ' *'));
+                abxLabels.push(a + (wIntr ? ' ‡' : '') + (wSel ? ' †' : '') + (t >= minN() ? '' : ' *'));
                 abxData.push(p);
                 // تلوين ذكي حسب شدة المقاومة (أحمر للمقاومة العالية، برتقالي للمتوسطة، أخضر للمنخفضة)
                 if (p > 50) abxColors.push('rgba(225, 29, 72, 0.85)');
@@ -970,7 +965,7 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
         
         labels.push(org);
         data.push(p);
-        bgColors.push(item.tested >= 30 ? palette.bg : '#94a3b8');
+        bgColors.push(item.tested >= minN() ? palette.bg : '#94a3b8');
         ciData.push(wilsonScoreCI(item.resistant, item.tested));
         nDataArr.push(item.tested);
     });
@@ -1304,7 +1299,7 @@ function renderGuidedAST() {
 
     testedAbxs.forEach(abx => {
         let s = abxStats[abx];
-        let isReliable = s.tested >= 30;
+        let isReliable = s.tested >= minN();
 
         if (hideLowN && !isReliable) return;
 
@@ -1445,7 +1440,7 @@ function renderPathoChart() {
 
     testedAbxs.forEach(abx => {
         let s = abxStats[abx];
-        let isReliable = s.tested >= 30;
+        let isReliable = s.tested >= minN();
 
         if (hideLowN && !isReliable) return;
 
@@ -1578,7 +1573,7 @@ function renderAbxChart() {
 
     testedOrgs.forEach(org => {
         let s = orgStats[org];
-        let isReliable = s.tested >= 30;
+        let isReliable = s.tested >= minN();
 
         if (hideLowN && !isReliable) return;
 
@@ -1712,7 +1707,7 @@ window.generateAdvancedAnalytics = function() {
     });
 
     const hmHideLow = $('#adv_hide_low').is(':checked');
-    if (hmHideLow) Object.keys(heatmapStats).forEach(o => Object.keys(heatmapStats[o]).forEach(a => { if (heatmapStats[o][a].t < 30) delete heatmapStats[o][a]; }));
+    if (hmHideLow) Object.keys(heatmapStats).forEach(o => Object.keys(heatmapStats[o]).forEach(a => { if (heatmapStats[o][a].t < minN()) delete heatmapStats[o][a]; }));
     let hmOrgs = Object.keys(heatmapStats).sort();
     let hmAbxs = targetAbxs.sort();
 
@@ -1735,11 +1730,11 @@ window.generateAdvancedAnalytics = function() {
         hmHtml += `<tr><th class="text-[10px] text-left leading-tight">${formatScientificName(o)} <br><span class="text-[9px] font-normal text-slate-400">(${orgCounts[o]||0})</span></th>`;
         hmAbxs.forEach(a => {
             let cell = heatmapStats[o][a];
-            if (!cell || cell.t === 0 || (hmHideLow && cell.t < 30)) { hmHtml += '<td class="bg-slate-50 text-slate-300">-</td>'; } 
+            if (!cell || cell.t === 0 || (hmHideLow && cell.t < minN())) { hmHtml += '<td class="bg-slate-50 text-slate-300">-</td>'; } 
             else {
                 let targetVal = metric === 'R' ? cell.r : (metric === 'NS' ? cell.ns : cell.s);
                 let p = Math.round((targetVal / cell.t) * 100);
-                let isLow = cell.t < 30;
+                let isLow = cell.t < minN();
                 let dangerScore = (metric === 'R' || metric === 'NS') ? p : (100 - p);
                 let ci = wilsonScoreCI(targetVal, cell.t); // Calculate the confidence interval
                 const sel = isSelectivelyTested(cell.t, orgCounts[o] || 0); // tested on fewer than 90% of the organism's isolates
@@ -1768,7 +1763,7 @@ window.generateAdvancedAnalytics = function() {
     });
     hmHtml += '</tbody></table>';
     $('#heatmapWrapper').html(hmHtml + scopeBanner());
-    if (lowCells || irCells) $('#heatmapLegend').append('<span class="px-1 bg-slate-200 text-slate-500 rounded">Grey: ' + (lowCells && irCells ? 'n&lt;30 or &Dagger;' : (lowCells ? 'n&lt;30' : '&Dagger;')) + '</span>');
+    if (lowCells || irCells) $('#heatmapLegend').append('<span class="px-1 bg-slate-200 text-slate-500 rounded">Grey: ' + (lowCells && irCells ? 'n&lt;' + minN() + ' or &Dagger;' : (lowCells ? 'n&lt;' + minN() : '&Dagger;')) + '</span>');
     setNote('#heatmapNote', [
         (lowCells || irCells) ? '<b>Grey cell:</b> the value is not a reliable susceptibility result.' : '',
         lowCells ? '<b>*</b> = fewer than 30 isolates tested (CLSI M39): ' + lowCells + ' cell' + (lowCells === 1 ? '' : 's') + '.' : '',
