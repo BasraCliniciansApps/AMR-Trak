@@ -66,11 +66,22 @@ function periodText() {
 }
 function scopeShort() { const s = getUnitScope(); return s === 'icu' ? 'ICU' : s === 'nonicuip' ? 'Non-ICU inpatients' : s === 'outpatient' ? 'Outpatient (with emergency)' : 'All units'; }
 // custom = period text when a chart has its own dates (the Heatmap From/To)
+// Footnote required by CLSI M39 Section 6.4 when several years are analysed together
+function combinedYearsNote() {
+    try {
+        const t = anPeriod(), recs = getDashRecords();
+        let ys = 0;
+        if (t === 'all') ys = completeYearsInfo(recs.filter(r => !r.Date || String(r.Date).slice(0, 7) <= dashAnchor(recs))).complete.length;
+        else if (t === 'range') { const w = periodWindow(recs, t); if (w) { const m = (parseInt(w.to.slice(0, 4), 10) - parseInt(w.from.slice(0, 4), 10)) * 12 + parseInt(w.to.slice(5, 7), 10) - parseInt(w.from.slice(5, 7), 10) + 1; ys = m > 12 ? Math.ceil(m / 12) : 0; } }
+        return ys > 1 ? 'Combined data: ' + ys + ' years analysed together (first isolate per patient per calendar year; CLSI M39 &sect;6.4). Interpret trends and changes over time with caution.' : '';
+    } catch (e) { return ''; }
+}
 function scopeBanner(custom) {
     const lines = ['<b>Showing: ' + scopeShort() + ' &middot; ' + (custom || periodText()) + '</b>',
         'Unit: change it with the buttons at the top of the page.',
         custom ? 'Period: set by the From and To dates of this search.' : 'Period: change it in Settings (gear button).',
         'Records without a ward are excluded and counted in Data quality.'];
+    const cn = custom ? '' : combinedYearsNote(); if (cn) lines.push('<b>' + cn + '</b>');
     return '<div class="scope-note" style="font-size:11px;line-height:1.45;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:8px 10px;color:#3730a3;margin-top:10px"><ul class="note-list keep" style="margin:0">' + lines.map(t => '<li>' + t + '</li>').join('') + '</ul></div>';
 }
 function scopeLabel() { const s = getUnitScope(); return s === 'icu' ? 'ICU' : s === 'nonicuip' ? 'Non-ICU IP (inpatient, excluding emergency)' : s === 'outpatient' ? 'Outpatient (including emergency)' : 'ALL'; }
