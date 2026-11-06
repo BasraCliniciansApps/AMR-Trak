@@ -212,14 +212,14 @@ function yaCumulative() {
     orgs.forEach(o => {
         stats[o] = {};
         abxList.forEach(a => {
-            let t = 0, s = 0;
-            byOrg[o].forEach(r => { const v = String(r[a] || '').trim().toUpperCase(); if (yaIsSIR(v)) { t++; if (v === 'S') s++; } });
-            if (t >= 30) { stats[o][a] = { t, s }; colTotals[a] = (colTotals[a] || 0) + t; }
+            let t = 0, s = 0, nu = 0;
+            byOrg[o].forEach(r => { const v = String(r[a] || '').trim().toUpperCase(); if (yaIsSIR(v)) { t++; if (v === 'S') s++; if (isNonUrineUrineOnly(r, a)) nu++; } });
+            if (t >= 30) { stats[o][a] = { t, s, nu }; colTotals[a] = (colTotals[a] || 0) + t; }
         });
     });
     const cols = abxList.filter(a => colTotals[a]).sort((a, b) => abxList.indexOf(a) - abxList.indexOf(b)).slice(0, 30);
     const color = p => p >= 90 ? 'background:#d1fae5;color:#065f46' : p >= 70 ? 'background:#fef9c3;color:#854d0e' : p >= 50 ? 'background:#fed7aa;color:#9a3412' : 'background:#fecaca;color:#991b1b';
-    let dagger = false, irCol = false;
+    let dagger = false, irCol = false, usym = false;
     const body = orgs.map(o => {
         const n = byOrg[o].length;
         const cells = cols.map(a => {
@@ -228,13 +228,14 @@ function yaCumulative() {
             if (isIntrinsicResistance(o, a)) { irCol = true; return `<td class="ya-mute" style="background:#e2e8f0" title="${escHtml(a)}: intrinsic resistance (not reported as acquired)">&Dagger;</td>`; }
             const p = Math.round((c.s / c.t) * 100), sel = isSelectivelyTested(c.t, n);
             if (sel) { dagger = true; return `<td class="ya-mute" style="background:#f1f5f9" title="${escHtml(a)}: selectively tested (${c.t} of ${n} isolates). Not reported (CLSI M39 Section 6.5.3)">&dagger;</td>`; }
-            return `<td style="${color(p)}" title="${escHtml(a)}: ${c.s}/${c.t} susceptible">${p}</td>`;
+            if (c.nu) usym = true;
+            return `<td style="${color(p)}" title="${escHtml(a)}: ${c.s}/${c.t} susceptible${c.nu ? '; ' + c.nu + ' from non-urine specimens' : ''}">${p}${c.nu ? '&sect;' : ''}</td>`;
         }).join('');
         return `<tr><td class="ya-l"><b>${escHtml(formatOrgName(o))}</b><div class="ya-mute">n=${n}</div></td>${cells}</tr>`;
     }).join('');
     const head = cols.map(a => `<th class="ya-v"><span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;height:96px;white-space:nowrap;font-size:10px">${escHtml(a)}</span></th>`).join('');
     $('#ya_cum_table').html(`<table class="ya-table ya-cum"><thead><tr><th class="ya-l">Organism</th>${head}</tr></thead><tbody>${body}</tbody></table>`);
-    setNote('#ya_cum_note', [YA.noContam && exclN ? `<b>${exclN} possible skin-flora contaminant isolate${exclN === 1 ? '' : 's'}</b> (for example coagulase-negative staphylococci in blood) excluded.` : '', `${y}: first isolate per patient and organism (CLSI M39).`, 'Values are % <b>susceptible</b>. Only S counts; I and SDD are not counted as susceptible.', 'A cell is shown only when 30 or more isolates were tested. Colours: green 90% or more, yellow 70-89%, orange 50-69%, red below 50%.', small.length ? `Organisms with fewer than 30 isolates (not shown): ${small.slice(0, 6).map(o => `${escHtml(formatOrgName(o))} (n=${byOrg[o].length})`).join('; ')}${small.length > 6 ? '...' : ''}.` : '', irCol ? '<b>&Dagger;</b> = intrinsic resistance (CLSI M100-Ed36 Appendix B): expected for the organism, so no susceptibility percentage is reported.' : '', dagger ? '<b>&dagger;</b> = selective test: the agent was tested on fewer than 90% of the isolates, so no percentage is shown. CLSI M39 (Section 6.5.3) says agents tested selectively should not be included in the routine cumulative report because they are biased toward lower susceptibility. M39 gives no percentage cut-off; 90% follows the ACSQHC cumulative antibiogram specification.' : '']);
+    setNote('#ya_cum_note', [YA.noContam && exclN ? `<b>${exclN} possible skin-flora contaminant isolate${exclN === 1 ? '' : 's'}</b> (for example coagulase-negative staphylococci in blood) excluded.` : '', `${y}: first isolate per patient and organism (CLSI M39).`, 'Values are % <b>susceptible</b>. Only S counts; I and SDD are not counted as susceptible.', 'A cell is shown only when 30 or more isolates were tested. Colours: green 90% or more, yellow 70-89%, orange 50-69%, red below 50%.', small.length ? `Organisms with fewer than 30 isolates (not shown): ${small.slice(0, 6).map(o => `${escHtml(formatOrgName(o))} (n=${byOrg[o].length})`).join('; ')}${small.length > 6 ? '...' : ''}.` : '', usym ? '<b>&sect;</b> = urine-only agent (CLSI M100-Ed36) that also includes non-urine specimens. Those results are included; interpret with clinical judgement.' : '', irCol ? '<b>&Dagger;</b> = intrinsic resistance (CLSI M100-Ed36 Appendix B): expected for the organism, so no susceptibility percentage is reported.' : '', dagger ? '<b>&dagger;</b> = selective test: the agent was tested on fewer than 90% of the isolates, so no percentage is shown. CLSI M39 (Section 6.5.3) says agents tested selectively should not be included in the routine cumulative report because they are biased toward lower susceptibility. M39 gives no percentage cut-off; 90% follows the ACSQHC cumulative antibiogram specification.' : '']);
 }
 
 // ---------------------------------------------------------------- 3. quarterly trend

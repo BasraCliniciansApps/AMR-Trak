@@ -626,7 +626,8 @@ function urineOnlyAbxFor(r) {
 function isUrinarySpecimen(r) {
     return /urin|catheter|\bmsu\b|\bcsu\b/i.test(String(r['Sample'] || ''));
 }
-// Returns the record itself, or a copy in which the urine-only agents are blanked when the specimen is not urine.
+// True when this result is for a urine-only agent but the specimen is not urine (flagged in notes; the result is kept).
+function isNonUrineUrineOnly(r, abx) { return !isUrinarySpecimen(r) && urineOnlyAbxFor(r).includes(abx) && r[abx] !== undefined && r[abx] !== null && r[abx] !== '' && r[abx] !== '-'; }
 function applyUrineOnlyRule(r) {
     if (isUrinarySpecimen(r)) return r;
     let copy = null;

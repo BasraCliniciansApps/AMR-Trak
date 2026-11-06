@@ -33,11 +33,10 @@ function getDashRecords() {
     let all = [];
     try { all = JSON.parse(localStorage.getItem('amr_dash_records')) || []; } catch (e) {}
     const scope = getUnitScope();
-    const scoped = scope === 'all' ? all : all.filter(r => wardInScope(r.Ward, scope));
-    return scoped.map(applyUrineOnlyRule);   // CLSI M100: urine-only agents are not interpreted for other specimens
+    return scope === 'all' ? all : all.filter(r => wardInScope(r.Ward, scope));
 }
 function getAllDashRecordsUnscoped() {
-    try { return (JSON.parse(localStorage.getItem('amr_dash_records')) || []).map(applyUrineOnlyRule); } catch (e) { return []; }
+    try { return (JSON.parse(localStorage.getItem('amr_dash_records')) || []); } catch (e) { return []; }
 }
 window.setUnitScope = function (v) {
     _unitScope = v;
