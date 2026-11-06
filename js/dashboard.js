@@ -120,10 +120,10 @@ function refreshPeriodHints() {
         const el = document.getElementById(g + '_period_hint');
         if (!el) return;
         const t = $('input[name="' + g + '_period"]:checked').val() || 'year';
-        if (t === 'all') { el.className = 'period-hint text-[10px] mt-1.5 rounded-md px-2 py-1.5 bg-amber-50 text-amber-800 border border-amber-200'; el.innerHTML = '<b>Exploratory view.</b> All Times pools several years. The reference period for CLSI M39 is one year (Last Year), so use Last Year for reporting.'; return; }
+        if (t === 'all') { el.className = 'period-hint text-[10px] mt-1.5 rounded-md px-2 py-1.5 bg-amber-50 text-amber-800 border border-amber-200'; el.innerHTML = '<b>Exploratory view: several years combined.</b> CLSI M39 (Section 6.4): when several years are combined, the first isolate per patient per calendar year is used and a footnote should alert readers that the data are combined. For the routine report use Last Year (M39 recommends analysing cumulative data at least annually, Section 6.3).'; return; }
         const w = periodWindow(recs, t);
         el.className = 'period-hint text-[10px] mt-1.5 rounded-md px-2 py-1.5 bg-slate-50 text-slate-600 border border-slate-200';
-        el.innerHTML = w ? (t === 'year' ? 'Last complete calendar year: <b>' + w.label + '</b> (the CLSI M39 reference period).' : t === 'quarter' ? 'Last complete quarter: <b>' + w.label + '</b>. Shorter than a year, so use as an indication only.' : 'Latest month with data: <b>' + w.label + '</b>. Shorter than a year, so use as an indication only.') : 'No data.';
+        el.innerHTML = w ? (t === 'year' ? 'Last complete calendar year: <b>' + w.label + '</b>. CLSI M39 recommends analysing cumulative data at least annually (Section 6.3); the analysis period is typically one year (Section 6.4).' : (t === 'quarter' ? 'Last complete quarter: <b>' + w.label + '</b>. ' : 'Latest month with data: <b>' + w.label + '</b>. ') + 'This is shorter than one year. CLSI M39 (Section 6.3): presenting data more often may be complicated by seasonal variation in resistance rates and imprecise estimates when isolate numbers are small. Use as an indication only.') : 'No data.';
     });
 }
 
@@ -364,8 +364,9 @@ function chartNoteBlocks(selectiveNotes, groups, contaminantCount, opts) {
             <span style="flex:none;width:64px;text-align:center;font-size:10px;font-weight:700;padding:3px 0;border-radius:6px;background:${col[k][0]};color:${col[k][1]}">${AWARE_NAMES[k]}</span>
             <span style="flex:1;line-height:1.9">${groups[k].map(a => `<span style="display:inline-block;font-size:11px;padding:0 8px;margin:0 4px 0 0;border-radius:999px;background:#f1f5f9;color:#334155;line-height:1.7">${a}</span>`).join('')}</span></div>`).join('');
     }
-    if (opts.ir && opts.ir.length) out += H('&Dagger; Intrinsic resistance') + `<div style="font-size:11px;line-height:1.45;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;color:#334155"><b>${opts.ir.length}</b> antibiotic${opts.ir.length === 1 ? '' : 's'} shown ${opts.ir.length === 1 ? 'is' : 'are'} intrinsically resistant in <i>${opts.irOrg || 'this organism'}</i> (CLSI M100 Appendix B): <b>${opts.ir.join(', ')}</b>. Resistance to ${opts.ir.length === 1 ? 'it' : 'them'} is expected and is not acquired resistance. The laboratory tested ${opts.ir.length === 1 ? 'it' : 'them'} and the results are shown as reported.</div>`;
-    if (opts.urine && opts.urine.length) out += H('Urine-only agents') + `<div style="font-size:11px;line-height:1.45;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;color:#1e40af"><b>${opts.urine.join(', ')}</b>: CLSI M100 breakpoints apply to urinary isolates only. Results from other specimens are excluded from every chart and table.</div>`;
+    if (opts.route && opts.route.length) out += `<div style="font-size:11px;line-height:1.45;color:#475569;margin:6px 0 8px"><b>Not classified (route not recorded):</b> ${opts.route.map(a => a === 'Fosfomycin' ? 'Fosfomycin is Watch when given orally and Reserve when given intravenously' : 'Minocycline is Watch when given orally and Reserve when given intravenously').join('; ')}.</div>`;
+    if (opts.ir && opts.ir.length) out += H('&Dagger; Intrinsic resistance') + `<div style="font-size:11px;line-height:1.45;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;color:#334155"><b>${opts.ir.length}</b> antibiotic${opts.ir.length === 1 ? '' : 's'} shown ${opts.ir.length === 1 ? 'is' : 'are'} intrinsically resistant in <i>${opts.irOrg || 'this organism'}</i> (CLSI M100-Ed36, Appendix B): <b>${opts.ir.join(', ')}</b>. Resistance to ${opts.ir.length === 1 ? 'it' : 'them'} is expected and is not acquired resistance. The laboratory tested ${opts.ir.length === 1 ? 'it' : 'them'} and the results are shown as reported.</div>`;
+    if (opts.urine && opts.urine.length) out += H('Urine-only agents') + `<div style="font-size:11px;line-height:1.45;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;color:#1e40af"><b>${opts.urine.join(', ')}</b>: CLSI M100-Ed36 designates these agents as urine only: they are reported only on isolates from the urinary tract. Results from other specimens are excluded from every chart and table.</div>`;
     if (contaminantCount > 0) out += H('Possible contaminants') + `<div style="font-size:11px;line-height:1.45;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;color:#92400e"><b>${contaminantCount}</b> blood isolate(s) of this organism are possible skin-flora contaminants. Review them clinically.</div>`;
     return out;
 }
@@ -382,7 +383,8 @@ function renderChartNotes(containerSel, selectiveNotes, contaminantCount, shownA
     (shownAbx || []).forEach(a => { if (AWARE_CLASS[a]) groups[AWARE_CLASS[a]].push(a); });
     // organised blocks (inline styles so they look the same on screen and in the printed report)
     const urine = (shownAbx || []).filter(a => URINE_ONLY_ABX.includes(a));
-    const blocks = chartNoteBlocks(selectiveNotes, groups, contaminantCount, Object.assign({ urine }, opts || {}));
+    const route = (shownAbx || []).filter(a => a === 'Fosfomycin' || a === 'Minocycline');
+    const blocks = chartNoteBlocks(selectiveNotes, groups, contaminantCount, Object.assign({ urine, route }, opts || {}));
     html += blocks;
     setInfo(key, 'About this chart', html);
     // the details that matter for this particular chart are shown under the chart key
@@ -1522,8 +1524,8 @@ function renderAbxChart() {
 
     let abxExtra = '';
     const NH = t => `<div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;margin:14px 0 6px">${t}</div>`;
-    if (irOrgs.length) abxExtra += NH('&Dagger; Intrinsic resistance') + `<div style="font-size:11px;line-height:1.45;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;color:#334155">${drug} is intrinsically resistant in <b>${irOrgs.length}</b> organism${irOrgs.length === 1 ? '' : 's'} shown (CLSI M100 Appendix B): <b>${irOrgs.join(', ')}</b>. Resistance is expected there and is not acquired resistance. The laboratory tested it and the results are shown as reported.</div>`;
-    if (URINE_ONLY_ABX.includes(drug)) abxExtra += NH('Urine-only agent') + `<div style="font-size:11px;line-height:1.45;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;color:#1e40af"><b>${drug}</b>: CLSI M100 breakpoints apply to urinary isolates only. Results from other specimens are excluded.</div>`;
+    if (irOrgs.length) abxExtra += NH('&Dagger; Intrinsic resistance') + `<div style="font-size:11px;line-height:1.45;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;color:#334155">${drug} is intrinsically resistant in <b>${irOrgs.length}</b> organism${irOrgs.length === 1 ? '' : 's'} shown (CLSI M100-Ed36, Appendix B): <b>${irOrgs.join(', ')}</b>. Resistance is expected there and is not acquired resistance. The laboratory tested it and the results are shown as reported.</div>`;
+    if (URINE_ONLY_ABX.includes(drug) || drug === 'Amikacin') abxExtra += NH('Urine-only agent') + `<div style="font-size:11px;line-height:1.45;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;color:#1e40af"><b>${drug}</b>: CLSI M100-Ed36 designates this agent as urine only (reported only on isolates from the urinary tract). Results from other specimens are excluded.</div>`;
     $('#extra_abxAmrContainer').html(abxExtra);
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#abxAmrContainer').css('width', chartWidth);
@@ -1537,6 +1539,16 @@ function renderAbxChart() {
         },
         plugins: [errorBarsPlugin, centredAbxLabels]
     });
+}
+// Period sentence for the heatmap note, based on the dates actually covered by the records
+function hmPeriodNote(records) {
+    const ds = records.map(r => r.Date).filter(Boolean).sort();
+    const base = 'CLSI M39 recommends analysing cumulative data at least annually (Section 6.3); the analysis period is typically one year (Section 6.4).';
+    if (!ds.length) return '<p>' + base + '</p>';
+    const days = (new Date(ds[ds.length - 1]) - new Date(ds[0])) / 86400000 + 1;
+    if (days < 360) return '<p><b>Period shown: ' + ds[0] + ' to ' + ds[ds.length - 1] + ' (about ' + Math.round(days) + ' days), shorter than one year.</b> ' + base + ' Presenting data more often may be complicated by seasonal variation in resistance rates and imprecise estimates when isolate numbers are small, so read this map as an indication only.</p>';
+    if (days > 372) return '<p><b>Period shown: ' + ds[0] + ' to ' + ds[ds.length - 1] + ', more than one year (years combined).</b> ' + base + ' When several years are combined, M39 (Section 6.4) uses the first isolate per patient per calendar year and advises a footnote alerting readers that the data are combined.</p>';
+    return '<p>Period shown: ' + ds[0] + ' to ' + ds[ds.length - 1] + '. ' + base + '</p>';
 }
 window.generateAdvancedAnalytics = function() {
     const startDate = $('#adv_start').val();
@@ -1666,7 +1678,7 @@ window.generateAdvancedAnalytics = function() {
         '<p><b>Grey cell:</b> the value is not a reliable susceptibility result. <b>*</b> = fewer than 30 isolates tested (CLSI M39); <b>&Dagger;</b> = intrinsic resistance (expected for the organism, CLSI M100 Appendix B), not acquired resistance. Grey cells: ' + lowCells + ' with *, ' + irCells + ' with &Dagger;.</p>' +
         '<p><b>Colour bands</b> are a visual aid in steps of 20%. They are not CLSI or WHO categories.</p>' +
         '<p><b>Common practice benchmarks</b> (conventions, not CLSI or WHO rules): 80% or more susceptible is often accepted for empirical treatment of non-severe infections, and 90% or more is expected for severe infections such as bloodstream infection or meningitis. These values are a guide only. Always follow the hospital antibiotic policy.</p>' +
-        '<p>Cells are in vitro results. Urine-only agents (' + URINE_ONLY_ABX.join(', ') + ') include urine specimens only. Periods shorter than a year are indicative only; CLSI M39 is an annual analysis.</p>');
+        '<p>Cells are in vitro results. Urine-only agents (' + URINE_ONLY_ABX.join(', ') + ') include urine specimens only (CLSI M100-Ed36).</p>' + hmPeriodNote(records));
 };
 // --- Modal: About App ---
 function showAboutModal() {

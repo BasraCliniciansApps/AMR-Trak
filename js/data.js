@@ -615,9 +615,14 @@ function awareTag(abx) { return AWARE_CLASS[abx] ? ` [${AWARE_CLASS[abx]}]` : ''
 // =====================================================================
 // Clinical applicability rules (applied to every analysis in the dashboard)
 // =====================================================================
-// 1) Urine-only agents. CLSI M100 gives breakpoints for these agents for urinary isolates only,
-//    so a result from any other specimen must not be interpreted.
-const URINE_ONLY_ABX = ['Nitrofurantoin', 'Fosfomycin', 'Mecillinam', 'Norfloxacin', 'Nalidixic acid'];
+// 1) Urine-only agents. CLSI M100-Ed36 designates these agents "(U)" / "Urine Only": they are reported only on isolates
+//    from the urinary tract (Tables 1 and 2). M100 also states that nitrofurantoin is reported only on urine isolates because
+//    it is effective in uncomplicated urinary tract infections only. Amikacin for P. aeruginosa is urine-only in Table 2B-1.
+const URINE_ONLY_ABX = ['Nitrofurantoin', 'Fosfomycin', 'Mecillinam', 'Norfloxacin', 'Nalidixic acid', 'Sulfonamides', 'Trimethoprim'];
+function urineOnlyAbxFor(r) {
+    const org = String(r['Selective organism'] || '').toLowerCase();
+    return /pseudomonas aeruginosa/.test(org) ? URINE_ONLY_ABX.concat(['Amikacin']) : URINE_ONLY_ABX;
+}
 function isUrinarySpecimen(r) {
     return /urin|catheter|\bmsu\b|\bcsu\b/i.test(String(r['Sample'] || ''));
 }
@@ -625,38 +630,55 @@ function isUrinarySpecimen(r) {
 function applyUrineOnlyRule(r) {
     if (isUrinarySpecimen(r)) return r;
     let copy = null;
-    for (const a of URINE_ONLY_ABX) {
+    for (const a of urineOnlyAbxFor(r)) {
         const v = r[a];
         if (v !== undefined && v !== null && v !== '' && v !== '-') { if (!copy) copy = Object.assign({}, r); copy[a] = ''; }
     }
     return copy || r;
 }
 
-// 2) Intrinsic (expected) resistance, built from the CLSI M100 Appendix B / EUCAST expected-resistant phenotypes.
-//    These results reflect the organism's biology, not acquired resistance, and are flagged with the double dagger.
-const _IR_GRAMPOS_ONLY = ['Benzylpenicillin', 'Penicillin', 'Oxacillin', 'Cloxacillin', 'Vancomycin', 'Teicoplanin', 'Daptomycin', 'Linezolid',
-    'Clindamycin', 'Inducible Clindamycin Resistance', 'Quinupristin/Dalfopristin', 'Fusidic acid', 'Telavancin', 'Dalbavancin', 'Oritavancin'];
-const _IR_CEPH = ['Cefazolin', 'Cephalothin', 'Cefoxitin', 'Cefoxitin screen', 'Cefuroxime', 'Cefixime', 'Ceftriaxone', 'Cefotaxime', 'Ceftazidime', 'Cefepime',
-    'Cefaclor', 'Cefpodoxime', 'Cefdinir', 'Cefoperazone', 'Cefotetan', 'Ceftizoxime'];
-const _IR_AMINO = ['Gentamicin', 'Amikacin', 'Tobramycin', 'Kanamycin', 'Streptomycin', 'Netilmicin'];
-const _IR_AMPC_PEN = ['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Ampicillin/Sulbactam', 'Amoxicillin/Sulbactam', 'Cefazolin', 'Cephalothin'];
+// 2) Intrinsic resistance, taken from CLSI M100-Ed36 (2026) Appendix B (tables B1 to B4 and their notes).
+//    M100: an intrinsically resistant agent-organism combination, if tested, is reported as resistant; the tables also help
+//    verify cumulative antibiogram data. M39-A4 places an "R" in such cells instead of a percentage. Here they are flagged with a double dagger.
+const _AMP = ['Ampicillin', 'Amoxicillin'];
+const _AC = ['Amoxicillin/Clavulanic acid'];
+const _AS = ['Ampicillin/Sulbactam', 'Amoxicillin/Sulbactam'];
+const _CEPH1 = ['Cefazolin', 'Cephalothin', 'Cefalotin', 'Cefalexin', 'Cefadroxil'];
+const _CEPH2 = ['Cefuroxime', 'Cefaclor'];
+const _CMY = ['Cefoxitin', 'Cefoxitin screen', 'Cefotetan'];
+const _TETRA = ['Tetracycline', 'Doxycycline', 'Minocycline'];
+const _POLY = ['Colistin', 'Polymyxin B'];
+const _MACRO = ['Erythromycin', 'Azithromycin', 'Clarithromycin'];
+const _AMINO = ['Gentamicin', 'Amikacin', 'Tobramycin', 'Kanamycin', 'Streptomycin', 'Netilmicin'];
+const _CEPH_ALL = _CEPH1.concat(_CEPH2, _CMY, ['Cefixime', 'Ceftriaxone', 'Cefotaxime', 'Ceftazidime', 'Cefepime', 'Cefpodoxime', 'Cefdinir', 'Cefoperazone', 'Ceftizoxime']);
+// M100 Appendix B1, Note 2 (all Enterobacterales)
+const _IR_ENTEROBACTERALES = ['Clindamycin', 'Inducible Clindamycin Resistance', 'Daptomycin', 'Fusidic acid', 'Vancomycin', 'Teicoplanin', 'Telavancin', 'Oritavancin',
+    'Dalbavancin', 'Linezolid', 'Tedizolid', 'Quinupristin/Dalfopristin', 'Rifampicin'].concat(_MACRO);
+// M100 Appendix B2, Note (non-fermenting gram-negative bacilli)
+const _IR_NONFERMENTERS = ['Benzylpenicillin', 'Penicillin'].concat(_CEPH1, _CEPH2, _CMY, ['Clindamycin', 'Inducible Clindamycin Resistance', 'Daptomycin', 'Fusidic acid',
+    'Vancomycin', 'Teicoplanin', 'Linezolid', 'Quinupristin/Dalfopristin', 'Rifampicin'], _MACRO);
+const _IR_GRAMPOS_NOTE = ['Aztreonam', 'Colistin', 'Polymyxin B', 'Nalidixic acid'];   // M100 B3/B4 notes
 const INTRINSIC_RESISTANCE_RULES = [
-    { test: /^(escherichia|klebsiella|raoultella|enterobacter|proteus|morganella|providencia|serratia|citrobacter|salmonella|shigella|yersinia|hafnia|pantoea|cronobacter|edwardsiella|enterobacteriaceae)/, drugs: _IR_GRAMPOS_ONLY },
-    { test: /klebsiella|raoultella|citrobacter koseri|citrobacter diversus/, drugs: ['Ampicillin', 'Amoxicillin', 'Ticarcillin'] },
-    { test: /enterobacter|klebsiella aerogenes|citrobacter freundii/, drugs: _IR_AMPC_PEN.concat(['Cefoxitin']) },
-    { test: /serratia|morganella|hafnia/, drugs: _IR_AMPC_PEN },
-    { test: /serratia|proteus|morganella|providencia/, drugs: ['Colistin', 'Polymyxin B'] },
-    { test: /proteus|morganella|providencia/, drugs: ['Nitrofurantoin', 'Tetracycline', 'Doxycycline', 'Minocycline', 'Tigecycline'] },
-    { test: /pseudomonas aeruginosa/, drugs: _IR_GRAMPOS_ONLY.concat(['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Ampicillin/Sulbactam', 'Amoxicillin/Sulbactam',
-        'Cefazolin', 'Cephalothin', 'Cefoxitin', 'Cefuroxime', 'Cefotaxime', 'Ceftriaxone', 'Cefixime', 'Cefpodoxime', 'Ertapenem', 'Trimethoprim', 'Trimethoprim/Sulfamethoxazole',
-        'Chloramphenicol', 'Tetracycline', 'Doxycycline', 'Minocycline', 'Tigecycline', 'Nitrofurantoin']) },
-    { test: /^acinetobacter/, drugs: _IR_GRAMPOS_ONLY.concat(['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Cefazolin', 'Cephalothin', 'Cefotaxime', 'Ceftriaxone',
-        'Ertapenem', 'Trimethoprim', 'Fosfomycin']) },
-    { test: /^enterococcus/, drugs: _IR_CEPH.concat(_IR_AMINO, ['Oxacillin', 'Cloxacillin', 'Aztreonam', 'Clindamycin', 'Trimethoprim', 'Trimethoprim/Sulfamethoxazole', 'Sulfonamides', 'Nalidixic acid', 'Colistin', 'Polymyxin B']) },
+    { test: /^(escherichia|klebsiella|raoultella|enterobacter|proteus|morganella|providencia|serratia|citrobacter|salmonella|shigella|yersinia|hafnia|pantoea|cronobacter|edwardsiella|enterobacteriaceae)/, drugs: _IR_ENTEROBACTERALES },
+    { test: /citrobacter freundii/, drugs: _AMP.concat(_AC, _AS, _CEPH1, _CMY, _CEPH2) },
+    { test: /citrobacter koseri|citrobacter diversus|citrobacter amalonaticus|escherichia hermannii|^klebsiella (pneumoniae|oxytoca|variicola)|^raoultella/, drugs: _AMP.concat(['Ticarcillin']) },
+    { test: /^enterobacter|klebsiella aerogenes|hafnia/, drugs: _AMP.concat(_AC, _AS, _CEPH1, _CMY) },
+    { test: /hafnia/, drugs: _POLY },
+    { test: /morganella/, drugs: _AMP.concat(_AC, _CEPH1, _CEPH2, ['Tigecycline', 'Nitrofurantoin'], _POLY) },
+    { test: /proteus mirabilis/, drugs: _TETRA.concat(['Tigecycline', 'Nitrofurantoin'], _POLY) },
+    { test: /proteus (vulgaris|penneri)|proteus \(other/, drugs: _AMP.concat(_CEPH1, _CEPH2, _TETRA, ['Tigecycline', 'Nitrofurantoin'], _POLY) },
+    { test: /providencia/, drugs: _AMP.concat(_AC, _CEPH1, _TETRA, ['Tigecycline', 'Nitrofurantoin'], _POLY) },
+    { test: /providencia stuartii/, drugs: ['Gentamicin', 'Netilmicin', 'Tobramycin'] },
+    { test: /serratia/, drugs: _AMP.concat(_AC, _AS, _CEPH1, _CMY, _CEPH2, ['Nitrofurantoin'], _POLY) },
+    { test: /yersinia enterocolitica/, drugs: _AMP.concat(_AC, ['Ticarcillin'], _CEPH1) },
+    { test: /pseudomonas aeruginosa/, drugs: _IR_NONFERMENTERS.concat(_AMP, _AC, _AS, ['Cefotaxime', 'Ceftriaxone', 'Ertapenem', 'Tigecycline', 'Trimethoprim', 'Trimethoprim/Sulfamethoxazole', 'Chloramphenicol'], _TETRA) },
+    { test: /^acinetobacter/, drugs: _IR_NONFERMENTERS.concat(_AMP, _AC, ['Aztreonam', 'Ertapenem', 'Trimethoprim', 'Chloramphenicol', 'Fosfomycin']) },
+    { test: /^staphylococcus/, drugs: _IR_GRAMPOS_NOTE },
+    { test: /staphylococcus saprophyticus/, drugs: ['Fosfomycin', 'Fusidic acid'] },
+    { test: /staphylococcus capitis/, drugs: ['Fosfomycin'] },
+    { test: /^enterococcus/, drugs: _CEPH_ALL.concat(_AMINO, ['Clindamycin', 'Trimethoprim/Sulfamethoxazole', 'Trimethoprim', 'Fusidic acid'], _IR_GRAMPOS_NOTE) },
     { test: /enterococcus faecalis/, drugs: ['Quinupristin/Dalfopristin'] },
-    { test: /enterococcus gallinarum|casseliflavus/, drugs: ['Vancomycin'] },
-    { test: /^staphylococcus/, drugs: ['Aztreonam', 'Colistin', 'Polymyxin B', 'Nalidixic acid'] },
-    { test: /^streptococcus/, drugs: _IR_AMINO.concat(['Aztreonam', 'Colistin', 'Polymyxin B', 'Nalidixic acid']) }
+    { test: /enterococcus gallinarum|casseliflavus/, drugs: ['Vancomycin', 'Quinupristin/Dalfopristin'] }
 ];
 const _irCache = {};
 function intrinsicResistanceSet(org) {
@@ -664,6 +686,7 @@ function intrinsicResistanceSet(org) {
     if (_irCache[key]) return _irCache[key];
     const set = new Set();
     INTRINSIC_RESISTANCE_RULES.forEach(rule => { if (rule.test.test(key)) rule.drugs.forEach(d => set.add(d)); });
+    if (/^(salmonella|shigella)/.test(key)) _MACRO.slice(1, 2).forEach(d => set.delete(d));   // M100 B1 Note 2: azithromycin exception
     return (_irCache[key] = set);
 }
 function isIntrinsicResistance(org, abx) { return intrinsicResistanceSet(org).has(abx); }

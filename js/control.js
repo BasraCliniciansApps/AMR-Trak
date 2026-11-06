@@ -20,7 +20,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 // ---------------------------------------------------------------- configuration
 const TOGGLES = {
     tabs: [['tab_year', 'Last Year'], ['tab_quarter', 'Last Quarter'], ['tab_month', 'Last Month'], ['tab_lab', 'Culture Overview']],
-    analytics: [['sec_prevalence', 'Clinical Prevalence & AST Profile'], ['sec_patho', 'Bacteria / Fungi Susceptibility Profile'], ['sec_abx', 'Antimicrobial Efficacy Profile'], ['sec_heatmap', 'Advanced Cross-Search (Heatmaps)'], ['sec_mdr_panel', 'MDR / XDR / PDR Analysis']],
+    analytics: [['sec_prevalence', 'Clinical Prevalence & AST Profile'], ['sec_patho', 'Bacteria / Fungi Susceptibility Profile'], ['sec_abx', 'Antimicrobial In Vitro Activity Profile'], ['sec_heatmap', 'Advanced Cross-Search (Heatmaps)'], ['sec_mdr_panel', 'MDR / XDR / PDR Analysis']],
     content: [['sec_mdr', 'MDR / XDR / PDR card']]
 };
 const ALL_TOGGLE_KEYS = [].concat(TOGGLES.tabs, TOGGLES.analytics, TOGGLES.content).map(x => x[0]);
