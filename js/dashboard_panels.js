@@ -41,6 +41,10 @@ function wardInScope(ward, scope) {
     const isIcu = icuWardList().some(w => String(w).toLowerCase() === String(ward || '').toLowerCase());
     return scope === 'icu' ? isIcu : !isIcu;
 }
+// Warning under every Analytics chart: the results follow the single unit filter at the top of the dashboard
+function scopeBanner() {
+    return '<div class="scope-note" style="font-size:11px;line-height:1.45;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:8px 10px;color:#3730a3;margin-top:10px"><b>Results for: ' + scopeLabel() + '.</b> This chart follows the unit filter at the top of the dashboard. Change it there to change every chart.</div>';
+}
 function scopeLabel() { const s = getUnitScope(); return s === 'icu' ? 'ICU only' : s === 'nonicu' ? 'Non-ICU units' : 'All units'; }
 // Every chart reads records through this function so the scope applies everywhere.
 function getDashRecords() {

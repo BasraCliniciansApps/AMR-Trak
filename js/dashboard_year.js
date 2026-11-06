@@ -78,7 +78,9 @@ function yaZ(r1, n1, r2, n2) {
     return se ? Math.abs(r1 / n1 - r2 / n2) / se : 0;
 }
 const yaPct = (r, n) => n ? Math.round((r / n) * 1000) / 10 : null;
-const yaFmt = v => v === null || v === undefined ? '-' : (Math.round(v * 10) / 10).toString();
+// Percentages are whole numbers (as in CLSI M39 antibiogram tables). Differences in percentage points keep one decimal.
+const yaFmt = v => v === null || v === undefined ? '-' : String(Math.round(v));
+const yaPp = v => v === null || v === undefined ? '-' : (Math.round(v * 10) / 10).toString();
 
 // ---------------------------------------------------------------- skeleton (built once)
 const YA_CARDS = [
@@ -204,7 +206,7 @@ function yaIndicators() {
         if (s.tested && p.tested) {
             const d = Math.round((pc - pp) * 10) / 10, sig = yaZ(s.resistant, s.tested, p.resistant, p.tested) >= 1.96 && s.tested >= 30 && p.tested >= 30;
             const col = !sig ? '#64748b' : d > 0 ? '#dc2626' : '#059669';
-            chg = `<span style="color:${col};font-weight:${sig ? 700 : 500}">${d > 0 ? '+' : ''}${yaFmt(d)} pp ${d > 0 ? '&#9650;' : d < 0 ? '&#9660;' : ''}</span>${sig ? '' : ' <span class="ya-mute">ns</span>'}`;
+            chg = `<span style="color:${col};font-weight:${sig ? 700 : 500}">${d > 0 ? '+' : ''}${yaPp(d)} pp ${d > 0 ? '&#9650;' : d < 0 ? '&#9660;' : ''}</span>${sig ? '' : ' <span class="ya-mute">ns</span>'}`;
         }
         const cand = s.candidates ? `<div class="ya-mute">${s.candidates} unconfirmed (MIC &ge; 16)</div>` : '';
         return `<tr><td class="ya-l"><b>${s.label}</b><div class="ya-mute">${YA_MARKER_NAMES[s.label] || ''}</div>${cand}</td>

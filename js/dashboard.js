@@ -451,7 +451,7 @@ function renderChartNotes(containerSel, selectiveNotes, contaminantCount, shownA
     setInfo(key, 'About this chart', html);
     // the details that matter for this particular chart are shown under the chart key
     const extra = blocks;
-    $('#extra_' + containerSel.replace('#', '')).html(extra);
+    $('#extra_' + containerSel.replace('#', '')).html(scopeBanner() + extra);
 }
 
 function setDashStatus(kind, text) {
@@ -1597,7 +1597,7 @@ function renderAbxChart() {
     const NH = t => `<div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;margin:14px 0 6px">${t}</div>`;
     if (irOrgs.length) abxExtra += NH('&Dagger; Intrinsic resistance') + `<div style="font-size:11px;line-height:1.45;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;color:#334155">${drug} is intrinsically resistant in <b>${irOrgs.length}</b> organism${irOrgs.length === 1 ? '' : 's'} shown (CLSI M100-Ed36, Appendix B): <b>${irOrgs.join(', ')}</b>. Resistance is expected there and is not acquired resistance. The laboratory tested it and the results are shown as reported.</div>`;
     if (nuTot > 0) abxExtra += NH('&sect; Urine-only agent') + `<div style="font-size:11px;line-height:1.45;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;color:#1e40af"><b>${drug}</b>: CLSI M100-Ed36 designates this agent as urine only (reported only on isolates from the urinary tract). <b>${nuTot}</b> of ${allTot} results shown come from non-urine specimens and are <b>included</b> in the bars. The percentage with urine specimens only is given for comparison; use clinical judgement.<div style=\"margin-top:6px\">${uoOrgLines.join('')}</div></div>`;
-    $('#extra_abxAmrContainer').html(abxExtra);
+    $('#extra_abxAmrContainer').html(scopeBanner() + abxExtra);
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#abxAmrContainer').css('width', chartWidth);
 
@@ -1760,7 +1760,7 @@ window.generateAdvancedAnalytics = function() {
         hmHtml += '</tr>';
     });
     hmHtml += '</tbody></table>';
-    $('#heatmapWrapper').html(hmHtml);
+    $('#heatmapWrapper').html(hmHtml + scopeBanner());
     if (lowCells || irCells) $('#heatmapLegend').append('<span class="px-1 bg-slate-200 text-slate-500 rounded">Grey: ' + (lowCells && irCells ? 'n&lt;30 or &Dagger;' : (lowCells ? 'n&lt;30' : '&Dagger;')) + '</span>');
     setNote('#heatmapNote', [
         (lowCells || irCells) ? '<b>Grey cell:</b> the value is not a reliable susceptibility result.' : '',

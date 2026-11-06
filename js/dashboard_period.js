@@ -40,7 +40,8 @@ function opZ(r1, n1, r2, n2) {
     return se ? Math.abs(r1 / n1 - r2 / n2) / se : 0;
 }
 const opPct = (r, n) => n ? Math.round((r / n) * 1000) / 10 : null;
-const opFmt = v => v === null || v === undefined ? '-' : (Math.round(v * 10) / 10).toString();
+// Percentages are whole numbers (as in CLSI M39 antibiogram tables).
+const opFmt = v => v === null || v === undefined ? '-' : String(Math.round(v));
 function opCell(r, n, extra) {
     if (!n) return '<td class="ya-mute">-</td>';
     const low = n < 30;

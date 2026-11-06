@@ -349,18 +349,7 @@
                     <h3 class="text-sm font-bold text-slate-800 text-center mb-1">Organism Prevalence</h3>
                     <p class="text-[9px] text-center text-slate-500 mb-3">Tap any slice to view its AST profile below.</p>
                     
-                    <!-- Top 3-Way Ward Toggle -->
-                    <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm text-[10px] font-bold mb-4 mx-auto max-w-[250px]">
-                        <label class="cursor-pointer px-3 py-1 flex-1 text-center rounded-md transition-all guided-ward-btn bg-white text-indigo-700 shadow-sm">
-                            <input type="radio" name="guided_ward" value="total" class="hidden" checked> Total
-                        </label>
-                        <label class="cursor-pointer px-3 py-1 flex-1 text-center rounded-md transition-all guided-ward-btn text-slate-500 hover:text-slate-700">
-                            <input type="radio" name="guided_ward" value="inpatient" class="hidden"> Inpatient
-                        </label>
-                        <label class="cursor-pointer px-3 py-1 flex-1 text-center rounded-md transition-all guided-ward-btn text-slate-500 hover:text-slate-700">
-                            <input type="radio" name="guided_ward" value="outpatient" class="hidden"> Outpatient
-                        </label>
-                    </div>
+                    
 
                     <div class="h-48 relative"><canvas id="chartGuidedPie"></canvas></div>
                     <div class="text-[10px] leading-snug text-slate-500 text-center mt-1">Share of each organism among the first isolates in the selected period (% of isolates). It describes the isolate mix, not prevalence in the population.</div>
@@ -378,18 +367,7 @@
 
                     <!-- Advanced Filters Wrapper -->
                     <div class="flex flex-wrap justify-center items-center mb-4 gap-3">
-                        <!-- 3-Way Ward Toggle -->
-                        <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm text-[10px] font-bold">
-                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all guided-ward-btn bg-white text-indigo-700 shadow-sm">
-                                <input type="radio" name="guided_ward" value="total" class="hidden" checked> Total
-                            </label>
-                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all guided-ward-btn text-slate-500 hover:text-slate-700">
-                                <input type="radio" name="guided_ward" value="inpatient" class="hidden"> Inpatient
-                            </label>
-                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all guided-ward-btn text-slate-500 hover:text-slate-700">
-                                <input type="radio" name="guided_ward" value="outpatient" class="hidden"> Outpatient
-                            </label>
-                        </div>
+                        
 
                         <!-- 3-Way Metric Toggle -->
                         <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm text-[10px] font-bold">
@@ -462,17 +440,7 @@
                     
                     <!-- Advanced Filters Wrapper -->
                     <div class="flex flex-wrap justify-center items-center my-3 gap-3">
-                        <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm text-[10px] font-bold">
-                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all patho-ward-btn bg-white text-emerald-700 shadow-sm">
-                                <input type="radio" name="patho_ward" value="total" class="hidden" checked> Total
-                            </label>
-                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all patho-ward-btn text-slate-500 hover:text-slate-700">
-                                <input type="radio" name="patho_ward" value="inpatient" class="hidden"> Inpatient
-                            </label>
-                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all patho-ward-btn text-slate-500 hover:text-slate-700">
-                                <input type="radio" name="patho_ward" value="outpatient" class="hidden"> Outpatient
-                            </label>
-                        </div>
+                        
 
                         <!-- 3-Way Metric Toggle -->
                         <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm text-[10px] font-bold">
@@ -540,17 +508,7 @@
                     
                     <!-- Advanced Filters Wrapper -->
                     <div class="flex flex-wrap justify-center items-center my-3 gap-3">
-                        <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm text-[10px] font-bold">
-                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all abx-ward-btn bg-white text-blue-700 shadow-sm">
-                                <input type="radio" name="abx_ward" value="total" class="hidden" checked> Total
-                            </label>
-                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all abx-ward-btn text-slate-500 hover:text-slate-700">
-                                <input type="radio" name="abx_ward" value="inpatient" class="hidden"> Inpatient
-                            </label>
-                            <label class="cursor-pointer px-3 py-1 rounded-md transition-all abx-ward-btn text-slate-500 hover:text-slate-700">
-                                <input type="radio" name="abx_ward" value="outpatient" class="hidden"> Outpatient
-                            </label>
-                        </div>
+                        
 
                         <!-- 3-Way Metric Toggle -->
                         <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm text-[10px] font-bold">
@@ -626,17 +584,7 @@
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-slate-500 mb-1">Ward Filter</label>
-                            <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm text-[10px] font-bold w-full h-[38px]">
-                                <label class="cursor-pointer px-2 py-1 flex-1 text-center rounded-md transition-all adv-ward-btn bg-white text-slate-800 shadow-sm">
-                                    <input type="radio" name="adv_ward" value="total" class="hidden" checked> All
-                                </label>
-                                <label class="cursor-pointer px-2 py-1 flex-1 text-center rounded-md transition-all adv-ward-btn text-slate-500 hover:text-slate-700">
-                                    <input type="radio" name="adv_ward" value="inpatient" class="hidden"> In
-                                </label>
-                                <label class="cursor-pointer px-2 py-1 flex-1 text-center rounded-md transition-all adv-ward-btn text-slate-500 hover:text-slate-700">
-                                    <input type="radio" name="adv_ward" value="outpatient" class="hidden"> Out
-                                </label>
-                            </div>
+                            
                         </div>
                     </div>
                     <div class="flex justify-center items-center gap-2 bg-white p-2 px-3 rounded-lg border border-slate-200 shadow-sm">
@@ -842,15 +790,15 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=11.14"></script>
-    <script src="js/dashboard.js?v=11.14"></script>
-    <script src="js/info_texts.js?v=11.14"></script>
-    <script src="js/dashboard_panels.js?v=11.14"></script>
-    <script src="js/dashboard_year.js?v=11.14"></script>
-    <script src="js/dashboard_period.js?v=11.14"></script>
-    <script src="js/guide_reviewer.js?v=11.14"></script>
-    <script src="js/guide.js?v=11.14"></script>
-    <script src="js/nav.js?v=11.14"></script>
+    <script src="js/data.js?v=11.15"></script>
+    <script src="js/dashboard.js?v=11.15"></script>
+    <script src="js/info_texts.js?v=11.15"></script>
+    <script src="js/dashboard_panels.js?v=11.15"></script>
+    <script src="js/dashboard_year.js?v=11.15"></script>
+    <script src="js/dashboard_period.js?v=11.15"></script>
+    <script src="js/guide_reviewer.js?v=11.15"></script>
+    <script src="js/guide.js?v=11.15"></script>
+    <script src="js/nav.js?v=11.15"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>
