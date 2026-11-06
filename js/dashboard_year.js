@@ -25,7 +25,7 @@ const yaIsSIR = v => v === 'S' || v === 'I' || v === 'R' || v === 'SDD';
 
 // ---- Analysis window. A key is either 'YYYY' (calendar year) or 'YYYY-MM..YYYY-MM' (12 months).
 // Rolling mode (default): the latest 12 months with data. Calendar mode: the year set by the surveillance team.
-function yaMode() { try { const v = localStorage.getItem('amr_ya_mode'); if (v === 'calendar' || v === 'rolling') return v; } catch (e) {} try { if (getDashSettings().dash_ya_mode === 'calendar') return 'calendar'; } catch (e) {} return 'rolling'; }
+function yaMode() { try { const v = localStorage.getItem('amr_ya_mode'); if (v === 'calendar' || v === 'rolling') return v; } catch (e) {} try { if (getDashSettings().dash_ya_mode === 'rolling') return 'rolling'; } catch (e) {} return 'calendar'; }
 window.yaSetMode = function (m) { try { localStorage.setItem('amr_ya_mode', m); } catch (e) {} renderAnnualReport(); };
 function yaLatestMonth() { return dashAnchor(); }
 function yaYear() {
@@ -35,13 +35,13 @@ function yaYear() {
 }
 function yaWin(key) { key = String(key); return key.indexOf('..') > 0 ? { from: key.split('..')[0], to: key.split('..')[1] } : { from: key + '-01', to: key + '-12' }; }
 function yaPrev(key) { const w = yaWin(key); return String(key).indexOf('..') > 0 ? ymShift(w.from, -12) + '..' + ymShift(w.to, -12) : String(parseInt(key, 10) - 1); }
-function yaLabel(key) { const w = yaWin(key); return String(key).indexOf('..') > 0 ? ymLabel(w.from) + ' \u2013 ' + ymLabel(w.to) : String(key); }
+function yaLabel(key) { const w = yaWin(key); return String(key).indexOf('..') > 0 ? ymRange(w.from, w.to) : String(key); }
 function yaInWin(date, key) { const m = String(date || '').slice(0, 7), w = yaWin(key); return /^\d{4}-\d{2}$/.test(m) && m >= w.from && m <= w.to; }
 function yaMonths(key) { const w = yaWin(key), out = []; for (let m = w.from; m <= w.to; m = ymShift(m, 1)) out.push(m); return out; }
 // quarters of the window: calendar quarters for a calendar year, consecutive 3-month blocks for a rolling window
 function yaQuarters(key) {
     const ms = yaMonths(key);
-    return [0, 1, 2, 3].map(i => { const b = ms.slice(i * 3, i * 3 + 3); return [String(key).indexOf('..') > 0 ? ymLabel(b[0]).replace(' ', '\u00a0') + '\u2013' + MON3[parseInt(b[2].slice(5, 7), 10) - 1] : 'Q' + (i + 1), b]; });
+    return [0, 1, 2, 3].map(i => { const b = ms.slice(i * 3, i * 3 + 3); return [String(key).indexOf('..') > 0 ? ymRange(b[0], b[2]).replace(/ /g, '\u00a0') : 'Q' + (i + 1), b]; });
 }
 // A window is complete when every month in it has data
 function yaIsComplete(key) {

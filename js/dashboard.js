@@ -93,6 +93,8 @@ function uoLine(name, s, metric, p) {
 //  all     = only calendar years with data in all 12 months (older incomplete years are left out)
 const MON3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function ymShift(ym, n) { let y = parseInt(ym.slice(0, 4), 10), m = parseInt(ym.slice(5, 7), 10) - 1 + n; y += Math.floor(m / 12); m = ((m % 12) + 12) % 12; return y + '-' + String(m + 1).padStart(2, '0'); }
+// Range label: same year -> "Oct–Dec 2025"; different years -> "Oct 2025 – Sep 2026"
+function ymRange(a, b) { return a.slice(0, 4) === b.slice(0, 4) ? (a === b ? ymLabel(a) : MON3[parseInt(a.slice(5, 7), 10) - 1] + '\u2013' + ymLabel(b)) : ymLabel(a) + ' \u2013 ' + ymLabel(b); }
 function ymLabel(ym) { return MON3[parseInt(ym.slice(5, 7), 10) - 1] + ' ' + ym.slice(0, 4); }
 // Calendar years in which every one of the 12 months has at least one record
 function completeYearsInfo(records) {
@@ -110,15 +112,15 @@ function periodWindow(records, periodType) {
     const pad = n => String(n).padStart(2, '0');
     if (periodType === 'year') {
         const from = ymShift(latest, -11);
-        return { from: from, to: latest, label: ymLabel(from) + ' \u2013 ' + ymLabel(latest) };
+        return { from: from, to: latest, label: ymRange(from, latest) };
     }
     if (periodType === 'quarter') {
         const from = ymShift(latest, -2);
-        return { from: from, to: latest, label: ymLabel(from) + ' \u2013 ' + ymLabel(latest) };
+        return { from: from, to: latest, label: ymRange(from, latest) };
     }
     if (periodType === 'month') return { from: latest, to: latest, label: ymLabel(latest) };
     if (periodType === 'calyear') { const y = String(getUserPrefs().pyear || (lMonth === 12 ? lYear : lYear - 1)); return { from: y + '-01', to: y + '-12', label: y }; }
-    if (periodType === 'range') { let a = getUserPrefs().pfrom || ymShift(latest, -11), b = getUserPrefs().pto || latest; if (a > b) { const t = a; a = b; b = t; } return { from: a, to: b, label: ymLabel(a) + ' \u2013 ' + ymLabel(b) }; }
+    if (periodType === 'range') { let a = getUserPrefs().pfrom || ymShift(latest, -11), b = getUserPrefs().pto || latest; if (a > b) { const t = a; a = b; b = t; } return { from: a, to: b, label: ymRange(a, b) }; }
     return null;
 }
 function filterByPeriod(records, periodType) {
@@ -628,7 +630,7 @@ function generateLiveSurveillance() {
     const anchor = dashAnchor(cleanRecords);
     const targetMonthPrefix = anchor;
     const q3from = ymShift(anchor, -2);
-    const qLabel = ymLabel(q3from) + ' \u2013 ' + ymLabel(anchor);
+    const qLabel = ymRange(q3from, anchor);
     let monthRecords = cleanRecords.filter(r => r.Date && String(r.Date).slice(0, 7) === targetMonthPrefix);
     let quarterRecords = cleanRecords.filter(r => { const m = String(r.Date || '').slice(0, 7); return m >= q3from && m <= anchor; });
 

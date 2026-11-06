@@ -863,7 +863,7 @@ window.showUserSettings = function () {
       ${row('Exclude possible skin-flora contaminants', 'Removes blood isolates of skin-flora organisms (for example coagulase-negative staphylococci) before the first isolate is chosen. Applies to every tab and chart.', tg('us_contam', contamExcluded()))}
       ${blk('Default unit filter', 'The unit filter selected when the dashboard opens.', sel('us_scope', [['all', 'ALL'], ['icu', 'ICU'], ['nonicuip', 'Non-ICU IP'], ['outpatient', 'Outpatient']], getUnitScope()))}
       ${blk('Analysis period (Analytics tab)', 'One period for every Analytics chart. All Times combines complete calendar years only. The Heatmap From/To fields, when filled, override it.', sel('us_period', [['year', 'Last 12 Months'], ['all', 'All Times'], ['calyear', 'Calendar year'], ['quarter', 'Last 3 Months'], ['month', 'Last Month'], ['range', 'Specific period']], anPeriod()) + `<div id="us_cal" style="display:none;margin-top:6px">${sel('us_pyear', usYears().map(y => [y, y]), String(u.pyear || usYears()[0]))}</div><div id="us_rng" style="display:none;margin-top:6px;gap:6px"><input type="month" id="us_pfrom" value="${u.pfrom || ''}" style="flex:1;border:1px solid #cbd5e1;border-radius:8px;padding:7px;font-size:12px"><input type="month" id="us_pto" value="${u.pto || ''}" style="flex:1;border:1px solid #cbd5e1;border-radius:8px;padding:7px;font-size:12px"></div>`)}
-      ${blk('Last Year tab period', 'Last 12 months moves forward with the data. Calendar year is the last complete calendar year (CLSI M39, Section 6.4).', sel('us_yamode', [['rolling', 'Last 12 months'], ['calendar', 'Calendar year']], (typeof yaMode === 'function') ? yaMode() : 'rolling'))}
+      ${blk('Last Year tab period', 'Calendar year (default) is the last complete calendar year (CLSI M39, Section 6.4). Last 12 months moves forward with the data.', sel('us_yamode', [['calendar', 'Calendar year'], ['rolling', 'Last 12 months']], (typeof yaMode === 'function') ? yaMode() : 'calendar'))}
       ${row('Show organisms with fewer than 30 isolates', 'Last Year tab antibiogram. Off by default: organisms below 30 isolates are listed in a note only. When on, they appear as grey rows marked * (indicative only, CLSI M39 Section 7.2.2).', tg('us_small', u.showsmall === true))}
       ${row('Show explanation notes under charts', 'Notes about symbols, colours and sample size. Warnings about incomplete periods and the unit banner always stay.', tg('us_notes', effNotes()))}
       <div style="font-size:10.5px;color:#64748b">These settings are saved on this device only.</div>
@@ -882,7 +882,7 @@ window.showUserSettings = function () {
         if (v.showsmall) uu.showsmall = true; else delete uu.showsmall;
         ['pyear', 'pfrom', 'pto'].forEach(k => { if (uu.period === 'calyear' || uu.period === 'range') uu[k] = v[k]; else delete uu[k]; });
         try { localStorage.setItem('amr_user_prefs', JSON.stringify(uu)); } catch (e) {}
-        try { if (v.yamode === (sh.dash_ya_mode === 'calendar' ? 'calendar' : 'rolling')) localStorage.removeItem('amr_ya_mode'); else localStorage.setItem('amr_ya_mode', v.yamode); } catch (e) {}
+        try { if (v.yamode === (sh.dash_ya_mode === 'rolling' ? 'rolling' : 'calendar')) localStorage.removeItem('amr_ya_mode'); else localStorage.setItem('amr_ya_mode', v.yamode); } catch (e) {}
         applyUserPrefsUI(true);
         _unitScope = v.scope;
         try { refreshAll(); } catch (e) { console.error(e); }
