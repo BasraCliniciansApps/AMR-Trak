@@ -93,6 +93,10 @@ function uoLine(name, s, metric, p) {
 //  all     = only calendar years with data in all 12 months (older incomplete years are left out)
 const MON3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function ymShift(ym, n) { let y = parseInt(ym.slice(0, 4), 10), m = parseInt(ym.slice(5, 7), 10) - 1 + n; y += Math.floor(m / 12); m = ((m % 12) + 12) % 12; return y + '-' + String(m + 1).padStart(2, '0'); }
+// Vertical antibiotic column header: a name with "/" is split into two lines (e.g. Piperacillin/ + Tazobactam) so the header stays short
+function abxHeadLines(name) { const t = String(name), i = t.indexOf('/'); return i > 0 && i < t.length - 1 ? [t.slice(0, i + 1), t.slice(i + 1)] : [t]; }
+function abxHeadHeight(names) { let m = 0; names.forEach(a => abxHeadLines(a).forEach(l => { m = Math.max(m, l.length); })); return Math.max(60, m * 6.4 + 14); }
+function abxHeadSpan(name, h) { return `<span title="${escHtml(name)}" style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;height:${h}px;white-space:nowrap;font-size:10px;font-weight:700;line-height:1.25;text-align:center">${abxHeadLines(name).map(l => escHtml(l)).join('<br>')}</span>`; }
 // Range label: same year -> "Oct–Dec 2025"; different years -> "Oct 2025 – Sep 2026"
 function ymRange(a, b) { return a.slice(0, 4) === b.slice(0, 4) ? (a === b ? ymLabel(a) : MON3[parseInt(a.slice(5, 7), 10) - 1] + '\u2013' + ymLabel(b)) : ymLabel(a) + ' \u2013 ' + ymLabel(b); }
 function ymLabel(ym) { return MON3[parseInt(ym.slice(5, 7), 10) - 1] + ' ' + ym.slice(0, 4); }
@@ -1750,8 +1754,8 @@ window.generateAdvancedAnalytics = function() {
 
     let irCells = 0, lowCells = 0, nuCells = 0, daggerCells = 0;
     let hmHtml = '<table class="heatmap-table"><thead><tr><th>Org (n)</th>';
-    const hmHeadH = Math.max(96, Math.max.apply(null, hmAbxs.map(a => String(a).length).concat([0])) * 6.4 + 14);
-    hmAbxs.forEach(a => { hmHtml += `<th style="vertical-align:bottom;padding:6px 2px"><span title="${a}" style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;height:${hmHeadH}px;white-space:nowrap;font-size:10px;font-weight:700">${a}</span></th>`; });
+    const hmHeadH = abxHeadHeight(hmAbxs);
+    hmAbxs.forEach(a => { hmHtml += `<th style="vertical-align:bottom;padding:6px 2px">${abxHeadSpan(a, hmHeadH)}</th>`; });
     hmHtml += '</tr></thead><tbody>';
 
     hmOrgs.forEach(o => {
