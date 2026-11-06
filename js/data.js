@@ -215,8 +215,13 @@ function isNonSusceptibleResult(v) {
     return v === 'R' || v === 'I' || v === 'SDD';
 }
 
+// One switch for the whole dashboard (control panel): exclude possible skin-flora contaminants from first-isolate analyses. Default: on.
+function contamExcluded() {
+    try { return (JSON.parse(localStorage.getItem('amr_live_settings')) || {}).mobile_dash_nocontam !== false; } catch (e) { return true; }
+}
 function applyDeduplication(records) {
     records = records.filter(r => !isScreeningSpecimen(r));
+    if (contamExcluded()) records = records.filter(r => !isPossibleContaminant(r));
     const winners = new Map(); // key -> chosen record
     // The laboratory patient number restarts every calendar year, so the same number in two different years can be two different people.
     // The first isolate is therefore chosen per patient number, organism AND calendar year (CLSI M39 Section 6.4 for combined years).

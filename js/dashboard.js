@@ -761,7 +761,7 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
             $(`#live_${prefix}_watchlist_container`).html(`<div class="flex items-center gap-2 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2"><svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span>Watchlist: <i>${nm}</i> - none detected (${timeLabel})</span></div>`).removeClass('hidden');
             return;
         }
-        let wWard = {}, wSpec = {}, wAbxT = {}, wAbxR = {};
+        let wWard = {}, wSpec = {}, wAbxT = {}, wAbxR = {}, wAbxOrgs = {};
         let allPossibleAbxs = [...(typeof abxList !== 'undefined' ? abxList : []), ...getCustomAntibiotics().map(a => a.name)];
 
         watchRecords.forEach(r => {
@@ -771,6 +771,7 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
             allPossibleAbxs.forEach(a => {
                 if(r[a] && r[a] !== '-' && r[a] !== '') {
                     wAbxT[a] = (wAbxT[a] || 0) + 1;
+                    (wAbxOrgs[a] = wAbxOrgs[a] || new Set()).add(r['Selective organism'] || '');
                     if(r[a] === 'R') wAbxR[a] = (wAbxR[a] || 0) + 1;
                 }
             });
@@ -886,7 +887,10 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
                 let t = wAbxT[a];
                 let r = wAbxR[a] || 0;
                 let p = Math.round((r / t) * 100);
-                abxLabels.push(t >= 30 ? a : `${a} *`);
+                const wOrgs = [...(wAbxOrgs[a] || [])].filter(Boolean);
+                const wIntr = wOrgs.length > 0 && wOrgs.every(o => isIntrinsicResistance(o, a));   // intrinsic only when every organism tested for it is intrinsically resistant
+                const wSel = isSelectivelyTested(t, watchRecords.length);
+                abxLabels.push(a + (wIntr ? ' ‡' : '') + (wSel ? ' †' : '') + (t >= 30 ? '' : ' *'));
                 abxData.push(p);
                 // تلوين ذكي حسب شدة المقاومة (أحمر للمقاومة العالية، برتقالي للمتوسطة، أخضر للمنخفضة)
                 if (p >= 60) abxColors.push('rgba(225, 29, 72, 0.85)');
@@ -1548,6 +1552,8 @@ function renderAbxChart() {
     });
 
     let testedOrgs = Object.keys(orgStats).sort();
+    const orgAllN = {};
+    records.forEach(r => { const o = r['Selective organism']; if (o) orgAllN[o] = (orgAllN[o] || 0) + 1; });
     
     if (chartAbxAMR_instance) chartAbxAMR_instance.destroy();
 
@@ -1560,7 +1566,7 @@ function renderAbxChart() {
 
     let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
     let baseColor = currentAbxMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : (currentAbxMetric === 'NS' ? 'rgba(245, 158, 11, 0.9)' : 'rgba(225, 29, 72, 0.9)');
-    let irOrgs = [], nuTot = 0, allTot = 0, uoOrgLines = [];
+    let irOrgs = [], nuTot = 0, allTot = 0, uoOrgLines = [], selOrgs = [];
     let hideLowN = $('#abx_hide_low').is(':checked');
 
     testedOrgs.forEach(org => {
@@ -1577,7 +1583,9 @@ function renderAbxChart() {
         nuTot += s.nu || 0; allTot += s.tested;
         if (s.nu) uoOrgLines.push(uoLine(formattedOrg, s, currentAbxMetric, p));
         if (intr) irOrgs.push(formattedOrg);
-        labels.push(formattedOrg + (intr ? ' ‡' : '') + (isReliable ? '' : ' *'));
+        const sel = isSelectivelyTested(s.tested, orgAllN[org] || 0);
+        if (sel) selOrgs.push(formattedOrg + ' (' + s.tested + '/' + orgAllN[org] + ')');
+        labels.push(formattedOrg + (intr ? ' ‡' : '') + (sel ? ' †' : '') + (isReliable ? '' : ' *'));
         data.push(p);
         bgColors.push(isReliable ? baseColor : 'rgba(148, 163, 184, 0.5)'); 
         ciData.push(wilsonScoreCI(targetVal, s.tested));
@@ -1585,6 +1593,7 @@ function renderAbxChart() {
     });
 
     let abxExtra = '';
+    if (selOrgs.length) abxExtra += `<div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;margin:14px 0 6px">&dagger; Selective tests (tested / isolates)</div>` + `<div style="font-size:11px;line-height:1.45;color:#334155">${selOrgs.join('<br>')}</div>`;
     const NH = t => `<div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;margin:14px 0 6px">${t}</div>`;
     if (irOrgs.length) abxExtra += NH('&Dagger; Intrinsic resistance') + `<div style="font-size:11px;line-height:1.45;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;color:#334155">${drug} is intrinsically resistant in <b>${irOrgs.length}</b> organism${irOrgs.length === 1 ? '' : 's'} shown (CLSI M100-Ed36, Appendix B): <b>${irOrgs.join(', ')}</b>. Resistance is expected there and is not acquired resistance. The laboratory tested it and the results are shown as reported.</div>`;
     if (nuTot > 0) abxExtra += NH('&sect; Urine-only agent') + `<div style="font-size:11px;line-height:1.45;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;color:#1e40af"><b>${drug}</b>: CLSI M100-Ed36 designates this agent as urine only (reported only on isolates from the urinary tract). <b>${nuTot}</b> of ${allTot} results shown come from non-urine specimens and are <b>included</b> in the bars. The percentage with urine specimens only is given for comparison; use clinical judgement.<div style=\"margin-top:6px\">${uoOrgLines.join('')}</div></div>`;
@@ -1705,7 +1714,7 @@ window.generateAdvancedAnalytics = function() {
         return;
     }
 
-    let irCells = 0, lowCells = 0, nuCells = 0;
+    let irCells = 0, lowCells = 0, nuCells = 0, daggerCells = 0;
     let hmHtml = '<table class="heatmap-table"><thead><tr><th>Org (n)</th>';
     hmAbxs.forEach(a => { hmHtml += `<th><div class="w-16 truncate text-[10px]" title="${a}">${a}</div></th>`; });
     hmHtml += '</tr></thead><tbody>';
@@ -1724,6 +1733,8 @@ window.generateAdvancedAnalytics = function() {
                 let isLow = cell.t < 30;
                 let dangerScore = (metric === 'R' || metric === 'NS') ? p : (100 - p);
                 let ci = wilsonScoreCI(targetVal, cell.t); // Calculate the confidence interval
+                const sel = isSelectivelyTested(cell.t, orgCounts[o] || 0); // tested on fewer than 90% of the organism's isolates
+                if (sel) daggerCells++;
                 
                 let bgClass = 'bg-white', textClass = 'text-slate-700';
                 if (dangerScore <= 20) { bgClass = 'bg-emerald-100'; textClass = 'text-emerald-800'; }
@@ -1740,7 +1751,7 @@ window.generateAdvancedAnalytics = function() {
                 if (isLow || intr) { bgClass = 'bg-slate-200'; textClass = 'text-slate-500'; }
 
                 hmHtml += `<td class="${bgClass} ${textClass} align-middle">
-                    <div class="leading-none">${p}% ${isLow ? '<span class="text-black font-bold">*</span>' : ''}${intr ? '<span class="font-bold">&Dagger;</span>' : ''}${cell.nu ? '<span class="font-bold text-blue-700" title="' + cell.nu + ' non-urine results">&sect;</span>' : ''}</div>
+                    <div class="leading-none">${p}% ${isLow ? '<span class="text-black font-bold">*</span>' : ''}${intr ? '<span class="font-bold">&Dagger;</span>' : ''}${sel ? '<span class="font-bold">&dagger;</span>' : ''}${cell.nu ? '<span class="font-bold text-blue-700" title="' + cell.nu + ' non-urine results">&sect;</span>' : ''}</div>
                     ${cell.nu ? '<div class="text-[7.5px] font-bold text-blue-700 tracking-tighter whitespace-nowrap">urine only: ' + (cell.ua.t ? Math.round(((metric === 'R' ? cell.ua.r : (metric === 'NS' ? cell.ua.ns : cell.ua.s)) / cell.ua.t) * 100) + '% (n=' + cell.ua.t + ')' : 'no data') + '</div>' : ''}
                     <div class="text-[7.5px] font-medium opacity-80 tracking-tighter mt-1 whitespace-nowrap">95% CI (${ci.lower}% - ${ci.upper}%)</div>
                 </td>`;
@@ -1754,6 +1765,7 @@ window.generateAdvancedAnalytics = function() {
     setNote('#heatmapNote', [
         (lowCells || irCells) ? '<b>Grey cell:</b> the value is not a reliable susceptibility result.' : '',
         lowCells ? '<b>*</b> = fewer than 30 isolates tested (CLSI M39): ' + lowCells + ' cell' + (lowCells === 1 ? '' : 's') + '.' : '',
+        daggerCells ? '<b>&dagger;</b> = selective test: the agent was tested on fewer than 90% of the organism\'s isolates, so the percentage may be biased: ' + daggerCells + ' cell' + (daggerCells === 1 ? '' : 's') + '.' : '',
         irCells ? '<b>&Dagger;</b> = intrinsic resistance (expected for the organism, CLSI M100 Appendix B), not acquired resistance: ' + irCells + ' cell' + (irCells === 1 ? '' : 's') + '.' : '',
         '<b>Colour bands</b> are a visual aid in steps of 20%.',
         'The colour bands are not CLSI or WHO categories.',

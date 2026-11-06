@@ -54,6 +54,7 @@ function normalise(s) {
     const now = new Date(), lq = lastCompleteQuarter();
     const o = {
         mobile_dash_lastmonth: /^\d{4}-\d{2}$/.test(s.mobile_dash_lastmonth || '') ? s.mobile_dash_lastmonth : '',
+        mobile_dash_nocontam: s.mobile_dash_nocontam !== false,
         dash_show_scope: s.dash_show_scope !== false,
         dash_default_scope: ['all', 'icu', 'nonicu'].includes(s.dash_default_scope) ? s.dash_default_scope : 'all',
         dash_default_period: ['month', 'quarter', 'year', 'all'].includes(s.dash_default_period) ? s.dash_default_period : 'month',
@@ -100,7 +101,9 @@ function render() {
         <div class="field"><label>Report data up to (last complete month)</label>
             <input type="month" class="input" data-k="mobile_dash_lastmonth" value="${cur.mobile_dash_lastmonth}">
             <p class="hint">Every period in the dashboard ends at this month: Last Month is this month, Last 3 Months and Last 12 Months end here, and the calendar year is the last complete year before it. Set it to the latest month for which the full laboratory file has been loaded. Leave it empty to use the latest month that has data (a partly entered month would then count as the latest).</p>
-            <button type="button" class="btn" id="clearLastMonth" style="margin-top:8px;width:100%;background:#e2e8f0;color:#334155">Use latest month with data</button></div>`;
+            <button type="button" class="btn" id="clearLastMonth" style="margin-top:8px;width:100%;background:#e2e8f0;color:#334155">Use latest month with data</button></div>
+        <div class="field"><label><input type="checkbox" data-k="mobile_dash_nocontam" ${cur.mobile_dash_nocontam ? 'checked' : ''}> Exclude possible skin-flora contaminants</label>
+            <p class="hint">Applies to every analysis, tab and chart. Blood isolates of skin-flora organisms (for example coagulase-negative staphylococci) are removed before the first isolate is chosen. Turn off to include them.</p></div>`;
 
     const scope = `
         <div class="row" style="margin-top:4px"><span>Show the All / ICU / Non-ICU switch</span><label class="sw"><input type="checkbox" data-k="dash_show_scope" ${cur.dash_show_scope ? 'checked' : ''}><i></i></label></div>

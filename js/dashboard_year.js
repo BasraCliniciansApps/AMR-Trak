@@ -2,7 +2,7 @@
 // Reference methods: CLSI M39 (first isolate per patient, organism and year; n >= 30), CLSI M100 (interpretation),
 // WHO GLASS (priority indicators, specimen-specific reporting), Magiorakos 2012 (MDR / XDR / PDR).
 
-const YA = { icuOrg: '', spec: 'all', cumSpec: 'all', noContam: true, trend: null, abxChart: null, abx: { abx: 'Meropenem', org: 'top', mode: 'year', metric: 'R' } };
+const YA = { icuOrg: '', spec: 'all', cumSpec: 'all', noContam: contamExcluded(), trend: null, abxChart: null, abx: { abx: 'Meropenem', org: 'top', mode: 'year', metric: 'R' } };
 try { const sv = JSON.parse(localStorage.getItem('amr_trend_sel') || 'null'); if (sv && typeof sv === 'object') Object.assign(YA.abx, sv); } catch (e) {}
 const YA_EXCLUDED_ORGS = ['xxx', 'con', 'no growth', 'contaminated', 'normal flora', 'mixed flora', 'no significant growth'];
 const YA_MARKER_NAMES = {
@@ -102,7 +102,7 @@ function yaBuild() {
     host.insertAdjacentHTML('beforebegin', '<div id="ya_window_ctl" class="mb-3"></div>');
     const bodies = {
         ind: yaSeg('ya_spec_seg', [['all', 'All specimens'], ['blood', 'Blood only']], YA.spec, 'yaSetSpec') + '<div id="ya_ind_table" class="ya-scroll"></div><p class="ya-note" id="ya_ind_note"></p>',
-        cum: '<div id="ya_cum_seg" class="ya-seg ya-seg-wrap"></div><label class="ya-opt"><span>Exclude possible skin-flora contaminants</span><span class="ya-sw"><input type="checkbox" id="ya_nocontam" checked onchange="yaSetNoContam(this.checked)"><i></i></span></label><div id="ya_cum_table" class="ya-scroll"></div><p class="ya-note" id="ya_cum_note"></p>',
+        cum: '<div id="ya_cum_seg" class="ya-seg ya-seg-wrap"></div><div id="ya_cum_table" class="ya-scroll"></div><p class="ya-note" id="ya_cum_note"></p>',
         trend: '<div class="ya-chart"><canvas id="chart_y_trend"></canvas></div><div id="ya_trend_table" class="ya-scroll"></div><p class="ya-note" id="ya_trend_note"></p>',
         abx: '<div id="ya_abx_ctl"></div><div class="ya-chart"><canvas id="chart_y_abxtrend"></canvas></div><div id="ya_abx_table" class="ya-scroll"></div><p class="ya-note" id="ya_abx_note"></p>',
         icu: '<div id="ya_icu_table" class="ya-scroll"></div><p class="ya-note" id="ya_icu_note"></p><div class="ya-sub">Susceptibility (% S) by organism</div><div id="ya_icu_seg" class="ya-seg ya-seg-wrap"></div><div id="ya_icu_abx" class="ya-scroll"></div><p class="ya-note" id="ya_icu_abx_note"></p>',
@@ -126,7 +126,6 @@ window.toggleYa = function (id) {
 };
 window.yaSetSpec = function (v) { YA.spec = v; $('#ya_spec_seg button').each(function () { $(this).toggleClass('on', $(this).data('v') === v); }); yaIndicators(); yaTrend(); };
 window.yaSetCumSpec = function (v) { YA.cumSpec = v; yaCumulative(); };
-window.yaSetNoContam = function (on) { YA.noContam = !!on; yaCumulative(); };
 // specimen types that reach 30 first isolates in the year (CLSI M39: a specimen is reported separately only when numbers allow)
 function yaSpecOptions(year) {
     const names = {};
@@ -225,7 +224,7 @@ function yaCumulative() {
     const specs = yaSpecOptions(y);
     if (YA.cumSpec !== 'all' && !specs.some(s => s.key === YA.cumSpec)) YA.cumSpec = 'all';
     $('#ya_cum_seg').html([{ key: 'all', label: 'All specimens' }].concat(specs).map(s => `<button type="button" data-v="${escHtml(s.key)}" class="${s.key === YA.cumSpec ? 'on' : ''}" onclick="yaSetCumSpec(this.getAttribute('data-v'))">${escHtml(s.label)}</button>`).join(''));
-    $('#ya_nocontam').prop('checked', YA.noContam);
+    YA.noContam = contamExcluded();
     const recs = yaFirst(y, YA.cumSpec, YA.noContam);
     const exclN = yaRaw(y).filter(r => yaMatchSpec(r, YA.cumSpec) && isPossibleContaminant(r)).length;
     const byOrg = {};

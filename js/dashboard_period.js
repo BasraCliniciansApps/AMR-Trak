@@ -44,7 +44,8 @@ const opFmt = v => v === null || v === undefined ? '-' : (Math.round(v * 10) / 1
 function opCell(r, n, extra) {
     if (!n) return '<td class="ya-mute">-</td>';
     const low = n < 30;
-    return `<td style="${low ? 'color:#94a3b8' : ''}"><b>${r}/${n}${low ? '*' : ''}</b><div class="ya-mute">${opFmt(opPct(r, n))}%${extra || ''}</div></td>`;
+    const ci = wilsonScoreCI(r, n);
+    return `<td style="${low ? 'color:#94a3b8' : ''}"><b>${r}/${n}${low ? '*' : ''}</b><div class="ya-mute">${opFmt(opPct(r, n))}%</div><div class="ya-mute">95% CI ${ci.lower}-${ci.upper}</div>${extra || ''}</td>`;
 }
 
 // Difference cell (first group minus second, in percentage points). Always shown; called significant only when both n >= 30 and z >= 1.96.
