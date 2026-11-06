@@ -33,7 +33,7 @@ function icuWardList() {
 
 // ---------- unit scope: All units / ICU only / Non-ICU ----------
 let _unitScope = null;
-function getUnitScope() { const s = _unitScope || getDashSettings().dash_default_scope || 'all'; return s === 'nonicu' ? 'nonicuip' : s; }
+function getUnitScope() { const s = _unitScope || getUserPrefs().scope || getDashSettings().dash_default_scope || 'all'; return s === 'nonicu' ? 'nonicuip' : s; }
 // Unit filter values:
 //   all        : every ward
 //   icu        : ICU wards only
@@ -764,26 +764,46 @@ document.addEventListener('DOMContentLoaded', mountSectionToolbars);
 function getUserPrefs() { try { return JSON.parse(localStorage.getItem('amr_user_prefs')) || {}; } catch (e) { return {}; } }
 function setUserPref(k, v) { const u = getUserPrefs(); u[k] = v; try { localStorage.setItem('amr_user_prefs', JSON.stringify(u)); } catch (e) {} }
 window.showUserSettings = function () {
+    const u = getUserPrefs();
     const tg = (id, on) => `<label style="display:inline-block;position:relative;width:40px;height:22px;flex:none"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} style="opacity:0;width:0;height:0"><span class="us-sl"></span></label>`;
-    const per = (typeof anPeriod === 'function') ? (getUserPrefs().period || 'year') : 'year';
+    const row = (title, desc, ctl) => `<div style="display:flex;gap:10px;align-items:flex-start;justify-content:space-between;margin-bottom:14px"><div><b>${title}</b><div style="font-size:10.5px;color:#64748b;margin-top:2px">${desc}</div></div>${ctl}</div>`;
+    const sel = (id, opts, cur) => `<select id="${id}" style="width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:12px;background:#fff">${opts.map(o => `<option value="${o[0]}" ${o[0] === cur ? 'selected' : ''}>${o[1]}</option>`).join('')}</select>`;
+    const blk = (title, desc, ctl) => `<div style="margin-bottom:14px"><b>${title}</b>${ctl}<div style="font-size:10.5px;color:#64748b;margin-top:4px">${desc}</div></div>`;
     const html = `<style>.us-sl{position:absolute;inset:0;background:#cbd5e1;border-radius:22px;transition:.2s}.us-sl:before{content:"";position:absolute;height:16px;width:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}input:checked+.us-sl{background:#0d9488}input:checked+.us-sl:before{transform:translateX(18px)}</style>
-    <div style="text-align:left;font-size:12px;color:#334155">
-      <div style="display:flex;gap:10px;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
-        <div><b>Exclude possible skin-flora contaminants</b><div style="font-size:10.5px;color:#64748b;margin-top:2px">Removes blood isolates of skin-flora organisms (for example coagulase-negative staphylococci) before the first isolate is chosen. Applies to every tab and chart.</div></div>${tg('us_contam', contamExcluded())}</div>
-      <div><b>Default analysis period (Analytics tab)</b>
-        <select id="us_period" style="width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:12px;background:#fff">
-          ${[['all', 'All Times'], ['year', 'Last 12 Months'], ['quarter', 'Last 3 Months'], ['month', 'Last Month']].map(o => `<option value="${o[0]}" ${o[0] === per ? 'selected' : ''}>${o[1]}</option>`).join('')}
-        </select>
-        <div style="font-size:10.5px;color:#64748b;margin-top:4px">Used when the dashboard opens. These settings are saved on this device only.</div></div>
+    <div style="text-align:left;font-size:12px;color:#334155;max-height:62vh;overflow-y:auto;padding-right:4px">
+      ${row('Exclude possible skin-flora contaminants', 'Removes blood isolates of skin-flora organisms (for example coagulase-negative staphylococci) before the first isolate is chosen. Applies to every tab and chart.', tg('us_contam', contamExcluded()))}
+      ${blk('Default unit filter', 'The unit filter selected when the dashboard opens.', sel('us_scope', [['all', 'ALL'], ['icu', 'ICU'], ['nonicuip', 'Non-ICU IP'], ['outpatient', 'Outpatient']], getUnitScope()))}
+      ${blk('Default analysis period (Analytics tab)', 'The period selected when the dashboard opens.', sel('us_period', [['all', 'All Times'], ['year', 'Last 12 Months'], ['quarter', 'Last 3 Months'], ['month', 'Last Month']], u.period || 'year'))}
+      ${blk('Last Year tab period', 'Last 12 months moves forward with the data. Calendar year is the last complete calendar year (CLSI M39, Section 6.4).', sel('us_yamode', [['rolling', 'Last 12 months'], ['calendar', 'Calendar year']], (typeof yaMode === 'function') ? yaMode() : 'rolling'))}
+      ${row('Hide results with fewer than 30 isolates', 'Switches on the "Hide n &lt; 30" option in every Analytics chart when the dashboard opens. The threshold of 30 follows CLSI M39 and cannot be lowered.', tg('us_hidelow', !!u.hidelow))}
+      ${row('Show explanation notes under charts', 'Notes about symbols, colours and sample size. Warnings about incomplete periods and the unit banner always stay.', tg('us_notes', u.notes !== false))}
+      <div style="font-size:10.5px;color:#64748b">These settings are saved on this device only.</div>
     </div>`;
     Swal.fire({ title: 'Settings', html, confirmButtonText: 'Save', showCancelButton: true, confirmButtonColor: '#0d9488', focusConfirm: false,
-        preConfirm: () => ({ nocontam: document.getElementById('us_contam').checked, period: document.getElementById('us_period').value }) })
+        preConfirm: () => ({ nocontam: document.getElementById('us_contam').checked, period: document.getElementById('us_period').value, scope: document.getElementById('us_scope').value,
+            yamode: document.getElementById('us_yamode').value, hidelow: document.getElementById('us_hidelow').checked, notes: document.getElementById('us_notes').checked }) })
     .then(r => {
         if (!r.isConfirmed) return;
-        setUserPref('nocontam', r.value.nocontam); setUserPref('period', r.value.period);
-        $('input[name="an_period"][value="' + r.value.period + '"]').prop('checked', true);
+        const v = r.value;
+        ['nocontam', 'period', 'scope', 'hidelow', 'notes'].forEach(k => setUserPref(k, v[k]));
+        try { localStorage.setItem('amr_ya_mode', v.yamode); } catch (e) {}
+        $('input[name="an_period"][value="' + v.period + '"]').prop('checked', true);
+        applyUserPrefsUI(true);
+        _unitScope = v.scope;
         try { refreshAll(); } catch (e) { console.error(e); }
         try { loadAnalyticsFilters(); refreshPeriodHints(); } catch (e) {}
     });
 };
-$(function () { const p = getUserPrefs().period; if (p) $('input[name="an_period"][value="' + p + '"]').prop('checked', true); });
+// Applies the saved device settings to the page
+function applyUserPrefsUI(fire) {
+    const u = getUserPrefs();
+    document.body.classList.toggle('no-sym-notes', u.notes === false);
+    ['guided', 'patho', 'abx', 'adv'].forEach(k => {
+        const el = document.getElementById(k + '_hide_low');
+        if (el && !!u.hidelow !== el.checked) { el.checked = !!u.hidelow; if (fire) $(el).trigger('change'); }
+    });
+}
+$(function () {
+    const p = getUserPrefs().period; if (p) $('input[name="an_period"][value="' + p + '"]').prop('checked', true);
+    applyUserPrefsUI(false);
+});

@@ -374,7 +374,7 @@ function setNote(sel, items) {
         const html = $(tbl).html() || '';
         if (!/color:#94a3b8|\d\*</.test(html)) list = [].concat.apply([], list.filter(Boolean).map(splitHints)).filter(t => !/^<b>\*<\/b>|^<b>Hollow point/.test(t));
     }
-    $(sel).html(hintsHtml(list));
+    $(sel).addClass('sym-note').html(hintsHtml(list));
 }
 window.showInfo = function(key) {
     const i = INFO_STORE[key];
