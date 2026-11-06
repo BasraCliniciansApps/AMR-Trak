@@ -302,13 +302,15 @@ const INFO_STORE = {};
 // Official sources used to support the definitions shown in the (i) popups and on printed charts
 const REFS = {
     MAGIORAKOS: { t: 'Magiorakos AP, Srinivasan A, Carey RB, et al. Multidrug-resistant, extensively drug-resistant and pandrug-resistant bacteria: an international expert proposal for interim standard definitions for acquired resistance. Clin Microbiol Infect. 2012;18(3):268-281.', u: 'https://doi.org/10.1111/j.1469-0691.2011.03570.x' },
-    CLSI_M100: { t: 'Clinical and Laboratory Standards Institute (CLSI). M100: Performance Standards for Antimicrobial Susceptibility Testing (current edition).', u: 'https://clsi.org/standards/products/microbiology/documents/m100/' },
-    CLSI_M39: { t: 'CLSI. M39: Analysis and Presentation of Cumulative Antimicrobial Susceptibility Test Data (5th ed., 2022).', u: 'https://clsi.org/standards/products/microbiology/documents/m39/' },
+    CLSI_M100: { t: 'Clinical and Laboratory Standards Institute (CLSI). M100: Performance Standards for Antimicrobial Susceptibility Testing (M100-Ed36, 36th ed., 2026).', u: 'https://clsi.org/standards/products/microbiology/documents/m100/' },
+    CLSI_M39: { t: 'Hindler JA, Barton M, Erdman SM, et al. CLSI M39-A4: Analysis and Presentation of Cumulative Antimicrobial Susceptibility Test Data; Approved Guideline, 4th ed. Vol. 34, No. 2. Wayne, PA: CLSI; 2014.', u: 'https://clsi.org/standards/products/microbiology/documents/m39/' },
     CLSI_M47: { t: 'CLSI. M47: Principles and Procedures for Blood Cultures (current edition).', u: 'https://clsi.org/standards/products/microbiology/documents/m47/' },
     ASM_BCC: { t: 'American Society for Microbiology. Evidence-based laboratory medicine practice guidelines to reduce blood culture contamination rates: a systematic review and meta-analysis.', u: 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11629619/' },
     WHO_GLASS: { t: 'World Health Organization. GLASS manual for antimicrobial resistance surveillance in common bacteria causing human infection. Geneva: WHO; 2023.', u: 'https://www.who.int/publications/i/item/9789240076600' },
-    WHO_AWARE: { t: 'World Health Organization. AWaRe classification of antibiotics for evaluation and monitoring of use, 2025.', u: 'https://www.who.int/publications/i/item/2021-aware-classification' },
+    WHO_AWARE: { t: 'World Health Organization. The selection and use of essential medicines 2025: AWaRe classification of antibiotics for evaluation and monitoring of use. Geneva: WHO; 2025.', u: 'https://www.who.int/publications/i/item/B09489' },
     WHO_BPPL: { t: 'World Health Organization. WHO Bacterial Priority Pathogens List, 2024.', u: 'https://www.who.int/publications/i/item/9789240093461' },
+    ACSQHC: { t: 'Australian Commission on Safety and Quality in Health Care. Specification for a Hospital Cumulative Antibiogram. Sydney: ACSQHC; December 2019.', u: 'https://www.safetyandquality.gov.au/' },
+    BROWN_WILSON: { t: 'Brown LD, Cai TT, DasGupta A. Interval estimation for a binomial proportion. Statistical Science. 2001;16(2):101-133.', u: 'https://doi.org/10.1214/ss/1009213286' },
     WHONET: { t: 'WHONET software. WHO Collaborating Centre for Surveillance of Antimicrobial Resistance.', u: 'https://whonet.org/' }
 };
 // Which sources support which (i) popup

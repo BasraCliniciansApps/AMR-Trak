@@ -263,6 +263,13 @@
         ['about', 'About', () => window.aboutHtml()]
     ];
 
+    (function () {   // reviewer sections go in front of References
+        const rv = window.GD_REVIEWER_SECTIONS;
+        if (!rv) return;
+        const at = SECTIONS.findIndex(s => s[0] === 'refs');
+        SECTIONS.splice(at < 0 ? SECTIONS.length - 1 : at, 0, ...rv);
+    })();
+
     window.aboutHtml = function () {
         const chip = t => `<span class="gd-chip">${t}</span>`;
         const org = (n, d) => `<div class="gd-org"><div class="gd-org-n">${n}</div><div class="gd-org-d">${d}</div></div>`;

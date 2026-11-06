@@ -218,17 +218,14 @@ function isNonSusceptibleResult(v) {
 function applyDeduplication(records) {
     records = records.filter(r => !isScreeningSpecimen(r));
     const winners = new Map(); // key -> chosen record
-    // CLSI M39 Section 6.4: first isolate per patient per ANALYSIS PERIOD. When the records fit in one period
-    // (about 12 months or less, e.g. a rolling 12-month window that crosses New Year) they share one bucket.
-    // When several years are combined, the first isolate per patient per CALENDAR YEAR is kept.
-    const ds = records.map(r => String(r['Date'] || '')).filter(d => /^\d{4}-\d{2}/.test(d)).sort();
-    const onePeriod = ds.length > 0 && (new Date(ds[ds.length - 1]) - new Date(ds[0])) / 86400000 <= 372;
+    // The laboratory patient number restarts every calendar year, so the same number in two different years can be two different people.
+    // The first isolate is therefore chosen per patient number, organism AND calendar year (CLSI M39 Section 6.4 for combined years).
     const keyOf = (r) => {
         const pid = getDedupPatientId(r);
-        const year = onePeriod ? 'P' : String(r['Date'] || '').substring(0, 4);
+        const year = String(r['Date'] || '').substring(0, 4);
         const org = String(r['Selective organism'] || '').trim().toLowerCase();
         // Cannot dedup without patient id, a valid year, or an organism: keep the record
-        if (!pid || !/^(\d{4}|P)$/.test(year) || !String(r['Date'] || '').match(/^\d{4}/) || !org) return null;
+        if (!pid || !/^\d{4}$/.test(year) || !org) return null;
         return pid + '|' + year + '|' + org;
     };
 
@@ -256,7 +253,7 @@ function applyDeduplication(records) {
 //   broad enough. "possibleXDR" flags isolates that look XDR on the tested
 //   categories but whose panel is too narrow to confirm it.
 // - Only organisms with a defined category list are classified:
-//   Enterobacterales, P. aeruginosa, Acinetobacter spp., S. aureus.
+//   Enterobacterales, P. aeruginosa, Acinetobacter spp., S. aureus, Enterococcus spp.
 // - Intrinsic resistance is excluded from the category counts.
 // >>> Category lists and intrinsic-resistance exclusions below should be
 // >>> reviewed by the clinical pharmacist; edit them here only.

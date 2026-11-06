@@ -795,7 +795,11 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
             let val = cols[abx.index] ? String(cols[abx.index]).trim().toUpperCase() : "";
             // CLSI M100: beta-haemolytic streptococci have no disk breakpoints for R/I to penicillin/ampicillin (disk can only show S)
             if (abx.isDisk && isBetaHemolyticStrep && (abx.name === 'Penicillin' || abx.name === 'Ampicillin') && (val === 'R' || val === 'I')) { report.strepPenDisk++; return; }
-            if (val === 'S' || val === 'I' || val === 'R') {
+            if (val === 'SDD') {
+                // CLSI M100: susceptible-dose dependent is its own category. It must not be stored as S (M39 Section 6.6 counts only S as susceptible).
+                hasSRIData = true;
+                abxResults[abx.name] = 'SDD';
+            } else if (val === 'S' || val === 'I' || val === 'R') {
                 hasSRIData = true;
                 abxResults[abx.name] = val;
             } else if (val.startsWith('S') || val.startsWith('I') || val.startsWith('R')) {
@@ -1645,6 +1649,7 @@ function renderDefaultAntibiotics() {
                         <option value="S" class="text-emerald-600 bg-emerald-50">S</option>
                         <option value="I" class="text-amber-600 bg-amber-50">I</option>
                         <option value="R" class="text-rose-600 bg-rose-50">R</option>
+                        <option value="SDD" class="text-orange-600 bg-orange-50">SDD</option>
                     </select>
                 </div>
             `;
@@ -1876,6 +1881,7 @@ function addAntibiotic(abxName = null, result = 'S') {
                 <option value="S" class="text-green-600" ${result==='S'?'selected':''}>S</option>
                 <option value="I" class="text-yellow-600" ${result==='I'?'selected':''}>I</option>
                 <option value="R" class="text-red-600" ${result==='R'?'selected':''}>R</option>
+                <option value="SDD" class="text-orange-600" ${result==='SDD'?'selected':''}>SDD</option>
             </select>
             <button type="button" onclick="removeAntibiotic('${abx}', '${safeId}')" class="text-red-400 hover:text-red-600 font-bold px-2 text-lg transition">&times;</button>
         </div>
