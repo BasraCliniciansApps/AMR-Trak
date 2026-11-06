@@ -747,6 +747,7 @@ function buildPrintDoc(items, o) {
     fl.push(['Unit', scopeLabel()]);
     if (tab === 'analytics') {
         fl.push(['Analysis period', periodText()]);
+        { const cn = combinedYearsNote(); if (cn) fl.push(['Combined years', cn.replace(/&sect;/g, '\u00a7')]); }
         const hs = items.some(x => x.sec.id === 'heatmap') ? ((document.getElementById('adv_start') || {}).value || '') + '|' + ((document.getElementById('adv_end') || {}).value || '') : '|';
         if (hs !== '|') fl.push(['Heatmap dates', (hs.split('|')[0] || 'first data') + ' to ' + (hs.split('|')[1] || 'latest data') + ' (replace the analysis period)']);
     }
