@@ -253,21 +253,13 @@
                 ['GLASS', 'WHO Global Antimicrobial Resistance and Use Surveillance System.'], ['MIC', 'Minimum inhibitory concentration: the lowest drug concentration that stops growth.'],
                 ['n', 'Number of isolates (or cultures) tested.'], ['ns', 'Not statistically significant.'], ['pp', 'Percentage points: the difference between two percentages.'],
                 ['First isolate', 'The first result for a patient and organism in the reported period. Repeats are not counted (CLSI M39).'], ['De-duplication', 'Removing repeat isolates so each patient and organism is counted once.'], ['Screening culture', 'A swab taken to detect carriage of a resistant organism, not to diagnose infection. Excluded from the analysis.'], ['Completeness', 'The share of records in which a field (patient identifier, ward, specimen, AST) is filled in.'], ['Testing coverage', 'The share of isolates that were actually tested for the antibiotic an indicator depends on.'], ['Patient identifier', 'A code that lets the app recognise the same patient again; names are never shown.'],
-                ['WHONET', 'Free WHO software used by laboratories to record and analyse susceptibility data.'], ['ESBL', 'Extended-spectrum beta-lactamase.']])],
-
-        ['refs', 'References', () => {
-            const keys = ['CLSI_M39', 'CLSI_M100', 'CLSI_M47', 'MAGIORAKOS', 'WHO_GLASS', 'WHO_BPPL', 'WHO_AWARE', 'WHONET', 'ASM_BCC'];
-            return P('The rules used in this dashboard come from the following sources.') + (typeof refsHtml === 'function' ? refsHtml(keys, true) : '');
-        }],
-
-        ['about', 'About', () => window.aboutHtml()]
+                ['WHONET', 'Free WHO software used by laboratories to record and analyse susceptibility data.'], ['ESBL', 'Extended-spectrum beta-lactamase.']])]
     ];
 
-    (function () {   // reviewer sections go in front of References
+    (function () {   // reviewer sections (second tab of the Guide)
         const rv = window.GD_REVIEWER_SECTIONS;
         if (!rv) return;
-        const at = SECTIONS.findIndex(s => s[0] === 'refs');
-        SECTIONS.splice(at < 0 ? SECTIONS.length - 1 : at, 0, ...rv);
+        SECTIONS.push(...rv);
     })();
 
     window.aboutHtml = function () {
@@ -296,19 +288,28 @@
             </div>`;
     };
 
+    // Two tabs: the reviewer sections and the References belong to "For reviewer"; everything else is "Instructions"
+    const isRev = id => /^rv_/.test(id);
+    let tab = 'ins';
+    try { tab = localStorage.getItem('amr_guide_tab') === 'rev' ? 'rev' : 'ins'; } catch (e) {}
+
     function build() {
-        const items = SECTIONS.map(([id, title, body], i) => `
+        const items = SECTIONS.filter(s => isRev(s[0]) === (tab === 'rev')).map(([id, title, body], i) => `
             <details class="gd-sec" data-id="${id}">
-                <summary><span class="gd-num">${id === 'about' ? '' : (i + 1)}</span><span class="gd-t">${title}</span></summary>
+                <summary><span class="gd-num">${i + 1}</span><span class="gd-t">${title.replace(/^For reviewer: (.)/, (m, c) => c.toUpperCase())}</span></summary>
                 <div class="gd-body">${body()}</div>
             </details>`).join('');
+        const intro = tab === 'rev'
+            ? 'For experts, the Ministry and hospital management: how each tool works, the rule it applies, the source of the rule and the reason it was chosen.'
+            : 'Tap a section to open it. Each section explains what a chart or concept is, why it is used, how to read it, and on what rule it is based.';
         return `
             <div class="gd-bar">
-                <div><div class="gd-title">Guide</div><div class="gd-subtitle">How to read this dashboard</div></div>
+                <div><div class="gd-title">Guide</div><div class="gd-subtitle">${tab === 'rev' ? 'For reviewer' : 'How to read this dashboard'}</div></div>
                 <div class="gd-actions"><button type="button" id="gdToggle">Expand all</button><button type="button" id="gdClose" aria-label="Close the guide">&times;</button></div>
             </div>
+            <div class="gd-tabs"><button type="button" data-tab="ins" class="${tab === 'ins' ? 'on' : ''}">Instructions</button><button type="button" data-tab="rev" class="${tab === 'rev' ? 'on' : ''}">For reviewer</button></div>
             <div class="gd-scroll">
-                <p class="gd-intro">Tap a section to open it. Each section explains what a chart or concept is, why it is used, how to read it, and on what rule it is based.</p>
+                <p class="gd-intro">${intro}</p>
                 ${items}
             </div>`;
     }
@@ -316,18 +317,26 @@
     window.showGuide = function () {
         let el = document.getElementById('guideView');
         if (!el) { el = document.createElement('div'); el.id = 'guideView'; document.body.appendChild(el); }
-        el.innerHTML = build();
+        const render = () => {
+            el.innerHTML = build();
+            el.querySelector('#gdClose').onclick = close;
+            const tg = el.querySelector('#gdToggle');
+            tg.onclick = () => {
+                const all = el.querySelectorAll('details.gd-sec'), anyClosed = Array.from(all).some(d => !d.open);
+                all.forEach(d => { d.open = anyClosed; });
+                tg.textContent = anyClosed ? 'Collapse all' : 'Expand all';
+            };
+            el.querySelectorAll('.gd-tabs button').forEach(b => b.onclick = () => {
+                tab = b.dataset.tab;
+                try { localStorage.setItem('amr_guide_tab', tab); } catch (e) {}
+                render();
+            });
+            el.querySelector('.gd-scroll').scrollTop = 0;
+        };
+        const close = () => { el.classList.remove('open'); document.body.classList.remove('gd-lock'); };
+        render();
         el.classList.add('open');
         document.body.classList.add('gd-lock');
-        const close = () => { el.classList.remove('open'); document.body.classList.remove('gd-lock'); };
-        el.querySelector('#gdClose').onclick = close;
-        const tg = el.querySelector('#gdToggle');
-        tg.onclick = () => {
-            const all = el.querySelectorAll('details.gd-sec'), anyClosed = Array.from(all).some(d => !d.open);
-            all.forEach(d => { d.open = anyClosed; });
-            tg.textContent = anyClosed ? 'Collapse all' : 'Expand all';
-        };
-        el.querySelector('.gd-scroll').scrollTop = 0;
     };
     window.hideGuide = function () { const el = document.getElementById('guideView'); if (el) el.classList.remove('open'); document.body.classList.remove('gd-lock'); };
 })();
