@@ -136,8 +136,10 @@
                 'A difference is called significant only when <b>both groups have 30 or more tested isolates</b> and |z| &ge; 1.96 (two-sided p &lt; 0.05). M39 notes that the chi-square test does not work well when the number of isolates is small or the proportion is close to 0% or 100%, where an exact test is appropriate [R2, p. 63]; the minimum of 30 is the application\'s safeguard, and an exact test is not implemented.',
                 '<b>No adjustment is made for multiple comparisons.</b> M39 states that this is common practice and advises a note to that effect [R2, Appendix H3, p. 63]. A significant difference should be treated as a signal to investigate, not as proof of change; M39 also reminds the analyst to consider changes in patient population, sampling practice and laboratory testing protocols [R2, Section 10, p. 27].']) +
             H('5. Colour bands') + L([
-                'Cumulative antibiogram: green 90% or more, yellow 70-89%, orange 50-69%, red below 50%. Heatmap: five bands of 20 percentage points.',
-                'These bands are a <b>display convention</b> ' + A + '. They are not CLSI or WHO interpretive categories. The usual practice of preferring an agent with about 80% (non-severe infection) or 90% (severe infection) susceptibility for empirical use is a convention of clinical practice, not a rule of M39 or M100; the heatmap note says so.'])],
+                'Cumulative antibiogram: green 80% or more; amber 50-79%; red below 50%. Heatmap: five bands of 20 percentage points.',
+                'These bands are a <b>display convention</b> ' + A + '. They are not CLSI or WHO interpretive categories, and neither M39 nor M100 defines colours.',
+                '<b>Rationale for the antibiogram bands.</b> The 80% threshold is the level that clinicians in practice accept for empirical therapy: a survey of infectious diseases providers (Hasegawa et al., 2023, conference abstract, Open Forum Infectious Diseases, 10 Suppl 2) reported median acceptance thresholds between 74% and 86%, higher for severe infection (86.0% for ICU gram-negative bloodstream infection; 77.9% for non-ICU). In one worked example, agents active against 80-85% of pooled isolates were judged unacceptable for routine empirical use, while 90-97% in a subgroup were judged appropriate (Pogue, Contagion Live, 2018; a practical review without a formal derivation).',
+                '<b>Limits.</b> The survey does not support a single fixed threshold for severe infection: its ICU bloodstream median (86%) lies between 80 and 90. For severe infection the application therefore relies on the local policy stated in the note under the table, not on a separate colour. No CLSI or WHO document was found that fixes these numbers; the reviewer should confirm the thresholds with the Antibiotic Committee.'])],
 
         // ------------------------------------------------------------------ 4
         ['rv_flags', 'For reviewer: selective testing, intrinsic resistance and urine-only agents', () =>
@@ -248,7 +250,7 @@
         // ------------------------------------------------------------------ 9
         ['rv_units', 'For reviewer: units, wards and specimen strata', () =>
             H('1. Unit scope') + L([
-                'The scope selector (all units, ICU only, non-ICU) applies to every chart. The ICU wards are a <b>list set by the programme</b> in the control panel (default: ICU) ' + A + '.',
+                'The unit filter (ALL, ICU, Non-ICU IP, Outpatient) applies to every chart. The first isolate is chosen across all wards before the filter is applied, as stated in section 2 (CLSI M39 Section 6.4 and Appendix B: one isolate per patient, irrespective of body site; patient location is defined at the time the specimen is obtained, Section 3, and stratification by location is described in Section 11). The ICU wards are a <b>list set by the programme</b> in the control panel (default: ICU) ' + A + '.',
                 'Stratification by location is allowed and encouraged by M39 when each subgroup has at least 30 isolates [R2, Section 11, p. 28; Appendix D, p. 49 (example of results by inpatient, outpatient and ICU location)].']) +
             H('2. Inpatient and outpatient classification') + T(['Ward text', 'Class'], [
                 ['Outpatient, out-patient, OPD, clinic, ambulatory', 'Outpatient'],

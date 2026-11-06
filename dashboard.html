@@ -278,9 +278,10 @@
         <div id="scopeBar" class="w-full basis-full mt-2">
             <div class="flex items-center gap-2">
             <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-inner flex-1">
-                <button type="button" data-scope="all" onclick="setUnitScope('all')" class="scope-btn flex-1 text-[10px] font-bold py-1.5 rounded-md transition-all bg-white text-teal-700 shadow-sm">All units</button>
+                <button type="button" data-scope="all" onclick="setUnitScope('all')" class="scope-btn flex-1 text-[10px] font-bold py-1.5 rounded-md transition-all bg-white text-teal-700 shadow-sm">ALL</button>
                 <button type="button" data-scope="icu" onclick="setUnitScope('icu')" class="scope-btn flex-1 text-[10px] font-bold py-1.5 rounded-md transition-all text-slate-500">ICU</button>
-                <button type="button" data-scope="nonicu" onclick="setUnitScope('nonicu')" class="scope-btn flex-1 text-[10px] font-bold py-1.5 rounded-md transition-all text-slate-500">Non-ICU</button>
+                <button type="button" data-scope="nonicuip" onclick="setUnitScope('nonicuip')" class="scope-btn flex-1 text-[10px] font-bold py-1.5 rounded-md transition-all text-slate-500" title="Non-ICU inpatient wards (emergency excluded)">Non-ICU IP</button>
+                <button type="button" data-scope="outpatient" onclick="setUnitScope('outpatient')" class="scope-btn flex-1 text-[10px] font-bold py-1.5 rounded-md transition-all text-slate-500" title="Outpatient clinics and emergency">Outpatient</button>
             </div>
             
             </div>
@@ -790,15 +791,15 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=11.15"></script>
-    <script src="js/dashboard.js?v=11.15"></script>
-    <script src="js/info_texts.js?v=11.15"></script>
-    <script src="js/dashboard_panels.js?v=11.15"></script>
-    <script src="js/dashboard_year.js?v=11.15"></script>
-    <script src="js/dashboard_period.js?v=11.15"></script>
-    <script src="js/guide_reviewer.js?v=11.15"></script>
-    <script src="js/guide.js?v=11.15"></script>
-    <script src="js/nav.js?v=11.15"></script>
+    <script src="js/data.js?v=11.17"></script>
+    <script src="js/dashboard.js?v=11.17"></script>
+    <script src="js/info_texts.js?v=11.17"></script>
+    <script src="js/dashboard_panels.js?v=11.17"></script>
+    <script src="js/dashboard_year.js?v=11.17"></script>
+    <script src="js/dashboard_period.js?v=11.17"></script>
+    <script src="js/guide_reviewer.js?v=11.17"></script>
+    <script src="js/guide.js?v=11.17"></script>
+    <script src="js/nav.js?v=11.17"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>

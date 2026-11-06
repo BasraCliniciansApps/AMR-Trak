@@ -35,23 +35,36 @@ function icuWardList() {
 
 // ---------- unit scope: All units / ICU only / Non-ICU ----------
 let _unitScope = null;
-function getUnitScope() { return _unitScope || getDashSettings().dash_default_scope || 'all'; }
+function getUnitScope() { const s = _unitScope || getDashSettings().dash_default_scope || 'all'; return s === 'nonicu' ? 'nonicuip' : s; }
+// Unit filter values:
+//   all        : every ward
+//   icu        : ICU wards only
+//   nonicuip   : Non-ICU inpatient wards (IP). Emergency is not inpatient.
+//   outpatient : everything that is not inpatient (outpatient clinics, emergency, unassigned)
+//   nonicu     : every non-ICU ward, used only for the ICU vs non-ICU comparison tables
 function wardInScope(ward, scope) {
     if (scope === 'all') return true;
     const isIcu = icuWardList().some(w => String(w).toLowerCase() === String(ward || '').toLowerCase());
-    return scope === 'icu' ? isIcu : !isIcu;
+    if (scope === 'icu') return isIcu;
+    if (scope === 'nonicu') return !isIcu;
+    const inpatient = isIcu || wardClass(ward) === 'inpatient';
+    if (scope === 'nonicuip') return !isIcu && wardClass(ward) === 'inpatient';
+    if (scope === 'outpatient') return !inpatient;
+    return true;
 }
+// Applies the unit filter to records that are already de-duplicated (see applyDeduplication)
+function scopeRecs(recs) { const s = getUnitScope(); return s === 'all' ? recs : recs.filter(r => wardInScope(r.Ward, s)); }
 // Warning under every Analytics chart: the results follow the single unit filter at the top of the dashboard
 function scopeBanner() {
     return '<div class="scope-note" style="font-size:11px;line-height:1.45;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:8px 10px;color:#3730a3;margin-top:10px"><b>Results for: ' + scopeLabel() + '.</b> This chart follows the unit filter at the top of the dashboard. Change it there to change every chart.</div>';
 }
-function scopeLabel() { const s = getUnitScope(); return s === 'icu' ? 'ICU only' : s === 'nonicu' ? 'Non-ICU units' : 'All units'; }
+function scopeLabel() { const s = getUnitScope(); return s === 'icu' ? 'ICU' : s === 'nonicuip' ? 'Non-ICU IP (inpatient, excluding emergency)' : s === 'outpatient' ? 'Outpatient (including emergency)' : 'ALL'; }
 // Every chart reads records through this function so the scope applies everywhere.
+// Returns every record (no unit filter). Isolate analyses apply the unit filter inside applyDeduplication, after the first isolate is chosen.
 function getDashRecords() {
     let all = [];
     try { all = JSON.parse(localStorage.getItem('amr_dash_records')) || []; } catch (e) {}
-    const scope = getUnitScope();
-    return scope === 'all' ? all : all.filter(r => wardInScope(r.Ward, scope));
+    return all;
 }
 function getAllDashRecordsUnscoped() {
     try { return (JSON.parse(localStorage.getItem('amr_dash_records')) || []); } catch (e) { return []; }
@@ -367,7 +380,7 @@ function renderLabQuality() {
     ].map(t => `<div class="bg-slate-50 border border-slate-100 rounded-lg p-2 text-center"><div class="text-[9px] font-bold text-slate-500">${t[0]}</div><div class="text-sm font-black ${t[2]}">${t[1]}</div></div>`).join(''));
 
     // Blood culture contamination: certain (lab flagged) vs possible (skin flora in blood, cannot be confirmed from this data)
-    const bloodRecs = getDashRecords().filter(r => r.Date && r.Date.slice(0, 7) >= range.from && r.Date.slice(0, 7) <= range.to && isPossibleContaminant(r));
+    const bloodRecs = scopeRecs(getDashRecords()).filter(r => r.Date && r.Date.slice(0, 7) >= range.from && r.Date.slice(0, 7) <= range.to && isPossibleContaminant(r));
     const possKeys = new Set(bloodRecs.map(r => [r['Patient ID'], r['Specimen Date'] || r.Date].join('|')));
     const lo = pct(blood.con, B), hi = pct(blood.con + possKeys.size, B);
     const tone = !B ? 'slate' : (hi <= 3 ? 'emerald' : (lo <= 3 ? 'amber' : 'rose'));

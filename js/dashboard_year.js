@@ -145,7 +145,7 @@ function yaIcuSplit(year) {
         const o = String(r['Selective organism'] || '').trim().toLowerCase();
         return o && !YA_EXCLUDED_ORGS.some(b => o.includes(b));
     });
-    const all = applyDeduplication(raw);
+    const all = applyDeduplication(raw, { noScope: true });
     return { all, icu: all.filter(r => wardInScope(r.Ward, 'icu')), non: all.filter(r => wardInScope(r.Ward, 'nonicu')) };
 }
 window.yaSetIcuOrg = function (v) { YA.icuOrg = v; yaIcu(); };
@@ -248,7 +248,8 @@ function yaCumulative() {
         });
     });
     const cols = abxList.filter(a => colTotals[a]).sort((a, b) => abxList.indexOf(a) - abxList.indexOf(b)).slice(0, 30);
-    const color = p => p >= 90 ? 'background:#d1fae5;color:#065f46' : p >= 70 ? 'background:#fef9c3;color:#854d0e' : p >= 50 ? 'background:#fed7aa;color:#9a3412' : 'background:#fecaca;color:#991b1b';
+    // Three bands for empirical use (see Guide, For reviewer, section 5): 80% or more usable empirically for non-severe infection; 50-79% only with other information; below 50% not for empirical use.
+    const color = p => p >= 80 ? 'background:#d1fae5;color:#065f46' : p >= 50 ? 'background:#fed7aa;color:#9a3412' : 'background:#fecaca;color:#991b1b';
     let dagger = false, irCol = false, usym = false;
     const body = orgs.map(o => {
         const n = byOrg[o].length;
@@ -265,7 +266,7 @@ function yaCumulative() {
     }).join('');
     const head = cols.map(a => `<th class="ya-v"><span style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;height:96px;white-space:nowrap;font-size:10px">${escHtml(a)}</span></th>`).join('');
     $('#ya_cum_table').html(`<table class="ya-table ya-cum"><thead><tr><th class="ya-l">Organism</th>${head}</tr></thead><tbody>${body}</tbody></table>`);
-    setNote('#ya_cum_note', [YA.noContam && exclN ? `<b>${exclN} possible skin-flora contaminant isolate${exclN === 1 ? '' : 's'}</b> (for example coagulase-negative staphylococci in blood) excluded.` : '', `${yaLabel(y)}: first isolate per patient and organism within each calendar year of the period (the laboratory patient number restarts every year; CLSI M39, Section 6.4). A patient with isolates in two calendar years of a 12-month window that crosses New Year can therefore be counted twice.`, 'Values are % <b>susceptible</b>. Only S counts; I and SDD are not counted as susceptible.', 'A cell is shown only when 30 or more isolates were tested. Colours: green 90% or more, yellow 70-89%, orange 50-69%, red below 50%.', small.length ? `Organisms with fewer than 30 isolates (not shown): ${small.slice(0, 6).map(o => `${escHtml(formatOrgName(o))} (n=${byOrg[o].length})`).join('; ')}${small.length > 6 ? '...' : ''}.` : '', usym ? '<b>&sect;</b> = urine-only agent (CLSI M100-Ed36) that also includes non-urine specimens. Those results are included; tap a cell to see the percentage with urine specimens only. Interpret with clinical judgement.' : '', irCol ? '<b>&Dagger;</b> = intrinsic resistance (CLSI M100-Ed36 Appendix B): expected for the organism, so no susceptibility percentage is reported.' : '', dagger ? '<b>&dagger;</b> = selective test: the agent was tested on fewer than 90% of the isolates, so no percentage is shown. CLSI M39 (Section 6.5.3) says agents tested selectively should not be included in the routine cumulative report because they are biased toward lower susceptibility. M39 gives no percentage cut-off; 90% follows the ACSQHC cumulative antibiogram specification.' : '']);
+    setNote('#ya_cum_note', [YA.noContam && exclN ? `<b>${exclN} possible skin-flora contaminant isolate${exclN === 1 ? '' : 's'}</b> (for example coagulase-negative staphylococci in blood) excluded.` : '', `${yaLabel(y)}: first isolate per patient and organism within each calendar year of the period (the laboratory patient number restarts every year; CLSI M39, Section 6.4). A patient with isolates in two calendar years of a 12-month window that crosses New Year can therefore be counted twice.`, 'Values are % <b>susceptible</b>. Only S counts; I and SDD are not counted as susceptible.', 'A cell is shown only when 30 or more isolates were tested. Colours: green 80% or more (usable empirically for non-severe infection), amber 50-79% (only with other information), red below 50% (not for empirical use). For severe infection a higher local threshold applies.', small.length ? `Organisms with fewer than 30 isolates (not shown): ${small.slice(0, 6).map(o => `${escHtml(formatOrgName(o))} (n=${byOrg[o].length})`).join('; ')}${small.length > 6 ? '...' : ''}.` : '', usym ? '<b>&sect;</b> = urine-only agent (CLSI M100-Ed36) that also includes non-urine specimens. Those results are included; tap a cell to see the percentage with urine specimens only. Interpret with clinical judgement.' : '', irCol ? '<b>&Dagger;</b> = intrinsic resistance (CLSI M100-Ed36 Appendix B): expected for the organism, so no susceptibility percentage is reported.' : '', dagger ? '<b>&dagger;</b> = selective test: the agent was tested on fewer than 90% of the isolates, so no percentage is shown. CLSI M39 (Section 6.5.3) says agents tested selectively should not be included in the routine cumulative report because they are biased toward lower susceptibility. M39 gives no percentage cut-off; 90% follows the ACSQHC cumulative antibiogram specification.' : '']);
 }
 
 // ---------------------------------------------------------------- 3. quarterly trend

@@ -36,7 +36,7 @@
             H('Moving around') + L([
                 '<b>Bottom bar:</b> switches between Analytics, Last Year, Last 3 Months, Last Month and Cultures.',
                 '<b>Top bar:</b> (i) About, the open book is this Guide, the printer prints the open tab, and the green dot shows the live connection.',
-                '<b>Unit scope</b> (All units, ICU, Non-ICU) filters everything on every tab.',
+                '<b>Unit filter</b> (ALL, ICU, Non-ICU IP, Outpatient) filters everything on every tab.',
                 '<b>Section headers</b> in Analytics open and close when tapped. Open only the one you need.']) +
             H('Choosing the data (Analytics)') + L([
                 '<b>Time Period:</b> All Times, Last Year, Last 3 Months or Last Month. Start with a wider period when numbers are small, because more isolates give more reliable percentages.',
@@ -159,7 +159,7 @@
             P('This tab is the formal yearly report. By default the analysis period is the <b>latest 12 months with data</b> (for example Oct 2025 to Sep 2026), which moves forward whenever newer data are loaded. CLSI M39 asks for an analysis at least annually (Section 6.3) with an analysis period of, for example, one year (Section 6.4); it does not require a fixed calendar year. A switch at the top of the tab lets you use the <b>calendar year</b> set by the surveillance team instead (easier to compare between reports). Everything on the tab follows the chosen period. A warning is shown if a month in the period has no data.') +
             H('1. Key resistance indicators') + L(['<b>Why:</b> they are the standard measures used to compare hospitals and countries.', '<b>How to read:</b> compare the percentage with the previous year; trust the change only when it is marked as significant.']) +
             H('2. ICU compared with non-ICU') + L(['<b>Why:</b> ICU patients are sicker and more exposed to antibiotics, so a pooled annual figure can hide an ICU problem.', '<b>How to read:</b> the first table compares the priority indicators; the second compares the susceptibility of each main organism. The last column is ICU minus non-ICU in percentage points; it is marked as significant only when both groups have 30 or more tested.', '<b>Basis:</b> CLSI M39 supports stratifying by location. The first isolate of the year is chosen across all wards before the split.']) +
-            H('3. Cumulative antibiogram') + L(['<b>Why:</b> it guides empirical treatment. It tells the prescriber, before the culture result, how likely a drug is to work.', '<b>How to read:</b> find the suspected organism in the row, then the drug in the column. Green 90% or more, yellow 70 to 89%, orange 50 to 69%, red below 50%.', '<b>Basis:</b> CLSI M39: one isolate per patient and organism per year, only S counted as susceptible, minimum 30 isolates.', '<b>Specimen buttons:</b> a blood and a urine isolate of the same organism may differ, so each specimen with 30 or more isolates can be viewed separately.', '<b>Contaminant switch:</b> removes skin-flora organisms from blood so they do not distort the table.']) +
+            H('3. Cumulative antibiogram') + L(['<b>Why:</b> it guides empirical treatment. It tells the prescriber, before the culture result, how likely a drug is to work.', '<b>How to read:</b> find the suspected organism in the row, then the drug in the column. Green 80% or more: usable for empirical treatment of non-severe infection. Amber 50 to 79%: only with other information. Red below 50%: not for empirical use. For severe infection, a higher local threshold applies. The colour bands are a practice convention, not a CLSI or WHO rule; the Guide (For reviewer, section 5) gives the reasons.', '<b>Basis:</b> CLSI M39: one isolate per patient and organism per year, only S counted as susceptible, minimum 30 isolates.', '<b>Specimen buttons:</b> a blood and a urine isolate of the same organism may differ, so each specimen with 30 or more isolates can be viewed separately.', '<b>Contaminant switch:</b> removes skin-flora organisms from blood so they do not distort the table.']) +
             H('4. Quarterly trend') + L(['<b>Why:</b> to see whether resistance moved within the year.', '<b>How to read:</b> hollow points and dashed lines mean fewer than 30 isolates.']) +
             H('5. Antibiotic trend') + L(['<b>Why:</b> to follow one drug, for example meropenem, over the years or by quarter, for all organisms or one organism.', '<b>How to read:</b> choose the drug, the organism, the period and %R or %S. Tap a point for n and the confidence interval.']) +
             H('6. MDR / XDR / PDR by organism group') + L(['<b>Why:</b> it measures the burden of the most limited-option infections.', '<b>How to read:</b> "Any" is MDR, XDR and PDR together.']) +
@@ -227,9 +227,11 @@
         ['scope', 'Unit scope and ICU', () =>
             P('The switch under the top bar filters <b>every chart and table on every tab</b> by the ward where the specimen was collected.') +
             H('The three options') + L([
-                '<b>All units:</b> every ward, including outpatients.',
+                '<b>ALL:</b> every ward.',
                 '<b>ICU:</b> only the wards counted as intensive care units. The surveillance team chooses which wards count as ICU.',
-                '<b>Non-ICU:</b> all other wards, including outpatients and neonatal units.']) +
+                '<b>Non-ICU IP:</b> inpatient wards that are not ICU. IP means inpatient. Emergency is not counted as inpatient.',
+                '<b>Outpatient:</b> everything that is not inpatient, including outpatient clinics and emergency.',
+                'Each patient is counted once. The first isolate is chosen across all wards, then the filter is applied (CLSI M39, Section 6.4).']) +
             H('Why ICU is shown separately') + P('Antimicrobial use, invasive devices and patient risk differ between intensive care and other wards, so a pooled result can hide ICU-specific resistance. CLSI M39 supports stratifying cumulative susceptibility data by patient location.') +
             H('How it is applied') + L([
                 'The first isolate per patient and organism is chosen across all wards first, and the ward filter is applied afterwards. A patient who moves between wards is therefore not counted twice.',

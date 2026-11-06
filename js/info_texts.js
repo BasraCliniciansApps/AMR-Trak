@@ -14,9 +14,10 @@ const INFO_OVERRIDE = (function () {
     add('scope', 'Unit scope',
         H('What it does') + P('The switch filters every chart and table on the dashboard by the ward where the specimen was collected.') +
         H('The three options') + L([
-            '<b>All units:</b> every ward, including outpatients.',
+            '<b>ALL:</b> every ward.',
             '<b>ICU:</b> only the wards counted as intensive care units. The list is set on the Dashboard Control page.',
-            '<b>Non-ICU:</b> all other wards, including outpatients and neonatal units.']) +
+            '<b>Non-ICU IP:</b> inpatient wards that are not ICU. IP means inpatient; emergency is not inpatient.',
+            '<b>Outpatient:</b> everything that is not inpatient, including outpatient clinics and emergency.']) +
         H('Why ICU is shown separately') + P('Antimicrobial use, invasive devices and patient risk differ between intensive care and other wards, so a pooled result can hide ICU-specific resistance. CLSI M39 supports stratifying cumulative susceptibility data by patient location.') +
         H('Method') + P('The first isolate per patient and organism is chosen across all wards first, and the ward filter is applied afterwards.'));
 
@@ -95,9 +96,9 @@ const INFO_OVERRIDE = (function () {
         ['CLSI_M39', 'CLSI_M100']);
     add('ya_cum', 'Cumulative antibiogram',
         H('What it shows') + P('The percentage of first isolates that are susceptible to each antibiotic, for each organism, over the selected analysis period of one year. It is the report clinicians use to choose empirical therapy.') +
-        H('How to read it') + L(['Each row is an organism; each column is an antibiotic. The cell is the % susceptible.', 'Colours: green 90% or more, yellow 70 to 89%, orange 50 to 69%, red below 50%.', 'A dash means the combination was tested on fewer than 30 isolates, so no value is reported.', '<b>&dagger;</b> = selective test: tested on fewer than 90% of the isolates, so the percentage may be biased.']) +
+        H('How to read it') + L(['Each row is an organism; each column is an antibiotic. The cell is the % susceptible.', 'Colours: green 80% or more (usable empirically for non-severe infection), amber 50 to 79% (only with other information), red below 50% (not for empirical use). The bands are a practice convention, not a CLSI or WHO rule.', 'A dash means the combination was tested on fewer than 30 isolates, so no value is reported.', '<b>&dagger;</b> = selective test: tested on fewer than 90% of the isolates, so the percentage may be biased.']) +
         H('Rules applied (CLSI M39)') + L(['One isolate per patient and organism per year; screening cultures are excluded.', 'Only susceptible (S) counts as susceptible. I and SDD do not.', 'A value is reported only when 30 or more isolates were tested.', 'Specimens can be viewed separately because a blood isolate and a urine isolate of the same organism may behave differently.']) +
-        H('Possible contaminants') + P('The switch excludes skin-flora organisms from blood (for example <i>S. hominis</i>). They are usually contaminants and can distort the antibiogram. The note under the table says how many were excluded.'),
+        H('Possible contaminants') + P('The Settings switch (Exclude possible skin-flora contaminants) excludes skin-flora organisms from blood (for example <i>S. hominis</i>). They are usually contaminants and can distort the antibiogram. The note under the table says how many were excluded.'),
         ['CLSI_M39', 'CLSI_M100']);
     add('ya_trend', 'Quarterly trend',
         H('What it shows') + P('Resistance of the priority indicators across the four quarters of the selected year.') +

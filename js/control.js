@@ -56,7 +56,7 @@ function normalise(s) {
         mobile_dash_lastmonth: /^\d{4}-\d{2}$/.test(s.mobile_dash_lastmonth || '') ? s.mobile_dash_lastmonth : '',
         mobile_dash_nocontam: s.mobile_dash_nocontam !== false,
         dash_show_scope: s.dash_show_scope !== false,
-        dash_default_scope: ['all', 'icu', 'nonicu'].includes(s.dash_default_scope) ? s.dash_default_scope : 'all',
+        dash_default_scope: ['all', 'icu', 'nonicuip', 'outpatient', 'nonicu'].includes(s.dash_default_scope) ? (s.dash_default_scope === 'nonicu' ? 'nonicuip' : s.dash_default_scope) : 'all',
         dash_default_period: ['month', 'quarter', 'year', 'all'].includes(s.dash_default_period) ? s.dash_default_period : 'month',
         dash_icu_wards: Array.isArray(s.dash_icu_wards) && s.dash_icu_wards.length ? s.dash_icu_wards.slice() : ['ICU'],
         profile1_abx: s.profile1_abx || 'Meropenem',
@@ -108,7 +108,7 @@ function render() {
     const scope = `
         <div class="row" style="margin-top:4px"><span>Show the All / ICU / Non-ICU switch</span><label class="sw"><input type="checkbox" data-k="dash_show_scope" ${cur.dash_show_scope ? 'checked' : ''}><i></i></label></div>
         <div class="field"><label>Scope when the dashboard opens</label>
-            <div class="seg" id="scopeSeg">${[['all', 'All units'], ['icu', 'ICU'], ['nonicu', 'Non-ICU']].map(([v, t]) => `<button type="button" data-scope="${v}" class="${cur.dash_default_scope === v ? 'on' : ''}">${t}</button>`).join('')}</div></div>
+            <div class="seg" id="scopeSeg">${[['all', 'ALL'], ['icu', 'ICU'], ['nonicuip', 'Non-ICU IP'], ['outpatient', 'Outpatient']].map(([v, t]) => `<button type="button" data-scope="${v}" class="${cur.dash_default_scope === v ? 'on' : ''}">${t}</button>`).join('')}</div></div>
         <div class="field"><label>Default period for MDR and Culture Overview</label>
             <select class="select" data-k="dash_default_period">${[['month', 'Latest month'], ['quarter', 'Latest 3 months'], ['year', 'Latest year'], ['all', 'All data']].map(([v, t]) => `<option value="${v}" ${cur.dash_default_period === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
         <div class="field"><label>Wards counted as ICU</label>

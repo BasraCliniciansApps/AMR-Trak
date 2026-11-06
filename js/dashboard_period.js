@@ -25,7 +25,7 @@ function opSettingsPeriods() {
     return { month, q: [month ? opShiftMonth(month, -2) : '', month], qy: 0 };
 }
 // first isolates inside [from, to] (months); de-duplication is applied within the reported period
-function opFirst(records, from, to) { return applyDeduplication(opInRange(opClean(records), from, to)); }
+function opFirst(records, from, to, opts) { return applyDeduplication(opInRange(opClean(records), from, to), opts); }
 
 function opMarkerStats(records) { return evaluateCriticalMarkers(records); }
 function opIsMdrPlus(r) { const c = classifyMDR(r); return c ? c.cls !== 'Non-MDR' : null; }
@@ -230,7 +230,7 @@ function opRun(q, qy) {
 // ---------------------------------------------------------------- QUARTER: ICU vs non-ICU
 function opIcu(q, qy) {
     const [a, b] = q;
-    const all = opFirst(getAllDashRecordsUnscoped(), a, b);       // first isolate chosen across all wards, then split by unit
+    const all = opFirst(getAllDashRecordsUnscoped(), a, b, { noScope: true });       // first isolate chosen across all wards, then split by unit
     const icu = all.filter(r => wardInScope(r.Ward, 'icu')), non = all.filter(r => wardInScope(r.Ward, 'nonicu'));
     const si = opMarkerStats(icu), sn = opMarkerStats(non);
     const mi = opMdrCount(icu), mn = opMdrCount(non);

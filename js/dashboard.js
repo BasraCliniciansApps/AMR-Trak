@@ -627,8 +627,9 @@ function generateLiveSurveillance() {
 }
 
 function buildMobileLiveSection(records, prefix, settings, timeLabel) {
-    $(`#live_${prefix}_total`).text(records.length);
-    if(records.length === 0) {
+    const inScope = scopeRecs(records);   // raw count in the selected unit filter, before the first isolate is chosen
+    $(`#live_${prefix}_total`).text(inScope.length);
+    if(inScope.length === 0) {
         $(`#live_${prefix}_bug`).text("-");
         $(`#live_${prefix}_spec`).text("-");
         $(`#live_${prefix}_watchlist_container`).addClass('hidden');

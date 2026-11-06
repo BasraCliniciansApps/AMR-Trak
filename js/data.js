@@ -219,7 +219,7 @@ function isNonSusceptibleResult(v) {
 function contamExcluded() {
     try { return (JSON.parse(localStorage.getItem('amr_live_settings')) || {}).mobile_dash_nocontam !== false; } catch (e) { return true; }
 }
-function applyDeduplication(records) {
+function applyDeduplication(records, opts) {
     records = records.filter(r => !isScreeningSpecimen(r));
     if (contamExcluded()) records = records.filter(r => !isPossibleContaminant(r));
     const winners = new Map(); // key -> chosen record
@@ -241,10 +241,13 @@ function applyDeduplication(records) {
         if (!cur || String(r['Specimen Date'] || r['Date']) < String(cur['Specimen Date'] || cur['Date'])) winners.set(key, r);
     });
 
-    return records.filter(r => {
+    const chosen = records.filter(r => {
         const key = keyOf(r);
         return key === null || winners.get(key) === r;
     });
+    // Order matters (CLSI M39 first-isolate rule): the isolate is chosen across all wards, and the unit filter is applied afterwards,
+    // so a patient with isolates in two units is counted once, in the unit of the isolate that was chosen.
+    return (opts && opts.noScope) ? chosen : chosen.filter(r => typeof wardInScope === 'function' && typeof getUnitScope === 'function' ? wardInScope(r.Ward, getUnitScope()) : true);
 }
 
 
