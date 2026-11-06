@@ -898,3 +898,18 @@ function applyUserPrefsUI(fire) {
 $(function () {
     applyUserPrefsUI(false);
 });
+
+// Long tables (more than 8 rows): the header row stays visible while scrolling; the first column is already sticky
+(function () {
+    let pend = false;
+    function mark() {
+        pend = false;
+        document.querySelectorAll('.ya-scroll').forEach(el => {
+            const rows = el.querySelectorAll('tbody tr').length;
+            el.classList.toggle('ya-tall', rows > 8);
+        });
+    }
+    function sched() { if (!pend) { pend = true; requestAnimationFrame(mark); } }
+    function start() { new MutationObserver(sched).observe(document.body, { childList: true, subtree: true }); sched(); }
+    if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+})();
