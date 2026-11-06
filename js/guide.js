@@ -51,6 +51,7 @@
                 '<b>Default unit filter:</b> the unit selected when the dashboard opens.',
                 '<b>Analysis period (Analytics tab):</b> Last 12 Months, All Times, Calendar year, Last 3 Months, Last Month or a specific period.',
                 '<b>Last Year tab period:</b> last 12 months or calendar year.',
+                '<b>Show organisms with fewer than 30 isolates:</b> off by default (this device only). When on, the Last Year antibiogram also lists those organisms as grey rows marked * (indicative only).',
                 '<b>Show explanation notes under charts:</b> hides or shows the notes and chart keys. Warnings stay.',
                 'Your choices are saved on this device only. The defaults for everyone are set by the surveillance team in the Control app. <b>Reset to defaults</b> returns this device to them.']) +
             H('Reading and exploring') + L([

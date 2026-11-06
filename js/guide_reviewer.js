@@ -267,7 +267,7 @@
                 'M39 mentions "ICU" and "MICU" only [R2, Section 11.1]. Neonatal, paediatric and coronary intensive care units are not mentioned. By default only wards recorded as ICU count as ICU; the surveillance team can add other wards in the Control app. This is a decision of the application ' + A + '.']) +
             H('5. Settings and defaults') + L([
                 'The MDR tab and every other tab follow the unit filter. The MDR tab keeps its own period picker (month, quarter, year, range, all).',
-                'Each user can change five settings on their own device (gear button): exclusion of possible contaminants (default off), default unit filter, Analytics period (default last 12 months), Last Year period (12 months or calendar year) and the explanation notes. Nothing else can be changed by users; in particular the minimum of 30 isolates is fixed.',
+                'Each user can change six settings on their own device (gear button): exclusion of possible contaminants (default off), default unit filter, Analytics period (default last 12 months), Last Year period (12 months or calendar year), showing organisms with fewer than 30 isolates in the Last Year antibiogram (default off; shown as grey rows marked *, indicative only [R2, Section 7.2.2]) and the explanation notes. Nothing else can be changed by users; in particular the minimum of 30 isolates is fixed.',
                 'The defaults for all users are set by the surveillance team in the Control app. A choice made on a device is kept only while it differs from the default, so a later change of the default reaches every user who did not choose otherwise.'])],
 
         // ------------------------------------------------------------------ 10
