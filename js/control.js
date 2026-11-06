@@ -57,7 +57,6 @@ function normalise(s) {
         mobile_dash_nocontam: s.mobile_dash_nocontam === true,
         dash_an_period: ['year', 'all', 'calyear', 'quarter', 'month'].includes(s.dash_an_period) ? s.dash_an_period : 'year',
         dash_ya_mode: s.dash_ya_mode === 'calendar' ? 'calendar' : 'rolling',
-        dash_hide_low: s.dash_hide_low === true,
         dash_show_notes: s.dash_show_notes !== false,
         dash_show_scope: s.dash_show_scope !== false,
         dash_default_scope: ['all', 'icu', 'nonicuip', 'outpatient', 'nonicu'].includes(s.dash_default_scope) ? (s.dash_default_scope === 'nonicu' ? 'nonicuip' : s.dash_default_scope) : 'all',
@@ -109,7 +108,6 @@ function render() {
         <div class="field"><label>Last Year tab period</label>
             <select class="select" data-k="dash_ya_mode">${[['rolling', 'Last 12 months'], ['calendar', 'Calendar year']].map(([v, t]) => `<option value="${v}" ${cur.dash_ya_mode === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
         <div class="row"><span>Exclude possible skin-flora contaminants</span><label class="sw"><input type="checkbox" data-k="mobile_dash_nocontam" ${cur.mobile_dash_nocontam ? 'checked' : ''}><i></i></label></div>
-        <div class="row"><span>Hide results below 30 isolates</span><label class="sw"><input type="checkbox" data-k="dash_hide_low" ${cur.dash_hide_low ? 'checked' : ''}><i></i></label></div>
         <div class="row"><span>Show explanation notes under charts</span><label class="sw"><input type="checkbox" data-k="dash_show_notes" ${cur.dash_show_notes ? 'checked' : ''}><i></i></label></div>
         <p class="hint">These are the defaults for all users. Each user can change them for their own device only, from the gear button.</p>`;
 

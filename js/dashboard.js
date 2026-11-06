@@ -433,6 +433,19 @@ function chartNoteBlocks(selectiveNotes, groups, contaminantCount, opts) {
     return out;
 }
 
+// Chart key under a bar chart: only the symbols that occur in the chart that is on screen
+function updateChartKey(id, labels) {
+    const L = labels || [], has = t => L.some(l => String(l).indexOf(t) >= 0), n = minN();
+    const li = (sw, html) => '<li>' + sw + '<span>' + html + '</span></li>';
+    let h = '';
+    if (L.some(l => !/\*$/.test(l))) h += li('<span class="sw sw-solid"></span>', '<b>Solid bar:</b> ' + n + ' or more isolates tested. The result is reliable.');
+    if (L.some(l => /\*$/.test(l))) h += li('<span class="sw sw-grey"></span>', '<b>Faded grey bar, name ending with *:</b> fewer than ' + n + ' isolates tested. Interpret with caution.');
+    if (has(' \u2021')) h += li('<span class="sym">&Dagger;</span>', '<b>Intrinsic resistance</b> (after the name): resistance is expected for this organism (CLSI M100 Appendix B), not acquired.');
+    if (has(' \u2020')) h += li('<span class="sym">&dagger;</span>', '<b>Selective test</b>: tested on fewer than 90% of the isolates, so the percentage may be biased.');
+    if (has(' \u00a7')) h += li('<span class="sym">&sect;</span>', '<b>Urine-only agent</b> that also includes non-urine specimens.');
+    if (L.length) h += li('<span class="sym">i</span>', 'Tap a bar: shows n (number of isolates tested) and the 95% CI. The bar height is always the selected percentage.');
+    $('#keylist_' + id).html(h); $('#key_' + id).toggle(L.length > 0);
+}
 function renderChartNotes(containerSel, selectiveNotes, contaminantCount, shownAbx, opts) {
     const key = 'abx_' + containerSel.replace('#', '');
     const o = opts || {};
@@ -1249,6 +1262,7 @@ function renderGuidedAST() {
     
     // إذا لم تكن هناك بكتيريا متاحة، نعرض No Data تتوسط الشاشة
     if (!currentGuidedBug || currentGuidedBug === "") {
+        $('#extra_guidedAmrContainer').empty(); updateChartKey('guided', []);
         $('#guidedAmrContainer').html('<div class="flex items-center justify-center h-full w-full text-slate-400 font-bold text-sm absolute inset-0">No Data Available</div>');
         $('#guidedAmrContainer').css('width', '100%');
         return;
@@ -1319,12 +1333,14 @@ function renderGuidedAST() {
     });
 
     if (labels.length === 0) {
+        $('#extra_guidedAmrContainer').empty(); updateChartKey('guided', []);
         $('#guidedAmrContainer').html('<div class="flex items-center justify-center h-full w-full text-slate-400 font-bold text-sm absolute inset-0">No Data Available</div>');
         $('#guidedAmrContainer').css('width', '100%');
         return;
     }
 
-    renderChartNotes('#guidedAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length, testedAbxs, { ir: irList, irOrg: formatScientificName(currentGuidedBug), uo: uoList, low: labels.some(l => / \*$/.test(l)) });
+    updateChartKey('guided', labels);
+    renderChartNotes('#guidedAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length, testedAbxs.filter(a => !(hideLowN && abxStats[a].tested < minN())), { ir: irList, irOrg: formatScientificName(currentGuidedBug), uo: uoList, low: labels.some(l => / \*$/.test(l)) });
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#guidedAmrContainer').css('width', chartWidth);
 
@@ -1390,6 +1406,7 @@ $(document).on('change', '#adv_hide_low', function() { if (!$('#advContainer').h
 function renderPathoChart() {
     const bug = $('#patho_bug').val();
     if(!bug) {
+        $('#extra_pathoAmrContainer').empty(); updateChartKey('patho', []);
         if (chartPathoAMR_instance) chartPathoAMR_instance.destroy();
         $('#pathoAmrContainer').html('<canvas id="chartPathoAMR"></canvas>');
         return;
@@ -1426,6 +1443,7 @@ function renderPathoChart() {
     if (chartPathoAMR_instance) chartPathoAMR_instance.destroy();
     
     if (testedAbxs.length === 0) {
+        $('#extra_pathoAmrContainer').empty(); updateChartKey('patho', []);
         $('#pathoAmrContainer').html('<div class="flex items-center justify-center h-[200px] w-full text-slate-400 font-bold text-sm">No Data Available</div>');
         return;
     }
@@ -1459,7 +1477,8 @@ function renderPathoChart() {
         nDataArr.push(s.tested);
     });
 
-    renderChartNotes('#pathoAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length, testedAbxs, { ir: irList, irOrg: formatScientificName(bug), uo: uoList, low: labels.some(l => / \*$/.test(l)) });
+    updateChartKey('patho', labels);
+    renderChartNotes('#pathoAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length, testedAbxs.filter(a => !(hideLowN && abxStats[a].tested < minN())), { ir: irList, irOrg: formatScientificName(bug), uo: uoList, low: labels.some(l => / \*$/.test(l)) });
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#pathoAmrContainer').css('width', chartWidth);
 
@@ -1526,6 +1545,7 @@ $(document).on('change', '#abx_hide_low', function() { renderAbxChart(); });
 function renderAbxChart() {
     const drug = $('#abx_drug').val();
     if(!drug) {
+        $('#extra_abxAmrContainer').empty(); updateChartKey('abx', []);
         if (chartAbxAMR_instance) chartAbxAMR_instance.destroy();
         $('#abxAmrContainer').html('<canvas id="chartAbxAMR"></canvas>');
         return;
@@ -1560,6 +1580,7 @@ function renderAbxChart() {
     if (chartAbxAMR_instance) chartAbxAMR_instance.destroy();
 
     if (testedOrgs.length === 0) {
+        $('#extra_abxAmrContainer').empty(); updateChartKey('abx', []);
         $('#abxAmrContainer').html('<div class="flex items-center justify-center h-[200px] w-full text-slate-400 font-bold text-sm">No Data Available</div>');
         return;
     }
@@ -1594,6 +1615,7 @@ function renderAbxChart() {
         nDataArr.push(s.tested);
     });
 
+    updateChartKey('abx', labels);
     let abxExtra = '';
     if (selOrgs.length) abxExtra += `<div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;margin:14px 0 6px">&dagger; Selective tests (tested / isolates)</div>` + `<div style="font-size:11px;line-height:1.45;color:#334155">${selOrgs.join('<br>')}</div>`;
     const NH = t => `<div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;margin:14px 0 6px">${t}</div>`;
@@ -1633,7 +1655,7 @@ window.generateAdvancedAnalytics = function() {
     const metric = $('#adv_metric').val() || 'R'; 
 
     if (startDate && endDate && startDate > endDate) {
-        $('#heatmapWrapper').html('<div class="flex items-center justify-center h-[100px] w-full text-amber-700 font-bold text-sm text-center px-4">The From month is after the To month. Please correct the dates.</div>');
+        $('#heatmapBanner').empty(); $('#heatmapNote').empty(); $('#heatmapLegend').empty(); $('#heatmapWrapper').html('<div class="flex items-center justify-center h-[100px] w-full text-amber-700 font-bold text-sm text-center px-4">The From month is after the To month. Please correct the dates.</div>');
         $('#heatmapNote').html('');
         Swal.fire('Check the dates', 'The From month is after the To month.', 'warning');
         return;
@@ -1714,7 +1736,7 @@ window.generateAdvancedAnalytics = function() {
     let hasData = hmOrgs.some(o => hmAbxs.some(a => heatmapStats[o][a] && heatmapStats[o][a].t > 0));
 
     if (!hasData) {
-        $('#heatmapWrapper').html('<div class="flex items-center justify-center h-[100px] w-full text-slate-400 font-bold text-sm">No Data Available</div>');
+        $('#heatmapBanner').empty(); $('#heatmapNote').empty(); $('#heatmapLegend').empty(); $('#heatmapWrapper').html('<div class="flex items-center justify-center h-[100px] w-full text-slate-400 font-bold text-sm">No Data Available</div>');
         return;
     }
 
@@ -1762,7 +1784,8 @@ window.generateAdvancedAnalytics = function() {
         hmHtml += '</tr>';
     });
     hmHtml += '</tbody></table>';
-    $('#heatmapWrapper').html(hmHtml + scopeBanner());
+    $('#heatmapWrapper').html(hmHtml);
+    $('#heatmapBanner').html(scopeBanner((startDate || endDate) ? ((startDate ? ymLabel(startDate) : 'first data') + ' \u2013 ' + (endDate ? ymLabel(endDate) : 'latest data')) : ''));
     if (lowCells || irCells) $('#heatmapLegend').append('<span class="px-1 bg-slate-200 text-slate-500 rounded">Grey: ' + (lowCells && irCells ? 'n&lt;' + minN() + ' or &Dagger;' : (lowCells ? 'n&lt;' + minN() : '&Dagger;')) + '</span>');
     setNote('#heatmapNote', [
         (lowCells || irCells) ? '<b>Grey cell:</b> the value is not a reliable susceptibility result.' : '',
