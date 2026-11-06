@@ -360,7 +360,16 @@ function hintsHtml(items, style) {
 function paraHints(html) {
     return String(html || '').replace(/<p>([\s\S]*?)<\/p>/g, (m, t) => splitHints(t).length > 1 ? hintsHtml([t]) : m);
 }
-function setNote(sel, items) { $(sel).html(hintsHtml(items)); }
+// A line that explains the low-number mark (*, grey, hollow point) is shown only when the table next to it has such a mark
+function setNote(sel, items) {
+    const tbl = String(sel).replace(/_note$/, '_table');
+    let list = items || [];
+    if (tbl !== sel && $(tbl).length) {
+        const html = $(tbl).html() || '';
+        if (!/color:#94a3b8|\d\*</.test(html)) list = [].concat.apply([], list.filter(Boolean).map(splitHints)).filter(t => !/^<b>\*<\/b>|^<b>Hollow point/.test(t));
+    }
+    $(sel).html(hintsHtml(list));
+}
 window.showInfo = function(key) {
     const i = INFO_STORE[key];
     if (!i) return;
@@ -425,11 +434,13 @@ function chartNoteBlocks(selectiveNotes, groups, contaminantCount, opts) {
 
 function renderChartNotes(containerSel, selectiveNotes, contaminantCount, shownAbx, opts) {
     const key = 'abx_' + containerSel.replace('#', '');
+    const o = opts || {};
+    const hasLow = !!o.low, hasIr = !!(o.ir && o.ir.length), hasSel = !!(selectiveNotes && selectiveNotes.length);
     let html = '<h5>How to read the bars</h5><ul>' +
         '<li><b>Solid bar:</b> 30 or more isolates were tested. The result is considered reliable.</li>' +
-        '<li><b>Faded grey bar, name ending with *:</b> fewer than 30 isolates were tested. Interpret with caution (CLSI M39).</li>' +
-        '<li><b>Name ending with &Dagger;:</b> intrinsic resistance (expected for this organism, not acquired).</li>' +
-        '<li><b>Name ending with &dagger;:</b> selective test. The antibiotic was tested on fewer than 90% of the isolates, so the percentage may be biased.</li>' +
+        (hasLow ? '<li><b>Faded grey bar, name ending with *:</b> fewer than 30 isolates were tested. Interpret with caution (CLSI M39).</li>' : '') +
+        (hasIr ? '<li><b>Name ending with &Dagger;:</b> intrinsic resistance (expected for this organism, not acquired).</li>' : '') +
+        (hasSel ? '<li><b>Name ending with &dagger;:</b> selective test. The antibiotic was tested on fewer than 90% of the isolates, so the percentage may be biased.</li>' : '') +
         '<li>Tap a bar: shows n (number of isolates tested) and the 95% CI. The bar height is always the selected percentage.</li></ul>';
     const groups = { A: [], W: [], R: [] };
     (shownAbx || []).forEach(a => { if (AWARE_CLASS[a]) groups[AWARE_CLASS[a]].push(a); });
@@ -1307,7 +1318,7 @@ function renderGuidedAST() {
         return;
     }
 
-    renderChartNotes('#guidedAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length, testedAbxs, { ir: irList, irOrg: formatScientificName(currentGuidedBug), uo: uoList });
+    renderChartNotes('#guidedAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length, testedAbxs, { ir: irList, irOrg: formatScientificName(currentGuidedBug), uo: uoList, low: labels.some(l => / \*$/.test(l)) });
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#guidedAmrContainer').css('width', chartWidth);
 
@@ -1442,7 +1453,7 @@ function renderPathoChart() {
         nDataArr.push(s.tested);
     });
 
-    renderChartNotes('#pathoAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length, testedAbxs, { ir: irList, irOrg: formatScientificName(bug), uo: uoList });
+    renderChartNotes('#pathoAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length, testedAbxs, { ir: irList, irOrg: formatScientificName(bug), uo: uoList, low: labels.some(l => / \*$/.test(l)) });
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#pathoAmrContainer').css('width', chartWidth);
 
@@ -1657,7 +1668,7 @@ window.generateAdvancedAnalytics = function() {
     let hmLegend = (metric === 'R' || metric === 'NS') ? 
         `<span class="px-1 bg-emerald-100 text-emerald-800 rounded">0-20%</span><span class="px-1 bg-yellow-100 text-yellow-800 rounded">21-40%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">41-60%</span><span class="px-1 bg-red-400 text-white rounded">61-80%</span><span class="px-1 bg-red-600 text-white rounded">81-100%</span>` :
         `<span class="px-1 bg-red-600 text-white rounded">0-20%</span><span class="px-1 bg-red-400 text-white rounded">21-40%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">41-60%</span><span class="px-1 bg-yellow-100 text-yellow-800 rounded">61-80%</span><span class="px-1 bg-emerald-100 text-emerald-800 rounded">81-100%</span>`;
-    hmLegend += '<span class="px-1 bg-slate-200 text-slate-500 rounded">Grey: n&lt;30 or &Dagger;</span>';
+    // the grey chip is added after the table is built, when it is known whether any cell is grey
     $('#heatmapLegend').html(hmLegend);
 
     let heatmapStats = {}, orgCounts = {};
@@ -1739,11 +1750,11 @@ window.generateAdvancedAnalytics = function() {
     });
     hmHtml += '</tbody></table>';
     $('#heatmapWrapper').html(hmHtml);
+    if (lowCells || irCells) $('#heatmapLegend').append('<span class="px-1 bg-slate-200 text-slate-500 rounded">Grey: ' + (lowCells && irCells ? 'n&lt;30 or &Dagger;' : (lowCells ? 'n&lt;30' : '&Dagger;')) + '</span>');
     setNote('#heatmapNote', [
-        '<b>Grey cell:</b> the value is not a reliable susceptibility result.',
-        '<b>*</b> = fewer than 30 isolates tested (CLSI M39).',
-        '<b>&Dagger;</b> = intrinsic resistance (expected for the organism, CLSI M100 Appendix B), not acquired resistance.',
-        'Grey cells: ' + lowCells + ' with *, ' + irCells + ' with &Dagger;.',
+        (lowCells || irCells) ? '<b>Grey cell:</b> the value is not a reliable susceptibility result.' : '',
+        lowCells ? '<b>*</b> = fewer than 30 isolates tested (CLSI M39): ' + lowCells + ' cell' + (lowCells === 1 ? '' : 's') + '.' : '',
+        irCells ? '<b>&Dagger;</b> = intrinsic resistance (expected for the organism, CLSI M100 Appendix B), not acquired resistance: ' + irCells + ' cell' + (irCells === 1 ? '' : 's') + '.' : '',
         '<b>Colour bands</b> are a visual aid in steps of 20%.',
         'The colour bands are not CLSI or WHO categories.',
         '<b>Common practice benchmarks</b> (conventions, not CLSI or WHO rules):',
@@ -1751,8 +1762,8 @@ window.generateAdvancedAnalytics = function() {
         '90% or more is expected for severe infections such as bloodstream infection or meningitis.',
         'These values are a guide only; always follow the hospital antibiotic policy.',
         'Cells are in vitro results.',
-        '<b>&sect;</b> = urine-only agent (CLSI M100-Ed36: ' + URINE_ONLY_ABX.join(', ') + '; amikacin for <i>P. aeruginosa</i>) that also includes non-urine specimens (' + nuCells + ' cells).',
-        'Those results are included; interpret with clinical judgement.'
+        nuCells ? '<b>&sect;</b> = urine-only agent (CLSI M100-Ed36: ' + URINE_ONLY_ABX.join(', ') + '; amikacin for <i>P. aeruginosa</i>) that also includes non-urine specimens (' + nuCells + ' cell' + (nuCells === 1 ? '' : 's') + ').' : '',
+        nuCells ? 'Those results are included; interpret with clinical judgement.' : ''
     ].concat(hmPeriodNote(records)));
 };
 // --- Modal: About App ---
