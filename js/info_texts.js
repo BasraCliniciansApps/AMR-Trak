@@ -110,7 +110,7 @@ const INFO_OVERRIDE = (function () {
     add('ya_mdr', 'MDR / XDR / PDR by organism group',
         H('What it shows') + P('Multidrug-resistant (MDR), extensively drug-resistant (XDR) and pandrug-resistant (PDR) first isolates among Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp. and <i>S. aureus</i>.') +
         H('How to read it') + L(['<b>Any</b> = MDR + XDR + PDR.', '<b>Possible</b> = isolates that look XDR on the tested categories but had too narrow a panel to confirm.', '<b>*</b> = fewer than 30 isolates.']) +
-        H('Method') + L(['Definitions follow Magiorakos et al., 2012.', 'Intrinsic resistance is excluded.', 'A category that was not tested is unknown, not susceptible, so XDR and PDR counts are conservative.']),
+        H('Method') + L(['Definitions follow Magiorakos et al., 2012.', 'Intrinsic resistance is excluded.', 'A category that was not tested is unknown, not susceptible, so XDR and PDR counts are conservative.', 'Validity condition (Magiorakos 2012): the XDR and PDR definitions are valid only when isolates were tested against all or nearly all agents of each category and selective reporting or suppression of results was avoided. With incomplete testing an isolate can only be called possible XDR or possible PDR, and such results should not be compared with confirmed XDR or PDR from other studies.']),
         ['MAGIORAKOS', 'CLSI_M100']);
     add('ya_cult', 'Culture burden',
         H('What it shows') + P('The monthly number of cultures received, the share with growth, without growth and reported as contaminated, and the contamination rate of blood cultures.') +

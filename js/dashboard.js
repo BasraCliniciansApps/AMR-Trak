@@ -80,6 +80,11 @@ $(document).on('change', 'input[name="adv_ward"]', function() {
     // Note: We don't auto-refresh here because the user must click "Generate Heatmap"
 });
 // --- TIME PERIOD FILTER LOGIC ---
+// One line for the urine-only note: % with all results versus % with urine specimens only
+function uoLine(name, s, metric, p) {
+    const u = s.ua, pu = u && u.t ? Math.round(((metric === 'R' ? u.r : (metric === 'NS' ? u.ns : u.s)) / u.t) * 100) : null;
+    return `<div><b>${name}</b>: ${s.nu} of ${s.tested} results are non-urine. % ${metric}: <b>${p}%</b> with all results; <b>${pu === null ? 'no urine results' : pu + '% with urine only (n=' + u.t + ')'}</b></div>`;
+}
 // Period definitions (anchored to the latest month of data, so they do not depend on the device clock):
 //  year    = the last COMPLETE calendar year (CLSI M39 is an annual analysis)
 //  quarter = the last COMPLETE calendar quarter
@@ -338,7 +343,8 @@ function mdrInfoHtml(px, pp) {
     <li>A category that was not tested is treated as unknown, not as resistant.</li>
     <li>Each isolate is placed in its highest class.</li></ul>
     <h5>Possible XDR / PDR</h5>
-    <p>Isolates tested against too few categories to confirm their class are not counted in the charts. This period has <b>${px}</b> possible XDR and <b>${pp}</b> possible PDR isolate(s).</p>`;
+    <p>Isolates tested against too few categories to confirm their class are not counted in the charts. This period has <b>${px}</b> possible XDR and <b>${pp}</b> possible PDR isolate(s).</p>
+    <p>Validity condition (Magiorakos 2012): the XDR and PDR definitions are valid only when isolates were tested against all or nearly all agents of each category and selective reporting or suppression of results was avoided. With incomplete testing an isolate can only be called possible XDR or possible PDR, and such results should not be compared with confirmed XDR or PDR from other studies.</p>`;
 }
 const AWARE_NAMES = { A: 'Access', W: 'Watch', R: 'Reserve' };
 
@@ -365,7 +371,7 @@ function chartNoteBlocks(selectiveNotes, groups, contaminantCount, opts) {
     }
     if (opts.route && opts.route.length) out += `<div style="font-size:11px;line-height:1.45;color:#475569;margin:6px 0 8px"><b>Not classified (route not recorded):</b> ${opts.route.map(a => a === 'Fosfomycin' ? 'Fosfomycin is Watch when given orally and Reserve when given intravenously' : 'Minocycline is Watch when given orally and Reserve when given intravenously').join('; ')}.</div>`;
     if (opts.ir && opts.ir.length) out += H('&Dagger; Intrinsic resistance') + `<div style="font-size:11px;line-height:1.45;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;color:#334155"><b>${opts.ir.length}</b> antibiotic${opts.ir.length === 1 ? '' : 's'} shown ${opts.ir.length === 1 ? 'is' : 'are'} intrinsically resistant in <i>${opts.irOrg || 'this organism'}</i> (CLSI M100-Ed36, Appendix B): <b>${opts.ir.join(', ')}</b>. Resistance to ${opts.ir.length === 1 ? 'it' : 'them'} is expected and is not acquired resistance. The laboratory tested ${opts.ir.length === 1 ? 'it' : 'them'} and the results are shown as reported.</div>`;
-    if (opts.uo && opts.uo.length) out += H('&sect; Urine-only agents') + `<div style="font-size:11px;line-height:1.45;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;color:#1e40af">CLSI M100-Ed36 designates these agents as urine only (reported only on isolates from the urinary tract; nitrofurantoin because it is effective in uncomplicated urinary tract infections only). The laboratory also tested them on non-urine specimens, and those results are <b>included</b> in the chart. Non-urine results / all results: <b>${opts.uo.join(', ')}</b>. Interpret with clinical judgement.</div>`;
+    if (opts.uo && opts.uo.length) out += H('&sect; Urine-only agents') + `<div style="font-size:11px;line-height:1.45;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;color:#1e40af">CLSI M100-Ed36 designates these agents as urine only (reported only on isolates from the urinary tract; nitrofurantoin because it is effective in uncomplicated urinary tract infections only). The laboratory also tested them on non-urine specimens, and those results are <b>included</b> in the bars. The percentage with urine specimens only is given for comparison; use clinical judgement.<div style="margin-top:6px">${opts.uo.join('')}</div></div>`;
     if (contaminantCount > 0) out += H('Possible contaminants') + `<div style="font-size:11px;line-height:1.45;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;color:#92400e"><b>${contaminantCount}</b> blood isolate(s) of this organism are possible skin-flora contaminants. Review them clinically.</div>`;
     return out;
 }
@@ -1220,9 +1226,10 @@ function renderGuidedAST() {
         allPossibleAbxs.forEach(abx => {
             let res = r[abx];
             if (res && res !== '-' && res !== '') {
-                if (!abxStats[abx]) abxStats[abx] = { tested: 0, r: 0, s: 0, ns: 0, nu: 0 };
+                if (!abxStats[abx]) abxStats[abx] = { tested: 0, r: 0, s: 0, ns: 0, nu: 0, ua: { t: 0, r: 0, s: 0, ns: 0 } };
                 abxStats[abx].tested += 1;
                 if (isNonUrineUrineOnly(r, abx)) abxStats[abx].nu += 1;
+                else { const u = abxStats[abx].ua; u.t++; if (res === 'R') u.r++; if (res === 'S') u.s++; if (res === 'R' || res === 'I' || res === 'SDD') u.ns++; }
                 if (res === 'R') abxStats[abx].r += 1;
                 if (res === 'S') abxStats[abx].s += 1;
                 if (res === 'R' || res === 'I' || res === 'SDD') abxStats[abx].ns += 1; // حساب الـ Non-Susceptible
@@ -1249,7 +1256,7 @@ function renderGuidedAST() {
         const selective = isSelectivelyTested(s.tested, records.length);
         const intr = isIntrinsicResistance(currentGuidedBug, abx);
         if (intr) irList.push(abx);
-        if (s.nu) uoList.push(`${abx} (${s.nu}/${s.tested})`);
+        if (s.nu) uoList.push(uoLine(abx, s, currentGuidedMetric, p));
         if (selective) selectiveNotes.push(`${abx} (${s.tested}/${records.length})`);
         labels.push(abx + (selective ? ' †' : '') + (intr ? ' ‡' : '') + (s.nu ? ' §' : '') + (isReliable ? '' : ' *'));
         data.push(p);
@@ -1350,9 +1357,10 @@ function renderPathoChart() {
         allPossibleAbxs.forEach(abx => {
             let res = r[abx];
             if (res && res !== '-' && res !== '') {
-                if (!abxStats[abx]) abxStats[abx] = { tested: 0, r: 0, s: 0, ns: 0, nu: 0 };
+                if (!abxStats[abx]) abxStats[abx] = { tested: 0, r: 0, s: 0, ns: 0, nu: 0, ua: { t: 0, r: 0, s: 0, ns: 0 } };
                 abxStats[abx].tested += 1;
                 if (isNonUrineUrineOnly(r, abx)) abxStats[abx].nu += 1;
+                else { const u = abxStats[abx].ua; u.t++; if (res === 'R') u.r++; if (res === 'S') u.s++; if (res === 'R' || res === 'I' || res === 'SDD') u.ns++; }
                 if (res === 'R') abxStats[abx].r += 1;
                 if (res === 'S') abxStats[abx].s += 1;
                 if (res === 'R' || res === 'I' || res === 'SDD') abxStats[abx].ns += 1;
@@ -1389,7 +1397,7 @@ function renderPathoChart() {
         const selective = isSelectivelyTested(s.tested, records.length);
         const intr = isIntrinsicResistance(bug, abx);
         if (intr) irList.push(abx);
-        if (s.nu) uoList.push(`${abx} (${s.nu}/${s.tested})`);
+        if (s.nu) uoList.push(uoLine(abx, s, currentPathoMetric, p));
         if (selective) selectiveNotes.push(`${abx} (${s.tested}/${records.length})`);
         labels.push(abx + (selective ? ' †' : '') + (intr ? ' ‡' : '') + (s.nu ? ' §' : '') + (isReliable ? '' : ' *'));
         data.push(p);
@@ -1482,12 +1490,13 @@ function renderAbxChart() {
         let org = r['Selective organism'];
         let res = r[drug];
         if (org && res && res !== '-' && res !== '') {
-            if (!orgStats[org]) orgStats[org] = { tested: 0, r: 0, s: 0, ns: 0 };
+            if (!orgStats[org]) orgStats[org] = { tested: 0, r: 0, s: 0, ns: 0, nu: 0, ua: { t: 0, r: 0, s: 0, ns: 0 } };
             orgStats[org].tested += 1;
             if (res === 'R') orgStats[org].r += 1;
             if (res === 'S') orgStats[org].s += 1;
             if (res === 'R' || res === 'I' || res === 'SDD') orgStats[org].ns += 1;
-            if (isNonUrineUrineOnly(r, drug)) { orgStats[org].nu = (orgStats[org].nu || 0) + 1; }
+            if (isNonUrineUrineOnly(r, drug)) orgStats[org].nu += 1;
+            else { const u = orgStats[org].ua; u.t++; if (res === 'R') u.r++; if (res === 'S') u.s++; if (res === 'R' || res === 'I' || res === 'SDD') u.ns++; }
         }
     });
 
@@ -1504,7 +1513,7 @@ function renderAbxChart() {
 
     let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
     let baseColor = currentAbxMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : (currentAbxMetric === 'NS' ? 'rgba(245, 158, 11, 0.9)' : 'rgba(225, 29, 72, 0.9)');
-    let irOrgs = [], nuTot = 0, allTot = 0;
+    let irOrgs = [], nuTot = 0, allTot = 0, uoOrgLines = [];
     let hideLowN = $('#abx_hide_low').is(':checked');
 
     testedOrgs.forEach(org => {
@@ -1519,6 +1528,7 @@ function renderAbxChart() {
         let formattedOrg = formatScientificName(org);
         const intr = isIntrinsicResistance(org, drug);
         nuTot += s.nu || 0; allTot += s.tested;
+        if (s.nu) uoOrgLines.push(uoLine(formattedOrg, s, currentAbxMetric, p));
         if (intr) irOrgs.push(formattedOrg);
         labels.push(formattedOrg + (intr ? ' ‡' : '') + (isReliable ? '' : ' *'));
         data.push(p);
@@ -1530,7 +1540,7 @@ function renderAbxChart() {
     let abxExtra = '';
     const NH = t => `<div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;margin:14px 0 6px">${t}</div>`;
     if (irOrgs.length) abxExtra += NH('&Dagger; Intrinsic resistance') + `<div style="font-size:11px;line-height:1.45;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;color:#334155">${drug} is intrinsically resistant in <b>${irOrgs.length}</b> organism${irOrgs.length === 1 ? '' : 's'} shown (CLSI M100-Ed36, Appendix B): <b>${irOrgs.join(', ')}</b>. Resistance is expected there and is not acquired resistance. The laboratory tested it and the results are shown as reported.</div>`;
-    if (nuTot > 0) abxExtra += NH('&sect; Urine-only agent') + `<div style="font-size:11px;line-height:1.45;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;color:#1e40af"><b>${drug}</b>: CLSI M100-Ed36 designates this agent as urine only (reported only on isolates from the urinary tract). <b>${nuTot}</b> of ${allTot} results shown come from non-urine specimens and are <b>included</b>. Interpret with clinical judgement.</div>`;
+    if (nuTot > 0) abxExtra += NH('&sect; Urine-only agent') + `<div style="font-size:11px;line-height:1.45;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;color:#1e40af"><b>${drug}</b>: CLSI M100-Ed36 designates this agent as urine only (reported only on isolates from the urinary tract). <b>${nuTot}</b> of ${allTot} results shown come from non-urine specimens and are <b>included</b> in the bars. The percentage with urine specimens only is given for comparison; use clinical judgement.<div style=\"margin-top:6px\">${uoOrgLines.join('')}</div></div>`;
     $('#extra_abxAmrContainer').html(abxExtra);
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#abxAmrContainer').css('width', chartWidth);
@@ -1616,9 +1626,10 @@ window.generateAdvancedAnalytics = function() {
             targetAbxs.forEach(abx => {
                 let res = r[abx];
                 if (res && res !== '-' && res !== '') {
-                   if (!heatmapStats[org][abx]) heatmapStats[org][abx] = { t: 0, r: 0, s: 0, ns: 0, nu: 0 };
+                   if (!heatmapStats[org][abx]) heatmapStats[org][abx] = { t: 0, r: 0, s: 0, ns: 0, nu: 0, ua: { t: 0, r: 0, s: 0, ns: 0 } };
                     heatmapStats[org][abx].t += 1;
                     if (isNonUrineUrineOnly(r, abx)) heatmapStats[org][abx].nu += 1;
+                    else { const u = heatmapStats[org][abx].ua; u.t++; if (res === 'R') u.r++; if (res === 'S') u.s++; if (res === 'R' || res === 'I' || res === 'SDD') u.ns++; }
                     if (res === 'R') heatmapStats[org][abx].r += 1;
                     if (res === 'S') heatmapStats[org][abx].s += 1;
                     if (res === 'R' || res === 'I' || res === 'SDD') heatmapStats[org][abx].ns += 1;
@@ -1675,6 +1686,7 @@ window.generateAdvancedAnalytics = function() {
 
                 hmHtml += `<td class="${bgClass} ${textClass} align-middle">
                     <div class="leading-none">${p}% ${isLow ? '<span class="text-black font-bold">*</span>' : ''}${intr ? '<span class="font-bold">&Dagger;</span>' : ''}${cell.nu ? '<span class="font-bold text-blue-700" title="' + cell.nu + ' non-urine results">&sect;</span>' : ''}</div>
+                    ${cell.nu ? '<div class="text-[7.5px] font-bold text-blue-700 tracking-tighter whitespace-nowrap">urine only: ' + (cell.ua.t ? Math.round(((metric === 'R' ? cell.ua.r : (metric === 'NS' ? cell.ua.ns : cell.ua.s)) / cell.ua.t) * 100) + '% (n=' + cell.ua.t + ')' : 'no data') + '</div>' : ''}
                     <div class="text-[7.5px] font-medium opacity-80 tracking-tighter mt-1 whitespace-nowrap">95% CI (${ci.lower}% - ${ci.upper}%)</div>
                 </td>`;
             }
