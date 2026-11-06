@@ -44,6 +44,13 @@
         .nav-btn.active svg { transform: scale(1.18); filter: drop-shadow(0 3px 5px rgba(13,148,136,.35)); }
         .nav-btn::after { content: ""; position: absolute; bottom: -7px; left: 50%; width: 18px; height: 3px; border-radius: 3px; background: linear-gradient(90deg,#10b981,#f59e0b,#ef4444); transform: translateX(-50%) scaleX(0); transition: transform .25s; }
         .nav-btn.active::after { transform: translateX(-50%) scaleX(1); }
+        /* uniform fields in every search form: same height, same text size */
+        #adv_content input[type=month], #adv_content #adv_metric { display: block; width: 100%; height: 42px; padding: 0 10px; font-size: 14px; line-height: 40px; background: #fff; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 8px; -webkit-appearance: none; appearance: none; box-sizing: border-box; }
+        #adv_content #adv_metric { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2364748b'%3E%3Cpath d='M5.3 7.3a1 1 0 011.4 0L10 10.6l3.3-3.3a1 1 0 111.4 1.4l-4 4a1 1 0 01-1.4 0l-4-4a1 1 0 010-1.4z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 16px; padding-right: 32px; }
+        .select2-container .select2-selection--single { height: 42px; display: flex; align-items: center; }
+        .select2-container--default .select2-selection--single .select2-selection__rendered { font-size: 14px; line-height: 40px; padding-left: 10px; }
+        .select2-container--default .select2-selection--single .select2-selection__arrow { height: 40px; }
+        .select2-container--default .select2-selection--multiple .select2-selection__rendered, .select2-container .select2-search--inline .select2-search__field { font-size: 14px; }
         .select2-container .select2-selection--single, .select2-container .select2-selection--multiple { min-height: 42px; border-radius: 8px; border-color: #cbd5e1; }
         
         .heatmap-table { border-collapse: separate; border-spacing: 0; min-width: max-content; width: 100%; }
@@ -263,7 +270,7 @@
 
     <header class="bg-white px-4 py-3 sticky top-0 z-40 border-b border-slate-200 shadow-sm flex flex-wrap justify-between items-center">
         <div class="flex items-center gap-2 -ml-2" id="brand">
-            <img src="img/logo.png?v=11.33" alt="AMR Trak" style="height:30px;width:auto;display:block">
+            <img src="img/logo.png?v=11.34" alt="AMR Trak" style="height:30px;width:auto;display:block">
             <span id="brandName" style="font-family:'Space Grotesk','Inter',system-ui,sans-serif;font-weight:700;font-size:21px;line-height:30px;letter-spacing:-.01em;color:#0f4c5c">AMR <span style="color:#0d9488">Trak</span></span>
                         <span id="connection_status" title="Live connection" aria-label="Live connection" class="flex items-center justify-center text-emerald-600 bg-emerald-50 rounded-full border border-emerald-100" style="width:14px;height:14px;margin-left:-6px;align-self:flex-start;margin-top:4px">
                 <span class="relative flex h-2 w-2"><span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
@@ -502,13 +509,14 @@
                 <div id="adv_content" class="hidden p-4 space-y-3 bg-white border-t border-slate-200">
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-[10px] font-bold text-slate-500 mb-1">From (Optional, overrides the period)</label>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">From (optional)</label>
                             <input type="month" id="adv_start" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-slate-500 outline-none">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold text-slate-500 mb-1">To (Optional, overrides the period)</label>
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">To (optional)</label>
                             <input type="month" id="adv_end" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-slate-500 outline-none">
                         </div>
+                        <p class="col-span-2 text-[10px] text-slate-500 -mt-1">When filled, these dates replace the analysis period set in Settings.</p>
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Specimen (Optional)</label>
@@ -524,7 +532,7 @@
                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Antibiotics</label>
                         <select id="adv_antibiotic" class="w-full text-sm select2-multiple" multiple="multiple" data-placeholder="Leave blank for ALL Antibiotics"></select>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 gap-3">
                         <div>
                             <label class="block text-[10px] font-bold text-slate-500 mb-1">Metric</label>
                             <select id="adv_metric" class="w-full text-sm border border-slate-300 rounded-lg p-2 bg-white">
@@ -532,10 +540,6 @@
                                 <option value="S">Susceptibility (% S)</option>
                                 <option value="NS">Non-Susceptible (% R+I)</option>
                             </select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Ward Filter</label>
-                            
                         </div>
                     </div>
                     <div class="flex justify-center items-center gap-2 bg-white p-2 px-3 rounded-lg border border-slate-200 shadow-sm">
@@ -729,11 +733,11 @@
             Analytics
         </button>
         <button onclick="switchTab('last_year')" id="btnNavLastYear" class="nav-btn">
-            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.33m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.33v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" /></svg>
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.34m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.34v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" /></svg>
             Last Year
         </button>
         <button onclick="switchTab('last_quarter')" id="btnNavLastQuarter" class="nav-btn">
-            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.33c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.34c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
             Last 3 Months
         </button>
         <button onclick="switchTab('last_month')" id="btnNavLastMonth" class="nav-btn">
@@ -741,7 +745,7 @@
             Last Month
         </button>
         <button onclick="switchTab('mdr')" id="btnNavMdr" class="nav-btn">
-            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.33 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.34 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
             MDR
         </button>
         <button onclick="switchTab('lab')" id="btnNavLab" class="nav-btn">
@@ -750,15 +754,15 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=11.33"></script>
-    <script src="js/dashboard.js?v=11.33"></script>
-    <script src="js/info_texts.js?v=11.33"></script>
-    <script src="js/dashboard_panels.js?v=11.33"></script>
-    <script src="js/dashboard_year.js?v=11.33"></script>
-    <script src="js/dashboard_period.js?v=11.33"></script>
-    <script src="js/guide_reviewer.js?v=11.33"></script>
-    <script src="js/guide.js?v=11.33"></script>
-    <script src="js/nav.js?v=11.33"></script>
+    <script src="js/data.js?v=11.34"></script>
+    <script src="js/dashboard.js?v=11.34"></script>
+    <script src="js/info_texts.js?v=11.34"></script>
+    <script src="js/dashboard_panels.js?v=11.34"></script>
+    <script src="js/dashboard_year.js?v=11.34"></script>
+    <script src="js/dashboard_period.js?v=11.34"></script>
+    <script src="js/guide_reviewer.js?v=11.34"></script>
+    <script src="js/guide.js?v=11.34"></script>
+    <script src="js/nav.js?v=11.34"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>
@@ -770,6 +774,6 @@
         });
     }
 </script>
-<div style="text-align:center;font-size:10px;color:#94a3b8;padding:8px 0 16px" id="app_ver">AMR Trak v11.33</div>
+<div style="text-align:center;font-size:10px;color:#94a3b8;padding:8px 0 16px" id="app_ver">AMR Trak v11.34</div>
 </body>
 </html>
