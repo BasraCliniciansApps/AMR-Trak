@@ -247,6 +247,11 @@ const MDR_COLORS = { 'Non-MDR': '#10b981', 'MDR': '#f59e0b', 'XDR': '#e11d48', '
 function pct(n, d) { return d ? Math.round((n / d) * 1000) / 10 : 0; }
 
 // ---------- MDR / XDR / PDR analysis panel (first tab) ----------
+function ciSub(r, n, noPct) {
+    if (!n) return '';
+    const c = wilsonScoreCI(r, n);
+    return `<div class="text-[8px] font-normal text-slate-400">95% CI ${c.lower}-${c.upper}%</div>`;
+}
 function renderMdrPanel() {
     if (!document.getElementById('mdrPanel')) return;
     const range = renderPeriodPickerOnce('mdr', renderMdrPanel);
@@ -276,9 +281,9 @@ function renderMdrPanel() {
 
     const worse = counts.MDR + counts.XDR + counts.PDR;
     $('#mdr_tiles').html([
-        ['Classified isolates', n, 'text-slate-800'],
-        ['MDR or worse', n ? `${worse} (${pct(worse, n)}%)` : '-', 'text-amber-600'],
-        ['XDR or worse', n ? `${counts.XDR + counts.PDR} (${pct(counts.XDR + counts.PDR, n)}%)` : '-', 'text-rose-600'],
+        ['Classified isolates', n + (n && n < minN() ? '*' : ''), 'text-slate-800'],
+        ['MDR or worse', n ? `${worse} (${pct(worse, n)}%)${ciSub(worse, n)}` : '-', 'text-amber-600'],
+        ['XDR or worse', n ? `${counts.XDR + counts.PDR} (${pct(counts.XDR + counts.PDR, n)}%)${ciSub(counts.XDR + counts.PDR, n)}` : '-', 'text-rose-600'],
         ['PDR', n ? counts.PDR : '-', 'text-red-900']
     ].map(t => `<div class="bg-slate-50 border border-slate-100 rounded-lg p-2 text-center"><div class="text-[9px] font-bold text-slate-500">${t[0]}</div><div class="text-sm font-black ${t[2]}">${t[1]}</div></div>`).join(''));
 
@@ -309,9 +314,9 @@ function renderMdrPanel() {
         const ds = ['MDR', 'XDR', 'PDR'].map(k => ({ label: k, data: monthList.map(m => pct(byMonth[m][k], byMonth[m].total)), backgroundColor: MDR_COLORS[k], borderRadius: 2 }));
         panelCharts.mdr.push(new Chart(document.getElementById('chart_mdr_panel_trend'), {
             type: 'bar',
-            data: { labels: monthList.map(m => MONTH_NAMES[parseInt(m.slice(5, 7), 10) - 1] + " '" + m.slice(2, 4)), datasets: ds },
+            data: { labels: monthList.map(m => MONTH_NAMES[parseInt(m.slice(5, 7), 10) - 1] + " '" + m.slice(2, 4) + (byMonth[m].total < minN() ? '*' : '')), datasets: ds },
             options: Object.assign({}, ctxOpts, {
-                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9, weight: 'bold' } } }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.raw}%` } } },
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9, weight: 'bold' } } }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.raw}%`, footer: it => { const t = byMonth[monthList[it[0].dataIndex]].total; return `n=${t}${t < minN() ? ' (below 30: wide uncertainty)' : ''}`; } } } },
                 scales: { x: { stacked: true, ticks: { font: { size: 9 } }, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { callback: v => v + '%' }, grid: { color: '#f1f5f9' } } }
             })
         }));
@@ -323,7 +328,7 @@ function renderMdrPanel() {
     panelCharts.mdr.push(new Chart(document.getElementById('chart_mdr_panel_wards'), {
         type: 'bar',
         data: {
-            labels: wards.map(w => (w.length > 22 ? w.slice(0, 20) + '..' : w) + ` (${byWard[w].total})`),
+            labels: wards.map(w => (w.length > 22 ? w.slice(0, 20) + '..' : w) + ` (${byWard[w].total}${byWard[w].total < minN() ? '*' : ''})`),
             datasets: ['Non-MDR', 'MDR', 'XDR', 'PDR'].map(k => ({ label: k, data: wards.map(w => byWard[w][k]), backgroundColor: MDR_COLORS[k], borderRadius: 2 }))
         },
         options: Object.assign({}, ctxOpts, {
@@ -335,12 +340,14 @@ function renderMdrPanel() {
 
     // By organism group
     const gnames = { enterobacterales: 'Enterobacterales', pseudomonas: 'P. aeruginosa', acinetobacter: 'Acinetobacter', staph: 'S. aureus' };
+    const lowN = (n && n < minN()) || Object.values(byGroup).some(x => x.total < minN()) || wards.some(w => byWard[w].total < minN()) || monthList.some(m => byMonth[m].total < minN());
+    const mdrNNote = `<ul class="note-list text-[9px] text-slate-400 mt-1 sym-note"><li>MDR+ = MDR, XDR or PDR. The 95% CI (Wilson) shows how precise each percentage is.</li>${lowN ? '<li><b>*</b> fewer than 30 isolates (CLSI M39 &sect;7.2.2): the percentage is imprecise, see the wide CI. Read it as an indication, not a stable rate.</li>' : ''}<li>Classification is per isolate (Magiorakos 2012), so small n does not change an isolate\'s class; it only makes the percentage less certain.</li></ul>`;
     const rows = Object.keys(byGroup).sort((a, b) => byGroup[b].total - byGroup[a].total).map(g => {
         const x = byGroup[g], w = x.MDR + x.XDR + x.PDR;
         const poss = (x.px || x.pp) ? ` <span class="text-slate-400">(+${x.px} poss. XDR${x.pp ? ', +' + x.pp + ' poss. PDR' : ''})</span>` : '';
-        return `<tr class="border-t border-slate-100"><td class="py-1.5 pr-2 font-bold text-slate-700">${gnames[g] || g}</td><td class="text-center">${x.total}${x.total < minN() ? '*' : ''}</td><td class="text-center text-amber-600 font-bold">${pct(w, x.total)}%</td><td class="text-center text-rose-600 font-bold">${x.XDR + x.PDR}${poss}</td><td class="text-center text-red-900 font-bold">${x.PDR}</td></tr>`;
+        return `<tr class="border-t border-slate-100"><td class="py-1.5 pr-2 font-bold text-slate-700">${gnames[g] || g}</td><td class="text-center">${x.total}${x.total < minN() ? '*' : ''}</td><td class="text-center text-amber-600 font-bold">${pct(w, x.total)}%${ciSub(w, x.total)}</td><td class="text-center text-rose-600 font-bold">${x.XDR + x.PDR}${ciSub(x.XDR + x.PDR, x.total, true)}${poss}</td><td class="text-center text-red-900 font-bold">${x.PDR}</td></tr>`;
     }).join('');
-    $('#mdr_group_table').html(rows ? `<table class="w-full text-[10px]"><thead><tr class="text-slate-500"><th class="text-left pb-1">Group</th><th>n</th><th>MDR+</th><th>XDR+</th><th>PDR</th></tr></thead><tbody>${rows}</tbody></table><p class="text-[9px] text-slate-400 mt-1">* fewer than 30 isolates: interpret with caution. MDR+ = MDR, XDR or PDR.</p>` : '<p class="text-xs text-slate-400 text-center">No classifiable isolates in this period.</p>');
+    $('#mdr_group_table').html(rows ? `<table class="w-full text-[10px]"><thead><tr class="text-slate-500"><th class="text-left pb-1">Group</th><th>n</th><th>MDR+</th><th>XDR+</th><th>PDR</th></tr></thead><tbody>${rows}</tbody></table>${mdrNNote}` : '<p class="text-xs text-slate-400 text-center">No classifiable isolates in this period.</p>');
 }
 const _pickerRendered = {};
 function renderPeriodPickerOnce(id, cb) {

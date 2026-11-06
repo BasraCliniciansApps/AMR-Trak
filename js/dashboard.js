@@ -392,6 +392,12 @@ function mdrInfoHtml(px, pp) {
     <li><b>MDR:</b> non-susceptible to at least one agent in three or more antimicrobial categories.</li>
     <li><b>XDR:</b> non-susceptible to at least one agent in all but two or fewer categories.</li>
     <li><b>PDR:</b> non-susceptible to all agents in all categories.</li></ul>
+    <h5>Small numbers (n &lt; 30)</h5>
+    <ul>
+    <li>CLSI M39 &sect;7.2.2 advises at least 30 isolates per species; below that, the figures are marked <b>*</b>.</li>
+    <li>M39 &sect;10.1 recommends confidence intervals; the 95% CI (Wilson) is shown next to MDR+ and XDR+ percentages.</li>
+    <li>A small n does not change whether an isolate is MDR, XDR or PDR. It only makes the percentage unstable: e.g. 3 of 10 = 30% (CI 11-60%).</li>
+    <li>M100 and Magiorakos 2012 set no minimum n for MDR.</li></ul>
     <h5>Method</h5>
     <ul>
     <li>Applied to first isolates (CLSI M39) of Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp. and <i>S. aureus</i>.</li>
