@@ -36,13 +36,12 @@ let currentAbxMetric = 'S';
 // (applyDeduplication is defined once in data.js)
 
 // --- WARD FILTER LOGIC (Inpatient / Outpatient) ---
-// Ward classification. Outpatient = outpatient / OPD / clinic wards. Inpatient = an admitted ward.
-// Emergency and records without a ward cannot be assigned reliably, so they appear only under "Total".
+// Ward classification. Outpatient = outpatient / OPD / clinic wards and the emergency department (patients not admitted).
+// Inpatient = an admitted ward. Records without a ward cannot be assigned, so they appear only under "Total".
 function wardClass(ward) {
     const w = String(ward || '').toLowerCase().trim();
     if (!w || w === 'unknown') return 'unassigned';
-    if (/^(outpatient|out-patient|opd)$|clinic|ambulatory|out patient/.test(w)) return 'outpatient';
-    if (/emergency|casualty|\ber\b|\bed\b|accident/.test(w)) return 'unassigned';
+    if (/^(outpatient|out-patient|opd)$|clinic|ambulatory|out patient|emergency|casualty|\ber\b|\bed\b|accident/.test(w)) return 'outpatient';
     return 'inpatient';
 }
 function applyWardFilter(records, filterValue) {
@@ -1326,6 +1325,7 @@ function updatePathoDropdowns() {
 }
 
 $(document).on('change', '#patho_hide_low', function() { renderPathoChart(); });
+$(document).on('change', '#adv_hide_low', function() { if (!$('#advContainer').hasClass('hidden')) generateAdvancedAnalytics(); });
 
 function renderPathoChart() {
     const bug = $('#patho_bug').val();
@@ -1627,6 +1627,8 @@ window.generateAdvancedAnalytics = function() {
         }
     });
 
+    const hmHideLow = $('#adv_hide_low').is(':checked');
+    if (hmHideLow) Object.keys(heatmapStats).forEach(o => Object.keys(heatmapStats[o]).forEach(a => { if (heatmapStats[o][a].t < 30) delete heatmapStats[o][a]; }));
     let hmOrgs = Object.keys(heatmapStats).sort();
     let hmAbxs = targetAbxs.sort();
 
@@ -1649,7 +1651,7 @@ window.generateAdvancedAnalytics = function() {
         hmHtml += `<tr><th class="text-[10px] text-left leading-tight">${formatScientificName(o)} <br><span class="text-[9px] font-normal text-slate-400">(${orgCounts[o]||0})</span></th>`;
         hmAbxs.forEach(a => {
             let cell = heatmapStats[o][a];
-            if (!cell || cell.t === 0) { hmHtml += '<td class="bg-slate-50 text-slate-300">-</td>'; } 
+            if (!cell || cell.t === 0 || (hmHideLow && cell.t < 30)) { hmHtml += '<td class="bg-slate-50 text-slate-300">-</td>'; } 
             else {
                 let targetVal = metric === 'R' ? cell.r : (metric === 'NS' ? cell.ns : cell.s);
                 let p = Math.round((targetVal / cell.t) * 100);

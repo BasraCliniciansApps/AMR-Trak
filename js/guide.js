@@ -41,7 +41,7 @@
             H('Choosing the data (Analytics)') + L([
                 '<b>Time Period:</b> All Times, Last Year, Last Quarter or Last Month. Start with a wider period when numbers are small, because more isolates give more reliable percentages.',
                 '<b>Specimen:</b> restricts to blood, urine, wound and so on. Resistance often differs by site, so choose the specimen that matches the patient\'s infection.',
-                '<b>Ward (All, In, Out):</b> all patients, inpatients, or outpatients.',
+                '<b>Ward (All, In, Out):</b> all patients, inpatients, or outpatients. The emergency department is counted with the outpatients (patients seen without admission).',
                 '<b>Bacteria or Antimicrobial:</b> the organism or the drug you want to examine.',
                 '<b>% S, % R, % NS:</b> the metric. Use %S to see what works, %R to see how bad resistance is, and %NS when intermediate results should be treated as not reliable.',
                 '<b>Hide n &lt; 30:</b> removes the unreliable (grey) bars.']) +
@@ -152,7 +152,7 @@
         ['mdr', 'Multidrug resistance: MDR, XDR and PDR', () =>
             P('A single resistant result does not show how limited the treatment options are. The international definitions of Magiorakos et al. (2012, ECDC and CDC) classify an isolate by how many antibiotic <b>categories</b> it resists.') +
             L(['<b>MDR:</b> non-susceptible to at least one agent in three or more categories.', '<b>XDR:</b> non-susceptible to at least one agent in all but two or fewer categories. Only one or two categories remain active.', '<b>PDR:</b> non-susceptible to all agents in all categories.']) +
-            H('How it is applied here') + L(['Only first isolates of Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp., <i>S. aureus</i> and <i>Enterococcus</i> spp. are classified.', 'MRSA is counted as non-susceptible in the anti-staphylococcal beta-lactam category (Magiorakos 2012).', 'Intrinsic resistance is excluded.', 'A category that was not tested is treated as unknown, not as resistant or susceptible. XDR and PDR are therefore conservative.', '<b>Possible XDR / PDR</b> means the panel was too narrow to confirm the class. These isolates are shown separately.', '<b>MDR+</b> means MDR, XDR or PDR together.']) +
+            H('How it is applied here') + L(['Only first isolates of Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp., <i>S. aureus</i> and <i>Enterococcus</i> spp. are classified.', 'Every MRSA isolate is classified as MDR (Magiorakos 2012, Table 6), because oxacillin or cefoxitin resistance predicts non-susceptibility to all beta-lactam categories except the anti-MRSA cephalosporins.', 'An agent (or whole category) to which the species is intrinsically resistant is removed before counting (Magiorakos 2012; intrinsic resistance from CLSI M100-Ed36).', 'If too few agents were tested, the isolate can only be called possible XDR or possible PDR (Magiorakos 2012).', 'Intrinsic resistance is excluded.', 'A category that was not tested is treated as unknown, not as resistant or susceptible. XDR and PDR are therefore conservative.', '<b>Possible XDR / PDR</b> means the panel was too narrow to confirm the class. These isolates are shown separately.', '<b>MDR+</b> means MDR, XDR or PDR together.']) +
             H('Why it matters') + P('MDR and above are the isolates that drive prolonged stay, higher cost and mortality, and that need isolation precautions.')],
 
         ['year', 'Last Year tab: the annual report', () =>

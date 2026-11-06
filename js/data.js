@@ -320,7 +320,7 @@ const MDR_TABLES = {
     },
     // Magiorakos 2012 Table 2: 11 categories (high-level aminoglycoside screens are the relevant tests)
     'Enterococcus spp.': {
-        'Aminoglycosides (except streptomycin)': ['Gentamicin high-level', 'Kanamycin high-level'],
+        'Aminoglycosides (except streptomycin)': ['Gentamicin high-level'],
         'Streptomycin': ['Streptomycin'],
         'Carbapenems': ['Imipenem', 'Meropenem', 'Doripenem'],
         'Fluoroquinolones': ['Ciprofloxacin', 'Levofloxacin', 'Moxifloxacin'],
@@ -336,13 +336,8 @@ const MDR_TABLES = {
 
 // Intrinsic (expected) resistance: categories excluded for these organisms.
 const MDR_INTRINSIC_RULES = [
-    { test: /klebsiella|raoultella|citrobacter koseri|citrobacter diversus/, exclude: ['Penicillins'] },
-    { test: /enterobacter|klebsiella aerogenes|citrobacter freundii|serratia|morganella/,
-      exclude: ['Penicillins', 'Penicillins + BLI', 'Cephalosporins (1st/2nd gen)', 'Cephamycins'] },
-    { test: /proteus|morganella|providencia|serratia/, exclude: ['Polymyxins'] },
-    { test: /proteus|morganella|providencia/, exclude: ['Tetracyclines', 'Glycylcyclines'] },
-    { test: /enterococcus faecium/, exclude: ['Carbapenems'] },          // intrinsic in E. faecium (Magiorakos Table 2)
-    { test: /enterococcus faecalis/, exclude: ['Streptogramins'] }       // intrinsic in E. faecalis (Magiorakos Table 2)
+    // Category-level intrinsic resistance from Magiorakos Table 2 (agent-level intrinsic resistance comes from CLSI M100 Appendix B, see INTRINSIC_RESISTANCE_RULES)
+    { test: /enterococcus faecium/, exclude: ['Carbapenems'] }
 ];
 
 function getMdrGroup(orgLower) {
@@ -368,12 +363,16 @@ function classifyMDR(r) {
     const isMrsa = group === 'Staphylococcus aureus' && (['Cefoxitin', 'Cefoxitin screen', 'Oxacillin'].some(a => String(r[a] || '').trim().toUpperCase() === 'R') || r['Lab MRSA'] === '+');
 
     let tested = 0, ns = 0, total = 0, anySusceptible = false;
+    // Magiorakos 2012: an agent (or a whole category) to which the species is intrinsically resistant is removed before the criteria are applied
+    const irSet = intrinsicResistanceSet(orgLower);
     Object.keys(MDR_TABLES[group]).forEach(cat => {
         if (excluded.has(cat)) return;
+        const agents = MDR_TABLES[group][cat].filter(a => !irSet.has(a));
+        if (!agents.length) return;
         total++;
         let anyTested = false, anyNS = false;
         if (isMrsa && cat === 'Anti-staphylococcal beta-lactams') { tested++; ns++; return; }
-        MDR_TABLES[group][cat].forEach(abx => {
+        agents.forEach(abx => {
             const v = String(r[abx] || '').trim().toUpperCase();
             if (v === 'S' || v === 'I' || v === 'R' || v === 'SDD') {
                 anyTested = true;
@@ -395,6 +394,8 @@ function classifyMDR(r) {
         if (tested === total) cls = 'PDR';
         else if (tested >= MDR_MIN_TESTED_FOR_POSSIBLE_XDR) possiblePDR = true;   // panel incomplete: cannot be called PDR
     }
+    // Magiorakos 2012 Table 6 footnote: all MRSA isolates are defined as MDR
+    if (isMrsa && cls === 'Non-MDR') cls = 'MDR';
     return { cls, ns, tested, total, group, possibleXDR, possiblePDR };
 }
 
