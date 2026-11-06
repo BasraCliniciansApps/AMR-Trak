@@ -7,8 +7,8 @@
 // =====================================================================
 (function () {
     const H = t => `<h4>${t}</h4>`;
-    const P = t => `<p>${t}</p>`;
-    const L = items => '<ul>' + items.map(i => `<li>${i}</li>`).join('') + '</ul>';
+    const P = t => (typeof splitHints === 'function' && splitHints(t).length > 1) ? hintsHtml([t]) : `<p>${t}</p>`;
+    const L = items => '<ul>' + [].concat.apply([], items.map(i => typeof splitHints === 'function' ? splitHints(i) : [i])).map(i => `<li>${i}</li>`).join('') + '</ul>';
     const T = (head, rows) => `<div class="gd-tbl"><table><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
     const TIP = t => `<div class="gd-tip">${t}</div>`;
 

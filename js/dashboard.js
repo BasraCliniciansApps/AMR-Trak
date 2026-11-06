@@ -338,16 +338,35 @@ function setInfo(key, title, html, refs) {
     INFO_STORE[key] = { title: title, html: html, refs: refs || refsFor(key) };
 }
 // Notes under a chart or table: one point per line, never a run-on paragraph
-function setNote(sel, items) {
-    const list = (items || []).filter(Boolean);
-    $(sel).html(list.length ? '<ul class="note-list">' + list.map(t => '<li>' + t + '</li>').join('') + '</ul>' : '');
+// Splits one text into single sentences so that every hint is shown on its own line
+function splitHints(t) {
+    const s = String(t || '');
+    const out = []; let last = 0;
+    const re = /[.!?](\s+)(?=[A-Z]|<b>|<i>[A-Z])/g; let m;
+    while ((m = re.exec(s))) {
+        const before = s.slice(last, m.index).replace(/<[^>]*>/g, '');
+        if (/(^|[\s(])([A-Za-z]|spp|vs|no|e\.g|i\.e|approx|cf|al)$/i.test(before)) continue;   // initials and abbreviations: do not split
+        out.push(s.slice(last, m.index + 1)); last = m.index + m[0].length;
+    }
+    out.push(s.slice(last));
+    return out.filter(x => x.trim());
 }
+// Notes under a chart or table: one point per line, never a run-on paragraph
+function hintsHtml(items, style) {
+    const list = [].concat.apply([], (items || []).filter(Boolean).map(splitHints));
+    return list.length ? '<ul class="note-list"' + (style ? ' style="' + style + '"' : '') + '>' + list.map(t => '<li>' + t + '</li>').join('') + '</ul>' : '';
+}
+// Paragraphs of a text block: a paragraph with several sentences becomes one line per sentence
+function paraHints(html) {
+    return String(html || '').replace(/<p>([\s\S]*?)<\/p>/g, (m, t) => splitHints(t).length > 1 ? hintsHtml([t]) : m);
+}
+function setNote(sel, items) { $(sel).html(hintsHtml(items)); }
 window.showInfo = function(key) {
     const i = INFO_STORE[key];
     if (!i) return;
     Swal.fire({
         title: i.title,
-        html: '<div class="info-body">' + i.html + '</div>' + refsHtml(i.refs, true),
+        html: '<div class="info-body">' + paraHints(i.html) + '</div>' + refsHtml(i.refs, true),
         showConfirmButton: true, confirmButtonText: 'Close', width: 'min(92vw, 440px)',
         customClass: { popup: 'info-popup', title: 'info-title', htmlContainer: 'info-container', confirmButton: 'info-close' },
         buttonsStyling: false
@@ -1575,12 +1594,13 @@ function renderAbxChart() {
 // Period sentence for the heatmap note, based on the dates actually covered by the records
 function hmPeriodNote(records) {
     const ds = records.map(r => r.Date).filter(Boolean).sort();
-    const base = 'CLSI M39 recommends analysing cumulative data at least annually (Section 6.3); the analysis period is typically one year (Section 6.4).';
-    if (!ds.length) return '<p>' + base + '</p>';
+    const base = ['CLSI M39 recommends analysing cumulative data at least annually (Section 6.3).', 'The analysis period is typically one year (Section 6.4).'];
+    if (!ds.length) return base;
     const days = (new Date(ds[ds.length - 1]) - new Date(ds[0])) / 86400000 + 1;
-    if (days < 360) return '<p><b>Period shown: ' + ds[0] + ' to ' + ds[ds.length - 1] + ' (about ' + Math.round(days) + ' days), shorter than one year.</b> ' + base + ' Presenting data more often may be complicated by seasonal variation in resistance rates and imprecise estimates when isolate numbers are small, so read this map as an indication only.</p>';
-    if (days > 372) return '<p><b>Period shown: ' + ds[0] + ' to ' + ds[ds.length - 1] + ', more than one year (years combined).</b> ' + base + ' When several years are combined, M39 (Section 6.4) uses the first isolate per patient per calendar year and advises a footnote alerting readers that the data are combined.</p>';
-    return '<p>Period shown: ' + ds[0] + ' to ' + ds[ds.length - 1] + '. ' + base + '</p>';
+    const span = ds[0] + ' to ' + ds[ds.length - 1];
+    if (days < 360) return ['<b>Period shown: ' + span + ' (about ' + Math.round(days) + ' days), shorter than one year.</b>'].concat(base, ['Presenting data more often may be complicated by seasonal variation in resistance rates.', 'Estimates are imprecise when isolate numbers are small.', 'Read this map as an indication only.']);
+    if (days > 372) return ['<b>Period shown: ' + span + ', more than one year (years combined).</b>'].concat(base, ['When several years are combined, M39 (Section 6.4) uses the first isolate per patient per calendar year.', 'M39 advises a footnote alerting readers that the data are combined.']);
+    return ['Period shown: ' + span + '.'].concat(base);
 }
 window.generateAdvancedAnalytics = function() {
     const startDate = $('#adv_start').val();
@@ -1589,6 +1609,13 @@ window.generateAdvancedAnalytics = function() {
     let targetOrgs = $('#adv_organism').val() || [];
     let targetAbxs = $('#adv_antibiotic').val() || [];
     const metric = $('#adv_metric').val() || 'R'; 
+
+    if (startDate && endDate && startDate > endDate) {
+        $('#heatmapWrapper').html('<div class="flex items-center justify-center h-[100px] w-full text-amber-700 font-bold text-sm text-center px-4">The From month is after the To month. Please correct the dates.</div>');
+        $('#heatmapNote').html('');
+        Swal.fire('Check the dates', 'The From month is after the To month.', 'warning');
+        return;
+    }
 
     let allRecords = getDashRecords();
     let records = allRecords; // Start with entire database
@@ -1712,11 +1739,21 @@ window.generateAdvancedAnalytics = function() {
     });
     hmHtml += '</tbody></table>';
     $('#heatmapWrapper').html(hmHtml);
-    $('#heatmapNote').html(
-        '<p><b>Grey cell:</b> the value is not a reliable susceptibility result. <b>*</b> = fewer than 30 isolates tested (CLSI M39); <b>&Dagger;</b> = intrinsic resistance (expected for the organism, CLSI M100 Appendix B), not acquired resistance. Grey cells: ' + lowCells + ' with *, ' + irCells + ' with &Dagger;.</p>' +
-        '<p><b>Colour bands</b> are a visual aid in steps of 20%. They are not CLSI or WHO categories.</p>' +
-        '<p><b>Common practice benchmarks</b> (conventions, not CLSI or WHO rules): 80% or more susceptible is often accepted for empirical treatment of non-severe infections, and 90% or more is expected for severe infections such as bloodstream infection or meningitis. These values are a guide only. Always follow the hospital antibiotic policy.</p>' +
-        '<p>Cells are in vitro results. <b>&sect;</b> = urine-only agent (CLSI M100-Ed36: ' + URINE_ONLY_ABX.join(', ') + '; amikacin for <i>P. aeruginosa</i>) that also includes non-urine specimens (' + nuCells + ' cells). Those results are included; interpret with clinical judgement.</p>' + hmPeriodNote(records));
+    setNote('#heatmapNote', [
+        '<b>Grey cell:</b> the value is not a reliable susceptibility result.',
+        '<b>*</b> = fewer than 30 isolates tested (CLSI M39).',
+        '<b>&Dagger;</b> = intrinsic resistance (expected for the organism, CLSI M100 Appendix B), not acquired resistance.',
+        'Grey cells: ' + lowCells + ' with *, ' + irCells + ' with &Dagger;.',
+        '<b>Colour bands</b> are a visual aid in steps of 20%.',
+        'The colour bands are not CLSI or WHO categories.',
+        '<b>Common practice benchmarks</b> (conventions, not CLSI or WHO rules):',
+        '80% or more susceptible is often accepted for empirical treatment of non-severe infections.',
+        '90% or more is expected for severe infections such as bloodstream infection or meningitis.',
+        'These values are a guide only; always follow the hospital antibiotic policy.',
+        'Cells are in vitro results.',
+        '<b>&sect;</b> = urine-only agent (CLSI M100-Ed36: ' + URINE_ONLY_ABX.join(', ') + '; amikacin for <i>P. aeruginosa</i>) that also includes non-urine specimens (' + nuCells + ' cells).',
+        'Those results are included; interpret with clinical judgement.'
+    ].concat(hmPeriodNote(records)));
 };
 // --- Modal: About App ---
 function showAboutModal() {
