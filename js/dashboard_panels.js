@@ -686,7 +686,8 @@ function withOpened(items, fn) {
     const reopened = [];
     const restore = [];   // [element, class] pairs removed temporarily (collapsed cards and collapsed result areas)
     items.forEach(({ el }) => { let p = el; while (p) { if (p.classList) ['hidden', 'res-collapsed'].forEach(k => { if (p.classList.contains(k) && !restore.some(r => r[0] === p && r[1] === k)) { p.classList.remove(k); restore.push([p, k]); } }); p = p.parentElement; } });
-    if (restore.length) items.forEach(({ el }) => { try { const ch = el.tagName === 'CANVAS' && window.Chart && Chart.getChart(el); if (ch) { ch.resize(); ch.update('none'); } } catch (e) {} });
+    void document.body.offsetWidth;   // force layout after the cards were opened
+    items.forEach(({ el }) => { try { const ch = el.tagName === 'CANVAS' && window.Chart && Chart.getChart(el); if (ch) { const an = ch.options.animation; ch.options.animation = false; ch.resize(); ch.update('none'); ch.draw && ch.draw(); ch.options.animation = an; } } catch (e) {} });
     try { return fn(); } finally { restore.forEach(([p, k]) => p.classList.add(k)); }
 }
 
@@ -713,7 +714,8 @@ function buildPrintDoc(items, o) {
     const hideNotes = document.body.classList.contains('no-sym-notes');
     const small = (c, el) => {
         if (c.kind === 'tiles' || c.landscape) return false;
-        if (c.kind === 'table') { const t = el.querySelector('table'); return !!t && t.offsetWidth > 0 && t.offsetWidth <= (landscape ? 440 : 320); }
+        // two small tables share a row; the screen width of the phone says nothing about the page, so the size is judged by rows x columns
+        if (c.kind === 'table') { const t = el.querySelector('table'); if (!t) return false; const rows = t.querySelectorAll('tbody tr').length, cols = Math.max.apply(null, [...t.querySelectorAll('tr')].map(r => r.children.length).concat([1])); return rows <= 12 && rows * cols <= 40; }
         return (el.clientWidth || el.width || 0) <= 520;
     };
     const keyHtml = (c, el) => {
@@ -734,9 +736,13 @@ function buildPrintDoc(items, o) {
             if (el.tagName === 'CANVAS') {
                 const cv = document.createElement('canvas'); cv.width = el.width; cv.height = el.height;
                 const g = cv.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(el, 0, 0);
-                media = `<img class="chart" src="${cv.toDataURL('image/png')}" alt="">`;
-                if (o.values) vals = chartDataTable(el);
-            } else if (c.kind === 'table') media = '<div class="tbl">' + inlineColors(el).innerHTML + '</div>';
+                // a chart that drew nothing (for example it was created while hidden) is never printed as a blank box: its values are listed instead
+                let blank = !el.width || !el.height; try { if (!blank) { const d = el.getContext('2d').getImageData(0, 0, el.width, el.height).data; blank = true; for (let i = 3; i < d.length; i += 4 * 17) { if (d[i]) { blank = false; break; } } } } catch (e) {}
+                if (blank) { media = ''; vals = chartDataTable(el); } else {
+                    media = `<img class="chart" src="${cv.toDataURL('image/png')}" alt="">`;
+                    if (o.values) vals = chartDataTable(el);
+                }
+            } else if (c.kind === 'table') media = '<div class="tbl' + (c.landscape ? ' wide' : '') + '">' + inlineColors(el).innerHTML + '</div>';
             else media = tilesToHtml(el);
             const cls = (o.layout !== 'single' && small(c, el)) ? 'half' : 'full';
             return `<section class="blk ${cls}"><h2>${escHtml(chartTitleOf(c.title))}</h2>${media}${keyHtml(c, el)}${vals}</section>`;
@@ -751,6 +757,7 @@ function buildPrintDoc(items, o) {
         const hs = items.some(x => x.sec.id === 'heatmap') ? ((document.getElementById('adv_start') || {}).value || '') + '|' + ((document.getElementById('adv_end') || {}).value || '') : '|';
         if (hs !== '|') fl.push(['Heatmap dates', (hs.split('|')[0] || 'first data') + ' to ' + (hs.split('|')[1] || 'latest data') + ' (replace the analysis period)']);
     }
+    if (tab !== 'analytics' && tab !== 'lab' && labels[0]) fl.push(['Analysis period', labels[0]]);
     if (tab !== 'lab') fl.push(['Possible skin-flora contaminants', contamExcluded() ? 'Excluded' : 'Included (flagged only)']);
     fl.push(['Minimum isolates for a reliable result', String(minN())]);
     const dstat = (document.getElementById('dashStatus') || {}).textContent;
@@ -773,9 +780,11 @@ function buildPrintDoc(items, o) {
         .brand { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #64748b; font-weight: 700; }
         h1 { font-size: 20px; margin: 4px 0 4px; letter-spacing: -0.01em; }
         .ctx { font-size: 11px; color: #475569; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #cbd5e1; }
-        .grid { ${o.layout === 'single' ? 'display: block;' : 'display: grid; grid-template-columns: 1fr 1fr; grid-auto-flow: dense; gap: 12px 16px; align-items: start;'} }
+        .grid { display: block; text-align: center; }
         .blk { margin-bottom: 14px; text-align: center; ${o.layout === 'single' ? 'page-break-after: always; break-after: page;' : 'break-inside: avoid; page-break-inside: avoid;'} }
-        .blk.full { grid-column: 1 / -1; }
+        .blk.full { display: block; width: 100%; } .blk.half { display: inline-block; width: 49%; margin-left: .4%; margin-right: .4%; vertical-align: top; }
+        .tbl table.ya-cum { table-layout: fixed; width: 100%; } .tbl table.ya-cum th:first-child, .tbl table.ya-cum td:first-child { width: 74px; text-align: left; } .tbl table.ya-cum td, .tbl table.ya-cum th { padding: 3px 0; overflow: hidden; } .tbl table.ya-cum * { font-size: 7px !important; }
+        .tbl.wide { display: block; } .tbl.wide table { width: 100%; } .tbl.wide table.ya-cum { width: 100%; } .tbl.wide td, .tbl.wide th { word-break: break-word; padding: 2px 1px; } .tbl.wide table:not(.ya-cum) * { font-size: 7px !important; }
         .head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; } .head img { height: 34px; width: auto; }
         .flt { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; font-size: 10.5px; margin: 0 0 14px; padding: 8px 10px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; } .flt div { display: flex; gap: 6px; } .flt span { color: #64748b; } .flt span:after { content: ':'; } .flt b { color: #0f172a; font-weight: 600; }
         .ck { list-style: none; margin: 6px auto 0; padding: 0; font-size: 9px; color: #475569; text-align: left; display: inline-block; max-width: 100%; } .ck li { margin: 0 0 2px; } .cn, .lg { font-size: 9px; color: #475569; text-align: left; margin-top: 6px; } .cn ul { margin: 0; padding-left: 14px; } .lg span { display: inline-block; padding: 1px 6px; margin: 0 4px 2px 0; border-radius: 3px; font-weight: 600; } .cn .note-list { margin: 0; }
@@ -784,11 +793,11 @@ function buildPrintDoc(items, o) {
         .chart { display: block; max-width: 100%; ${o.layout === 'single' ? 'max-height: 620px;' : 'max-height: 300px;'} margin: 0 auto; object-fit: contain; }
         .tbl { display: flex; justify-content: center; } .tbl table, table.vals { border-collapse: collapse; font-size: 9px; margin: 6px auto 0; } .tbl td, .tbl th, .vals td, .vals th { border: 1px solid #cbd5e1; padding: 3px 6px; text-align: center; } .vals th:first-child { text-align: left; }
         .tiles { display: flex; flex-wrap: wrap; gap: 8px; } .tile { border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; min-width: 110px; } .tl { font-size: 9px; color: #64748b; font-weight: 600; } .tv { font-size: 15px; font-weight: 700; } .tn { font-size: 10px; color: #475569; margin: 6px 0 0; }
-        h4.sect { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin: 18px 0 6px; }
+        h4.sect { break-after: avoid; page-break-after: avoid; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin: 18px 0 6px; }
         .note { font-size: 10.5px; line-height: 1.55; color: #334155; margin-bottom: 8px; break-inside: avoid; } .note h3 { font-size: 11px; margin: 0 0 2px; color: #0f172a; } .note p { margin: 0 0 4px; } .note ul { margin: 2px 0 4px 16px; padding: 0; }
         ol { margin: 0; padding-left: 16px; font-size: 9.5px; line-height: 1.5; color: #475569; } li { margin-bottom: 3px; word-break: break-word; }
         .foot { margin-top: 16px; padding-top: 8px; border-top: 1px solid #cbd5e1; font-size: 9px; color: #94a3b8; }
-        .secname { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #0f766e; margin: 16px 0 6px; }
+        .secname { break-after: avoid; page-break-after: avoid; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #0f766e; margin: 16px 0 6px; }
         .note h5 { font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: #0f766e; margin: 6px 0 2px; }
         @media screen { body { padding: 14px; max-width: 860px; margin: 0 auto; background: #fff; } .tbl { overflow-x: auto; } }
     </style></head><body>
