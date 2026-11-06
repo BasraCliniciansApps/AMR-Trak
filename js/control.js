@@ -58,7 +58,7 @@ function normalise(s) {
         dash_show_scope: s.dash_show_scope !== false,
         dash_default_scope: ['all', 'icu', 'nonicuip', 'outpatient', 'nonicu'].includes(s.dash_default_scope) ? (s.dash_default_scope === 'nonicu' ? 'nonicuip' : s.dash_default_scope) : 'all',
         dash_default_period: ['month', 'quarter', 'year', 'all'].includes(s.dash_default_period) ? s.dash_default_period : 'month',
-        dash_icu_wards: Array.isArray(s.dash_icu_wards) && s.dash_icu_wards.length ? s.dash_icu_wards.slice() : ['ICU', 'CCU', 'Pediatric ICU', 'Neonatal ICU'],
+        dash_icu_wards: Array.isArray(s.dash_icu_wards) && s.dash_icu_wards.length ? s.dash_icu_wards.slice() : ['ICU'],
         profile1_abx: s.profile1_abx || 'Meropenem',
         profile2_abx: s.profile2_abx || 'Ceftriaxone',
         watchlist_bug: s.watchlist_bug || ''

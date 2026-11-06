@@ -30,7 +30,7 @@ function dashCalendarYear(records) {
 function dashFlag(key) { return getDashSettings()[key] !== false; }
 function icuWardList() {
     const w = getDashSettings().dash_icu_wards;
-    return (Array.isArray(w) && w.length) ? w : ['ICU', 'CCU', 'Pediatric ICU', 'Neonatal ICU'];
+    return (Array.isArray(w) && w.length) ? w : ['ICU'];
 }
 
 // ---------- unit scope: All units / ICU only / Non-ICU ----------
