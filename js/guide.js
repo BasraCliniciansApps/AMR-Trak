@@ -269,7 +269,7 @@
         const org = (n, d) => `<div class="gd-org"><div class="gd-org-n">${n}</div><div class="gd-org-d">${d}</div></div>`;
         return `
             <div class="gd-about">
-                <div class="gd-logo"><img src="icon.png" alt="AMR Tracker"></div>
+                <div class="gd-logo"><img src="img/logo-splash.png?v=1" alt="AMR Tracker"></div>
                 <h3>AMR Tracker Dashboard</h3>
                 <p class="gd-sub">Antimicrobial Resistance Surveillance System</p>
                 <div class="gd-card">
