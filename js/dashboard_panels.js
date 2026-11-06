@@ -524,13 +524,13 @@ function monthSection(p, label) {
 }
 const SECTIONS = {
     prevalence: { id: 'prevalence', title: 'Clinical Prevalence & AST Profile', infos: [['Organism prevalence', 'sec_prevalence'], ['AST profile of the selected organism', 'abx_guidedAmrContainer']],
-        charts: [{ title: 'Organism Prevalence', el: '#chartGuidedPie', hint: 'Choose a specimen in this section first.' }, { title: 'AST Profile of the selected organism', el: '#chartGuidedAMR', hint: 'Choose a specimen in this section first.' }] },
+        charts: [{ title: 'Organism Prevalence', el: '#chartGuidedPie', hint: 'Choose a specimen in this section first.' }, { title: 'AST Profile of the selected organism', el: '#chartGuidedAMR', key: 'guided', hint: 'Choose a specimen in this section first.' }] },
     patho: { id: 'patho', title: 'Bacteria/Fungi Susceptibility Profile', infos: [['How to read this chart', 'sec_patho'], ['Sample size and AWaRe', 'abx_pathoAmrContainer']],
-        charts: [{ title: 'Bacteria/Fungi Susceptibility Profile', el: '#chartPathoAMR', hint: 'Choose a bacteria in this section first.' }] },
+        charts: [{ title: 'Bacteria/Fungi Susceptibility Profile', el: '#chartPathoAMR', key: 'patho', hint: 'Choose a bacteria in this section first.' }] },
     abx: { id: 'abx', title: 'Antimicrobial In Vitro Activity Profile', infos: [['How to read this chart', 'sec_abx']],
-        charts: [{ title: 'Antimicrobial In Vitro Activity Profile', el: '#chartAbxAMR' }] },
+        charts: [{ title: 'Antimicrobial In Vitro Activity Profile', el: '#chartAbxAMR', key: 'abx' }] },
     heatmap: { id: 'heatmap', title: 'Advanced Cross-Search (Heatmap)', infos: [['How to read the heatmap', 'sec_heatmap']],
-        charts: [{ title: 'Advanced Heatmap', el: '#heatmapWrapper', kind: 'table', landscape: true, hint: 'Run the search in this section first.' }] },
+        charts: [{ title: 'Advanced Heatmap', el: '#heatmapWrapper', kind: 'table', landscape: true, noteSel: '#heatmapNote', legendSel: '#heatmapLegend', hint: 'Run the search in this section first.' }] },
     mdr: { id: 'mdr', title: 'MDR / XDR / PDR Analysis', labelSel: '#mdr_range_label',
         infos: [['Definitions and method', 'mdr_panel'], ['Summary figures', 'mdr_tiles'], ['Monthly trend', 'mdr_trend'], ['Distribution by ward', 'mdr_wards'], ['By organism group', 'mdr_group']],
         charts: [{ title: 'Summary', el: '#mdr_tiles', kind: 'tiles' }, { title: 'Resistance classification', el: '#chart_mdr_panel_pie' }, { title: 'Monthly trend (% of classified isolates)', el: '#chart_mdr_panel_trend' }, { title: 'All wards', el: '#chart_mdr_panel_wards' }, { title: 'By organism group', el: '#mdr_group_table', kind: 'table' }] },
@@ -598,7 +598,7 @@ function tilesToHtml(el) {
     return `<div class="tiles">${items}</div>${notes}`;
 }
 
-const TAB_SECTIONS = { analytics: ['prevalence', 'patho', 'abx', 'heatmap', 'mdr'], last_year: ['year'], last_month: ['month'], last_quarter: ['quarter'], lab: ['lab'] };
+const TAB_SECTIONS = { analytics: ['prevalence', 'patho', 'abx', 'heatmap'], last_year: ['year'], last_month: ['month'], last_quarter: ['quarter'], mdr: ['mdr'], lab: ['lab'] };
 
 function printGroups(withWaiting) {
     const tab = window._currentTab || 'analytics';
@@ -672,27 +672,72 @@ function withOpened(items, fn) {
     try { return fn(); } finally { restore.forEach(([p, k]) => p.classList.add(k)); }
 }
 
+// The print document has no Tailwind: copy the colours the screen shows into inline styles
+function inlineColors(srcRoot) {
+    const clone = srcRoot.cloneNode(true);
+    const a = [srcRoot, ...srcRoot.querySelectorAll('*')], b = [clone, ...clone.querySelectorAll('*')];
+    a.forEach((n, i) => {
+        if (!b[i] || !b[i].style) return;
+        const cs = getComputedStyle(n);
+        if (cs.backgroundColor && cs.backgroundColor !== 'rgba(0, 0, 0, 0)') b[i].style.backgroundColor = cs.backgroundColor;
+        b[i].style.color = cs.color; b[i].style.fontSize = cs.fontSize;
+        if (cs.fontWeight && cs.fontWeight !== '400') b[i].style.fontWeight = cs.fontWeight;
+        if (/^(TD|TH)$/.test(n.tagName)) b[i].style.textAlign = cs.textAlign;
+    });
+    return clone;
+}
 function buildPrintDoc(items, o) {
     const tabTitle = ($('#headerTitle').text() || 'AMR Trak').trim();
     const secs = []; items.forEach(x => { if (!secs.includes(x.sec)) secs.push(x.sec); });
-    const labels = secs.map(s => s.labelSel ? (document.querySelector(s.labelSel) || {}).textContent : '').filter(Boolean);
-    const context = [secs.length === 1 ? sectionTitle(secs[0]) : '', labels[0] || '', 'Unit scope: ' + scopeLabel()].filter(Boolean).join('  |  ');
+    const labels = secs.map(s => s.labelSel ? ((document.querySelector(s.labelSel) || {}).textContent || '').replace(' - ' + scopeLabel(), '') : '').filter(Boolean);
+    const context = [secs.length === 1 ? sectionTitle(secs[0]) : '', labels[0] || ''].filter(Boolean).join('  |  ');
     const landscape = o.orient === 'landscape' || (o.orient === 'auto' && items.some(x => x.c.landscape));
+    const hideNotes = document.body.classList.contains('no-sym-notes');
+    const small = (c, el) => {
+        if (c.kind === 'tiles' || c.landscape) return false;
+        if (c.kind === 'table') { const t = el.querySelector('table'); return !!t && t.offsetWidth > 0 && t.offsetWidth <= (landscape ? 440 : 320); }
+        return (el.clientWidth || el.width || 0) <= 520;
+    };
+    const keyHtml = (c, el) => {
+        if (!o.notes || hideNotes) return '';
+        let h = '';
+        if (c.key) { const ul = document.getElementById('keylist_' + c.key); if (ul && ul.innerHTML.trim()) h += '<ul class="ck">' + ul.innerHTML + '</ul>'; }
+        const nid = c.noteSel ? c.noteSel.slice(1) : (el.id && /_table$/.test(el.id) ? el.id.replace(/_table$/, '_note') : '');
+        const nel = nid ? document.getElementById(nid) : null;
+        if (nel && nel.innerHTML.trim()) h += '<div class="cn">' + nel.innerHTML + '</div>';
+        if (c.legendSel) { const lg = document.querySelector(c.legendSel); if (lg && lg.textContent.trim()) h += '<div class="lg">' + inlineColors(lg).innerHTML + '</div>'; }
+        return h;
+    };
     const blocks = secs.map(sec => {
         const mine = items.filter(x => x.sec === sec);
         const head = secs.length > 1 ? `<h3 class="secname">${escHtml(sectionTitle(sec))}</h3>` : '';
-        return head + mine.map(({ c, el }) => {
+        return head + '<div class="grid">' + mine.map(({ c, el }) => {
             let media = '', vals = '';
             if (el.tagName === 'CANVAS') {
                 const cv = document.createElement('canvas'); cv.width = el.width; cv.height = el.height;
                 const g = cv.getContext('2d'); g.fillStyle = '#ffffff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(el, 0, 0);
                 media = `<img class="chart" src="${cv.toDataURL('image/png')}" alt="">`;
                 if (o.values) vals = chartDataTable(el);
-            } else if (c.kind === 'table') media = '<div class="tbl">' + el.innerHTML + '</div>';
+            } else if (c.kind === 'table') media = '<div class="tbl">' + inlineColors(el).innerHTML + '</div>';
             else media = tilesToHtml(el);
-            return `<section class="blk"><h2>${escHtml(chartTitleOf(c.title))}</h2>${media}${vals}</section>`;
-        }).join('');
+            const cls = (o.layout !== 'single' && small(c, el)) ? 'half' : 'full';
+            return `<section class="blk ${cls}"><h2>${escHtml(chartTitleOf(c.title))}</h2>${media}${keyHtml(c, el)}${vals}</section>`;
+        }).join('') + '</div>';
     }).join('');
+    // filters in force, so the printed page states exactly what it shows
+    const tab = window._currentTab || 'analytics', fl = [];
+    fl.push(['Unit', scopeLabel()]);
+    if (tab === 'analytics') {
+        fl.push(['Analysis period', periodText()]);
+        const hs = items.some(x => x.sec.id === 'heatmap') ? ((document.getElementById('adv_start') || {}).value || '') + '|' + ((document.getElementById('adv_end') || {}).value || '') : '|';
+        if (hs !== '|') fl.push(['Heatmap dates', (hs.split('|')[0] || 'first data') + ' to ' + (hs.split('|')[1] || 'latest data') + ' (replace the analysis period)']);
+    }
+    if (tab !== 'lab') fl.push(['Possible skin-flora contaminants', contamExcluded() ? 'Excluded' : 'Included (flagged only)']);
+    fl.push(['Minimum isolates for a reliable result', String(minN())]);
+    const dstat = (document.getElementById('dashStatus') || {}).textContent;
+    if (dstat) fl.push(['Data', dstat.trim()]);
+    const filtersHtml = '<div class="flt">' + fl.map(([k, v]) => `<div><span>${escHtml(k)}</span><b>${escHtml(v)}</b></div>`).join('') + '</div>';
+    let logo = ''; try { const im = document.querySelector('#brand img'); if (im && im.naturalWidth) { const lc = document.createElement('canvas'); lc.width = im.naturalWidth; lc.height = im.naturalHeight; lc.getContext('2d').drawImage(im, 0, 0); logo = lc.toDataURL('image/png'); } } catch (e) {}
     const used = [];
     const notes = secs.map(sec => sec.infos.map(([t, k]) => {
         const inf = INFO_STORE[k]; if (!inf) return '';
@@ -709,11 +754,16 @@ function buildPrintDoc(items, o) {
         .brand { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #64748b; font-weight: 700; }
         h1 { font-size: 20px; margin: 4px 0 4px; letter-spacing: -0.01em; }
         .ctx { font-size: 11px; color: #475569; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #cbd5e1; }
-        .blk { margin-bottom: 14px; ${o.layout === 'single' ? 'page-break-after: always; break-after: page;' : 'break-inside: avoid; page-break-inside: avoid;'} }
+        .grid { ${o.layout === 'single' ? 'display: block;' : 'display: grid; grid-template-columns: 1fr 1fr; grid-auto-flow: dense; gap: 12px 16px; align-items: start;'} }
+        .blk { margin-bottom: 14px; text-align: center; ${o.layout === 'single' ? 'page-break-after: always; break-after: page;' : 'break-inside: avoid; page-break-inside: avoid;'} }
+        .blk.full { grid-column: 1 / -1; }
+        .head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; } .head img { height: 34px; width: auto; }
+        .flt { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; font-size: 10.5px; margin: 0 0 14px; padding: 8px 10px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; } .flt div { display: flex; gap: 6px; } .flt span { color: #64748b; } .flt span:after { content: ':'; } .flt b { color: #0f172a; font-weight: 600; }
+        .ck { list-style: none; margin: 6px auto 0; padding: 0; font-size: 9px; color: #475569; text-align: left; display: inline-block; max-width: 100%; } .ck li { margin: 0 0 2px; } .cn, .lg { font-size: 9px; color: #475569; text-align: left; margin-top: 6px; } .cn ul { margin: 0; padding-left: 14px; } .lg span { display: inline-block; padding: 1px 6px; margin: 0 4px 2px 0; border-radius: 3px; font-weight: 600; } .cn .note-list { margin: 0; }
         .blk:last-of-type { page-break-after: auto; break-after: auto; }
-        h2 { font-size: 13px; margin: 0 0 6px; color: #0f172a; }
+        h2 { font-size: 13px; margin: 0 0 6px; color: #0f172a; text-align: center; }
         .chart { display: block; max-width: 100%; ${o.layout === 'single' ? 'max-height: 620px;' : 'max-height: 300px;'} margin: 0 auto; object-fit: contain; }
-        .tbl table, table.vals { border-collapse: collapse; font-size: 9px; margin-top: 6px; } .tbl td, .tbl th, .vals td, .vals th { border: 1px solid #cbd5e1; padding: 3px 6px; text-align: center; } .vals th:first-child { text-align: left; }
+        .tbl { display: flex; justify-content: center; } .tbl table, table.vals { border-collapse: collapse; font-size: 9px; margin: 6px auto 0; } .tbl td, .tbl th, .vals td, .vals th { border: 1px solid #cbd5e1; padding: 3px 6px; text-align: center; } .vals th:first-child { text-align: left; }
         .tiles { display: flex; flex-wrap: wrap; gap: 8px; } .tile { border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; min-width: 110px; } .tl { font-size: 9px; color: #64748b; font-weight: 600; } .tv { font-size: 15px; font-weight: 700; } .tn { font-size: 10px; color: #475569; margin: 6px 0 0; }
         h4.sect { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin: 18px 0 6px; }
         .note { font-size: 10.5px; line-height: 1.55; color: #334155; margin-bottom: 8px; break-inside: avoid; } .note h3 { font-size: 11px; margin: 0 0 2px; color: #0f172a; } .note p { margin: 0 0 4px; } .note ul { margin: 2px 0 4px 16px; padding: 0; }
@@ -723,9 +773,9 @@ function buildPrintDoc(items, o) {
         .note h5 { font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: #0f766e; margin: 6px 0 2px; }
         @media screen { body { padding: 14px; max-width: 860px; margin: 0 auto; background: #fff; } .tbl { overflow-x: auto; } }
     </style></head><body>
-        <div class="brand">${escHtml(o.title || 'AMR Trak')} &middot; Antimicrobial Resistance Surveillance</div>
-        <h1>${escHtml(tabTitle)}</h1>
+        <div class="head">${logo ? `<img src="${logo}" alt="">` : ''}<div><div class="brand">${escHtml(o.title || 'AMR Trak')} &middot; Antimicrobial Resistance Surveillance</div><h1>${escHtml(tabTitle)}</h1></div></div>
         <div class="ctx">${escHtml(context)}</div>
+        ${filtersHtml}
         ${blocks}
         ${o.notes && notes ? `<h4 class="sect">Notes and definitions</h4>${notes}` : ''}
         ${o.refs && refs ? `<h4 class="sect">References</h4><ol>${refs}</ol>` : ''}

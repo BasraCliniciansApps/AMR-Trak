@@ -59,7 +59,7 @@
                 '<b>Heatmap:</b> choose the months, specimen, several organisms and several antibiotics together. Leave organisms or antibiotics blank to include all.']) +
             H('Printing') + L([
                 'Tap the <b>printer</b> at the top. A window lists every chart and table on the open tab; tick what you want.',
-                'Choose paper, orientation and layout, and whether to include notes, references and data tables. You can add a title such as the hospital or department name.',
+                'Choose paper, orientation and layout, and whether to include notes, references and data tables. You can add a title such as the hospital or department name. The printed page starts with a box that lists the filters in force (unit, period, contaminants, minimum isolates, data date). Charts and tables are centred, small ones are placed side by side, and the chart key lists only the symbols that appear.',
                 'Tap <b>Preview</b> to see the exact document. If it is right, tap <b>Print / Save PDF</b>; otherwise go back and change the options.',
                 'To keep a file, choose <b>Save as PDF</b> in the phone\'s print screen.']) +
             H('Connection') + P('The dashboard loads the latest published data when it opens. If the connection fails it shows the last data saved on the phone, and says so.')],
