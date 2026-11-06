@@ -750,7 +750,8 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
     const newRecords = [];
     // Re-importing the same export must not create duplicates: same patient id + month + organism + specimen
     const dupKey = (r) => [String(r['Patient ID'] || '').toLowerCase(), r['Date'], String(r['Selective organism'] || '').toLowerCase(), String(r['Sample'] || '').toLowerCase()].join('|');
-    const existingKeys = new Set(records.filter(r => r['Patient ID'] && r['Patient ID'] !== 'Unknown').map(dupKey));
+    // Manually entered records are not treated as duplicates: when the laboratory file arrives it replaces them (see finalize)
+    const existingKeys = new Set(records.filter(r => r['Patient ID'] && r['Patient ID'] !== 'Unknown' && r['Entry'] !== 'manual').map(dupKey));
 
     const wardMap = {
         'ped': 'Pediatrics', 'ped in': 'Pediatrics',
@@ -921,6 +922,18 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
 
     const fileNames = Array.from(event.target.files || []).map(f => f.name);
     const finalize = () => {
+        // Laboratory file replaces ALL manual entries of the months it covers
+        try {
+            const fileMonths = new Set(Object.keys((labAgg && labAgg.months) || {}));
+            newRecords.forEach(r => { if (r['Date']) fileMonths.add(String(r['Date']).slice(0, 7)); });
+            let removed = 0;
+            for (let i = records.length - 1; i >= 0; i--) {
+                const r = records[i];
+                if (r['Entry'] === 'manual' && fileMonths.has(String(r['Date'] || '').slice(0, 7))) { records.splice(i, 1); removed++; }
+            }
+            report.manualReplaced = removed;
+            report.manualMonths = Array.from(fileMonths).filter(m => m).sort();
+        } catch (e) { console.warn('Manual replacement failed', e); }
         localStorage.setItem('amr_records', JSON.stringify(records));
         try {
             const mergedLab = mergeLabQuality(JSON.parse(localStorage.getItem('amr_lab_quality') || '{}'), labAgg);
@@ -1018,6 +1031,7 @@ function buildImportReport(report, audit, newRecords, skippedCount) {
     if (report.labMonths) auto.push(`Culture counts (positive / no growth / contaminated) updated for ${report.labMonths} month(s); shown in the dashboard Culture Overview tab`);
     if (report.labKept && report.labKept.length) auto.push(`Culture Overview kept the existing counts for ${report.labKept.join(', ')} (the new file held fewer cultures for those months)`);
     if (report.noSri) auto.push(`Identified organisms without susceptibility results not imported: ${report.noSri}`);
+    if (report.manualReplaced) auto.push(`Manual entries replaced by the laboratory file (same month): ${report.manualReplaced}`);
     if (report.duplicates) auto.push(`Already in the database, not added again: ${report.duplicates}`);
     if (report.strepPenDisk) auto.push(`Beta-haemolytic streptococci: penicillin/ampicillin R/I by disk ignored (no valid CLSI disk breakpoints): ${report.strepPenDisk}`);
     if (report.vancDisk) auto.push(`Staphylococcus vancomycin by disk ignored (CLSI: MIC only): ${report.vancDisk}`);
@@ -1974,8 +1988,11 @@ $('#entryForm').submit(function(e) {
 
 
 if (editIndex > -1) {
+        // keep the origin of the record: manual entries stay marked, laboratory imports stay unmarked
+        if (records[editIndex] && records[editIndex]['Entry']) record['Entry'] = records[editIndex]['Entry'];
         records[editIndex] = record; 
     } else {
+        record['Entry'] = 'manual';   // replaced automatically when the laboratory file for the same month is imported
         records.push(record); 
     }
 
