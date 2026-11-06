@@ -102,9 +102,10 @@
                 'When a subset is analysed (a specimen type such as blood or urine), the subset is selected <b>before</b> the first isolate is chosen, as required [R2, Section 11, p. 28].',
                 'Unit comparisons (ICU, non-ICU, inpatient, outpatient) choose the first isolate across all wards and then split by unit, so that a patient is counted once. This is a design decision of the application; M39 describes stratification by location "at the time the infection is suspected or diagnosed" [R2, Section 11.1, p. 28].']) +
             H('4. Periods offered') + T(['Period', 'Definition', 'Basis'], [
-                ['Last 12 Months (default)', 'The 12 months ending at the report month. Moves forward when the report month changes.', '[R2] Sections 6.3 and 6.4: analysis at least annually, analysis period "eg, one year". A fixed calendar year is not required.'],
-                ['Calendar year (Last Year tab)', 'The last complete calendar year before the report month.', 'Accepted analysis period; easier to compare between reports. Application choice.'],
-                ['Last 3 Months and Last Month', 'The 3 months, or the single month, ending at the report month.', '[R2] Section 6.3, p. 10: more frequent analysis is allowed but is "complicated by seasonal variations in resistance rates and imprecise measures due to small numbers of isolates". These periods are for follow-up and are labelled as indicators.'],
+                ['Last 12 Months (default)', 'The 12 months ending at the latest month with data. Moves forward when newer data are loaded.', '[R2] Sections 6.3 and 6.4: analysis at least annually, analysis period "eg, one year". A fixed calendar year is not required.'],
+                ['Calendar year', 'The last complete calendar year before the latest month with data (Last Year tab, chosen in Settings), or a calendar year chosen in Settings (Analytics tab).', 'Accepted analysis period; easier to compare between reports. Application choice.'],
+                ['Last 3 Months and Last Month', 'The 3 months, or the single month, ending at the latest month with data.', '[R2] Section 6.3, p. 10: more frequent analysis is allowed but is "complicated by seasonal variations in resistance rates and imprecise measures due to small numbers of isolates". These periods are for follow-up and are labelled as indicators.'],
+                ['Specific period (Analytics tab, Settings; Heatmap From/To)', 'Any start and end month chosen by the user.', 'Application choice. The period is written under each chart.'],
                 ['All Times', 'Only calendar years in which every one of the 12 months has data. Years with a missing month are left out, and the years left out are named on the screen.', 'An incomplete year over-represents some seasons and does not meet the one-year analysis period of [R2]. Application policy.']]) +
             H('5. The report month') + L([
                 'All periods end at one month: the latest month with data (automatic, not set by the user).',
@@ -112,7 +113,7 @@
                 'A period in which any month has no data at all is flagged as incomplete.']) +
             H('6. Possible contaminants') + L([
                 'A blood isolate of a skin-flora organism (coagulase-negative staphylococci, <i>Corynebacterium</i>, <i>Micrococcus</i>, <i>Bacillus</i> other than <i>B. anthracis</i>, <i>Cutibacterium</i>, <i>Propionibacterium</i>, viridans streptococci) is flagged as a <b>possible</b> contaminant. A single positive set of these organisms is frequently a contaminant, but the decision requires clinical information.',
-                'The record is flagged, not deleted. The cumulative antibiogram has a switch to exclude them (default on). The number excluded is shown.'])],
+                'The record is flagged, not deleted. One switch in Settings (gear button) excludes them from every analysis on every tab; it is off by default, and the default for all users is set in the Control app. The number excluded is shown.'])],
 
         // ------------------------------------------------------------------ 3
         ['rv_stats', 'For reviewer: percentages, minimum numbers and confidence intervals', () =>
@@ -125,7 +126,7 @@
             H('2. Minimum numbers') + L([
                 '<b>Species:</b> %S is reported only for species with 30 or more isolates in the period. If fewer, a note states the lower statistical validity [R2, Sections 6.4, 6.7.2 and 7.2.2, pp. 10, 17, 22].',
                 '<b>Agent within a species:</b> the cumulative antibiogram shows a cell only when 30 or more isolates were tested for that agent. This is stricter than the species rule and is an application policy ' + A + '. It prevents a percentage based on a small number from being read as reliable.',
-                '<b>Charts:</b> bars and points based on fewer than 30 isolates are marked (grey bar, name ending with an asterisk, hollow point). The option "Hide n &lt; 30" removes them from the heatmap (default off).',
+                '<b>Charts:</b> bars and points based on fewer than 30 isolates are marked (grey bar, name ending with an asterisk, hollow point). The tick box "Hide n &lt; 30" in each Analytics chart removes them from that chart (default off). The minimum of 30 is fixed and cannot be changed by users.',
                 '<b>Subsets:</b> a subset is analysed only when it has 30 or more isolates [R2, Section 11, p. 28].']) +
             H('3. Confidence interval') + L([
                 'The 95% interval is the <b>Wilson score interval</b> without continuity correction: with p = r/n and z = 1.96, centre = (p + z&sup2;/2n) / (1 + z&sup2;/n) and half-width = z &radic;(p(1-p)/n + z&sup2;/4n&sup2;) / (1 + z&sup2;/n).',
@@ -136,7 +137,7 @@
                 'A difference is called significant only when <b>both groups have 30 or more tested isolates</b> and |z| &ge; 1.96 (two-sided p &lt; 0.05). M39 notes that the chi-square test does not work well when the number of isolates is small or the proportion is close to 0% or 100%, where an exact test is appropriate [R2, p. 63]; the minimum of 30 is the application\'s safeguard, and an exact test is not implemented.',
                 '<b>No adjustment is made for multiple comparisons.</b> M39 states that this is common practice and advises a note to that effect [R2, Appendix H3, p. 63]. A significant difference should be treated as a signal to investigate, not as proof of change; M39 also reminds the analyst to consider changes in patient population, sampling practice and laboratory testing protocols [R2, Section 10, p. 27].']) +
             H('5. Colour bands') + L([
-                'Cumulative antibiogram: green 80% or more; amber 50-79%; red below 50%. Heatmap: five bands of 20 percentage points.',
+                'Cumulative antibiogram: green 80% or more; amber 50-79%; red below 50%. Heatmap and the Watchlist chart use the same three bands, written as percent resistant: green up to 20%, amber 21-50%, red above 50% (the same as 80% and 50% susceptible).',
                 'These bands are a <b>display convention</b> ' + A + '. They are not CLSI or WHO interpretive categories. WHO does not provide a reference for these colours, and neither M39 nor M100 defines them. The bands are not a treatment guide and not an indicator for therapy.',
                 '<b>Rationale for the antibiogram bands.</b> The 80% threshold is the level that clinicians in practice accept for empirical therapy: a survey of infectious diseases providers (Hasegawa et al., 2023, conference abstract, Open Forum Infectious Diseases, 10 Suppl 2) reported median acceptance thresholds between 74% and 86%, higher for severe infection (86.0% for ICU gram-negative bloodstream infection; 77.9% for non-ICU). In one worked example, agents active against 80-85% of pooled isolates were judged unacceptable for routine empirical use, while 90-97% in a subgroup were judged appropriate (Pogue, Contagion Live, 2018; a practical review without a formal derivation).',
                 '<b>Limits.</b> The survey does not support a single fixed threshold for severe infection: its ICU bloodstream median (86%) lies between 80 and 90. For severe infection the application therefore relies on the local policy stated in the note under the table, not on a separate colour. No CLSI or WHO document was found that fixes these numbers; the reviewer should confirm the thresholds with the Antibiotic Committee.'])],
@@ -259,7 +260,13 @@
                 ['Any other ward', 'Inpatient']]) +
             P('This classification is an application policy ' + A + '. M39 lists "outpatient clinic" and "nursing home" among the possible locations [R2, Section 11.1, p. 28] without defining them.') +
             H('3. Specimen strata') + L([
-                'Blood and urine analyses include only agents relevant to the infection, as recommended for specimen-specific reports [R2, Section 11.1, p. 29]; urine-only agents carry the &sect; flag when non-urine results are present.'])],
+                'Blood and urine analyses include only agents relevant to the infection, as recommended for specimen-specific reports [R2, Section 11.1, p. 29]; urine-only agents carry the &sect; flag when non-urine results are present.']) +
+            H('4. ICU wards') + L([
+                'M39 mentions "ICU" and "MICU" only [R2, Section 11.1]. Neonatal, paediatric and coronary intensive care units are not mentioned. By default only wards recorded as ICU count as ICU; the surveillance team can add other wards in the Control app. This is a decision of the application ' + A + '.']) +
+            H('5. Settings and defaults') + L([
+                'The MDR tab and every other tab follow the unit filter. The MDR tab keeps its own period picker (month, quarter, year, range, all).',
+                'Each user can change five settings on their own device (gear button): exclusion of possible contaminants (default off), default unit filter, Analytics period (default last 12 months), Last Year period (12 months or calendar year) and the explanation notes. Nothing else can be changed by users; in particular the minimum of 30 isolates is fixed.',
+                'The defaults for all users are set by the surveillance team in the Control app. A choice made on a device is kept only while it differs from the default, so a later change of the default reaches every user who did not choose otherwise.'])],
 
         // ------------------------------------------------------------------ 10
         ['rv_aware', 'For reviewer: WHO AWaRe classification', () =>

@@ -12,8 +12,8 @@ const INFO_OVERRIDE = (function () {
 
     // ---------------------------------------------------------------- shared
     add('scope', 'Unit scope',
-        H('What it does') + P('The switch filters every chart and table on the dashboard by the ward where the specimen was collected.') +
-        H('The three options') + L([
+        H('What it does') + P('The buttons at the top of the page filter every chart and table on the dashboard by the ward where the specimen was collected.') +
+        H('The four options') + L([
             '<b>ALL:</b> every ward.',
             '<b>ICU:</b> only the wards counted as intensive care units. The list is set on the Dashboard Control page.',
             '<b>Non-ICU IP:</b> inpatient wards that are not ICU. IP means inpatient; emergency is not inpatient.',
@@ -23,7 +23,7 @@ const INFO_OVERRIDE = (function () {
 
     // ---------------------------------------------------------------- analytics
     add('sec_prevalence', 'Organism prevalence',
-        H('What it shows') + P('The share of first isolates contributed by each organism, for the selected period, specimen and ward filter.') +
+        H('What it shows') + P('The share of first isolates contributed by each organism, for the selected period, specimen and unit filter.') +
         H('How to read it') + L(['Each slice is one organism; a larger slice means a more frequent organism.', 'Tap a slice to open that organism\'s susceptibility profile below.']) +
         H('Method') + L(['One isolate per patient and organism within the selected period (CLSI M39).', 'Screening cultures are excluded.']));
     add('sec_patho', 'Susceptibility profile of one organism',
@@ -36,7 +36,7 @@ const INFO_OVERRIDE = (function () {
         H('Method') + L(['Interpretation follows CLSI M100.', 'One isolate per patient and organism within the period.']));
     add('sec_heatmap', 'Organism by antibiotic heatmap',
         H('What it shows') + P('One table showing many organisms and antibiotics together. Each cell is the percentage of the chosen category (S, I or R) for one organism and one antibiotic.') +
-        H('How to read it') + L(['Green is the favourable end (a low %R or %NS, or a high %S) and red the unfavourable end. The colour key under the table shows the ranges.', 'A cell marked with * is based on fewer than 30 tested isolates.']) +
+        H('How to read it') + L(['The colours follow the same three bands as the antibiogram: green = 80% or more susceptible (20% or less resistant), amber = 50-79% susceptible, red = below 50% susceptible. They are a display convention, not a CLSI or WHO category and not a treatment guide.', 'The colour key under the table shows the ranges for the metric you chose.', 'A cell marked with * is based on fewer than 30 tested isolates.']) +
         H('Method') + L(['Isolates are de-duplicated (CLSI M39) and interpreted with CLSI M100.']));
     add('sec_watch', 'Threat watchlist',
         H('What it shows') + P('The occurrence and resistance pattern of one pathogen chosen for special monitoring (set on the Dashboard Control page), among the first isolates of the selected period.') +

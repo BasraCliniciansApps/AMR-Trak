@@ -4,7 +4,7 @@
 // Loaded after dashboard.js (shares its globals).
 // =====================================================================
 
-setInfo('scope', 'Unit scope', `<p>The switch filters every chart on the dashboard by the ward where the specimen was collected.</p>
+setInfo('scope', 'Unit scope', `<p>The buttons at the top filter every chart on the dashboard by the ward where the specimen was collected.</p>
 <ul><li><b>All units:</b> every ward, including outpatients.</li><li><b>ICU:</b> only the wards counted as intensive care units. The list is set in the data-entry app; neonatal and paediatric ICUs are included only if they are selected there.</li><li><b>Non-ICU:</b> all other wards, including outpatients and neonatal units.</li></ul>
 <p><b>Why separate ICU?</b> Antimicrobial exposure, invasive device use and patient risk differ between intensive care and other wards, so pooled results can hide ICU-specific resistance. CLSI M39 supports stratifying cumulative susceptibility data by patient location.</p>
 <p>First-isolate de-duplication is applied within the selected scope.</p>`);
@@ -502,7 +502,7 @@ const ICON_PRINTER = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
 const ICON_INFO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
 
 // Static explanations for charts that have no dynamic note
-setInfo('sec_prevalence', 'Organism prevalence', '<p>Share of first isolates by organism for the selected period, specimen and ward filter. Isolates are de-duplicated (CLSI M39: first isolate per patient and organism within the selected period) and screening cultures are excluded. Select a slice to open that organism\'s susceptibility profile.</p>');
+setInfo('sec_prevalence', 'Organism prevalence', '<p>Share of first isolates by organism for the selected period, specimen and unit filter. Isolates are de-duplicated (CLSI M39: first isolate per patient and organism within the selected period) and screening cultures are excluded. Select a slice to open that organism\'s susceptibility profile.</p>');
 setInfo('sec_patho', 'Susceptibility profile of one organism', '<p>For the selected organism, each bar shows the percentage of tested isolates that are susceptible (S), intermediate (I) or resistant (R) to an antibiotic. Results are interpreted with CLSI M100 breakpoints; %S does not include I or SDD results. Bars based on fewer than 30 isolates are faded (CLSI M39).</p>');
 setInfo('sec_abx', 'Activity of one antibiotic', '<p>For the selected antibiotic, each bar shows the percentage of isolates of an organism that are susceptible (S), intermediate (I) or resistant (R). Interpretation follows CLSI M100. Organisms with fewer than 30 tested isolates are faded and should be interpreted with caution (CLSI M39).</p>');
 setInfo('sec_heatmap', 'Organism by antibiotic heatmap', '<p>Each cell is the percentage of the chosen category (S, I or R) for one organism and antibiotic among tested isolates. An asterisk marks cells with fewer than 30 tested isolates. Isolates are de-duplicated (CLSI M39) and interpreted with CLSI M100.</p>');
