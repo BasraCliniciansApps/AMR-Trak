@@ -261,6 +261,7 @@ const MDR_MIN_TESTED_FOR_POSSIBLE_XDR = 6;
 const MDR_TABLES = {
     'Enterobacterales': {
         'Aminoglycosides': ['Gentamicin', 'Tobramycin', 'Amikacin', 'Netilmicin'],
+        'Anti-MRSA cephalosporins': ['Ceftaroline'],
         'Antipseudomonal penicillins + BLI': ['Piperacillin/Tazobactam', 'Ticarcillin/Clavulanic acid'],
         'Carbapenems': ['Ertapenem', 'Imipenem', 'Meropenem', 'Doripenem'],
         'Cephalosporins (1st/2nd gen)': ['Cefazolin', 'Cefuroxime'],
@@ -272,6 +273,7 @@ const MDR_TABLES = {
         'Monobactams': ['Aztreonam'],
         'Penicillins': ['Ampicillin'],
         'Penicillins + BLI': ['Amoxicillin/Clavulanic acid', 'Ampicillin/Sulbactam'],
+        'Phenicols': ['Chloramphenicol'],
         'Phosphonic acids': ['Fosfomycin'],
         'Polymyxins': ['Colistin', 'Polymyxin B'],
         'Tetracyclines': ['Tetracycline', 'Doxycycline', 'Minocycline']
@@ -311,9 +313,24 @@ const MDR_TABLES = {
         'Lipopeptides': ['Daptomycin'],
         'Macrolides': ['Erythromycin', 'Azithromycin', 'Clarithromycin'],
         'Oxazolidinones': ['Linezolid'],
+        'Phenicols': ['Chloramphenicol'],
         'Phosphonic acids': ['Fosfomycin'],
         'Streptogramins': ['Quinupristin/Dalfopristin'],
         'Tetracyclines': ['Tetracycline', 'Doxycycline', 'Minocycline']
+    },
+    // Magiorakos 2012 Table 2: 11 categories (high-level aminoglycoside screens are the relevant tests)
+    'Enterococcus spp.': {
+        'Aminoglycosides (except streptomycin)': ['Gentamicin high-level', 'Kanamycin high-level'],
+        'Streptomycin': ['Streptomycin'],
+        'Carbapenems': ['Imipenem', 'Meropenem', 'Doripenem'],
+        'Fluoroquinolones': ['Ciprofloxacin', 'Levofloxacin', 'Moxifloxacin'],
+        'Glycopeptides': ['Vancomycin', 'Teicoplanin'],
+        'Glycylcyclines': ['Tigecycline'],
+        'Lipopeptides': ['Daptomycin'],
+        'Oxazolidinones': ['Linezolid'],
+        'Penicillins': ['Ampicillin'],
+        'Streptogramins': ['Quinupristin/Dalfopristin'],
+        'Tetracyclines': ['Doxycycline', 'Minocycline']
     }
 };
 
@@ -323,7 +340,9 @@ const MDR_INTRINSIC_RULES = [
     { test: /enterobacter|klebsiella aerogenes|citrobacter freundii|serratia|morganella/,
       exclude: ['Penicillins', 'Penicillins + BLI', 'Cephalosporins (1st/2nd gen)', 'Cephamycins'] },
     { test: /proteus|morganella|providencia|serratia/, exclude: ['Polymyxins'] },
-    { test: /proteus|morganella|providencia/, exclude: ['Tetracyclines', 'Glycylcyclines'] }
+    { test: /proteus|morganella|providencia/, exclude: ['Tetracyclines', 'Glycylcyclines'] },
+    { test: /enterococcus faecium/, exclude: ['Carbapenems'] },          // intrinsic in E. faecium (Magiorakos Table 2)
+    { test: /enterococcus faecalis/, exclude: ['Streptogramins'] }       // intrinsic in E. faecalis (Magiorakos Table 2)
 ];
 
 function getMdrGroup(orgLower) {
@@ -331,6 +350,7 @@ function getMdrGroup(orgLower) {
     if (orgLower.includes('pseudomonas aeruginosa')) return 'Pseudomonas aeruginosa';
     if (orgLower.startsWith('acinetobacter')) return 'Acinetobacter spp.';
     if (orgLower.includes('staphylococcus aureus')) return 'Staphylococcus aureus';
+    if (orgLower.startsWith('enterococcus')) return 'Enterococcus spp.';
     return null;
 }
 
@@ -343,11 +363,16 @@ function classifyMDR(r) {
     const excluded = new Set();
     MDR_INTRINSIC_RULES.forEach(rule => { if (rule.test.test(orgLower)) rule.exclude.forEach(c => excluded.add(c)); });
 
+    // Magiorakos 2012: an MRSA isolate is considered resistant to all beta-lactams except the anti-MRSA cephalosporins,
+    // so the anti-staphylococcal beta-lactam category counts as non-susceptible even when only the laboratory MRSA flag is available.
+    const isMrsa = group === 'Staphylococcus aureus' && (['Cefoxitin', 'Cefoxitin screen', 'Oxacillin'].some(a => String(r[a] || '').trim().toUpperCase() === 'R') || r['Lab MRSA'] === '+');
+
     let tested = 0, ns = 0, total = 0, anySusceptible = false;
     Object.keys(MDR_TABLES[group]).forEach(cat => {
         if (excluded.has(cat)) return;
         total++;
         let anyTested = false, anyNS = false;
+        if (isMrsa && cat === 'Anti-staphylococcal beta-lactams') { tested++; ns++; return; }
         MDR_TABLES[group][cat].forEach(abx => {
             const v = String(r[abx] || '').trim().toUpperCase();
             if (v === 'S' || v === 'I' || v === 'R' || v === 'SDD') {
@@ -552,35 +577,104 @@ function evaluateCriticalMarkers(records) {
 const RECORD_META_FIELDS = ['Specimen Date', 'Lab ESBL', 'Lab Carbapenemase', 'Lab MRSA', 'VRSA Confirmation', 'Vancomycin MIC', 'Original ID', 'Name Original'];
 
 // =====================================================================
-// WHO AWaRe classification (WHO Essential Medicines List 2023).
-// Only agents whose category is unambiguous are listed; others stay unclassified.
+// WHO AWaRe classification - 2025 edition (WHO AWaRe classification of antibiotics for
+// evaluation and monitoring of use, 2025; Excel list supplied by the program head).
+// Agents whose category depends on the route (Fosfomycin: oral Watch / IV Reserve;
+// Minocycline: oral Watch / IV Reserve) are left unclassified because the lab record does
+// not state the route. Agents where both routes share a category (Vancomycin, Colistin,
+// Polymyxin B, Streptomycin, Kanamycin) are classified.
+// AWaRe is a stewardship tool (use monitoring), NOT a CLSI interpretive category.
 // =====================================================================
 const AWARE_CLASS = {
     // Access
     "Benzylpenicillin": "A", "Penicillin": "A", "Ampicillin": "A", "Amoxicillin": "A", "Cloxacillin": "A", "Oxacillin": "A",
-    "Amoxicillin/Clavulanic acid": "A", "Ampicillin/Sulbactam": "A", "Cefazolin": "A", "Gentamicin": "A", "Amikacin": "A",
-    "Clindamycin": "A", "Doxycycline": "A", "Nitrofurantoin": "A", "Trimethoprim": "A", "Trimethoprim/Sulfamethoxazole": "A",
-    "Chloramphenicol": "A", "Spectinomycin": "A",
+    "Mecillinam": "A", "Amoxicillin/Clavulanic acid": "A", "Ampicillin/Sulbactam": "A", "Amoxicillin/Sulbactam": "A",
+    "Cefazolin": "A", "Cephalothin": "A", "Cefalotin": "A", "Cefalexin": "A",
+    "Gentamicin": "A", "Amikacin": "A", "Spectinomycin": "A",
+    "Clindamycin": "A", "Doxycycline": "A", "Tetracycline": "A", "Nitrofurantoin": "A",
+    "Trimethoprim": "A", "Trimethoprim/Sulfamethoxazole": "A", "Sulfonamides": "A", "Sulfisoxazole": "A",
+    "Chloramphenicol": "A", "Metronidazole": "A",
     // Watch
-    "Cefuroxime": "W", "Cefixime": "W", "Ceftriaxone": "W", "Cefotaxime": "W", "Ceftazidime": "W", "Cefepime": "W", "Cefoxitin": "W",
-    "Cefpodoxime": "W", "Cefaclor": "W", "Cefotetan": "W", "Cefoperazone": "W",
     "Piperacillin": "W", "Piperacillin/Tazobactam": "W", "Ticarcillin": "W", "Ticarcillin/Clavulanic acid": "W",
+    "Cefuroxime": "W", "Cefoxitin": "W", "Cefaclor": "W", "Cefotetan": "W",
+    "Cefixime": "W", "Ceftriaxone": "W", "Cefotaxime": "W", "Ceftazidime": "W", "Cefoperazone": "W",
+    "Cefpodoxime": "W", "Cefdinir": "W", "Ceftizoxime": "W", "Cefepime": "W",
     "Imipenem": "W", "Meropenem": "W", "Ertapenem": "W", "Doripenem": "W",
-    "Ciprofloxacin": "W", "Levofloxacin": "W", "Moxifloxacin": "W", "Ofloxacin": "W", "Norfloxacin": "W",
-    "Azithromycin": "W", "Clarithromycin": "W", "Erythromycin": "W", "Vancomycin": "W", "Teicoplanin": "W",
-    "Tobramycin": "W", "Streptomycin": "W", "Kanamycin": "W", "Rifampicin": "W",
+    "Tobramycin": "W", "Netilmicin": "W", "Streptomycin": "W", "Kanamycin": "W",
+    "Nalidixic acid": "W", "Ciprofloxacin": "W", "Levofloxacin": "W", "Moxifloxacin": "W", "Ofloxacin": "W", "Norfloxacin": "W",
+    "Azithromycin": "W", "Clarithromycin": "W", "Erythromycin": "W",
+    "Vancomycin": "W", "Teicoplanin": "W", "Rifampicin": "W", "Fusidic acid": "W",
     // Reserve
-    "Colistin": "R", "Polymyxin B": "R", "Linezolid": "R", "Tigecycline": "R", "Daptomycin": "R", "Plazomicin": "R",
-    "Ceftazidime/Avibactam": "R", "Ceftolozane/Tazobactam": "R", "Ceftaroline": "R", "Ceftobiprole": "R",
-    "Meropenem/Vaborbactam": "R", "Imipenem/Relebactam": "R", "Telavancin": "R", "Quinupristin/Dalfopristin": "R"
+    "Aztreonam": "R", "Colistin": "R", "Polymyxin B": "R", "Linezolid": "R", "Tigecycline": "R", "Daptomycin": "R", "Plazomicin": "R",
+    "Ceftazidime/Avibactam": "R", "Ceftolozane/Tazobactam": "R", "Ceftaroline": "R", "Ceftobiprole": "R", "Cefiderocol": "R",
+    "Meropenem/Vaborbactam": "R", "Imipenem/Relebactam": "R",
+    "Telavancin": "R", "Dalbavancin": "R", "Oritavancin": "R", "Quinupristin/Dalfopristin": "R"
 };
 function awareTag(abx) { return AWARE_CLASS[abx] ? ` [${AWARE_CLASS[abx]}]` : ''; }
+
+// =====================================================================
+// Clinical applicability rules (applied to every analysis in the dashboard)
+// =====================================================================
+// 1) Urine-only agents. CLSI M100 gives breakpoints for these agents for urinary isolates only,
+//    so a result from any other specimen must not be interpreted.
+const URINE_ONLY_ABX = ['Nitrofurantoin', 'Fosfomycin', 'Mecillinam', 'Norfloxacin', 'Nalidixic acid'];
+function isUrinarySpecimen(r) {
+    return /urin|catheter|\bmsu\b|\bcsu\b/i.test(String(r['Sample'] || ''));
+}
+// Returns the record itself, or a copy in which the urine-only agents are blanked when the specimen is not urine.
+function applyUrineOnlyRule(r) {
+    if (isUrinarySpecimen(r)) return r;
+    let copy = null;
+    for (const a of URINE_ONLY_ABX) {
+        const v = r[a];
+        if (v !== undefined && v !== null && v !== '' && v !== '-') { if (!copy) copy = Object.assign({}, r); copy[a] = ''; }
+    }
+    return copy || r;
+}
+
+// 2) Intrinsic (expected) resistance, built from the CLSI M100 Appendix B / EUCAST expected-resistant phenotypes.
+//    These results reflect the organism's biology, not acquired resistance, and are flagged with the double dagger.
+const _IR_GRAMPOS_ONLY = ['Benzylpenicillin', 'Penicillin', 'Oxacillin', 'Cloxacillin', 'Vancomycin', 'Teicoplanin', 'Daptomycin', 'Linezolid',
+    'Clindamycin', 'Inducible Clindamycin Resistance', 'Quinupristin/Dalfopristin', 'Fusidic acid', 'Telavancin', 'Dalbavancin', 'Oritavancin'];
+const _IR_CEPH = ['Cefazolin', 'Cephalothin', 'Cefoxitin', 'Cefoxitin screen', 'Cefuroxime', 'Cefixime', 'Ceftriaxone', 'Cefotaxime', 'Ceftazidime', 'Cefepime',
+    'Cefaclor', 'Cefpodoxime', 'Cefdinir', 'Cefoperazone', 'Cefotetan', 'Ceftizoxime'];
+const _IR_AMINO = ['Gentamicin', 'Amikacin', 'Tobramycin', 'Kanamycin', 'Streptomycin', 'Netilmicin'];
+const _IR_AMPC_PEN = ['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Ampicillin/Sulbactam', 'Amoxicillin/Sulbactam', 'Cefazolin', 'Cephalothin'];
+const INTRINSIC_RESISTANCE_RULES = [
+    { test: /^(escherichia|klebsiella|raoultella|enterobacter|proteus|morganella|providencia|serratia|citrobacter|salmonella|shigella|yersinia|hafnia|pantoea|cronobacter|edwardsiella|enterobacteriaceae)/, drugs: _IR_GRAMPOS_ONLY },
+    { test: /klebsiella|raoultella|citrobacter koseri|citrobacter diversus/, drugs: ['Ampicillin', 'Amoxicillin', 'Ticarcillin'] },
+    { test: /enterobacter|klebsiella aerogenes|citrobacter freundii/, drugs: _IR_AMPC_PEN.concat(['Cefoxitin']) },
+    { test: /serratia|morganella|hafnia/, drugs: _IR_AMPC_PEN },
+    { test: /serratia|proteus|morganella|providencia/, drugs: ['Colistin', 'Polymyxin B'] },
+    { test: /proteus|morganella|providencia/, drugs: ['Nitrofurantoin', 'Tetracycline', 'Doxycycline', 'Minocycline', 'Tigecycline'] },
+    { test: /pseudomonas aeruginosa/, drugs: _IR_GRAMPOS_ONLY.concat(['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Ampicillin/Sulbactam', 'Amoxicillin/Sulbactam',
+        'Cefazolin', 'Cephalothin', 'Cefoxitin', 'Cefuroxime', 'Cefotaxime', 'Ceftriaxone', 'Cefixime', 'Cefpodoxime', 'Ertapenem', 'Trimethoprim', 'Trimethoprim/Sulfamethoxazole',
+        'Chloramphenicol', 'Tetracycline', 'Doxycycline', 'Minocycline', 'Tigecycline', 'Nitrofurantoin']) },
+    { test: /^acinetobacter/, drugs: _IR_GRAMPOS_ONLY.concat(['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Cefazolin', 'Cephalothin', 'Cefotaxime', 'Ceftriaxone',
+        'Ertapenem', 'Trimethoprim', 'Fosfomycin']) },
+    { test: /^enterococcus/, drugs: _IR_CEPH.concat(_IR_AMINO, ['Oxacillin', 'Cloxacillin', 'Aztreonam', 'Clindamycin', 'Trimethoprim', 'Trimethoprim/Sulfamethoxazole', 'Sulfonamides', 'Nalidixic acid', 'Colistin', 'Polymyxin B']) },
+    { test: /enterococcus faecalis/, drugs: ['Quinupristin/Dalfopristin'] },
+    { test: /enterococcus gallinarum|casseliflavus/, drugs: ['Vancomycin'] },
+    { test: /^staphylococcus/, drugs: ['Aztreonam', 'Colistin', 'Polymyxin B', 'Nalidixic acid'] },
+    { test: /^streptococcus/, drugs: _IR_AMINO.concat(['Aztreonam', 'Colistin', 'Polymyxin B', 'Nalidixic acid']) }
+];
+const _irCache = {};
+function intrinsicResistanceSet(org) {
+    const key = String(org || '').trim().toLowerCase();
+    if (_irCache[key]) return _irCache[key];
+    const set = new Set();
+    INTRINSIC_RESISTANCE_RULES.forEach(rule => { if (rule.test.test(key)) rule.drugs.forEach(d => set.add(d)); });
+    return (_irCache[key] = set);
+}
+function isIntrinsicResistance(org, abx) { return intrinsicResistanceSet(org).has(abx); }
 
 // =====================================================================
 // Selective testing: when only part of the isolates of a species were tested for a drug
 // (e.g. colistin only on suspected carbapenem-resistant isolates), %R is biased upward.
 // =====================================================================
-const SELECTIVE_TESTING_THRESHOLD = 0.5;
+// 90%: an agent tested on fewer than 90% of a species' isolates is treated as selectively tested
+// (threshold used by the ACSQHC hospital cumulative antibiogram specification, which is based on CLSI M39).
+const SELECTIVE_TESTING_THRESHOLD = 0.9;
 function isSelectivelyTested(testedCount, totalIsolates) {
     return totalIsolates >= 30 && testedCount > 0 && (testedCount / totalIsolates) < SELECTIVE_TESTING_THRESHOLD;
 }

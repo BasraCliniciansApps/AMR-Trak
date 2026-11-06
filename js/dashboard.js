@@ -36,18 +36,17 @@ let currentAbxMetric = 'S';
 // (applyDeduplication is defined once in data.js)
 
 // --- WARD FILTER LOGIC (Inpatient / Outpatient) ---
+// Ward classification. Outpatient = outpatient / OPD / clinic wards. Inpatient = an admitted ward.
+// Emergency and records without a ward cannot be assigned reliably, so they appear only under "Total".
+function wardClass(ward) {
+    const w = String(ward || '').toLowerCase().trim();
+    if (!w || w === 'unknown') return 'unassigned';
+    if (/^(outpatient|out-patient|opd)$|clinic|ambulatory|out patient/.test(w)) return 'outpatient';
+    if (/emergency|casualty|\ber\b|\bed\b|accident/.test(w)) return 'unassigned';
+    return 'inpatient';
+}
 function applyWardFilter(records, filterValue) {
-    if (filterValue === 'inpatient') {
-        return records.filter(r => {
-            let w = (r.Ward || "").toLowerCase().trim();
-            return w !== 'outpatient' && w !== 'out-patient' && w !== 'opd'; 
-        });
-    } else if (filterValue === 'outpatient') {
-        return records.filter(r => {
-            let w = (r.Ward || "").toLowerCase().trim();
-            return w === 'outpatient' || w === 'out-patient' || w === 'opd';
-        });
-    }
+    if (filterValue === 'inpatient' || filterValue === 'outpatient') return records.filter(r => wardClass(r.Ward) === filterValue);
     return records; // 'total'
 }
 
@@ -82,47 +81,54 @@ $(document).on('change', 'input[name="adv_ward"]', function() {
     // Note: We don't auto-refresh here because the user must click "Generate Heatmap"
 });
 // --- TIME PERIOD FILTER LOGIC ---
+// Period definitions (anchored to the latest month of data, so they do not depend on the device clock):
+//  year    = the last COMPLETE calendar year (CLSI M39 is an annual analysis)
+//  quarter = the last COMPLETE calendar quarter
+//  month   = the latest month that has data
+//  all     = every record (exploratory only)
+function periodWindow(records, periodType) {
+    const dates = records.map(r => r.Date).filter(Boolean).sort();
+    if (!dates.length) return null;
+    const latest = dates[dates.length - 1].substring(0, 7);
+    const lYear = parseInt(latest.slice(0, 4), 10), lMonth = parseInt(latest.slice(5, 7), 10);
+    const pad = n => String(n).padStart(2, '0');
+    if (periodType === 'year') {
+        const y = lMonth === 12 ? lYear : lYear - 1;
+        return { from: `${y}-01`, to: `${y}-12`, label: String(y) };
+    }
+    if (periodType === 'quarter') {
+        let q = Math.ceil(lMonth / 3), y = lYear;
+        if (lMonth % 3 !== 0) { q -= 1; if (q === 0) { q = 4; y -= 1; } }
+        return { from: `${y}-${pad((q - 1) * 3 + 1)}`, to: `${y}-${pad(q * 3)}`, label: `Q${q} ${y}` };
+    }
+    if (periodType === 'month') return { from: latest, to: latest, label: latest };
+    return null;
+}
 function filterByPeriod(records, periodType) {
     if (!periodType || periodType === 'all') return records;
-
-    let validRecords = records.filter(r => r.Date);
-    if (validRecords.length === 0) return records;
-
-    if (periodType === 'year') {
-        let lastYear = (new Date().getFullYear() - 1).toString();
-        return validRecords.filter(r => r.Date.startsWith(lastYear));
-    }
-
-    // Identify the latest month in the dataset to calculate Month/Quarter
-    let allDates = validRecords.map(r => r.Date).sort();
-    let latestDateStr = allDates[allDates.length - 1]; 
-    let targetMonthPrefix = latestDateStr.substring(0, 7);
-
-    if (periodType === 'month') {
-        return validRecords.filter(r => r.Date.startsWith(targetMonthPrefix));
-    }
-
-    if (periodType === 'quarter') {
-        let [lYear, lMonth] = targetMonthPrefix.split('-').map(Number);
-        let qYear = lYear, qMonths = [];
-
-        // Jump to next quarter only when its 3rd month is reached
-        if (lMonth < 3) { qYear -= 1; qMonths = ["10","11","12"]; }
-        else if (lMonth < 6) { qMonths = ["01","02","03"]; }
-        else if (lMonth < 9) { qMonths = ["04","05","06"]; }
-        else if (lMonth < 12) { qMonths = ["07","08","09"]; }
-        else { qMonths = ["10","11","12"]; }
-
-        return validRecords.filter(r => {
-            let parts = r.Date.split('-');
-            return parseInt(parts[0]) === qYear && qMonths.includes(parts[1]);
-        });
-    }
-
-    return records;
+    const valid = records.filter(r => r.Date);
+    if (!valid.length) return records;
+    const w = periodWindow(valid, periodType);
+    if (!w) return records;
+    return valid.filter(r => { const m = r.Date.substring(0, 7); return m >= w.from && m <= w.to; });
+}
+// Shows what each period button resolves to, and warns when "All Times" is selected.
+function refreshPeriodHints() {
+    let recs = [];
+    try { recs = getDashRecords(); } catch (e) {}
+    ['guided', 'patho', 'abx'].forEach(g => {
+        const el = document.getElementById(g + '_period_hint');
+        if (!el) return;
+        const t = $('input[name="' + g + '_period"]:checked').val() || 'year';
+        if (t === 'all') { el.className = 'period-hint text-[10px] mt-1.5 rounded-md px-2 py-1.5 bg-amber-50 text-amber-800 border border-amber-200'; el.innerHTML = '<b>Exploratory view.</b> All Times pools several years. The reference period for CLSI M39 is one year (Last Year), so use Last Year for reporting.'; return; }
+        const w = periodWindow(recs, t);
+        el.className = 'period-hint text-[10px] mt-1.5 rounded-md px-2 py-1.5 bg-slate-50 text-slate-600 border border-slate-200';
+        el.innerHTML = w ? (t === 'year' ? 'Last complete calendar year: <b>' + w.label + '</b> (the CLSI M39 reference period).' : t === 'quarter' ? 'Last complete quarter: <b>' + w.label + '</b>. Shorter than a year, so use as an indication only.' : 'Latest month with data: <b>' + w.label + '</b>. Shorter than a year, so use as an indication only.') : 'No data.';
+    });
 }
 
 // Visual updates for period toggles
+$(document).on('change', 'input[name="guided_period"], input[name="patho_period"], input[name="abx_period"]', function() { refreshPeriodHints(); });
 $(document).on('change', 'input[name="guided_period"]', function() { loadAnalyticsFilters(); });
 $(document).on('change', 'input[name="patho_period"]', function() { updatePathoDropdowns(); });
 $(document).on('change', 'input[name="abx_period"]', function() { updateAbxDropdowns(); });
@@ -271,7 +277,7 @@ const REFS = {
     CLSI_M47: { t: 'CLSI. M47: Principles and Procedures for Blood Cultures (current edition).', u: 'https://clsi.org/standards/products/microbiology/documents/m47/' },
     ASM_BCC: { t: 'American Society for Microbiology. Evidence-based laboratory medicine practice guidelines to reduce blood culture contamination rates: a systematic review and meta-analysis.', u: 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11629619/' },
     WHO_GLASS: { t: 'World Health Organization. GLASS manual for antimicrobial resistance surveillance in common bacteria causing human infection. Geneva: WHO; 2023.', u: 'https://www.who.int/publications/i/item/9789240076600' },
-    WHO_AWARE: { t: 'World Health Organization. AWaRe classification of antibiotics for evaluation and monitoring of use, 2023.', u: 'https://www.who.int/publications/i/item/WHO-MHP-HPS-EML-2023.04' },
+    WHO_AWARE: { t: 'World Health Organization. AWaRe classification of antibiotics for evaluation and monitoring of use, 2025.', u: 'https://www.who.int/publications/i/item/2021-aware-classification' },
     WHO_BPPL: { t: 'World Health Organization. WHO Bacterial Priority Pathogens List, 2024.', u: 'https://www.who.int/publications/i/item/9789240093461' },
     WHONET: { t: 'WHONET software. WHO Collaborating Centre for Surveillance of Antimicrobial Resistance.', u: 'https://whonet.org/' }
 };
@@ -339,7 +345,8 @@ const AWARE_NAMES = { A: 'Access', W: 'Watch', R: 'Reserve' };
 
 // Antibiotic chart details: how to read the chart, selective testing, AWaRe, contaminants
 // Chart-specific notes under the chart key: selective tests, WHO AWaRe groups and possible contaminants
-function chartNoteBlocks(selectiveNotes, groups, contaminantCount) {
+function chartNoteBlocks(selectiveNotes, groups, contaminantCount, opts) {
+    opts = opts || {};
     const H = t => `<div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;margin:14px 0 6px">${t}</div>`;
     let out = '';
     if (selectiveNotes.length) {
@@ -353,25 +360,29 @@ function chartNoteBlocks(selectiveNotes, groups, contaminantCount) {
     const col = { A: ['#d1fae5', '#065f46'], W: ['#fef3c7', '#92400e'], R: ['#fee2e2', '#991b1b'] };
     const keys = ['A', 'W', 'R'].filter(k => groups[k].length);
     if (keys.length) {
-        out += H('WHO AWaRe groups') + keys.map(k => `<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px">
+        out += H('WHO AWaRe groups') + `<div style="font-size:11px;line-height:1.45;color:#475569;margin-bottom:8px">Purpose: AWaRe ranks antibiotics by their potential to drive resistance, to guide stewardship. Use <b>Access</b> first, restrict <b>Watch</b>, keep <b>Reserve</b> as last resort. It shows use priority, not laboratory susceptibility (WHO 2025).</div>` + keys.map(k => `<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px">
             <span style="flex:none;width:64px;text-align:center;font-size:10px;font-weight:700;padding:3px 0;border-radius:6px;background:${col[k][0]};color:${col[k][1]}">${AWARE_NAMES[k]}</span>
             <span style="flex:1;line-height:1.9">${groups[k].map(a => `<span style="display:inline-block;font-size:11px;padding:0 8px;margin:0 4px 0 0;border-radius:999px;background:#f1f5f9;color:#334155;line-height:1.7">${a}</span>`).join('')}</span></div>`).join('');
     }
+    if (opts.ir && opts.ir.length) out += H('&Dagger; Intrinsic resistance') + `<div style="font-size:11px;line-height:1.45;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;color:#334155"><b>${opts.ir.length}</b> antibiotic${opts.ir.length === 1 ? '' : 's'} shown ${opts.ir.length === 1 ? 'is' : 'are'} intrinsically resistant in <i>${opts.irOrg || 'this organism'}</i> (CLSI M100 Appendix B): <b>${opts.ir.join(', ')}</b>. Resistance to ${opts.ir.length === 1 ? 'it' : 'them'} is expected and is not acquired resistance. The laboratory tested ${opts.ir.length === 1 ? 'it' : 'them'} and the results are shown as reported.</div>`;
+    if (opts.urine && opts.urine.length) out += H('Urine-only agents') + `<div style="font-size:11px;line-height:1.45;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;color:#1e40af"><b>${opts.urine.join(', ')}</b>: CLSI M100 breakpoints apply to urinary isolates only. Results from other specimens are excluded from every chart and table.</div>`;
     if (contaminantCount > 0) out += H('Possible contaminants') + `<div style="font-size:11px;line-height:1.45;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;color:#92400e"><b>${contaminantCount}</b> blood isolate(s) of this organism are possible skin-flora contaminants. Review them clinically.</div>`;
     return out;
 }
 
-function renderChartNotes(containerSel, selectiveNotes, contaminantCount, shownAbx) {
+function renderChartNotes(containerSel, selectiveNotes, contaminantCount, shownAbx, opts) {
     const key = 'abx_' + containerSel.replace('#', '');
     let html = '<h5>How to read the bars</h5><ul>' +
         '<li><b>Solid bar:</b> 30 or more isolates were tested. The result is considered reliable.</li>' +
         '<li><b>Faded grey bar, name ending with *:</b> fewer than 30 isolates were tested. Interpret with caution (CLSI M39).</li>' +
-        '<li><b>Name ending with &dagger;:</b> selective test. The antibiotic was tested on fewer than half of the isolates, so the percentage may be biased.</li>' +
+        '<li><b>Name ending with &Dagger;:</b> intrinsic resistance (expected for this organism, not acquired).</li>' +
+        '<li><b>Name ending with &dagger;:</b> selective test. The antibiotic was tested on fewer than 90% of the isolates, so the percentage may be biased.</li>' +
         '<li>Tap a bar: shows n (number of isolates tested) and the 95% CI. The bar height is always the selected percentage.</li></ul>';
     const groups = { A: [], W: [], R: [] };
     (shownAbx || []).forEach(a => { if (AWARE_CLASS[a]) groups[AWARE_CLASS[a]].push(a); });
     // organised blocks (inline styles so they look the same on screen and in the printed report)
-    const blocks = chartNoteBlocks(selectiveNotes, groups, contaminantCount);
+    const urine = (shownAbx || []).filter(a => URINE_ONLY_ABX.includes(a));
+    const blocks = chartNoteBlocks(selectiveNotes, groups, contaminantCount, Object.assign({ urine }, opts || {}));
     html += blocks;
     setInfo(key, 'About this chart', html);
     // the details that matter for this particular chart are shown under the chart key
@@ -947,6 +958,7 @@ window.toggleAdvancedSearch = function() {
 };
 
 function loadAnalyticsFilters() {
+    refreshPeriodHints();
     if (isUpdatingFilters) return;
     isUpdatingFilters = true;
 
@@ -1220,7 +1232,8 @@ function renderGuidedAST() {
     let testedAbxs = Object.keys(abxStats).sort();
     let selectiveNotes = [];
     let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
-    let baseColor = currentGuidedMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : 'rgba(225, 29, 72, 0.9)'; 
+    let baseColor = currentGuidedMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : (currentGuidedMetric === 'NS' ? 'rgba(245, 158, 11, 0.9)' : 'rgba(225, 29, 72, 0.9)');
+    let irList = [];
     let hideLowN = $('#guided_hide_low').is(':checked');
 
     testedAbxs.forEach(abx => {
@@ -1233,8 +1246,10 @@ function renderGuidedAST() {
         let p = Math.round((targetVal / s.tested) * 100);
 
         const selective = isSelectivelyTested(s.tested, records.length);
+        const intr = isIntrinsicResistance(currentGuidedBug, abx);
+        if (intr) irList.push(abx);
         if (selective) selectiveNotes.push(`${abx} (${s.tested}/${records.length})`);
-        labels.push(abx + (selective ? ' †' : '') + (isReliable ? '' : ' *'));
+        labels.push(abx + (selective ? ' †' : '') + (intr ? ' ‡' : '') + (isReliable ? '' : ' *'));
         data.push(p);
         bgColors.push(isReliable ? baseColor : 'rgba(148, 163, 184, 0.5)'); 
         ciData.push(wilsonScoreCI(targetVal, s.tested));
@@ -1247,7 +1262,7 @@ function renderGuidedAST() {
         return;
     }
 
-    renderChartNotes('#guidedAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length, testedAbxs);
+    renderChartNotes('#guidedAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length, testedAbxs, { ir: irList, irOrg: formatScientificName(currentGuidedBug) });
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#guidedAmrContainer').css('width', chartWidth);
 
@@ -1282,6 +1297,7 @@ $(document).on('change', 'input[name="patho_metric"]', function() {
 });
 
 function updatePathoDropdowns() {
+    refreshPeriodHints();
     let period = $('input[name="patho_period"]:checked').val() || 'all';
 
     let records = getDashRecords();
@@ -1353,7 +1369,8 @@ function renderPathoChart() {
 
     let selectiveNotes = [];
     let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
-    let baseColor = currentPathoMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : 'rgba(225, 29, 72, 0.9)'; 
+    let baseColor = currentPathoMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : (currentPathoMetric === 'NS' ? 'rgba(245, 158, 11, 0.9)' : 'rgba(225, 29, 72, 0.9)');
+    let irList = [];
     let hideLowN = $('#patho_hide_low').is(':checked');
 
     testedAbxs.forEach(abx => {
@@ -1362,19 +1379,21 @@ function renderPathoChart() {
 
         if (hideLowN && !isReliable) return;
 
-        let targetVal = currentPathoMetric === 'R' ? s.r : s.s;
+        let targetVal = currentPathoMetric === 'R' ? s.r : (currentPathoMetric === 'NS' ? s.ns : s.s);
         let p = Math.round((targetVal / s.tested) * 100);
 
         const selective = isSelectivelyTested(s.tested, records.length);
+        const intr = isIntrinsicResistance(bug, abx);
+        if (intr) irList.push(abx);
         if (selective) selectiveNotes.push(`${abx} (${s.tested}/${records.length})`);
-        labels.push(abx + (selective ? ' †' : '') + (isReliable ? '' : ' *'));
+        labels.push(abx + (selective ? ' †' : '') + (intr ? ' ‡' : '') + (isReliable ? '' : ' *'));
         data.push(p);
         bgColors.push(isReliable ? baseColor : 'rgba(148, 163, 184, 0.5)'); 
         ciData.push(wilsonScoreCI(targetVal, s.tested));
         nDataArr.push(s.tested);
     });
 
-    renderChartNotes('#pathoAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length, testedAbxs);
+    renderChartNotes('#pathoAmrContainer', selectiveNotes, records.filter(isPossibleContaminant).length, testedAbxs, { ir: irList, irOrg: formatScientificName(bug) });
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#pathoAmrContainer').css('width', chartWidth);
 
@@ -1408,6 +1427,7 @@ $(document).on('change', 'input[name="abx_metric"]', function() {
 });
 
 function updateAbxDropdowns() {
+    refreshPeriodHints();
     let period = $('input[name="abx_period"]:checked').val() || 'all';
 
     let records = getDashRecords();
@@ -1477,7 +1497,8 @@ function renderAbxChart() {
     $('#abxAmrContainer').html('<canvas id="chartAbxAMR"></canvas>');
 
     let labels = [], data = [], bgColors = [], ciData = [], nDataArr = [];
-    let baseColor = currentAbxMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : 'rgba(225, 29, 72, 0.9)'; 
+    let baseColor = currentAbxMetric === 'S' ? 'rgba(16, 185, 129, 0.9)' : (currentAbxMetric === 'NS' ? 'rgba(245, 158, 11, 0.9)' : 'rgba(225, 29, 72, 0.9)');
+    let irOrgs = [];
     let hideLowN = $('#abx_hide_low').is(':checked');
 
     testedOrgs.forEach(org => {
@@ -1490,13 +1511,20 @@ function renderAbxChart() {
         let p = Math.round((targetVal / s.tested) * 100);
 
         let formattedOrg = formatScientificName(org);
-        labels.push(isReliable ? formattedOrg : `${formattedOrg} *`);
+        const intr = isIntrinsicResistance(org, drug);
+        if (intr) irOrgs.push(formattedOrg);
+        labels.push(formattedOrg + (intr ? ' ‡' : '') + (isReliable ? '' : ' *'));
         data.push(p);
         bgColors.push(isReliable ? baseColor : 'rgba(148, 163, 184, 0.5)'); 
         ciData.push(wilsonScoreCI(targetVal, s.tested));
         nDataArr.push(s.tested);
     });
 
+    let abxExtra = '';
+    const NH = t => `<div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#64748b;margin:14px 0 6px">${t}</div>`;
+    if (irOrgs.length) abxExtra += NH('&Dagger; Intrinsic resistance') + `<div style="font-size:11px;line-height:1.45;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;color:#334155">${drug} is intrinsically resistant in <b>${irOrgs.length}</b> organism${irOrgs.length === 1 ? '' : 's'} shown (CLSI M100 Appendix B): <b>${irOrgs.join(', ')}</b>. Resistance is expected there and is not acquired resistance. The laboratory tested it and the results are shown as reported.</div>`;
+    if (URINE_ONLY_ABX.includes(drug)) abxExtra += NH('Urine-only agent') + `<div style="font-size:11px;line-height:1.45;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;color:#1e40af"><b>${drug}</b>: CLSI M100 breakpoints apply to urinary isolates only. Results from other specimens are excluded.</div>`;
+    $('#extra_abxAmrContainer').html(abxExtra);
     let chartWidth = labels.length > 5 ? (labels.length * 45) + 'px' : '100%';
     $('#abxAmrContainer').css('width', chartWidth);
 
@@ -1558,6 +1586,7 @@ window.generateAdvancedAnalytics = function() {
     let hmLegend = (metric === 'R' || metric === 'NS') ? 
         `<span class="px-1 bg-emerald-100 text-emerald-800 rounded">0-20%</span><span class="px-1 bg-yellow-100 text-yellow-800 rounded">21-40%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">41-60%</span><span class="px-1 bg-red-400 text-white rounded">61-80%</span><span class="px-1 bg-red-600 text-white rounded">81-100%</span>` :
         `<span class="px-1 bg-red-600 text-white rounded">0-20%</span><span class="px-1 bg-red-400 text-white rounded">21-40%</span><span class="px-1 bg-orange-200 text-orange-900 rounded">41-60%</span><span class="px-1 bg-yellow-100 text-yellow-800 rounded">61-80%</span><span class="px-1 bg-emerald-100 text-emerald-800 rounded">81-100%</span>`;
+    hmLegend += '<span class="px-1 bg-slate-200 text-slate-500 rounded">Grey: n&lt;30 or &Dagger;</span>';
     $('#heatmapLegend').html(hmLegend);
 
     let heatmapStats = {}, orgCounts = {};
@@ -1590,6 +1619,7 @@ window.generateAdvancedAnalytics = function() {
         return;
     }
 
+    let irCells = 0, lowCells = 0;
     let hmHtml = '<table class="heatmap-table"><thead><tr><th>Org (n)</th>';
     hmAbxs.forEach(a => { hmHtml += `<th><div class="w-16 truncate text-[10px]" title="${a}">${a}</div></th>`; });
     hmHtml += '</tr></thead><tbody>';
@@ -1616,10 +1646,14 @@ window.generateAdvancedAnalytics = function() {
                 else if (dangerScore <= 80) { bgClass = 'bg-red-400'; textClass = 'text-white font-bold'; }
                 else { bgClass = 'bg-red-600'; textClass = 'text-white font-bold'; }
 
-                if (isLow) textClass += dangerScore > 60 ? ' text-red-100' : ' opacity-70';
-                
+                const intr = isIntrinsicResistance(o, a);
+                if (intr) irCells++;
+                if (isLow) lowCells++;
+                // grey = not interpretable as a real susceptibility result (fewer than 30 isolates, or intrinsic resistance)
+                if (isLow || intr) { bgClass = 'bg-slate-200'; textClass = 'text-slate-500'; }
+
                 hmHtml += `<td class="${bgClass} ${textClass} align-middle">
-                    <div class="leading-none">${p}% ${isLow ? '<span class="text-black font-bold">*</span>' : ''}</div>
+                    <div class="leading-none">${p}% ${isLow ? '<span class="text-black font-bold">*</span>' : ''}${intr ? '<span class="font-bold">&Dagger;</span>' : ''}</div>
                     <div class="text-[7.5px] font-medium opacity-80 tracking-tighter mt-1 whitespace-nowrap">95% CI (${ci.lower}% - ${ci.upper}%)</div>
                 </td>`;
             }
@@ -1628,6 +1662,11 @@ window.generateAdvancedAnalytics = function() {
     });
     hmHtml += '</tbody></table>';
     $('#heatmapWrapper').html(hmHtml);
+    $('#heatmapNote').html(
+        '<p><b>Grey cell:</b> the value is not a reliable susceptibility result. <b>*</b> = fewer than 30 isolates tested (CLSI M39); <b>&Dagger;</b> = intrinsic resistance (expected for the organism, CLSI M100 Appendix B), not acquired resistance. Grey cells: ' + lowCells + ' with *, ' + irCells + ' with &Dagger;.</p>' +
+        '<p><b>Colour bands</b> are a visual aid in steps of 20%. They are not CLSI or WHO categories.</p>' +
+        '<p><b>Common practice benchmarks</b> (conventions, not CLSI or WHO rules): 80% or more susceptible is often accepted for empirical treatment of non-severe infections, and 90% or more is expected for severe infections such as bloodstream infection or meningitis. These values are a guide only. Always follow the hospital antibiotic policy.</p>' +
+        '<p>Cells are in vitro results. Urine-only agents (' + URINE_ONLY_ABX.join(', ') + ') include urine specimens only. Periods shorter than a year are indicative only; CLSI M39 is an annual analysis.</p>');
 };
 // --- Modal: About App ---
 function showAboutModal() {

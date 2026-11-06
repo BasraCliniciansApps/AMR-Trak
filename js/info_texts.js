@@ -27,7 +27,7 @@ const INFO_OVERRIDE = (function () {
         H('Method') + L(['One isolate per patient and organism within the selected period (CLSI M39).', 'Screening cultures are excluded.']));
     add('sec_patho', 'Susceptibility profile of one organism',
         H('What it shows') + P('For the selected organism, the percentage of tested isolates that are susceptible (S), intermediate (I) or resistant (R) to each antibiotic.') +
-        H('How to read it') + L(['Choose the metric (%S, %R or %NS) with the buttons above the chart.', 'A solid bar is reliable (30 or more isolates tested). A faded grey bar, marked with *, has fewer than 30 isolates.', 'A dagger (&dagger;) marks an antibiotic tested on fewer than half of the isolates (selective testing).']) +
+        H('How to read it') + L(['Choose the metric (%S, %R or %NS) with the buttons above the chart.', 'A solid bar is reliable (30 or more isolates tested). A faded grey bar, marked with *, has fewer than 30 isolates.', 'A dagger (&dagger;) marks an antibiotic tested on fewer than 90% of the isolates (selective testing).']) +
         H('Method') + L(['Results are interpreted with CLSI M100 breakpoints.', '%S counts only S; I and SDD are not included.', 'One isolate per patient and organism within the period (CLSI M39).']));
     add('sec_abx', 'Activity of one antibiotic',
         H('What it shows') + P('For the selected antibiotic, the percentage of isolates of each organism that are susceptible, intermediate or resistant.') +
@@ -95,7 +95,7 @@ const INFO_OVERRIDE = (function () {
         ['CLSI_M39', 'CLSI_M100']);
     add('ya_cum', 'Cumulative antibiogram',
         H('What it shows') + P('The percentage of first isolates that are susceptible to each antibiotic, for each organism, over one calendar year. It is the report clinicians use to choose empirical therapy.') +
-        H('How to read it') + L(['Each row is an organism; each column is an antibiotic. The cell is the % susceptible.', 'Colours: green 90% or more, yellow 70 to 89%, orange 50 to 69%, red below 50%.', 'A dash means the combination was tested on fewer than 30 isolates, so no value is reported.', '<b>&dagger;</b> = selective test: tested on fewer than half of the isolates, so the percentage may be biased.']) +
+        H('How to read it') + L(['Each row is an organism; each column is an antibiotic. The cell is the % susceptible.', 'Colours: green 90% or more, yellow 70 to 89%, orange 50 to 69%, red below 50%.', 'A dash means the combination was tested on fewer than 30 isolates, so no value is reported.', '<b>&dagger;</b> = selective test: tested on fewer than 90% of the isolates, so the percentage may be biased.']) +
         H('Rules applied (CLSI M39)') + L(['One isolate per patient and organism per year; screening cultures are excluded.', 'Only susceptible (S) counts as susceptible. I and SDD do not.', 'A value is reported only when 30 or more isolates were tested.', 'Specimens can be viewed separately because a blood isolate and a urine isolate of the same organism may behave differently.']) +
         H('Possible contaminants') + P('The switch excludes skin-flora organisms from blood (for example <i>S. hominis</i>). They are usually contaminants and can distort the antibiogram. The note under the table says how many were excluded.'),
         ['CLSI_M39', 'CLSI_M100']);

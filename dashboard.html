@@ -304,11 +304,11 @@
                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Time Period</label>
                         <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-inner w-full">
                             <label class="flex-1 text-center cursor-pointer mb-0">
-                                <input type="radio" name="guided_period" value="all" class="peer sr-only" checked>
-                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-teal-700 peer-checked:shadow-sm text-slate-500 transition-all">All Times</div>
+                                <input type="radio" name="guided_period" value="all" class="peer sr-only">
+                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-teal-700 peer-checked:shadow-sm text-slate-500 transition-all">All Times (exploratory)</div>
                             </label>
                             <label class="flex-1 text-center cursor-pointer mb-0">
-                                <input type="radio" name="guided_period" value="year" class="peer sr-only">
+                                <input type="radio" name="guided_period" value="year" class="peer sr-only" checked>
                                 <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-teal-700 peer-checked:shadow-sm text-slate-500 transition-all">Last Year</div>
                             </label>
                             <label class="flex-1 text-center cursor-pointer mb-0">
@@ -320,6 +320,7 @@
                                 <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-teal-700 peer-checked:shadow-sm text-slate-500 transition-all">Last Month</div>
                             </label>
                         </div>
+                        <div id="guided_period_hint"></div>
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Specimen (Updates based on date)</label>
@@ -414,7 +415,7 @@
                     <div class="abx-legend"><div class="abx-legend-title">Chart key</div><ul>
 <li><span class="sw sw-solid"></span><span><b>Solid bar:</b> 30 or more isolates tested. The result is reliable.</span></li>
 <li><span class="sw sw-grey"></span><span><b>Faded grey bar, name ending with *:</b> fewer than 30 isolates tested. Interpret with caution.</span></li>
-<li><span class="sym">&dagger;</span><span><b>Selective test</b> (after the antibiotic name): tested on fewer than half of the isolates, so the percentage may be biased.</span></li><li><span class="sym">i</span><span>Tap a bar: shows n (number of isolates tested) and the 95% CI. The bar height is always the selected percentage.</span></li></ul><div class="abx-extra" id="extra_guidedAmrContainer"></div></div>
+<li><span class="sym">&Dagger;</span><span><b>Intrinsic resistance</b> (after the name): resistance is expected for this organism (CLSI M100 Appendix B), not acquired.</span></li><li><span class="sym">&dagger;</span><span><b>Selective test</b> (after the antibiotic name): tested on fewer than 90% of the isolates, so the percentage may be biased.</span></li><li><span class="sym">i</span><span>Tap a bar: shows n (number of isolates tested) and the 95% CI. The bar height is always the selected percentage.</span></li></ul><div class="abx-extra" id="extra_guidedAmrContainer"></div></div>
                 </div>
             </div>
 
@@ -432,11 +433,11 @@
                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Time Period</label>
                         <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-inner w-full">
                             <label class="flex-1 text-center cursor-pointer mb-0">
-                                <input type="radio" name="patho_period" value="all" class="peer sr-only" checked>
-                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-emerald-700 peer-checked:shadow-sm text-slate-500 transition-all">All Times</div>
+                                <input type="radio" name="patho_period" value="all" class="peer sr-only">
+                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-emerald-700 peer-checked:shadow-sm text-slate-500 transition-all">All Times (exploratory)</div>
                             </label>
                             <label class="flex-1 text-center cursor-pointer mb-0">
-                                <input type="radio" name="patho_period" value="year" class="peer sr-only">
+                                <input type="radio" name="patho_period" value="year" class="peer sr-only" checked>
                                 <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-emerald-700 peer-checked:shadow-sm text-slate-500 transition-all">Last Year</div>
                             </label>
                             <label class="flex-1 text-center cursor-pointer mb-0">
@@ -448,6 +449,7 @@
                                 <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-emerald-700 peer-checked:shadow-sm text-slate-500 transition-all">Last Month</div>
                             </label>
                         </div>
+                        <div id="patho_period_hint"></div>
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Select Bacteria</label>
@@ -491,7 +493,7 @@
 <div class="abx-legend"><div class="abx-legend-title">Chart key</div><ul>
 <li><span class="sw sw-solid"></span><span><b>Solid bar:</b> 30 or more isolates tested. The result is reliable.</span></li>
 <li><span class="sw sw-grey"></span><span><b>Faded grey bar, name ending with *:</b> fewer than 30 isolates tested. Interpret with caution.</span></li>
-<li><span class="sym">&dagger;</span><span><b>Selective test</b> (after the antibiotic name): tested on fewer than half of the isolates, so the percentage may be biased.</span></li><li><span class="sym">i</span><span>Tap a bar: shows n (number of isolates tested) and the 95% CI. The bar height is always the selected percentage.</span></li></ul><div class="abx-extra" id="extra_pathoAmrContainer"></div></div>
+<li><span class="sym">&Dagger;</span><span><b>Intrinsic resistance</b> (after the name): resistance is expected for this organism (CLSI M100 Appendix B), not acquired.</span></li><li><span class="sym">&dagger;</span><span><b>Selective test</b> (after the antibiotic name): tested on fewer than 90% of the isolates, so the percentage may be biased.</span></li><li><span class="sym">i</span><span>Tap a bar: shows n (number of isolates tested) and the 95% CI. The bar height is always the selected percentage.</span></li></ul><div class="abx-extra" id="extra_pathoAmrContainer"></div></div>
                 </div>
             </div>
 
@@ -509,11 +511,11 @@
                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Time Period</label>
                         <div class="flex justify-center items-center bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-inner w-full">
                             <label class="flex-1 text-center cursor-pointer mb-0">
-                                <input type="radio" name="abx_period" value="all" class="peer sr-only" checked>
-                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-blue-700 peer-checked:shadow-sm text-slate-500 transition-all">All Times</div>
+                                <input type="radio" name="abx_period" value="all" class="peer sr-only">
+                                <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-blue-700 peer-checked:shadow-sm text-slate-500 transition-all">All Times (exploratory)</div>
                             </label>
                             <label class="flex-1 text-center cursor-pointer mb-0">
-                                <input type="radio" name="abx_period" value="year" class="peer sr-only">
+                                <input type="radio" name="abx_period" value="year" class="peer sr-only" checked>
                                 <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-blue-700 peer-checked:shadow-sm text-slate-500 transition-all">Last Year</div>
                             </label>
                             <label class="flex-1 text-center cursor-pointer mb-0">
@@ -525,6 +527,7 @@
                                 <div class="text-[10px] font-bold py-1.5 rounded-md peer-checked:bg-white peer-checked:text-blue-700 peer-checked:shadow-sm text-slate-500 transition-all">Last Month</div>
                             </label>
                         </div>
+                        <div id="abx_period_hint"></div>
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-slate-500 mb-1">Select Antimicrobial</label>
@@ -642,9 +645,7 @@
                     <h3 class="text-sm font-bold text-slate-800 mb-2">Advanced Heatmap</h3>
                     <div id="heatmapLegend" class="flex flex-wrap gap-1 mb-3 text-[8px] font-bold"></div>
                     <div class="w-full overflow-x-auto custom-scroll rounded-lg border border-slate-200 mb-2" id="heatmapWrapper"></div>
-                    <div class="mt-2 text-[9px] text-slate-500 text-center bg-white border border-slate-100 p-1.5 rounded">
-                        * Asterisk indicates a low sample size (n &lt; 30).
-                    </div>
+                    <div id="heatmapNote" class="mt-2 text-[10px] leading-snug text-slate-600 bg-white border border-slate-100 p-2 rounded space-y-1"></div>
                 </div>
             </div>
 
@@ -833,14 +834,14 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=11.1"></script>
-    <script src="js/dashboard.js?v=11.1"></script>
-    <script src="js/info_texts.js?v=11.1"></script>
-    <script src="js/dashboard_panels.js?v=11.1"></script>
-    <script src="js/dashboard_year.js?v=11.1"></script>
-    <script src="js/dashboard_period.js?v=11.1"></script>
-    <script src="js/guide.js?v=11.1"></script>
-    <script src="js/nav.js?v=11.1"></script>
+    <script src="js/data.js?v=11.2"></script>
+    <script src="js/dashboard.js?v=11.2"></script>
+    <script src="js/info_texts.js?v=11.2"></script>
+    <script src="js/dashboard_panels.js?v=11.2"></script>
+    <script src="js/dashboard_year.js?v=11.2"></script>
+    <script src="js/dashboard_period.js?v=11.2"></script>
+    <script src="js/guide.js?v=11.2"></script>
+    <script src="js/nav.js?v=11.2"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>
