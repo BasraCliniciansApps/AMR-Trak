@@ -1750,7 +1750,8 @@ window.generateAdvancedAnalytics = function() {
 
     let irCells = 0, lowCells = 0, nuCells = 0, daggerCells = 0;
     let hmHtml = '<table class="heatmap-table"><thead><tr><th>Org (n)</th>';
-    hmAbxs.forEach(a => { hmHtml += `<th><div class="w-16 truncate text-[10px]" title="${a}">${a}</div></th>`; });
+    const hmHeadH = Math.max(96, Math.max.apply(null, hmAbxs.map(a => String(a).length).concat([0])) * 6.4 + 14);
+    hmAbxs.forEach(a => { hmHtml += `<th style="vertical-align:bottom;padding:6px 2px"><span title="${a}" style="writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;height:${hmHeadH}px;white-space:nowrap;font-size:10px;font-weight:700">${a}</span></th>`; });
     hmHtml += '</tr></thead><tbody>';
 
     hmOrgs.forEach(o => {
