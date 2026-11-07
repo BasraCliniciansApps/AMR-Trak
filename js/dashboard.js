@@ -412,7 +412,7 @@ function mdrInfoHtml(px, pp) {
     <li>A category that was not tested is treated as unknown, not as resistant.</li>
     <li>Each isolate is placed in its highest class.</li></ul>
     <h5>Possible XDR / PDR</h5>
-    <p>Inadequate panel: the isolate is MDR, but the categories that were not tested could still make it XDR (or PDR). Fewer than 3 susceptible categories were found, so XDR cannot be ruled out. These isolates are counted as MDR, not as XDR or PDR. This period has <b>${px}</b> possible XDR and <b>${pp}</b> possible PDR isolate(s).</p>
+    <p>Possible XDR / PDR (Magiorakos 2012): the isolate is MDR, but the categories that were not tested could still make it XDR (or PDR). Fewer than 3 susceptible categories were found, so XDR cannot be ruled out. These isolates are counted as MDR, not as XDR or PDR. This period has <b>${px}</b> possible XDR and <b>${pp}</b> possible PDR isolate(s).</p>
     <p>Validity condition (Magiorakos 2012): the XDR and PDR definitions are valid only when isolates were tested against all or nearly all agents of each category and selective reporting or suppression of results was avoided. With incomplete testing an isolate can only be called possible XDR or possible PDR, and such results should not be compared with confirmed XDR or PDR from other studies.</p>`;
 }
 const AWARE_NAMES = { A: 'Access', W: 'Watch', R: 'Reserve' };
