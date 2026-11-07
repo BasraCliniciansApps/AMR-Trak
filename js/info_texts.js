@@ -57,7 +57,7 @@ const INFO_OVERRIDE = (function () {
         H('How to read it') + L(['Wards are ordered by the number of MDR-or-worse isolates.', 'A patient who moves between wards is counted once, in the ward of the first isolate, because de-duplication covers the whole period.']));
     add('mdr_group', 'By organism group',
         H('What it shows') + P('MDR, XDR and PDR counts for each organism group.') +
-        H('How to read it') + L(['<b>MDR+</b> = MDR, XDR or PDR.', '<b>*</b> = fewer than 30 isolates: interpret with caution (CLSI M39).', '<b>Poss.</b> = isolates tested against too few categories to confirm XDR or PDR. They are shown for information and are not included in the XDR+ or PDR columns.']));
+        H('How to read it') + L(['<b>MDR+</b> = MDR, XDR or PDR.', '<b>*</b> = fewer than 30 isolates: interpret with caution (CLSI M39).', '<b>Poss.</b> = inadequate panel: the isolate is MDR, fewer than 3 susceptible categories were found, and the untested categories could still make it XDR (or PDR). They are counted as MDR, shown for information, and not included in the XDR+ or PDR columns.']));
 
     // ---------------------------------------------------------------- culture overview
     add('lab_def', 'About the Culture Overview',
@@ -110,7 +110,7 @@ const INFO_OVERRIDE = (function () {
         ['CLSI_M39', 'WHO_GLASS']);
     add('ya_mdr', 'MDR / XDR / PDR by organism group',
         H('What it shows') + P('Multidrug-resistant (MDR), extensively drug-resistant (XDR) and pandrug-resistant (PDR) first isolates among Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp. and <i>S. aureus</i>.') +
-        H('How to read it') + L(['<b>Any</b> = MDR + XDR + PDR.', '<b>Possible</b> = isolates that look XDR on the tested categories but had too narrow a panel to confirm.', '<b>*</b> = fewer than 30 isolates.']) +
+        H('How to read it') + L(['<b>Any</b> = MDR + XDR + PDR.', '<b>Possible</b> = inadequate panel: the isolate is MDR, fewer than 3 susceptible categories were found, and the untested categories could still make it XDR. It is counted as MDR.', '<b>*</b> = fewer than 30 isolates.']) +
         H('Method') + L(['Definitions follow Magiorakos et al., 2012.', 'Intrinsic resistance is excluded.', 'A category that was not tested is unknown, not susceptible, so XDR and PDR counts are conservative.', 'Validity condition (Magiorakos 2012): the XDR and PDR definitions are valid only when isolates were tested against all or nearly all agents of each category and selective reporting or suppression of results was avoided. With incomplete testing an isolate can only be called possible XDR or possible PDR, and such results should not be compared with confirmed XDR or PDR from other studies.']),
         ['MAGIORAKOS', 'CLSI_M100']);
     add('ya_cult', 'Culture burden',

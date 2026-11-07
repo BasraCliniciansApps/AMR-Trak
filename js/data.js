@@ -285,16 +285,18 @@ function applyDeduplication(records, opts) {
 // - MDR: NS to >=1 agent in >=3 antimicrobial categories.
 // - XDR: NS to >=1 agent in all but <=2 categories of ALL categories that
 //   apply to the organism (untested categories are unknown, not susceptible).
-//   With routine panels XDR is therefore only established when the panel is
-//   broad enough. "possibleXDR" flags isolates that look XDR on the tested
-//   categories but whose panel is too narrow to confirm it.
+//   An isolate with too few susceptible results to rule XDR out, but with
+//   categories not tested, is flagged "possibleXDR" (Magiorakos 2012: with
+//   incomplete testing an isolate can only be called possible XDR/PDR).
+//   Rule (no numeric threshold): XDR is ruled out only when 3 or more categories
+//   were found susceptible; otherwise the untested categories could still
+//   make it XDR. "possiblePDR": no tested agent susceptible, not every category tested.
 // - Only organisms with a defined category list are classified:
 //   Enterobacterales, P. aeruginosa, Acinetobacter spp., S. aureus, Enterococcus spp.
 // - Intrinsic resistance is excluded from the category counts.
 // >>> Category lists and intrinsic-resistance exclusions below should be
 // >>> reviewed by the clinical pharmacist; edit them here only.
 // =====================================================================
-const MDR_MIN_TESTED_FOR_POSSIBLE_XDR = 6;
 
 const MDR_TABLES = {
     'Enterobacterales': {
@@ -426,11 +428,11 @@ function classifyMDR(r) {
     if (ns >= 3) {
         cls = 'MDR';
         if (ns >= total - 2) cls = 'XDR';
-        else if (tested >= MDR_MIN_TESTED_FOR_POSSIBLE_XDR && (tested - ns) <= 2) possibleXDR = true;
+        else if (tested - ns <= 2) possibleXDR = true;      // fewer than 3 susceptible categories known: XDR cannot be ruled out
     }
-    if (cls === 'XDR' && !anySusceptible) {
-        if (tested === total) cls = 'PDR';
-        else if (tested >= MDR_MIN_TESTED_FOR_POSSIBLE_XDR) possiblePDR = true;   // panel incomplete: cannot be called PDR
+    if ((cls === 'XDR' || possibleXDR) && !anySusceptible) {
+        if (cls === 'XDR' && tested === total) cls = 'PDR';
+        else if (tested < total) possiblePDR = true;       // panel incomplete: cannot be called PDR
     }
     // Magiorakos 2012 Table 6 footnote: all MRSA isolates are defined as MDR
     if (isMrsa && cls === 'Non-MDR') cls = 'MDR';
