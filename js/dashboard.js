@@ -155,7 +155,7 @@ function refreshPeriodHints() {
             const cap = dashAnchor(recs);
             const info = completeYearsInfo(recs.filter(r => String(r.Date || '').slice(0, 7) <= cap));
             el.className = 'period-hint text-[10px] mt-1.5 rounded-md px-2 py-1.5 bg-amber-50 text-amber-800 border border-amber-200';
-            let h = '<b>Exploratory view: several years combined.</b> CLSI M39 (Section 6.4): when several years are combined, the first isolate per patient per calendar year is used and a footnote should alert readers that the data are combined. For the routine report use Last 12 Months (M39 recommends analysing cumulative data at least annually, Section 6.3).';
+            let h = '<b>Exploratory view: several years combined.</b> CLSI M39 (Section 6.4): when several years are combined, the first isolate per patient is used for each period (M39 suggests per calendar year; the app uses 12-month blocks counted from the start of the period) and a footnote should alert readers that the data are combined. For the routine report use Last 12 Months (M39 recommends analysing cumulative data at least annually, Section 6.3).';
             if (info.complete.length) h += ' <b>Years included (data in all 12 months): ' + info.complete.join(', ') + '.</b>';
             if (info.omitted.length) h += ' <b>Left out because the year is incomplete: ' + info.omitted.map(o => o.year + ' (' + o.months + ' of 12 months)').join(', ') + '.</b> An incomplete year over-represents some seasons and does not meet the CLSI M39 recommendation of an analysis period of one year (Sections 6.3 and 6.4).';
             el.innerHTML = h; return;
@@ -1655,7 +1655,7 @@ function hmPeriodNote(records) {
     const days = (new Date(ds[ds.length - 1]) - new Date(ds[0])) / 86400000 + 1;
     const span = ds[0] + ' to ' + ds[ds.length - 1];
     if (days < 360) return ['<b>Period shown: ' + span + ' (about ' + Math.round(days) + ' days), shorter than one year.</b>'].concat(base, ['Presenting data more often may be complicated by seasonal variation in resistance rates.', 'Estimates are imprecise when isolate numbers are small.', 'Read this map as an indication only.']);
-    if (days > 372) return ['<b>Period shown: ' + span + ', more than one year (years combined).</b>'].concat(base, ['When several years are combined, M39 (Section 6.4) uses the first isolate per patient per calendar year.', 'M39 advises a footnote alerting readers that the data are combined.']);
+    if (days > 372) return ['<b>Period shown: ' + span + ', more than one year (years combined).</b>'].concat(base, ['When several years are combined, M39 (Section 6.4) uses the first isolate per patient per period (here: per 12-month block).', 'M39 advises a footnote alerting readers that the data are combined.']);
     return ['Period shown: ' + span + '.'].concat(base);
 }
 window.generateAdvancedAnalytics = function() {

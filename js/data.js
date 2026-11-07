@@ -235,10 +235,20 @@ function applyDeduplication(records, opts) {
     const winners = new Map(); // key -> chosen record
     // The laboratory patient number restarts every calendar year, so the same number in two different years can be two different people.
     // The first isolate is therefore chosen per patient number, organism AND calendar year (CLSI M39 Section 6.4 for combined years).
+    // A patient confirmed as the same person across years carries a Patient Key (made by the importer). Such records are counted once per
+    // 12-month block of the analysis period (blocks start at the first month with data), whatever calendar years the block crosses.
+    const monthIdx = (r) => { const d = String(r['Date'] || ''); return /^\d{4}-\d{2}/.test(d) ? parseInt(d.slice(0, 4), 10) * 12 + parseInt(d.slice(5, 7), 10) - 1 : null; };
+    let anchor = null;
+    records.forEach(r => { const m = monthIdx(r); if (m !== null && (anchor === null || m < anchor)) anchor = m; });
     const keyOf = (r) => {
-        const pid = getDedupPatientId(r);
         const year = String(r['Date'] || '').substring(0, 4);
         const org = String(r['Selective organism'] || '').trim().toLowerCase();
+        const pk = String(r['Patient Key'] || '').trim();
+        if (pk && org && /^\d{4}$/.test(year)) {
+            const m = monthIdx(r);
+            return 'k:' + pk + '|' + (opts && opts.noBlocks ? 0 : (m === null || anchor === null ? 0 : Math.floor((m - anchor) / 12))) + '|' + org;
+        }
+        const pid = getDedupPatientId(r);
         // Cannot dedup without patient id, a valid year, or an organism: keep the record
         if (!pid || !/^\d{4}$/.test(year) || !org) return null;
         return pid + '|' + year + '|' + org;

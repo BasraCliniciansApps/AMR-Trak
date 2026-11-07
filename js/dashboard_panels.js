@@ -73,7 +73,7 @@ function combinedYearsNote() {
         let ys = 0;
         if (t === 'all') ys = completeYearsInfo(recs.filter(r => !r.Date || String(r.Date).slice(0, 7) <= dashAnchor(recs))).complete.length;
         else if (t === 'range') { const w = periodWindow(recs, t); if (w) { const m = (parseInt(w.to.slice(0, 4), 10) - parseInt(w.from.slice(0, 4), 10)) * 12 + parseInt(w.to.slice(5, 7), 10) - parseInt(w.from.slice(5, 7), 10) + 1; ys = m > 12 ? Math.ceil(m / 12) : 0; } }
-        return ys > 1 ? 'Combined data: ' + ys + ' years analysed together (first isolate per patient per calendar year; CLSI M39 &sect;6.4). Interpret trends and changes over time with caution.' : '';
+        return ys > 1 ? 'Combined data: ' + ys + ' years analysed together (first isolate per patient per 12-month block; CLSI M39 &sect;6.4). Interpret trends and changes over time with caution.' : '';
     } catch (e) { return ''; }
 }
 function scopeBanner(custom) {

@@ -134,7 +134,7 @@ function opClusters(month) {
     const endDay = opShiftMonth(month, 1) + '-01';
     const years = [...new Set([winFrom.slice(0, 4), month.slice(0, 4)])];
     const pool = opClean(getDashRecords()).filter(r => years.includes(String(r.Date || '').slice(0, 4)));
-    const first = applyDeduplication(pool).filter(r => r.Date && r.Date >= winFrom && r.Date < endDay);
+    const first = applyDeduplication(pool, { noBlocks: true }).filter(r => r.Date && r.Date >= winFrom && r.Date < endDay);
     const groups = {};
     first.forEach(r => {
         if (!r.Ward || r.Ward === '-') return;

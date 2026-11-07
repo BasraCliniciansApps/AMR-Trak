@@ -92,7 +92,7 @@ const INFO_OVERRIDE = (function () {
     add('ya_icu', 'ICU compared with non-ICU',
         H('What it shows') + P('The priority resistance indicators and the susceptibility of the main organisms in intensive care units, next to all other wards, for the selected analysis period.') +
         H('How to read it') + L(['<b>Cells:</b> resistant (or susceptible) / tested, with the percentage below.', '<b>Difference:</b> ICU minus non-ICU in percentage points. A significant difference is marked <b>differs *</b> (two-proportion z-test, p &lt; 0.05), and only when both groups have at least 30 tested isolates. Otherwise the difference is descriptive only.', 'A negative difference in susceptibility means the ICU has lower susceptibility.']) +
-        H('Method') + L(['The first isolate per patient, organism and year is chosen across all wards, and the unit split is applied afterwards, so a patient who moves between wards is not counted twice (CLSI M39).', 'The wards counted as ICU are set by the surveillance team.']),
+        H('Method') + L(['The first isolate per patient and organism is chosen (per 12-month block for patients linked across years in the importer, otherwise per calendar year) across all wards, and the unit split is applied afterwards, so a patient who moves between wards is not counted twice (CLSI M39).', 'The wards counted as ICU are set by the surveillance team.']),
         ['CLSI_M39', 'CLSI_M100']);
     add('ya_cum', 'Cumulative antibiogram',
         H('What it shows') + P('The percentage of first isolates that are susceptible to each antibiotic, for each organism, over the selected analysis period of one year. It is the report clinicians use to choose empirical therapy.') +

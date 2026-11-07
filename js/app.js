@@ -938,6 +938,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
             report.manualReplaced = removed;
             report.manualMonths = Array.from(fileMonths).filter(m => m).sort();
         } catch (e) { console.warn('Manual replacement failed', e); }
+        try { if (typeof plAutoLink === 'function') plAutoLink(records); } catch (e) {}   // people confirmed before keep their code
         localStorage.setItem('amr_records', JSON.stringify(records));
         try {
             const mergedLab = mergeLabQuality(JSON.parse(localStorage.getItem('amr_lab_quality') || '{}'), labAgg);
@@ -947,7 +948,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         } catch (e) { console.warn('Lab quality aggregate failed', e); }
         initDataTable();
         if (typeof syncLocalToCloud === "function" && navigator.onLine) syncLocalToCloud();
-        showImportReport(report, audit, newRecords, skippedCount, fileNames);
+        Promise.resolve(showImportReport(report, audit, newRecords, skippedCount, fileNames)).then(() => { if (typeof openPatientLink === 'function') openPatientLink({ silent: true }); });
         event.target.value = '';
     };
 
@@ -1095,7 +1096,7 @@ function showImportReport(report, audit, newRecords, skippedCount, fileNames) {
         log.unshift({ when: new Date().toISOString(), files: fileNames, added: report.added, skipped: skippedCount, auto: rep.auto, attention: rep.attention });
         localStorage.setItem('amr_import_log', JSON.stringify(log.slice(0, 12)));
     } catch (e) {}
-    Swal.fire({ title: 'Import report', html: renderImportReportHtml({ added: report.added, skipped: skippedCount, auto: rep.auto, attention: rep.attention }), icon: rep.attention.length ? 'warning' : 'success', width: 'min(94vw, 560px)', confirmButtonText: 'Close', confirmButtonColor: '#0d9488' });
+    return Swal.fire({ title: 'Import report', html: renderImportReportHtml({ added: report.added, skipped: skippedCount, auto: rep.auto, attention: rep.attention }), icon: rep.attention.length ? 'warning' : 'success', width: 'min(94vw, 560px)', confirmButtonText: 'Close', confirmButtonColor: '#0d9488' });
 }
 
 function renderImportReportHtml(r) {

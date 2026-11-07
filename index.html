@@ -391,6 +391,7 @@
                     <p class="text-xs text-slate-500 mb-4">Extract isolates directly from WHONET or standard CSV/TXT laboratory exports.</p>
                     <button onclick="triggerDataExtractor()" class="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm transition">Select File(s) to Extract</button>
                     <button onclick="showImportHistory()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm transition ml-2">Import History</button>
+                    <button onclick="openPatientLink()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm transition ml-2">Link Repeat Patients</button>
                     <input type="file" id="extractorFileInput" multiple accept=".txt,.csv,.xlsx,.xls" class="hidden" onchange="processDataExtraction(event)">
                 </div>
 
@@ -442,6 +443,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <!-- Scripts -->
     <script src="js/data.js"></script>
+    <script src="js/patient_link.js?v=1"></script>
     <script src="js/app.js?v=11.9"></script>
 
 </body>
