@@ -272,7 +272,7 @@ function renderMdrPanel() {
     $('#mdr_range_label').text(`${range.label} - ${scopeLabel()}`);
 
     const counts = { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0, 'PDR': 0 };
-    const byWard = {}, byMonth = {}, byGroup = {};
+    const byWard = {}, byMonth = {}, byGroup = {}, byOrg = {};
     let possibleX = 0, possibleP = 0, n = 0;
     recs.forEach(r => {
         const res = classifyMDR(r);
@@ -280,6 +280,8 @@ function renderMdrPanel() {
         n++; counts[res.cls]++;
         if (res.possibleXDR) possibleX++;
         if (res.possiblePDR) possibleP++;
+        const on = r['Selective organism'] || 'Unknown';
+        (byOrg[on] = byOrg[on] || { total: 0, mdr: 0 }).total++; if (res.cls !== 'Non-MDR') byOrg[on].mdr++;
         const w = r.Ward || 'Unknown';
         (byWard[w] = byWard[w] || { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0, 'PDR': 0, total: 0 })[res.cls]++; byWard[w].total++;
         const m = r.Date.slice(0, 7);
@@ -295,7 +297,9 @@ function renderMdrPanel() {
         ['Classified isolates', n + (n && n < minN() ? '*' : ''), 'text-slate-800'],
         ['MDR or worse', n ? `${worse} (${pct(worse, n)}%)${ciSub(worse, n)}` : '-', 'text-amber-600'],
         ['XDR or worse', n ? `${counts.XDR + counts.PDR} (${pct(counts.XDR + counts.PDR, n)}%)${ciSub(counts.XDR + counts.PDR, n)}` : '-', 'text-rose-600'],
-        ['PDR', n ? counts.PDR : '-', 'text-red-900']
+        ['MDR only', n ? `${counts.MDR} (${pct(counts.MDR, n)}%)` : '-', 'text-amber-700'],
+        ['XDR only', n ? `${counts.XDR} (${pct(counts.XDR, n)}%)` : '-', 'text-rose-700'],
+        ['PDR', n ? `${counts.PDR} (${pct(counts.PDR, n)}%)` : '-', 'text-red-900']
     ].map(t => `<div class="bg-slate-50 border border-slate-100 rounded-lg p-2 text-center"><div class="text-[9px] font-bold text-slate-500">${t[0]}</div><div class="text-sm font-black ${t[2]}">${t[1]}</div></div>`).join(''));
 
     setInfo('mdr_panel', 'MDR / XDR / PDR analysis', mdrInfoHtml(possibleX, possibleP));
@@ -306,7 +310,7 @@ function renderMdrPanel() {
     attachInfo('#mdr_trend_title', 'mdr_trend');
     setInfo('mdr_wards', 'Distribution by ward', '<p>Classified first isolates per ward, split by class. The number in brackets is the total classified isolates for that ward. Wards are ordered by the number of MDR or worse isolates. Isolates are de-duplicated across the whole selected period, so a patient moving between wards is counted once, in the ward of the first isolate.</p>');
     attachInfo('#mdr_wards_title', 'mdr_wards');
-    setInfo('mdr_group', 'By organism group', '<p>MDR+ = MDR, XDR or PDR. Groups with fewer than 30 isolates are marked with * and should be interpreted with caution (CLSI M39). "Poss." figures are isolates tested against too few categories to confirm XDR or PDR; they are shown for information and are not included in the XDR+ or PDR columns.</p>');
+    setInfo('mdr_group', 'By organism group', '<p>Cumulative: MDR+ = MDR, XDR or PDR; XDR+ = XDR or PDR. Single class: MDR only, XDR only, PDR. The list under the table gives the percentage MDR+ next to each organism name, as in CLSI M39 Section 12.1, and the definition used is stated below it.</p><p>MDR+ = MDR, XDR or PDR. Groups with fewer than 30 isolates are marked with * and should be interpreted with caution (CLSI M39). "Poss." figures are isolates tested against too few categories to confirm XDR or PDR; they are shown for information and are not included in the XDR+ or PDR columns.</p>');
     attachInfo('#mdr_group_title', 'mdr_group');
 
     const ctxOpts = { responsive: true, maintainAspectRatio: false };
@@ -352,13 +356,17 @@ function renderMdrPanel() {
     // By organism group
     const gnames = { enterobacterales: 'Enterobacterales', pseudomonas: 'P. aeruginosa', acinetobacter: 'Acinetobacter', staph: 'S. aureus' };
     const lowN = (n && n < minN()) || Object.values(byGroup).some(x => x.total < minN()) || wards.some(w => byWard[w].total < minN()) || monthList.some(m => byMonth[m].total < minN());
-    const mdrNNote = `<ul class="note-list text-[9px] text-slate-400 mt-1 sym-note"><li>MDR+ = MDR, XDR or PDR. The 95% CI (Wilson) shows how precise each percentage is.</li>${lowN ? '<li><b>*</b> fewer than 30 isolates (CLSI M39 &sect;7.2.2): the percentage is imprecise, see the wide CI. Read it as an indication, not a stable rate.</li>' : ''}<li>Classification is per isolate (Magiorakos 2012), so small n does not change an isolate\'s class; it only makes the percentage less certain.</li></ul>`;
+    const mdrNNote = `<ul class="note-list text-[9px] text-slate-400 mt-1 sym-note"><li>Cumulative: MDR+ = MDR, XDR or PDR; XDR+ = XDR or PDR. Single class: MDR only, XDR only, PDR (each isolate is in one class).</li><li>The 95% CI (Wilson) shows how precise each cumulative percentage is.</li>${lowN ? '<li><b>*</b> fewer than 30 isolates (CLSI M39 &sect;7.2.2): the percentage is imprecise, see the wide CI. Read it as an indication, not a stable rate.</li>' : ''}<li>Classification is per isolate (Magiorakos 2012), so small n does not change an isolate\'s class; it only makes the percentage less certain.</li></ul>`;
+    // CLSI M39 Section 12.1 style: the percentage MDR next to each organism name, with the definition used stated below
+    const orgRows = Object.keys(byOrg).filter(o => byOrg[o].total > 0).sort((a, b) => byOrg[b].total - byOrg[a].total);
+    const mdrOrgList = orgRows.length ? `<div class="mt-3"><div class="text-[10px] font-bold text-slate-600 mb-1">Percentage MDR+ by organism</div><ul class="text-[10px] text-slate-600 space-y-0.5">${orgRows.map(o => { const x = byOrg[o], small = x.total < minN(); return `<li class="${small ? 'text-slate-400' : ''}"><b>${escHtml(formatOrgName ? formatOrgName(o) : o)}</b> (${pct(x.mdr, x.total)}% MDR+, n=${x.total}${small ? '*' : ''})</li>`; }).join('')}</ul></div>` : '';
+    const mdrDefNote = `<ul class="note-list text-[9px] text-slate-400 mt-2 sym-note"><li>Definitions (Magiorakos et al. 2012): MDR = non-susceptible to at least one agent in three or more antimicrobial categories.</li><li>XDR = non-susceptible to at least one agent in all but two or fewer categories. PDR = non-susceptible to all agents in all categories.</li><li>Non-susceptible = I, SDD or R. Intrinsic resistance is not counted. Only the categories listed for the organism group are used (CLSI M39 Section 12 asks the facility to state its definition).</li></ul>`;
     const rows = Object.keys(byGroup).sort((a, b) => byGroup[b].total - byGroup[a].total).map(g => {
         const x = byGroup[g], w = x.MDR + x.XDR + x.PDR;
         const poss = (x.px || x.pp) ? ` <span class="text-slate-400">(+${x.px} poss. XDR${x.pp ? ', +' + x.pp + ' poss. PDR' : ''})</span>` : '';
-        return `<tr class="border-t border-slate-100"><td class="py-1.5 pr-2 font-bold text-slate-700">${gnames[g] || g}</td><td class="text-center">${x.total}${x.total < minN() ? '*' : ''}</td><td class="text-center text-amber-600 font-bold">${pct(w, x.total)}%${ciSub(w, x.total)}</td><td class="text-center text-rose-600 font-bold">${x.XDR + x.PDR}${ciSub(x.XDR + x.PDR, x.total, true)}${poss}</td><td class="text-center text-red-900 font-bold">${x.PDR}</td></tr>`;
+        return `<tr class="border-t border-slate-100"><td class="py-1.5 pr-2 font-bold text-slate-700">${gnames[g] || g}</td><td class="text-center">${x.total}${x.total < minN() ? '*' : ''}</td><td class="text-center text-amber-600 font-bold">${pct(w, x.total)}%${ciSub(w, x.total)}</td><td class="text-center text-rose-600 font-bold">${x.XDR + x.PDR}${ciSub(x.XDR + x.PDR, x.total, true)}${poss}</td><td class="text-center text-amber-700">${x.MDR} <span class="text-slate-400">(${pct(x.MDR, x.total)}%)</span></td><td class="text-center text-rose-700">${x.XDR} <span class="text-slate-400">(${pct(x.XDR, x.total)}%)</span></td><td class="text-center text-red-900 font-bold">${x.PDR} <span class="text-slate-400 font-normal">(${pct(x.PDR, x.total)}%)</span></td></tr>`;
     }).join('');
-    $('#mdr_group_table').html(rows ? `<table class="w-full text-[10px]"><thead><tr class="text-slate-500"><th class="text-left pb-1">Group</th><th>n</th><th>MDR+</th><th>XDR+</th><th>PDR</th></tr></thead><tbody>${rows}</tbody></table>${mdrNNote}` : '<p class="text-xs text-slate-400 text-center">No classifiable isolates in this period.</p>');
+    $('#mdr_group_table').html(rows ? `<table class="w-full text-[10px]"><thead><tr class="text-slate-500"><th class="text-left pb-1">Group</th><th>n</th><th>MDR+</th><th>XDR+</th><th>MDR only</th><th>XDR only</th><th>PDR</th></tr></thead><tbody>${rows}</tbody></table>${mdrOrgList}${mdrNNote}${mdrDefNote}` : '<p class="text-xs text-slate-400 text-center">No classifiable isolates in this period.</p>');
 }
 const _pickerRendered = {};
 function renderPeriodPickerOnce(id, cb) {
