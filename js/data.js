@@ -347,7 +347,7 @@ const MDR_TABLES = {
         'Fluoroquinolones': ['Ciprofloxacin', 'Levofloxacin', 'Moxifloxacin'],
         'Folate pathway inhibitors': ['Trimethoprim/Sulfamethoxazole'],
         'Fusidane': ['Fusidic acid'],
-        'Glycopeptides': ['Vancomycin', 'Teicoplanin'],
+        'Glycopeptides': ['Vancomycin', 'Teicoplanin', 'Telavancin'],
         'Glycylcyclines': ['Tigecycline'],
         'Lincosamides': ['Clindamycin'],
         'Lipopeptides': ['Daptomycin'],
