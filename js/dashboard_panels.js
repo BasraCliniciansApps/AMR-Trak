@@ -861,6 +861,25 @@ function effPref(k, shared, hard) {
 function getUserPrefs() { try { return JSON.parse(localStorage.getItem('amr_user_prefs')) || {}; } catch (e) { return {}; } }
 function setUserPref(k, v) { const u = getUserPrefs(); u[k] = v; try { localStorage.setItem('amr_user_prefs', JSON.stringify(u)); } catch (e) {} }
 function usYears() { const set = {}; (getUserPrefs && getAllDashRecordsUnscoped()).forEach(r => { const y = String(r.Date || '').slice(0, 4); if (/^\d{4}$/.test(y)) set[y] = 1; }); const ys = Object.keys(set).sort().reverse(); return ys.length ? ys : [String(new Date().getFullYear())]; }
+// Pop-up explanation for the two ways of counting a patient seen in two calendar years inside one 12-month period
+function showDedupInfo() {
+    if (document.getElementById('ddInfoOv')) return;
+    const ov = document.createElement('div'); ov.id = 'ddInfoOv';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:16px';
+    const li = a => '<ul style="list-style:disc;padding-left:18px;margin:4px 0 10px;font-size:12px;color:#334155;line-height:1.5">' + a.map(x => '<li>' + x + '</li>').join('') + '</ul>';
+    ov.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:420px;width:100%;max-height:85vh;overflow:auto;padding:16px;text-align:left">'
+        + '<div style="font-weight:700;font-size:14px;margin-bottom:6px">A patient seen in two calendar years within 12 months</div>'
+        + li(['Example: Last 12 Months is Oct 2025 to Sep 2026. A patient has the same organism in Dec 2025 and again in Jan 2026.', 'This applies to patients you linked across years in the importer (Link Repeat Patients). Unlinked patients are always identified by laboratory number and calendar year, because the number restarts every year.'])
+        + '<div style="font-weight:700;font-size:13px">Count once (first isolate only)</div>'
+        + li(['Only the first isolate (Dec 2025) is counted for the 12-month period, even though the period crosses New Year.', 'Longer periods are split into 12-month blocks that start at the first month with data, and the patient is counted once in each block.', 'This is the CLSI M39 rule: first isolate per patient per analysis period (Section 6.4).', 'It avoids counting the same infection twice.'])
+        + '<div style="font-weight:700;font-size:13px">Count in each calendar year (two isolates)</div>'
+        + li(['Both isolates are counted: Dec 2025 in 2025 and Jan 2026 in 2026.', 'M39 suggests the calendar year only when several years are combined.', 'It is simpler, but it can count the same patient twice when a 12-month period crosses New Year.', 'In the development data the difference was about 0.5% of first isolates.'])
+        + '<button type="button" id="ddInfoClose" style="width:100%;margin-top:4px;padding:9px;border-radius:10px;background:#0d9488;color:#fff;font-weight:700;font-size:13px">Close</button></div>';
+    document.body.appendChild(ov);
+    const close = () => ov.remove();
+    ov.addEventListener('click', e => { if (e.target === ov) close(); });
+    ov.querySelector('#ddInfoClose').addEventListener('click', close);
+}
 window.showUserSettings = function () {
     const u = getUserPrefs();
     const tg = (id, on) => `<label style="display:inline-block;position:relative;width:40px;height:22px;flex:none"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} style="opacity:0;width:0;height:0"><span class="us-sl"></span></label>`;
@@ -873,13 +892,16 @@ window.showUserSettings = function () {
       ${blk('Default unit filter', 'The unit filter selected when the dashboard opens.', sel('us_scope', [['all', 'ALL'], ['icu', 'ICU'], ['nonicuip', 'Non-ICU IP'], ['outpatient', 'Outpatient']], getUnitScope()))}
       ${blk('Analysis period (Analytics tab)', 'One period for every Analytics chart. All Times combines complete calendar years only. The Heatmap From/To fields, when filled, override it.', sel('us_period', [['year', 'Last 12 Months'], ['all', 'All Times'], ['calyear', 'Calendar year'], ['quarter', 'Last 3 Months'], ['month', 'Last Month'], ['range', 'Specific period']], anPeriod()) + `<div id="us_cal" style="display:none;margin-top:6px">${sel('us_pyear', usYears().map(y => [y, y]), String(u.pyear || usYears()[0]))}</div><div id="us_rng" style="display:none;margin-top:6px;gap:6px"><input type="month" id="us_pfrom" value="${u.pfrom || ''}" style="flex:1;border:1px solid #cbd5e1;border-radius:8px;padding:7px;font-size:12px"><input type="month" id="us_pto" value="${u.pto || ''}" style="flex:1;border:1px solid #cbd5e1;border-radius:8px;padding:7px;font-size:12px"></div>`)}
       ${blk('Last Year tab period', 'Calendar year (default) is the last complete calendar year (CLSI M39, Section 6.4). Last 12 months moves forward with the data.', sel('us_yamode', [['calendar', 'Calendar year'], ['rolling', 'Last 12 months']], (typeof yaMode === 'function') ? yaMode() : 'calendar'))}
+      <div style="margin-bottom:14px"><b>Patient seen in two calendar years within 12 months</b> <button type="button" id="us_dd_i" aria-label="Explain" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid #94a3b8;color:#475569;font-size:11px;font-weight:700;margin-left:4px">i</button>
+        ${sel('us_dedup', [['block', 'Count once (first isolate only)'], ['calyear', 'Count in each calendar year (two isolates)']], dedupMode())}
+        <div style="font-size:10.5px;color:#64748b;margin-top:4px">For patients linked across years in the importer. Tap (i) for what each option does.</div></div>
       ${row('Show organisms with fewer than 30 isolates', 'Last Year tab antibiogram. Off by default: organisms below 30 isolates are listed in a note only. When on, they appear as grey rows marked * (indicative only, CLSI M39 Section 7.2.2).', tg('us_small', u.showsmall === true))}
       ${row('Show explanation notes under charts', 'Notes about symbols, colours and sample size. Warnings about incomplete periods and the unit banner always stay.', tg('us_notes', effNotes()))}
       <div style="font-size:10.5px;color:#64748b">These settings are saved on this device only.</div>
     </div>`;
-    Swal.fire({ title: 'Settings', html, didOpen: () => { const f = () => { const v = document.getElementById('us_period').value; document.getElementById('us_cal').style.display = v === 'calyear' ? '' : 'none'; document.getElementById('us_rng').style.display = v === 'range' ? 'flex' : 'none'; }; document.getElementById('us_period').addEventListener('change', f); f(); }, confirmButtonText: 'Save', showCancelButton: true, showDenyButton: true, denyButtonText: 'Reset to defaults', buttonsStyling: false, width: 'min(92vw, 440px)', customClass: { popup: 'info-popup teal-frame', title: 'info-title', htmlContainer: 'info-container', confirmButton: 'info-close', denyButton: 'info-deny', cancelButton: 'info-cancel', actions: 'info-actions' }, focusConfirm: false,
+    Swal.fire({ title: 'Settings', html, didOpen: () => { const di = document.getElementById('us_dd_i'); if (di) di.addEventListener('click', showDedupInfo); const f = () => { const v = document.getElementById('us_period').value; document.getElementById('us_cal').style.display = v === 'calyear' ? '' : 'none'; document.getElementById('us_rng').style.display = v === 'range' ? 'flex' : 'none'; }; document.getElementById('us_period').addEventListener('change', f); f(); }, confirmButtonText: 'Save', showCancelButton: true, showDenyButton: true, denyButtonText: 'Reset to defaults', buttonsStyling: false, width: 'min(92vw, 440px)', customClass: { popup: 'info-popup teal-frame', title: 'info-title', htmlContainer: 'info-container', confirmButton: 'info-close', denyButton: 'info-deny', cancelButton: 'info-cancel', actions: 'info-actions' }, focusConfirm: false,
         preConfirm: () => ({ nocontam: document.getElementById('us_contam').checked, period: document.getElementById('us_period').value, pyear: document.getElementById('us_pyear').value, pfrom: document.getElementById('us_pfrom').value, pto: document.getElementById('us_pto').value, scope: document.getElementById('us_scope').value,
-            yamode: document.getElementById('us_yamode').value, showsmall: document.getElementById('us_small').checked, notes: document.getElementById('us_notes').checked }) })
+            yamode: document.getElementById('us_yamode').value, dedup: document.getElementById('us_dedup').value, showsmall: document.getElementById('us_small').checked, notes: document.getElementById('us_notes').checked }) })
     .then(r => {
         if (r.isDenied) { try { localStorage.removeItem('amr_user_prefs'); localStorage.removeItem('amr_ya_mode'); } catch (e) {} _unitScope = null; applyUserPrefsUI(true); try { refreshAll(); loadAnalyticsFilters(); } catch (e) {} return; }
         if (!r.isConfirmed) return;
@@ -889,6 +911,7 @@ window.showUserSettings = function () {
         const uu = getUserPrefs();
         ['nocontam', 'period', 'scope', 'notes'].forEach(k => { if (v[k] === def[k]) delete uu[k]; else uu[k] = v[k]; });
         if (v.showsmall) uu.showsmall = true; else delete uu.showsmall;
+        if (v.dedup === (sh.dash_dedup_mode === 'calyear' ? 'calyear' : 'block')) delete uu.dedup; else uu.dedup = v.dedup;
         ['pyear', 'pfrom', 'pto'].forEach(k => { if (uu.period === 'calyear' || uu.period === 'range') uu[k] = v[k]; else delete uu[k]; });
         try { localStorage.setItem('amr_user_prefs', JSON.stringify(uu)); } catch (e) {}
         try { if (v.yamode === (sh.dash_ya_mode === 'rolling' ? 'rolling' : 'calendar')) localStorage.removeItem('amr_ya_mode'); else localStorage.setItem('amr_ya_mode', v.yamode); } catch (e) {}

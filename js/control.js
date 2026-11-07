@@ -57,6 +57,7 @@ function normalise(s) {
         mobile_dash_nocontam: s.mobile_dash_nocontam === true,
         dash_an_period: ['year', 'all', 'calyear', 'quarter', 'month'].includes(s.dash_an_period) ? s.dash_an_period : 'year',
         dash_ya_mode: s.dash_ya_mode === 'rolling' ? 'rolling' : 'calendar',
+        dash_dedup_mode: s.dash_dedup_mode === 'calyear' ? 'calyear' : 'block',
         dash_show_notes: s.dash_show_notes !== false,
         dash_show_scope: s.dash_show_scope !== false,
         dash_default_scope: ['all', 'icu', 'nonicuip', 'outpatient', 'nonicu'].includes(s.dash_default_scope) ? (s.dash_default_scope === 'nonicu' ? 'nonicuip' : s.dash_default_scope) : 'all',
@@ -107,6 +108,9 @@ function render() {
             <p class="hint">Default for every user. A user can change it for their own device from the gear button.</p></div>
         <div class="field"><label>Last Year tab period</label>
             <select class="select" data-k="dash_ya_mode">${[['calendar', 'Calendar year'], ['rolling', 'Last 12 months']].map(([v, t]) => `<option value="${v}" ${cur.dash_ya_mode === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+        <div class="field"><label>Patient seen in two calendar years within a 12-month period</label>
+            <select class="select" data-k="dash_dedup_mode">${[['block', 'Count once (first isolate only)'], ['calyear', 'Count in each calendar year (two isolates)']].map(([v, t]) => `<option value="${v}" ${cur.dash_dedup_mode === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
+            <p class="hint">Applies to patients linked across years in the importer. Each user can change it for their own device from the gear button, where the (i) button explains both options.</p></div>
         <div class="row"><span>Exclude possible skin-flora contaminants</span><label class="sw"><input type="checkbox" data-k="mobile_dash_nocontam" ${cur.mobile_dash_nocontam ? 'checked' : ''}><i></i></label></div>
         <div class="row"><span>Show explanation notes under charts</span><label class="sw"><input type="checkbox" data-k="dash_show_notes" ${cur.dash_show_notes ? 'checked' : ''}><i></i></label></div>
         <p class="hint">These are the defaults for all users. Each user can change them for their own device only, from the gear button.</p>`;

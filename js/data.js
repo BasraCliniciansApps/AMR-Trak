@@ -229,6 +229,13 @@ function nTxt(s) {
     return s.replace(/(fewer than |below |at least |reach(?:ed|es)? |rarely has |n ?(?:&lt;|<|>=|&ge;|≥) ?|&lt; ?)30\b/g, '$1' + m).replace(/\b30 (or more|first isolates|cultures)/g, m + ' $1');
 }
 (function () { if (!window.jQuery) return; const h = jQuery.fn.html; jQuery.fn.html = function (v) { return arguments.length ? h.call(this, nTxt(v)) : h.call(this); }; })();
+// How a patient seen in two calendar years inside one 12-month period is counted: 'block' = once (first isolate), 'calyear' = once per calendar year.
+// This device's choice, else the default published from the Control app, else 'block'.
+function dedupMode() {
+    try { const u = JSON.parse(localStorage.getItem('amr_user_prefs')) || {}; if (u.dedup === 'calyear' || u.dedup === 'block') return u.dedup; } catch (e) {}
+    try { const s = JSON.parse(localStorage.getItem('amr_live_settings')) || {}; if (s.dash_dedup_mode === 'calyear') return 'calyear'; } catch (e) {}
+    return 'block';
+}
 function applyDeduplication(records, opts) {
     records = records.filter(r => !isScreeningSpecimen(r));
     if (contamExcluded()) records = records.filter(r => !isPossibleContaminant(r));
@@ -246,6 +253,7 @@ function applyDeduplication(records, opts) {
         const pk = String(r['Patient Key'] || '').trim();
         if (pk && org && /^\d{4}$/.test(year)) {
             const m = monthIdx(r);
+            if (dedupMode() === 'calyear') return 'k:' + pk + '|y' + year + '|' + org;
             return 'k:' + pk + '|' + (opts && opts.noBlocks ? 0 : (m === null || anchor === null ? 0 : Math.floor((m - anchor) / 12))) + '|' + org;
         }
         const pid = getDedupPatientId(r);
