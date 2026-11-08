@@ -253,9 +253,7 @@
                 'The WHO priority list [R5] names carbapenem-resistant <i>A. baumannii</i> and Enterobacterales, carbapenem-resistant <i>P. aeruginosa</i>, MRSA and vancomycin-resistant <i>E. faecium</i> ' + V + '. It does not list VRSA (removed in 2024). The list is a guide for what to watch; it sets no threshold.',
                 'Intrinsic resistance is never counted [R1, Appendix B]. Susceptibility to the new glycopeptides, daptomycin and tigecycline is counted only when the laboratory entered a result.',
                 'Ordering: VRSA, <i>C. auris</i>, PDR and Annex 1 phenotypes first; then other flagged isolates; then XDR only.',
-                'An alert is a result to confirm and report, not an outbreak diagnosis.']) +
-            H('3. Cluster reporting idea (not applied)') + L([
-                'Linking cases needs epidemiological information (unit, exposure, timing) that infection control staff judge. A report button with confirmation by the AMR or infection control team was considered and is not implemented.'])],
+                'An alert is a result to confirm and report, not an outbreak diagnosis.'])],
 
         // ------------------------------------------------------------------ 9
         ['rv_units', 'For reviewer: units, wards and specimen strata', () =>
