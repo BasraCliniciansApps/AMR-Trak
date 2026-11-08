@@ -1,7 +1,7 @@
 // Period tag: a small label on the top-right of every Analytics result card that names the analysis period in force.
 // It follows Settings > Analysis period; the Heatmap card shows "Custom dates" when its own From/To fields are filled.
 (function () {
-    var NAMES = { year: 'Last 12 months', all: 'All times', calyear: 'Calendar year', quarter: 'Last 3 months', month: 'Last month', range: 'Specific period' };
+    var NAMES = { year: 'Last 12 months', all: 'All completed years', alltimes: 'All times', calyear: 'Calendar year', quarter: 'Last 3 months', month: 'Last month', range: 'Specific period' };
     // [element id, host selector]: the card or panel that holds the chart
     var TARGETS = ['chartGuidedPie', 'chartGuidedAMR', 'chartPathoAMR', 'chartAbxAMR', 'heatmapWrapper'];
     function hostOf(id) { var el = document.getElementById(id); return el ? (el.closest('[id$="_content"]') || el.closest('.mobile-card')) : null; }

@@ -113,7 +113,14 @@ function completeYearsInfo(records) {
     const years = {};
     Object.keys(months).forEach(m => { const y = m.slice(0, 4); years[y] = (years[y] || 0) + 1; });
     const ys = Object.keys(years).sort();
-    return { complete: ys.filter(y => years[y] === 12), omitted: ys.filter(y => years[y] < 12).map(y => ({ year: y, months: years[y] })) };
+    const full = ys.filter(y => years[y] === 12);
+    // Only consecutive years are combined: the run of complete years that ends at the most recent complete year
+    let run = [];
+    for (let i = full.length - 1; i >= 0; i--) {
+        if (!run.length || parseInt(run[0], 10) - parseInt(full[i], 10) === 1) run.unshift(full[i]); else break;
+    }
+    const omitted = ys.filter(y => run.indexOf(y) === -1).map(y => ({ year: y, months: years[y], gap: years[y] === 12 }));
+    return { complete: run, omitted: omitted };
 }
 function periodWindow(records, periodType) {
     const latest = dashAnchor(records);
@@ -135,6 +142,10 @@ function periodWindow(records, periodType) {
 }
 function filterByPeriod(records, periodType) {
     if (!periodType) return records;
+    if (periodType === 'alltimes') {
+        const cap = dashAnchor(records);
+        return records.filter(r => !r.Date || String(r.Date).slice(0, 7) <= cap);
+    }
     if (periodType === 'all') {
         const cap = dashAnchor(records);
         const upTo = records.filter(r => !r.Date || String(r.Date).slice(0, 7) <= cap);
@@ -163,8 +174,13 @@ function refreshPeriodHints() {
             el.className = 'period-hint text-[10px] mt-1.5 rounded-md px-2 py-1.5 bg-amber-50 text-amber-800 border border-amber-200';
             let h = '<b>Exploratory view: several years combined.</b> CLSI M39 (Section 6.4): when several years are combined, the first isolate per patient is used for each period (M39 suggests per calendar year; the app uses 12-month blocks counted from the start of the period) and a footnote should alert readers that the data are combined. For the routine report use Last 12 Months (M39 recommends analysing cumulative data at least annually, Section 6.3).';
             if (info.complete.length) h += ' <b>Years included (data in all 12 months): ' + info.complete.join(', ') + '.</b>';
-            if (info.omitted.length) h += ' <b>Left out because the year is incomplete: ' + info.omitted.map(o => o.year + ' (' + o.months + ' of 12 months)').join(', ') + '.</b> An incomplete year over-represents some seasons and does not meet the CLSI M39 recommendation of an analysis period of one year (Sections 6.3 and 6.4).';
+            if (info.omitted.length) h += ' <b>Left out: ' + info.omitted.map(o => o.year + (o.gap ? ' (complete, but not consecutive with the years included)' : ' (' + o.months + ' of 12 months)')).join(', ') + '.</b> Only consecutive complete years are combined. An incomplete year over-represents some seasons and does not meet the CLSI M39 recommendation of an analysis period of one year (Sections 6.3 and 6.4).';
             el.innerHTML = h; return;
+        }
+        if (t === 'alltimes') {
+            el.className = 'period-hint text-[10px] mt-1.5 rounded-md px-2 py-1.5 bg-amber-50 text-amber-800 border border-amber-200';
+            el.innerHTML = '<b>All available data combined.</b> Incomplete years and months with missing data are included, so some results may be less accurate and not comparable between years. For the routine report use Last 12 Months.';
+            return;
         }
         const w = periodWindow(recs, t);
         el.className = 'period-hint text-[10px] mt-1.5 rounded-md px-2 py-1.5 bg-slate-50 text-slate-600 border border-slate-200';
@@ -174,7 +190,7 @@ function refreshPeriodHints() {
 
 // Visual updates for period toggles
 // One Analytics period for every chart (see anPeriod)
-function anPeriod() { try { const p = (typeof effPref === 'function' ? effPref('period', 'dash_an_period', 'year') : 'year'); return ['all', 'year', 'quarter', 'month', 'calyear', 'range'].indexOf(p) >= 0 ? p : 'year'; } catch (e) { return 'year'; } }
+function anPeriod() { try { const p = (typeof effPref === 'function' ? effPref('period', 'dash_an_period', 'year') : 'year'); return ['all', 'alltimes', 'year', 'quarter', 'month', 'calyear', 'range'].indexOf(p) >= 0 ? p : 'year'; } catch (e) { return 'year'; } }
 
 
 function formatOrgName(org) {

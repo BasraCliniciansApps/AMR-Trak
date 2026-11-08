@@ -55,7 +55,7 @@ function normalise(s) {
     const o = {
         mobile_dash_lastmonth: /^\d{4}-\d{2}$/.test(s.mobile_dash_lastmonth || '') ? s.mobile_dash_lastmonth : '',
         mobile_dash_nocontam: s.mobile_dash_nocontam === true,
-        dash_an_period: ['year', 'all', 'calyear', 'quarter', 'month'].includes(s.dash_an_period) ? s.dash_an_period : 'year',
+        dash_an_period: ['year', 'all', 'alltimes', 'calyear', 'quarter', 'month'].includes(s.dash_an_period) ? s.dash_an_period : 'year',
         dash_ya_mode: s.dash_ya_mode === 'rolling' ? 'rolling' : 'calendar',
         dash_dedup_mode: s.dash_dedup_mode === 'calyear' ? 'calyear' : 'block',
         dash_show_notes: s.dash_show_notes !== false,
@@ -103,7 +103,7 @@ function render() {
     const periods = `
         <div class="field"><label>Report period</label><p class="hint">Every period in the dashboard ends automatically at the latest month that has data.</p></div>
         <div class="field"><label>Analysis period (Analytics tab)</label>
-            <select class="select" data-k="dash_an_period">${[['year', 'Last 12 Months'], ['all', 'All Times (complete years)'], ['calyear', 'Last complete calendar year'], ['quarter', 'Last 3 Months'], ['month', 'Last Month']].map(([v, t]) => `<option value="${v}" ${cur.dash_an_period === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
+            <select class="select" data-k="dash_an_period">${[['year', 'Last 12 Months'], ['all', 'All completed years (consecutive)'], ['alltimes', 'All times (all data, may be inaccurate)'], ['calyear', 'Last complete calendar year'], ['quarter', 'Last 3 Months'], ['month', 'Last Month']].map(([v, t]) => `<option value="${v}" ${cur.dash_an_period === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
             <p class="hint">Default for every user. A user can change it for their own device from the gear button.</p></div>
         <div class="field"><label>Annual Report tab period</label>
             <select class="select" data-k="dash_ya_mode">${[['calendar', 'Calendar year'], ['rolling', 'Last 12 months']].map(([v, t]) => `<option value="${v}" ${cur.dash_ya_mode === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>

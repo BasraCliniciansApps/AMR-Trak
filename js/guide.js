@@ -39,7 +39,7 @@
                 '<b>Unit filter</b> (ALL, ICU, Non-ICU IP, Outpatient) filters everything on every tab.',
                 '<b>Section headers</b> in Analytics open and close when tapped. Open only the one you need.']) +
             H('Choosing the data (Analytics)') + L([
-                '<b>Analysis period:</b> one period for every Analytics chart, set in Settings (gear button): Last 12 Months (default), All Times (complete years only), Calendar year, Last 3 Months, Last Month or a specific period. The Heatmap From/To fields, when filled, override it. Start with a wider period when numbers are small, because more isolates give more reliable percentages.',
+                '<b>Analysis period:</b> one period for every Analytics chart, set in Settings (gear button): Last 12 Months (default), All completed years (consecutive complete years only), All times (every month available, may be less accurate), Calendar year, Last 3 Months, Last Month or a specific period. The Heatmap From/To fields, when filled, override it. Start with a wider period when numbers are small, because more isolates give more reliable percentages.',
                 '<b>Specimen:</b> restricts to blood, urine, wound and so on. Resistance often differs by site, so choose the specimen that matches the patient\'s infection.',
                 '<b>Unit:</b> the buttons at the top of the page (ALL, ICU, Non-ICU IP, Outpatient) apply to every chart. See the section on unit scope.',
                 '<b>Bacteria or Antimicrobial:</b> the organism or the drug you want to examine.',
@@ -48,7 +48,7 @@
             H('Settings (gear button)') + L([
                 '<b>Exclude possible skin-flora contaminants:</b> off by default. When on, blood isolates of skin-flora organisms are removed before the first isolate is chosen, on every tab.',
                 '<b>Default unit filter:</b> the unit selected when the dashboard opens.',
-                '<b>Analysis period (Analytics tab):</b> Last 12 Months, All Times, Calendar year, Last 3 Months, Last Month or a specific period.',
+                '<b>Analysis period (Analytics tab):</b> Last 12 Months, All completed years, All times, Calendar year, Last 3 Months, Last Month or a specific period.',
                 '<b>Annual Report tab period:</b> last 12 months or calendar year.',
                 '<b>Repeat patient in a period that crosses New Year:</b> only for periods that cross New Year (for example Last 12 Months), and for patients confirmed as the same person across years. Count once (first isolate only, the CLSI M39 rule, default) or count once in each calendar year (two isolates). Calendar-year views are not affected. Tap the (i) button next to it for the explanation.',
                 '<b>Show organisms with fewer than 30 isolates:</b> off by default (this device only). When on, the Annual Report antibiogram also lists those organisms as grey rows marked * (indicative only).',
