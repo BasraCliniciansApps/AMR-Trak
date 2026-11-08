@@ -19,7 +19,7 @@
                 'Supporting <b>antimicrobial stewardship</b> and national or WHO reporting.']) +
             H('Where the data come from') + L([
                 'The microbiology laboratory exports its results from <b>WHONET</b> every month.',
-                'The data-entry app cleans and checks them, then publishes a <b>de-identified</b> copy to the cloud. Names are removed and patient numbers are replaced by codes.',
+                'The data are cleaned and checked, then a <b>de-identified</b> copy is published to the cloud. Names are removed and patient numbers are replaced by codes.',
                 'This dashboard only reads that copy. It never shows patient names.']) +
             TIP('This is a surveillance tool. It describes populations of isolates, not individual patients. It does not replace the susceptibility report of a single culture or clinical judgement.')],
 
@@ -50,10 +50,10 @@
                 '<b>Default unit filter:</b> the unit selected when the dashboard opens.',
                 '<b>Analysis period (Analytics tab):</b> Last 12 Months, All Times, Calendar year, Last 3 Months, Last Month or a specific period.',
                 '<b>Annual Report tab period:</b> last 12 months or calendar year.',
-                '<b>Repeat patient in a period that crosses New Year:</b> only for periods that cross New Year (for example Last 12 Months), and for patients linked in the importer. Count once (first isolate only, the CLSI M39 rule, default) or count once in each calendar year (two isolates). Calendar-year views are not affected. Tap the (i) button next to it for the explanation.',
+                '<b>Repeat patient in a period that crosses New Year:</b> only for periods that cross New Year (for example Last 12 Months), and for patients confirmed as the same person across years. Count once (first isolate only, the CLSI M39 rule, default) or count once in each calendar year (two isolates). Calendar-year views are not affected. Tap the (i) button next to it for the explanation.',
                 '<b>Show organisms with fewer than 30 isolates:</b> off by default (this device only). When on, the Annual Report antibiogram also lists those organisms as grey rows marked * (indicative only).',
                 '<b>Show explanation notes under charts:</b> hides or shows the notes and chart keys. Warnings stay.',
-                'Your choices are saved on this device only. The defaults for everyone are set by the surveillance team in the Control app. <b>Reset to defaults</b> returns this device to them.']) +
+                'Your choices are saved on this device only. The defaults for everyone are set by the surveillance programme. <b>Reset to defaults</b> returns this device to them.']) +
             H('Reading and exploring') + L([
                 '<b>Tap a slice or a bar</b> to see the number tested and the 95% confidence interval.',
                 '<b>Scroll sideways</b> in a wide chart to see all antibiotics.',
@@ -78,7 +78,7 @@
             H('Why at least 30 isolates?') + P('A percentage calculated from a few isolates is unstable. For example, 2 resistant out of 4 is 50%, but the true value could be anywhere from about 15% to 85%. CLSI M39 recommends reporting a susceptibility percentage only when <b>30 or more isolates</b> were tested.') +
             L(['A bar or cell based on fewer than 30 isolates is faded grey and marked with <b>*</b>.', 'In tables, a dash means there were too few isolates to report a value.']) +
             H('Confidence interval (95% CI)') + P('The range in which the true percentage probably lies. A narrow interval means a precise estimate. It is calculated with the Wilson method, which is reliable for small numbers and for percentages near 0% or 100%. Tap a bar or point to see it.') +
-            H('If there are fewer than 30 isolates') + L(['CLSI M39 allows combining several years when the numbers per year are small and the %S has not changed much.', 'Use the Analytics period in Settings (All time, or a date range).', 'Each patient is counted once per 12-month block of the period (patients you linked in the importer across years; others per calendar year).', 'The report should state that the data are combined; the banner under the charts shows the period.', 'Do not combine years if resistance changed a lot; look at the yearly trend first.']) +
+            H('If there are fewer than 30 isolates') + L(['CLSI M39 allows combining several years when the numbers per year are small and the %S has not changed much.', 'Use the Analytics period in Settings (All time, or a date range).', 'Each patient is counted once per 12-month block of the period (patients confirmed as the same person across years; others per calendar year).', 'The report should state that the data are combined; the banner under the charts shows the period.', 'Do not combine years if resistance changed a lot; look at the yearly trend first.']) +
                         H('Statistical significance') + P('When two periods are compared, a difference is called significant only if a two-proportion z-test gives p below 0.05 and both groups have 30 or more tested isolates. Otherwise it is marked <b>ns</b> (not significant): the change may be due to chance.') +
             H('Selective testing (&dagger;)') + P('Some antibiotics are tested only when the first-line drugs fail. If an antibiotic was tested on fewer than 90% of the isolates, the tested isolates are probably the more resistant ones, so the resistance percentage may be too high. Such antibiotics are marked with <b>&dagger;</b>. CLSI M39 (Section 6.5.3) says agents tested selectively should not be included in the routine cumulative report, because they are biased toward lower susceptibility. M39 does not give a percentage cut-off. The 90% used here follows the ACSQHC cumulative antibiogram specification. In the annual cumulative table such cells show &dagger; instead of a percentage.') +
             H('Possible contaminants') + P('Organisms that normally live on the skin (coagulase-negative staphylococci such as <i>S. epidermidis</i> and <i>S. hominis</i>, <i>Corynebacterium</i>, <i>Micrococcus</i>, viridans streptococci) are often contaminants when found in blood. They are flagged, not deleted, because they can occasionally cause true infection. In Settings you can choose to exclude them from every analysis (off by default).') +
@@ -195,7 +195,7 @@
                 ['<b>With ward</b>', 'The record shows which ward the patient was in. It is needed for the unit switch and the ICU comparison.', 'Records without a ward cannot be placed in ICU or non-ICU, so the unit views are incomplete.'],
                 ['<b>With specimen type</b>', 'The record shows the specimen (blood, urine, wound...). It is needed for specimen reports such as blood-only.', 'Specimen-specific antibiograms (for example blood) leave out these records.'],
                 ['<b>With at least one AST result</b>', 'The isolate has at least one susceptibility result (S, I or R) for any antibiotic. AST means antimicrobial susceptibility testing.', 'An isolate with no AST result adds to the count of isolates but cannot add to any resistance percentage.']]) +
-            P('<b>What is a good value?</b> The closer to 100% the better. There is no official cut-off for field completeness, so this dashboard does not set one. The lower the completeness, the more caution the related results need. Compare with the previous year: a value that is improving is a good sign, and one that is falling should be raised with the laboratory or data-entry team.') +
+            P('<b>What is a good value?</b> The closer to 100% the better. There is no official cut-off for field completeness, so this dashboard does not set one. The lower the completeness, the more caution the related results need. Compare with the previous year: a value that is improving is a good sign, and one that is falling should be raised with the laboratory and the surveillance programme.') +
             H('Part 3. Testing coverage for the priority indicators') +
             P('A resistance percentage is calculated only among the isolates that were <b>actually tested</b>. These lines show how many isolates of a group were tested for the antibiotic that defines each indicator. The figure is the percentage, with the counts in brackets.') +
             T(['Line', 'Tested means at least one of', 'Indicator it supports'], [
@@ -211,7 +211,7 @@
             H('What to do when a value is low') + L([
                 'Do not delete the indicator; read it with caution and say so when you present it.',
                 'Ask the laboratory whether the antibiotic was really tested and whether it was exported from WHONET.',
-                'Check whether the field was entered in the data-entry app. A missing ward or specimen is usually a data-entry gap, not a laboratory problem.',
+                'Check whether the field was recorded at source. A missing ward or specimen is usually a recording gap, not a laboratory problem.',
                 'Repeat the check next year and see whether coverage improved. Improvement is itself a useful result.']) +
             TIP('These lines measure whether a result <b>exists</b>. They do not tell you whether testing was appropriate or correct. Quality of testing is checked by the laboratory with quality control strains (CLSI M100).')],
 
@@ -229,7 +229,7 @@
             P('The switch under the top bar filters <b>every chart and table on every tab</b> by the ward where the specimen was collected.') +
             H('The four options') + L([
                 '<b>ALL:</b> every ward with a recorded ward name. Records without a ward are excluded from every unit view and counted only in Data quality.',
-                '<b>ICU:</b> only the wards counted as intensive care units. The surveillance team chooses which wards count as ICU (by default only wards recorded as ICU).',
+                '<b>ICU:</b> only the wards counted as intensive care units. The surveillance programme chooses which wards count as ICU (by default only wards recorded as ICU).',
                 '<b>Non-ICU IP:</b> inpatient wards that are not ICU. IP means inpatient. Emergency is not counted as inpatient.',
                 '<b>Outpatient:</b> everything that is not inpatient, including outpatient clinics and emergency.',
                 'Each patient is counted once. The first isolate is chosen across all wards, then the filter is applied (CLSI M39, Section 6.4).']) +
@@ -237,7 +237,7 @@
             H('How it is applied') + L([
                 'The first isolate per patient and organism is chosen across all wards first, and the ward filter is applied afterwards. A patient who moves between wards is therefore not counted twice.',
                 'The Annual Report ICU comparison always shows both units, whatever the switch is set to.',
-                'The buttons may be hidden by the surveillance team; in that case the dashboard opens on the chosen default scope. Each user can also choose the default for their own device in Settings.',
+                'The buttons may be hidden by the surveillance programme; in that case the dashboard opens on the chosen default scope. Each user can also choose the default for their own device in Settings.',
                 'A note under each Analytics chart states the unit and the period shown.'])],
 
         ['install', 'Install the app on your phone', () =>

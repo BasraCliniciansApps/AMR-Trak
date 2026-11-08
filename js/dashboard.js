@@ -545,7 +545,7 @@ function applyCloudSnap(snap) {
                 const have = ids.filter(id => docsById[id]).length;
                 if (have < ids.length) {                                             // a part is still arriving or missing
                     hideLoading();
-                    setDashStatus('warn', `Data is incomplete in the cloud (${have} of ${ids.length} parts). Open the data-entry app and use "Publish now".`);
+                    setDashStatus('warn', `Data is incomplete in the cloud (${have} of ${ids.length} parts). Please try again later; the data may still be uploading.`);
                     refreshAll();
                     return;
                 }
@@ -576,7 +576,7 @@ function applyCloudSnap(snap) {
                 return;
             }
             setDashStatus('warn', 'No published data found in the cloud.');
-            Swal.fire({ icon: 'info', title: 'No data yet', text: 'The public dashboard data has not been published. Open the data-entry app and sign in once to publish it.' });
+            Swal.fire({ icon: 'info', title: 'No data yet', text: 'The public dashboard data has not been published. Please try again later.' });
         }
 }
 function cloudError(error) {
