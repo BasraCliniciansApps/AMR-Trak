@@ -288,7 +288,7 @@
                     ${org('Microbiology Laboratory', 'Culture and susceptibility data')}
                     ${org('AMR Unit', 'Coordination with the laboratory')}
                 </div>
-                <div class="gd-legal"><b>Legal notice:</b> This tool supports epidemiological surveillance and the generation of accurate clinical statistics. All intellectual and software rights reserved &copy; 2026.</div>
+                <div class="gd-legal"><b>Legal notice</b><br>&bull; <b>Purpose:</b> this tool supports epidemiological surveillance and the generation of accurate clinical statistics.<br>&bull; <b>Not a substitute for clinical judgement:</b> it does not replace the judgement of the treating clinician, local treatment guidelines, or advice from microbiology and infectious diseases specialists.<br>&bull; <b>Not a diagnostic tool:</b> cumulative results describe the hospital as a whole and must not be the only basis for the management of an individual patient.<br>&bull; <b>Data quality:</b> results depend on the laboratory data supplied; interpret small numbers with caution.<br>&bull; <b>Rights:</b> all intellectual and software rights reserved &copy; 2026.</div>
             </div>`;
     };
 
