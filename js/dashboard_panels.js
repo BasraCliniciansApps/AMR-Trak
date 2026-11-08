@@ -877,7 +877,7 @@ function showDedupInfo() {
         + '<div style="font-weight:700;font-size:13px">Count once (first isolate only)</div>'
         + li(['Only the first isolate (Dec 2025) is counted for the 12-month period, even though the period crosses New Year.', 'Longer periods are split into 12-month blocks that start at the first month with data, and the patient is counted once in each block.', 'This is the CLSI M39 rule: first isolate per patient per analysis period (Section 6.4).', 'It avoids counting the same infection twice.'])
         + '<div style="font-weight:700;font-size:13px">Count once in each calendar year</div>'
-        + li(['Both isolates are counted: Dec 2025 as the 2025 isolate and Jan 2026 as the 2026 isolate (two isolates).', 'M39 suggests the calendar year only when several years are combined.', 'It is simpler, but it counts the same patient twice when a period crosses New Year.', 'In the development data the difference was about 0.5% of first isolates.'])
+        + li(['Both isolates are counted: Dec 2025 as the 2025 isolate and Jan 2026 as the 2026 isolate (two isolates).', 'M39 suggests the calendar year only when several years are combined.', 'It is simpler, but it counts the same patient twice when a period crosses New Year.'])
         + '<button type="button" id="ddInfoClose" style="width:100%;margin-top:4px;padding:9px;border-radius:10px;background:#0d9488;color:#fff;font-weight:700;font-size:13px">Close</button></div>';
     document.body.appendChild(ov);
     const close = () => ov.remove();
