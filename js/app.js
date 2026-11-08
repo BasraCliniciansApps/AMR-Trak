@@ -681,7 +681,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
     }
     const audit = { unknownOrg: new Map(), unknownWard: new Map(), unknownSpec: new Map(), unmappedAbx: new Map(), ignoredAbx: new Map(), renamed: new Map() };
     // Legacy WHONET codes for agents outside the current CLSI M100 / WHO AWaRe lists: recognised and deliberately not imported
-    const KNOWN_IGNORED_ABX = new Set(['GAT', 'LOM', 'PNV', 'GEM', 'CPR', 'CIC', 'CCV', 'CLA', 'OPT']);
+    const KNOWN_IGNORED_ABX = new Set(['KAC', 'GAT', 'LOM', 'PNV', 'GEM', 'CPR', 'CIC', 'CCV', 'CLA', 'OPT']);
     const report = { noSpecimen: [], strepPenDisk: 0, duplicates: 0, blankOrg: 0, added: 0, noGrowth: 0, noSri: 0, noDate: 0, vancDisk: 0, vancTypedIR: 0, vancInvalidMic: 0, vancMismatch: 0, vancCandidates: [], vancNeedsMic: 0, vancFromMic: 0, valuesFile: valuesAligned, valuesFileIgnored: !!valuesTable && !valuesAligned };
 
     const abxColumns = [];
