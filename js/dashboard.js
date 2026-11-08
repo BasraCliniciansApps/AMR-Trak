@@ -409,7 +409,7 @@ function mdrInfoHtml(px, pp) {
     <li>M100 and Magiorakos 2012 set no minimum n for MDR.</li></ul>
     <h5>Method</h5>
     <ul>
-    <li>Applied to first isolates (CLSI M39) of Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp. and <i>S. aureus</i>.</li>
+    <li>Applied to first isolates (CLSI M39) of Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp., <i>S. aureus</i> and <i>Enterococcus</i> spp.</li>
     <li>Susceptibility results are interpreted with CLSI M100 breakpoints.</li>
     <li>Intrinsic resistance is not counted.</li>
     <li>A category that was not tested is treated as unknown, not as resistant.</li>

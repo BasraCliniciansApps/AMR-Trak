@@ -302,7 +302,7 @@ function renderMdrPanel() {
 
     setInfo('mdr_panel', 'MDR / XDR / PDR analysis', mdrInfoHtml(possibleX, possibleP));
     attachInfo('#mdrPanel .mdr-title', 'mdr_panel');
-    setInfo('mdr_tiles', 'Summary figures', '<p><b>Classified isolates:</b> first isolates that could be assigned a class (Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp., <i>S. aureus</i>).</p><p style="margin-top:8px"><b>MDR or worse:</b> MDR, XDR and PDR combined. <b>XDR or worse:</b> XDR and PDR combined. Percentages are of classified isolates in the selected period and unit scope.</p>');
+    setInfo('mdr_tiles', 'Summary figures', '<p><b>Classified isolates:</b> first isolates that could be assigned a class (Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp., <i>S. aureus</i> and <i>Enterococcus</i> spp.).</p><p style="margin-top:8px"><b>MDR or worse:</b> MDR, XDR and PDR combined. <b>XDR or worse:</b> XDR and PDR combined. Percentages are of classified isolates in the selected period and unit scope.</p>');
     attachInfo('#mdr_tiles_title', 'mdr_tiles');
     setInfo('mdr_trend', 'Monthly trend', '<p>Share of classified isolates in each class per month (MDR, XDR, PDR stacked). Months with few isolates vary widely; read the trend over several months rather than a single bar.</p>');
     attachInfo('#mdr_trend_title', 'mdr_trend');
