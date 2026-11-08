@@ -529,7 +529,6 @@ setInfo('sec_prevalence', 'Organism prevalence', '<p>Share of first isolates by 
 setInfo('sec_patho', 'Susceptibility profile of one organism', '<p>For the selected organism, each bar shows the percentage of tested isolates that are susceptible (S), intermediate (I) or resistant (R) to an antibiotic. Results are interpreted with CLSI M100 breakpoints; %S does not include I or SDD results. Bars based on fewer than 30 isolates are faded (CLSI M39).</p>');
 setInfo('sec_abx', 'Activity of one antibiotic', '<p>For the selected antibiotic, each bar shows the percentage of isolates of an organism that are susceptible (S), intermediate (I) or resistant (R). Interpretation follows CLSI M100. Organisms with fewer than 30 tested isolates are faded and should be interpreted with caution (CLSI M39).</p>');
 setInfo('sec_heatmap', 'Organism by antibiotic heatmap', '<p>Each cell is the percentage of the chosen category (S, I or R) for one organism and antibiotic among tested isolates. An asterisk marks cells with fewer than 30 tested isolates. Isolates are de-duplicated (CLSI M39) and interpreted with CLSI M100.</p>');
-setInfo('sec_watch', 'Threat watchlist', '<p>Occurrence and resistance pattern of the pathogen selected for monitoring in the data-entry settings, among first isolates in the selected period.</p>');
 
 function chartTitleOf(selOrFn) { return typeof selOrFn === 'function' ? selOrFn() : selOrFn; }
 const profTitle = (p, n) => () => $('#live_' + p + '_profile' + n + '_title').text() || ('Resistance profile ' + n);
@@ -537,10 +536,8 @@ const profTitle = (p, n) => () => $('#live_' + p + '_profile' + n + '_title').te
 function monthSection(p, label) {
     return {
         id: 'sec_' + label, title: () => $('#live_month_title').text() || 'Monthly Alerts',
-        infos: [['Threat watchlist', 'sec_watch']],
-        charts: [
-            { title: 'Global Threat Watchlist', el: '#chart_' + p + '_watch_abx' }
-        ]
+        infos: [],
+        charts: []
     };
 }
 const SECTIONS = {

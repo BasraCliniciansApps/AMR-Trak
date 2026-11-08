@@ -64,8 +64,7 @@ function normalise(s) {
         dash_default_period: ['month', 'quarter', 'year', 'all'].includes(s.dash_default_period) ? s.dash_default_period : 'month',
         dash_icu_wards: Array.isArray(s.dash_icu_wards) && s.dash_icu_wards.length ? s.dash_icu_wards.slice() : ['ICU'],
         profile1_abx: s.profile1_abx || 'Meropenem',
-        profile2_abx: s.profile2_abx || 'Ceftriaxone',
-        watchlist_bug: s.watchlist_bug || ''
+        profile2_abx: s.profile2_abx || 'Ceftriaxone'
     };
     ALL_TOGGLE_KEYS.forEach(k => { o[k] = s[k] !== false; });
     return o;
@@ -126,17 +125,12 @@ function render() {
             <div class="wd-list" id="wardList">${wards.map(w => `<label class="wd-row"><input type="checkbox" data-ward="${esc(w)}" ${cur.dash_icu_wards.includes(w) ? 'checked' : ''}><span>${esc(w)}</span></label>`).join('')}</div>
             <p class="hint">Neonatal ICU is a separate unit. Leave it unselected to keep it out of the ICU view.</p></div>`;
 
-    const profiles = `
-        <div class="field"><label>Threat watchlist organism</label><select class="select" data-k="watchlist_bug">${optionList(orgs, cur.watchlist_bug, 'None (watchlist off)')}</select>
-            <p class="hint">When this organism is detected in the selected period, the dashboard shows an alert card with its resistance profile.</p></div>`;
-
     $('#sections').innerHTML =
         card('periods', 'calendar', 'Reporting periods', periods) +
         card('tabs', 'tabs', 'Tabs', `<div>${toggleRows(TOGGLES.tabs)}</div>`) +
         card('analytics', 'chart', 'Analytics sections', `<div>${toggleRows(TOGGLES.analytics)}</div>`) +
-        card('content', 'layers', 'Period tab content', `<div>${toggleRows(TOGGLES.content)}</div><p class="hint" style="margin-top:8px">Applies to the Last Month, Last 3 Months and Annual Report tabs.</p>`) +
-        card('scope', 'building', 'Unit scope', scope) +
-        card('profiles', 'flask', 'Threat watchlist', profiles);
+        card('content', 'layers', 'Period tab content', `<div>${toggleRows(TOGGLES.content)}</div><p class="hint" style="margin-top:8px">Applies to the Annual Report tab.</p>`) +
+        card('scope', 'building', 'Unit scope', scope);
     open.forEach(id => $('#card_' + id) && $('#card_' + id).classList.add('open'));
     summaries();
 }
@@ -155,7 +149,6 @@ function summaries() {
     set('content', count(TOGGLES.content));
     const sc = { all: 'All units', icu: 'ICU', nonicu: 'Non-ICU' }[cur.dash_default_scope];
     set('scope', (cur.dash_show_scope ? 'Switch visible' : 'Switch hidden') + `  ·  opens on ${sc}`);
-    set('profiles', cur.watchlist_bug ? cur.watchlist_bug : 'Watchlist off');
 }
 
 function refreshState() {
