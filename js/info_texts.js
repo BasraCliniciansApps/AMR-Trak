@@ -76,7 +76,8 @@ const INFO_OVERRIDE = (function () {
     add('lab_sample', 'By specimen type',
         H('What it shows') + P('For each specimen type: the number of cultures and the share that were positive, had no growth, or were reported as contaminated, in the selected period and unit scope.'));
     add('lab_blood', 'Blood cultures: contamination indicators',
-        H('Why it matters') + P('Contamination is growth that does not represent a true bloodstream infection. The commonly used benchmark is <b>3% or less</b> of blood cultures (CLSI M47; ASM practice guideline).') +
+        H('Why it matters') + P('Contamination is growth that does not represent a true bloodstream infection. The acceptable range is typically <b>3% or less</b> of blood cultures (CLSI M47-A, Section 5.6; CDC). Even with the best collection protocols it may not be possible to go below 2% (M47-A, Section 8). The 3% limit is traditional and its supporting data are described as controversial (ASM review).') +
+        H('How the rate is calculated') + P('Contaminated blood cultures divided by <b>all blood cultures received</b>, including those without growth (CDC definition). A different measure, the share of contaminated cultures among <i>positive</i> cultures, is called the false-positive rate and gives a much higher figure; it must not be compared with the 3% limit.') +
         H('The three figures') + L([
             '<b>Reported as contaminated:</b> cultures the laboratory itself recorded as contaminated. This figure is certain.',
             '<b>Possible skin-flora growth:</b> blood cultures that grew organisms usually found on skin (coagulase-negative staphylococci, <i>Corynebacterium</i>, <i>Micrococcus</i>, viridans streptococci and similar). These organisms can also cause real infection, so they are labelled <i>possible</i> and are not counted as contaminated.',
@@ -87,6 +88,7 @@ const INFO_OVERRIDE = (function () {
     add('ya_ind', 'Key resistance indicators',
         H('What it shows') + P('Resistance proportions for the priority indicators of WHO GLASS and the WHO Bacterial Priority Pathogens List, for the selected analysis period (the latest 12 months or a calendar year), compared with the period before.') +
         H('How to read it') + L(['<b>R / tested:</b> resistant isolates over isolates with a usable result.', '<b>% R:</b> the percentage resistant, with its 95% confidence interval below it.', '<b>* (grey):</b> fewer than 30 tested; interpret with caution.', '<b>Change:</b> the difference from the previous year in percentage points. <b>ns</b> means not statistically significant.', '<b>Unconfirmed:</b> S. aureus isolates with a vancomycin MIC of 16 or more that still await reference-laboratory confirmation. They are not counted as VRSA.']) +
+        H('Where the indicators come from') + L(['<b>3GC-R, CRE, CRAB, CRPA, MRSA:</b> resistance types of the WHO Bacterial Priority Pathogens List 2024 (critical: carbapenem-resistant <i>A. baumannii</i> and Enterobacterales, third-generation cephalosporin-resistant Enterobacterales; high: carbapenem-resistant <i>P. aeruginosa</i>, MRSA).', '<b>VRE:</b> the list names vancomycin-resistant <i>E. faecium</i> only. The indicator here covers all <i>Enterococcus</i>.', '<b>VRSA:</b> not on the list (WHO removed it in 2024). It is shown because CLSI M100 Appendix A lists it for confirmation.', '<b>ESBL and CPE:</b> laboratory confirmation flags from the WHONET file.']) +
         H('Method') + L(['First isolate per patient and organism within the year (CLSI M39).', 'Intrinsic and untested results are not counted as resistant.', 'The confidence interval is the Wilson 95% interval.', 'A change is called significant only when both years have 30 or more tested isolates and a two-proportion z-test gives p below 0.05.']),
         ['WHO_GLASS', 'WHO_BPPL', 'CLSI_M39', 'CLSI_M100']);
     add('ya_icu', 'ICU compared with non-ICU',
@@ -115,48 +117,35 @@ const INFO_OVERRIDE = (function () {
         ['MAGIORAKOS', 'CLSI_M100']);
     add('ya_cult', 'Culture burden',
         H('What it shows') + P('The monthly number of cultures received, the share with growth, without growth and reported as contaminated, and the contamination rate of blood cultures.') +
-        H('How to read it') + L(['The blood culture contamination benchmark is 3% or less (CLSI M47).', 'A month far below the others usually points to an incomplete file rather than a real drop.']) +
+        H('How to read it') + L(['The acceptable range for blood culture contamination is typically 3% or less (CLSI M47-A, Section 5.6).', 'The rate is contaminated blood cultures divided by all blood cultures received (CDC definition).', 'A month far below the others usually points to an incomplete file rather than a real drop.']) +
         H('Data source') + P('Aggregate laboratory counts collected from the monthly WHONET files. No patient data are involved.'),
-        ['CLSI_M47', 'WHONET']);
+        ['CLSI_M47', 'CDC_BCC', 'ASM_BCC']);
     add('ya_qual', 'Data quality',
         H('What it shows') + P('How complete the data behind this report are: the identifiers needed for de-duplication, the ward and specimen fields, and the share of isolates tested for the agents the indicators depend on.') +
         H('Why it matters') + P('Surveillance estimates are only as reliable as the completeness and representativeness of the underlying data (WHO GLASS; CLSI M39).'),
         ['WHO_GLASS', 'CLSI_M39']);
 
-    // ---------------------------------------------------------------- Last Month
+    // ---------------------------------------------------------------- Monthly Alerts
     add('op_m_alerts', 'Priority alerts',
-        H('What it shows') + P('First isolates of the month that need prompt attention.') +
-        H('What triggers an alert') + L(['<b>CRE, CRAB, CRPA:</b> carbapenem-resistant Enterobacterales, <i>A. baumannii</i> and <i>P. aeruginosa</i>.', '<b>VRE, VRSA:</b> vancomycin-resistant enterococci and <i>S. aureus</i>, including unconfirmed candidates.', '<b><i>Candida auris</i>.</b>', '<b>XDR and PDR</b> isolates.']) +
-        H('Why') + P('These are WHO priority resistance types and the organisms most often linked to outbreaks. Each should prompt a review of infection-control measures. A VRSA candidate needs confirmation by a reference laboratory.'),
-        ['WHO_BPPL', 'CLSI_M100']);
-    add('op_m_clusters', 'Possible clusters',
-        H('What it shows') + P('A ward where three or more different patients had the same organism with the same resistance type within 14 days.') +
-        H('Resistance types checked') + P('CRE, CRAB, CRPA, MRSA, VRE, VRSA, and XDR or PDR.') +
-        H('How to read it') + L(['This is a screening signal built from first isolates. It cannot prove transmission.', 'Review the cases with the infection control team and use typing where available.']),
-        ['WHO_GLASS']);
-    add('op_m_compare', 'Comparison with earlier periods',
-        H('What it shows') + P('The same indicators for this month, the previous month and the same month last year. The last column helps separate real change from seasonal effects.') +
-        H('How to read it') + L(['Each cell shows resistant / tested, with the percentage below it.', 'A single month rarely reaches 30 tested isolates, so no trend is claimed from one month.', 'Use the Last 3 Months and Last Year tabs to judge trends.']),
-        ['CLSI_M39', 'WHO_GLASS']);
-    add('op_m_bloodq', 'Possible blood contaminants',
-        H('What it shows') + P('The share of blood isolates that are organisms usually found on skin (coagulase-negative staphylococci, <i>Corynebacterium</i>, <i>Micrococcus</i> and similar). A high share suggests a problem in blood collection.') +
-        H('Cautions') + P('The CLSI M47 benchmark (3% or less) is defined per blood culture collected, not per isolate. The Cultures tab gives the proper rate.'),
-        ['CLSI_M47']);
-
-    // ---------------------------------------------------------------- Last 3 Months
-    add('op_q_run', 'Trend over the last 8 quarters',
-        H('What it shows') + P('The percentage of resistant first isolates for the priority indicators over the eight quarters ending at the selected one.') +
-        H('How to read it') + L(['A hollow point and a dashed line mean fewer than 30 isolates were tested.', 'Tap a point to see the counts and the 95% Wilson confidence interval.', 'Follow a change over several quarters rather than a single point.']),
-        ['WHO_GLASS', 'CLSI_M39']);
-    add('op_q_icu', 'ICU compared with non-ICU',
-        H('What it shows') + P('The priority indicators in intensive care units compared with all other wards, for the selected quarter.') +
-        H('How to read it') + L(['ICUs usually have higher resistance; the last column marks a statistically significant difference.', 'Which wards count as ICU is set on the Dashboard Control page.']) +
-        H('Method') + P('The first isolate per patient and organism is chosen across the whole hospital before the split, as CLSI M39 requires.'),
-        ['CLSI_M39']);
-    add('op_q_wards', 'Ward ranking',
-        H('What it shows') + P('Wards ranked by the number of first isolates classified as MDR, XDR or PDR (Magiorakos 2012). It shows where the resistant burden sits, to focus stewardship and infection control.') +
-        H('Cautions') + L(['Counts depend on how many cultures each ward sends.', 'Percentages based on fewer than 10 isolates should not be compared.']),
-        ['MAGIORAKOS', 'WHO_GLASS']);
+        H('What it shows') + P('Isolates of the latest month with a result that needs confirmation or reporting. All isolates of the month are checked, not only the first per patient.') +
+        H('What triggers an alert') + L([
+            '<b>CRE, CRAB, CRPA:</b> carbapenem-resistant Enterobacterales, <i>A. baumannii</i> and <i>P. aeruginosa</i> (CLSI M100 Appendix A lists any carbapenem result of I or R for confirmation).',
+            '<b>VRE:</b> vancomycin-resistant <i>Enterococcus</i> (CLSI M100 Appendix A).',
+            '<b>VRSA candidate, Vancomycin I (VISA):</b> <i>S. aureus</i> with a vancomycin MIC in the intermediate or resistant range (CLSI M100 Appendix A, with the footnote that these are rarely encountered). A candidate needs confirmation by a reference laboratory.',
+            '<b>PDR, XDR:</b> pandrug-resistant and extensively drug-resistant isolates (Magiorakos 2012). The WHO emerging AMR framework asks for PDR and for XDR not previously detected in the country to be reported.',
+            '<b>XDR + colistin-R:</b> Enterobacterales, <i>P. aeruginosa</i> or <i>Acinetobacter</i> that are XDR and colistin-resistant (WHO emerging AMR framework, Annex 1).',
+            '<b>VRE + linezolid-R, daptomycin-NS or telavancin/dalbavancin/oritavancin-NS</b> (WHO Annex 1).',
+            '<b><i>S. aureus</i> with linezolid-R, daptomycin-NS, tigecycline-NS or telavancin/dalbavancin/oritavancin-NS</b> (WHO Annex 1).',
+            '<b><i>Candida auris</i>:</b> in the critical group of the WHO fungal priority pathogens list, which notes its high outbreak potential. The WHO emerging AMR component targets <i>C. auris</i> among fungi.']) +
+        H('How to read it') + L([
+            'A later isolate of the same patient with the same flags is marked <b>repeat</b>. Screening swabs are marked <b>screening</b>.',
+            'A flag is a result to confirm and report, not a diagnosis of an outbreak. Linking cases needs epidemiological information that the laboratory file does not contain.',
+            'Intrinsic resistance is never counted (CLSI M100 Appendix B).']) +
+        H('Why all isolates') + P('A summary of first isolates can miss new resistance patterns, which should be looked for in the complete database (CLSI M39 Section 9.4).') +
+        H('Where the lists are not the same') + L([
+            'The WHO Bacterial Priority Pathogens List 2024 names carbapenem-resistant <i>A. baumannii</i> and Enterobacterales, carbapenem-resistant <i>P. aeruginosa</i>, MRSA and vancomycin-resistant <i>E. faecium</i>. It does not list VRSA: WHO removed vancomycin-intermediate and -resistant <i>S. aureus</i> in 2024. VRSA is flagged here because of CLSI M100 Appendix A.',
+            'The Annex 1 list of WHO is an example list of critical phenotypes. It is applied here as written, for the organism groups the app can classify.']),
+        ['CLSI_M100', 'CLSI_M39', 'WHO_EAR', 'WHO_FUNGAL', 'WHO_BPPL', 'MAGIORAKOS']);
 
     return o;
 })();

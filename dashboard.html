@@ -279,7 +279,7 @@
 
     <header class="bg-white px-4 py-3 sticky top-0 z-40 border-b border-slate-200 shadow-sm flex flex-wrap justify-between items-center">
         <div class="flex items-center gap-2 -ml-2" id="brand">
-            <img src="img/logo.png?v=11.60" alt="AMR Trak" style="height:30px;width:auto;display:block">
+            <img src="img/logo.png?v=11.61" alt="AMR Trak" style="height:30px;width:auto;display:block">
             <span id="brandName" style="font-family:'Space Grotesk','Inter',system-ui,sans-serif;font-weight:700;font-size:21px;line-height:30px;letter-spacing:-.01em;color:#0f4c5c">AMR <span style="color:#0d9488">Trak</span></span>
                         <span id="connection_status" title="Live connection" aria-label="Live connection" class="flex items-center justify-center text-emerald-600 bg-emerald-50 rounded-full border border-emerald-100" style="width:14px;height:14px;margin-left:-6px;align-self:flex-start;margin-top:4px">
                 <span class="relative flex h-2 w-2"><span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
@@ -586,23 +586,6 @@
                 
                 <div id="op_m_root" class="space-y-3"></div>
 
-<!-- MDR & XDR Surveillance Card -->
-                <div data-sec="mdr" class="bg-rose-50 border border-rose-200 rounded-xl p-4 shadow-sm mt-4 mb-4 print-full">
-                    <h4 class="text-xs font-bold text-rose-900 mb-3 flex items-center gap-1.5">
-                        <svg class="w-4 h-4 text-rose-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                        MDR / XDR / PDR Epidemiological Burden
-                    </h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Doughnut Chart -->
-                        <div class="bg-white border border-rose-100 p-2 rounded-lg shadow-inner">
-                            <div class="h-[180px] relative"><canvas id="chart_m_mdr_pie"></canvas></div>
-                        </div>
-                        <!-- Stacked Bar Chart -->
-                        <div class="bg-white border border-rose-100 p-2 rounded-lg shadow-inner">
-                            <div class="h-[250px] relative"><canvas id="chart_m_mdr_bar"></canvas></div>
-                        </div>
-                    </div>
-                </div>
                 <div id="live_m_watchlist_container" class="hidden mt-4"></div>
                 
             </div>
@@ -615,51 +598,6 @@
                 
                 <div id="ya_report" class="mb-4"></div>
 
-                
-            </div>
-        </div>
-
-
-        <!-- Tab: Last 3 Months -->
-        <div id="viewLastQuarter" class="hidden space-y-4">
-            <div class="mobile-card border-t-4 border-t-emerald-500">
-                <h3 class="text-sm font-bold text-emerald-800 mb-3 bg-emerald-50 p-2 rounded text-center"><span id="live_q_title">Surveillance Overview</span></h3>
-                
-                <div class="grid grid-cols-3 gap-2 text-center mb-4">
-                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
-                        <div class="text-[10px] text-slate-500 font-bold mb-1">Isolates</div>
-                        <div class="text-lg font-black text-slate-800" id="live_q_total">-</div>
-                    </div>
-                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
-                        <div class="text-[10px] text-slate-500 font-bold mb-1">Top Bug</div>
-                        <div class="text-[11px] font-bold text-rose-600 leading-snug break-words" id="live_q_bug">-</div>
-                    </div>
-                    <div class="bg-slate-50 p-2 rounded-lg border border-slate-100 min-h-[110px] flex flex-col justify-center">
-                        <div class="text-[10px] text-slate-500 font-bold mb-1">Top Specimen</div>
-                        <div class="text-[11px] font-bold text-teal-600 leading-snug break-words" id="live_q_spec">-</div>
-                    </div>
-                </div>
-                
-                <div id="op_q_root" class="space-y-3"></div>
-
-<!-- MDR & XDR Surveillance Card -->
-                <div data-sec="mdr" class="bg-rose-50 border border-rose-200 rounded-xl p-4 shadow-sm mt-4 mb-4 print-full">
-                    <h4 class="text-xs font-bold text-rose-900 mb-3 flex items-center gap-1.5">
-                        <svg class="w-4 h-4 text-rose-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                        MDR / XDR / PDR Epidemiological Burden
-                    </h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Doughnut Chart -->
-                        <div class="bg-white border border-rose-100 p-2 rounded-lg shadow-inner">
-                            <div class="h-[180px] relative"><canvas id="chart_q_mdr_pie"></canvas></div>
-                        </div>
-                        <!-- Stacked Bar Chart -->
-                        <div class="bg-white border border-rose-100 p-2 rounded-lg shadow-inner">
-                            <div class="h-[250px] relative"><canvas id="chart_q_mdr_bar"></canvas></div>
-                        </div>
-                    </div>
-                </div>
-                <div id="live_q_watchlist_container" class="hidden mt-4"></div>
                 
             </div>
         </div>
@@ -734,19 +672,16 @@
             Analytics
         </button>
         <button onclick="switchTab('last_year')" id="btnNavLastYear" class="nav-btn">
-            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.60m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.60v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" /></svg>
-            Last Year
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z" /></svg>
+            Annual Report
         </button>
-        <button onclick="switchTab('last_quarter')" id="btnNavLastQuarter" class="nav-btn">
-            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.60c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
-            Last 3 Months
-        </button>
+        
         <button onclick="switchTab('last_month')" id="btnNavLastMonth" class="nav-btn">
             <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-            Last Month
+            Monthly Alerts
         </button>
         <button onclick="switchTab('mdr')" id="btnNavMdr" class="nav-btn">
-            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.60 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
+            <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
             MDR
         </button>
         <button onclick="switchTab('lab')" id="btnNavLab" class="nav-btn">
@@ -755,15 +690,15 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=11.60"></script>
-    <script src="js/dashboard.js?v=11.60"></script>
-    <script src="js/info_texts.js?v=11.60"></script>
-    <script src="js/dashboard_panels.js?v=11.60"></script>
-    <script src="js/dashboard_year.js?v=11.60"></script>
-    <script src="js/dashboard_period.js?v=11.60"></script>
-    <script src="js/guide_reviewer.js?v=11.60"></script>
-    <script src="js/guide.js?v=11.60"></script>
-    <script src="js/nav.js?v=11.60"></script>
+    <script src="js/data.js?v=11.61"></script>
+    <script src="js/dashboard.js?v=11.61"></script>
+    <script src="js/info_texts.js?v=11.61"></script>
+    <script src="js/dashboard_panels.js?v=11.61"></script>
+    <script src="js/dashboard_year.js?v=11.61"></script>
+    <script src="js/dashboard_period.js?v=11.61"></script>
+    <script src="js/guide_reviewer.js?v=11.61"></script>
+    <script src="js/guide.js?v=11.61"></script>
+    <script src="js/nav.js?v=11.61"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>
@@ -775,6 +710,6 @@
         });
     }
 </script>
-<div style="text-align:center;font-size:10px;color:#94a3b8;padding:8px 0 16px" id="app_ver">AMR Trak v11.60</div>
+<div style="text-align:center;font-size:10px;color:#94a3b8;padding:8px 0 16px" id="app_ver">AMR Trak v11.61</div>
 </body>
 </html>

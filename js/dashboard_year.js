@@ -1,4 +1,4 @@
-// Annual AMR surveillance report: the content of the "Last Year" tab (a full calendar year).
+// Annual AMR surveillance report: the content of the "Annual Report" tab (a full calendar year).
 // Reference methods: CLSI M39 (first isolate per patient, organism and year; n >= 30), CLSI M100 (interpretation),
 // WHO GLASS (priority indicators, specimen-specific reporting), Magiorakos 2012 (MDR / XDR / PDR).
 
@@ -424,7 +424,7 @@ function yaCultures() {
     };
     const rows = yaMonths(y).map(m => row(ymLabel(m), per[m])).join('') + row('Total', tot, true);
     $('#ya_cult_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Month</th><th>Cultures</th><th>Positive</th><th>No growth</th><th>Contam.</th><th>Blood contam.</th></tr></thead><tbody>${rows}</tbody></table>`);
-    setNote('#ya_cult_note', [`${yaLabel(y)}, ${scopeLabel()}.`, 'Blood culture contamination = share of blood cultures reported as contaminated. Benchmark: 3% or less (CLSI M47).', 'A month far below the others usually means an incomplete file rather than a real drop.']);
+    setNote('#ya_cult_note', [`${yaLabel(y)}, ${scopeLabel()}.`, 'Blood culture contamination = share of blood cultures reported as contaminated. Acceptable range: typically 3% or less (CLSI M47-A, Section 5.6).', 'The rate is divided by all blood cultures received (CDC definition).', 'A month far below the others usually means an incomplete file rather than a real drop.']);
 }
 
 // ---------------------------------------------------------------- 6. data quality
@@ -476,7 +476,7 @@ function yaSetInfo() {
     setInfo('ya_mdr', 'MDR / XDR / PDR by organism group', P + 'Multidrug-resistant (MDR), extensively drug-resistant (XDR) and pandrug-resistant (PDR) isolates among Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp. and <i>S. aureus</i>, using the standard definitions of Magiorakos et al. (2012).' + E +
         P + 'Intrinsic resistance is excluded. A category that was not tested is treated as unknown, not as susceptible, so XDR and PDR are conservative; isolates with fewer than 3 susceptible categories found, whose untested categories could still make them XDR, are shown as "possible" (Magiorakos 2012) and counted as MDR. Validity condition (Magiorakos 2012): the XDR and PDR definitions are valid only when isolates were tested against all or nearly all agents of each category and selective reporting or suppression of results was avoided. With incomplete testing an isolate can only be called possible XDR or possible PDR, and such results should not be compared with confirmed XDR or PDR from other studies.' + E, ['MAGIORAKOS', 'CLSI_M100', 'CLSI_M39']);
     setInfo('ya_cult', 'Culture burden', P + 'Monthly number of cultures received, the share with growth, without growth and reported as contaminated, and the contamination rate of blood cultures.' + E +
-        P + 'The blood culture contamination benchmark is 3% or less (CLSI M47). These counts are aggregate laboratory counts collected from the monthly WHONET files; no patient data are involved.' + E, ['CLSI_M47', 'ASM_BCC', 'WHO_GLASS']);
+        P + 'The acceptable range for blood culture contamination is typically 3% or less (CLSI M47-A, Section 5.6), divided by all blood cultures received (CDC definition). These counts are aggregate laboratory counts collected from the monthly WHONET files; no patient data are involved.' + E, ['CLSI_M47', 'CDC_BCC', 'ASM_BCC']);
     setInfo('ya_qual', 'Data quality', P + 'How complete the data behind this report are: identifiers needed for de-duplication, ward and specimen fields, and the share of isolates tested for the agents each indicator depends on.' + E +
         P + 'WHO GLASS and CLSI M39 both stress that surveillance estimates are only as reliable as the completeness and representativeness of the underlying data.' + E, ['WHO_GLASS', 'CLSI_M39']);
 }
@@ -505,7 +505,7 @@ function renderAnnualReport() {
     yaWindowCtl(y);
 }
 
-// print: the Last Year tab prints as an annual report
+// print: the Annual Report tab prints as an annual report
 (function registerYearPrint() {
     if (typeof SECTIONS === 'undefined' || !SECTIONS.year) return;
     const own = [

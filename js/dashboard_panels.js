@@ -112,7 +112,7 @@ function applyDashboardSettings() {
     $('[data-sec]').each(function () {
         $(this).toggleClass('sec-off', s['sec_' + $(this).data('sec')] === false);
     });
-    [['year', 'LastYear'], ['month', 'LastMonth'], ['quarter', 'LastQuarter'], ['lab', 'Lab']].forEach(([t, id]) => {
+    [['year', 'LastYear'], ['month', 'LastMonth'], ['lab', 'Lab']].forEach(([t, id]) => {
         $('#btnNav' + id).toggleClass('sec-off', s['tab_' + t] === false);
     });
     $('#ya_card_mdr').toggleClass('sec-off', s.sec_mdr === false);          // the annual MDR card follows the same switch
@@ -120,7 +120,7 @@ function applyDashboardSettings() {
     updateScopeBar();
     // leave a tab that was switched off
     const cur = window._currentTab || 'analytics';
-    if ((cur === 'last_year' && s.tab_year === false) || (cur === 'last_month' && s.tab_month === false) || (cur === 'last_quarter' && s.tab_quarter === false) || (cur === 'lab' && s.tab_lab === false)) switchTab('analytics');
+    if ((cur === 'last_year' && s.tab_year === false) || (cur === 'last_month' && s.tab_month === false) || (cur === 'lab' && s.tab_lab === false)) switchTab('analytics');
 }
 
 function refreshAll() {
@@ -140,21 +140,18 @@ function refreshAll() {
 // ---------- tabs ----------
 window.switchTab = function (tab) {
     window._currentTab = tab;
-    $('#viewAnalytics, #viewLastYear, #viewLastMonth, #viewLastQuarter, #viewMdr, #viewLab').addClass('hidden');
-    $('#btnNavAnalytics, #btnNavLastYear, #btnNavLastMonth, #btnNavLastQuarter, #btnNavMdr, #btnNavLab').removeClass('active');
+    $('#viewAnalytics, #viewLastYear, #viewLastMonth, #viewMdr, #viewLab').addClass('hidden');
+    $('#btnNavAnalytics, #btnNavLastYear, #btnNavLastMonth, #btnNavMdr, #btnNavLab').removeClass('active');
     if (tab === 'analytics') {
         $('#viewAnalytics').removeClass('hidden'); $('#btnNavAnalytics').addClass('active');
         $('#headerTitle').text('Surveillance Analytics');
         if (!isUpdatingFilters) loadAnalyticsFilters();
     } else if (tab === 'last_year') {
         $('#viewLastYear').removeClass('hidden'); $('#btnNavLastYear').addClass('active');
-        $('#headerTitle').text('Last Year Surveillance');
+        $('#headerTitle').text('Annual Report');
     } else if (tab === 'last_month') {
         $('#viewLastMonth').removeClass('hidden'); $('#btnNavLastMonth').addClass('active');
-        $('#headerTitle').text('Last Month Surveillance');
-    } else if (tab === 'last_quarter') {
-        $('#viewLastQuarter').removeClass('hidden'); $('#btnNavLastQuarter').addClass('active');
-        $('#headerTitle').text('Last 3 Months Surveillance');
+        $('#headerTitle').text('Monthly Alerts');
     } else if (tab === 'mdr') {
         $('#viewMdr').removeClass('hidden'); $('#btnNavMdr').addClass('active');
         $('#headerTitle').text('MDR / XDR / PDR');
@@ -539,11 +536,9 @@ const profTitle = (p, n) => () => $('#live_' + p + '_profile' + n + '_title').te
 
 function monthSection(p, label) {
     return {
-        id: 'sec_' + label, title: () => $('#live_' + (p === 'm' ? 'month' : p) + '_title').text() || (p === 'm' ? 'Last Month' : 'Last 3 Months'),
-        infos: [['Overview', 'overview_' + p], ['MDR / XDR / PDR classification', 'mdr_' + p], ['Threat watchlist', 'sec_watch']],
+        id: 'sec_' + label, title: () => $('#live_month_title').text() || 'Monthly Alerts',
+        infos: [['Overview', 'overview_' + p], ['Threat watchlist', 'sec_watch']],
         charts: [
-            { title: 'MDR / XDR / PDR: Overall', el: '#chart_' + p + '_mdr_pie' },
-            { title: 'MDR / XDR / PDR: Hotspot wards', el: '#chart_' + p + '_mdr_bar' },
             { title: 'Global Threat Watchlist', el: '#chart_' + p + '_watch_abx' }
         ]
     };
@@ -560,9 +555,8 @@ const SECTIONS = {
     mdr: { id: 'mdr', title: 'MDR / XDR / PDR Analysis', labelSel: '#mdr_range_label',
         infos: [['Definitions and method', 'mdr_panel'], ['Summary figures', 'mdr_tiles'], ['Monthly trend', 'mdr_trend'], ['Distribution by ward', 'mdr_wards'], ['By organism group', 'mdr_group']],
         charts: [{ title: 'Summary', el: '#mdr_tiles', kind: 'tiles' }, { title: 'Resistance classification', el: '#chart_mdr_panel_pie' }, { title: 'Monthly trend (% of classified isolates)', el: '#chart_mdr_panel_trend' }, { title: 'All wards', el: '#chart_mdr_panel_wards' }, { title: 'By organism group', el: '#mdr_group_table', kind: 'table' }] },
-    year: { id: 'sec_year', title: () => $('#live_y_title').text() || 'Last Year', infos: [], charts: [] },
+    year: { id: 'sec_year', title: () => $('#live_y_title').text() || 'Annual Report', infos: [], charts: [] },
     month: monthSection('m', 'month'),
-    quarter: monthSection('q', 'quarter'),
     lab: { id: 'lab', title: 'Culture Overview', labelSel: '#lab_range_label',
         infos: [['About the Culture Overview', 'lab_def'], ['Cultures received', 'lab_tiles'], ['Blood cultures: contamination indicators', 'lab_blood'], ['Culture volume per month', 'lab_volume'], ['Positivity by ward', 'lab_wards'], ['By specimen type', 'lab_sample']],
         charts: [{ title: 'Cultures received', el: '#lab_tiles', kind: 'tiles' }, { title: 'Blood cultures: contamination indicators', el: '#lab_blood_box', kind: 'tiles' }, { title: 'Culture volume per month', el: '#chart_lab_volume' }, { title: 'Positivity by ward', el: '#chart_lab_wards' }, { title: 'By specimen type', el: '#lab_sample_table', kind: 'table' }] }
@@ -574,7 +568,7 @@ function chartElement(c) {
     if (!el) return null;
     // collapsed cards are still printable: only switched-off sections and tabs that are not open are skipped
     if (el.closest('.sec-off')) return null;
-    const view = el.closest('#viewAnalytics, #viewLastYear, #viewLastMonth, #viewLastQuarter, #viewMdr, #viewLab');
+    const view = el.closest('#viewAnalytics, #viewLastYear, #viewLastMonth, #viewMdr, #viewLab');
     if (view && view.classList.contains('hidden')) return null;
     if (el.tagName === 'CANVAS') {
         let chart = null, canAsk = false; try { canAsk = !!(window.Chart && Chart.getChart); chart = canAsk && Chart.getChart(el); } catch (e) {}
@@ -624,7 +618,7 @@ function tilesToHtml(el) {
     return `<div class="tiles">${items}</div>${notes}`;
 }
 
-const TAB_SECTIONS = { analytics: ['prevalence', 'patho', 'abx', 'heatmap'], last_year: ['year'], last_month: ['month'], last_quarter: ['quarter'], mdr: ['mdr'], lab: ['lab'] };
+const TAB_SECTIONS = { analytics: ['prevalence', 'patho', 'abx', 'heatmap'], last_year: ['year'], last_month: ['month'], mdr: ['mdr'], lab: ['lab'] };
 
 function printGroups(withWaiting) {
     const tab = window._currentTab || 'analytics';
@@ -899,11 +893,11 @@ window.showUserSettings = function () {
       ${row('Exclude possible skin-flora contaminants', 'Removes blood isolates of skin-flora organisms (for example coagulase-negative staphylococci) before the first isolate is chosen. Applies to every tab and chart.', tg('us_contam', contamExcluded()))}
       ${blk('Default unit filter', 'The unit filter selected when the dashboard opens.', sel('us_scope', [['all', 'ALL'], ['icu', 'ICU'], ['nonicuip', 'Non-ICU IP'], ['outpatient', 'Outpatient']], getUnitScope()))}
       ${blk('Analysis period (Analytics tab)', 'One period for every Analytics chart. All Times combines complete calendar years only. The Heatmap From/To fields, when filled, override it.', sel('us_period', [['year', 'Last 12 Months'], ['all', 'All Times'], ['calyear', 'Calendar year'], ['quarter', 'Last 3 Months'], ['month', 'Last Month'], ['range', 'Specific period']], anPeriod()) + `<div id="us_cal" style="display:none;margin-top:6px">${sel('us_pyear', usYears().map(y => [y, y]), String(u.pyear || usYears()[0]))}</div><div id="us_rng" style="display:none;margin-top:6px;gap:6px"><input type="month" id="us_pfrom" value="${u.pfrom || ''}" style="flex:1;border:1px solid #cbd5e1;border-radius:8px;padding:7px;font-size:12px"><input type="month" id="us_pto" value="${u.pto || ''}" style="flex:1;border:1px solid #cbd5e1;border-radius:8px;padding:7px;font-size:12px"></div>`)}
-      ${blk('Last Year tab period', 'Calendar year (default) is the last complete calendar year (CLSI M39, Section 6.4). Last 12 months moves forward with the data.', sel('us_yamode', [['calendar', 'Calendar year'], ['rolling', 'Last 12 months']], (typeof yaMode === 'function') ? yaMode() : 'calendar'))}
+      ${blk('Annual Report tab period', 'Calendar year (default) is the last complete calendar year (CLSI M39, Section 6.4). Last 12 months moves forward with the data.', sel('us_yamode', [['calendar', 'Calendar year'], ['rolling', 'Last 12 months']], (typeof yaMode === 'function') ? yaMode() : 'calendar'))}
       <div style="margin-bottom:14px"><b>Repeat patient in a period that crosses New Year</b> <button type="button" id="us_dd_i" aria-label="Explain" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid #94a3b8;color:#475569;font-size:11px;font-weight:700;margin-left:4px">i</button>
         ${sel('us_dedup', [['block', 'Count once (first isolate only)'], ['calyear', 'Count once in each calendar year']], dedupMode())}
         <div style="font-size:10.5px;color:#64748b;margin-top:4px">Applies to any period that crosses New Year (Last 12 Months, All Times, a specific period, Last 3 Months in Dec to Feb), for patients linked across years in the importer. Calendar-year views are not affected. Tap (i) for what each option does.</div></div>
-      ${row('Show organisms with fewer than 30 isolates', 'Last Year tab antibiogram. Off by default: organisms below 30 isolates are listed in a note only. When on, they appear as grey rows marked * (indicative only, CLSI M39 Section 7.2.2).', tg('us_small', u.showsmall === true))}
+      ${row('Show organisms with fewer than 30 isolates', 'Annual Report tab antibiogram. Off by default: organisms below 30 isolates are listed in a note only. When on, they appear as grey rows marked * (indicative only, CLSI M39 Section 7.2.2).', tg('us_small', u.showsmall === true))}
       ${row('Show explanation notes under charts', 'Notes about symbols, colours and sample size. Warnings about incomplete periods and the unit banner always stay.', tg('us_notes', effNotes()))}
       <div style="font-size:10.5px;color:#64748b">These settings are saved on this device only.</div>
     </div>`;

@@ -311,7 +311,10 @@ const REFS = {
     MAGIORAKOS: { t: 'Magiorakos AP, Srinivasan A, Carey RB, et al. Multidrug-resistant, extensively drug-resistant and pandrug-resistant bacteria: an international expert proposal for interim standard definitions for acquired resistance. Clin Microbiol Infect. 2012;18(3):268-281.', u: 'https://doi.org/10.1111/j.1469-0691.2011.03570.x' },
     CLSI_M100: { t: 'Clinical and Laboratory Standards Institute (CLSI). M100: Performance Standards for Antimicrobial Susceptibility Testing (M100-Ed36, 36th ed., 2026).', u: 'https://clsi.org/standards/products/microbiology/documents/m100/' },
     CLSI_M39: { t: 'Hindler JA, Barton M, Erdman SM, et al. CLSI M39-A4: Analysis and Presentation of Cumulative Antimicrobial Susceptibility Test Data; Approved Guideline, 4th ed. Vol. 34, No. 2. Wayne, PA: CLSI; 2014.', u: 'https://clsi.org/standards/products/microbiology/documents/m39/' },
-    CLSI_M47: { t: 'CLSI. M47: Principles and Procedures for Blood Cultures (current edition).', u: 'https://clsi.org/standards/products/microbiology/documents/m47/' },
+    CLSI_M47: { t: 'CLSI. M47-A: Principles and Procedures for Blood Cultures; Approved Guideline (Volume 27).', u: 'https://clsi.org/standards/products/microbiology/documents/m47/' },
+    CDC_BCC: { t: 'Centers for Disease Control and Prevention. Preventing Adult Blood Culture Contamination: A Quality Tool for Clinical Laboratory Professionals; and CDC blood culture contamination summary (rate = contaminated cultures per blood cultures received).', u: 'https://www.cdc.gov/labquality/docs/BCC-Prevention_A-Quality-Tool_CDC.pdf' },
+    WHO_EAR: { t: 'World Health Organization. Emerging antimicrobial resistance reporting framework. Geneva: WHO; 2018 (Annex 1: critical resistance phenotypes).', u: 'https://www.who.int/publications/i/item/9789241514590' },
+    WHO_FUNGAL: { t: 'World Health Organization. WHO fungal priority pathogens list to guide research, development and public health action. Geneva: WHO; 2022.', u: 'https://www.who.int/publications/i/item/9789240060241' },
     ASM_BCC: { t: 'American Society for Microbiology. Evidence-based laboratory medicine practice guidelines to reduce blood culture contamination rates: a systematic review and meta-analysis.', u: 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11629619/' },
     WHO_GLASS: { t: 'World Health Organization. GLASS manual for antimicrobial resistance surveillance in common bacteria causing human infection. Geneva: WHO; 2023.', u: 'https://www.who.int/publications/i/item/9789240076600' },
     WHO_AWARE: { t: 'World Health Organization. The selection and use of essential medicines 2025: AWaRe classification of antibiotics for evaluation and monitoring of use. Geneva: WHO; 2025.', u: 'https://www.who.int/publications/i/item/B09489' },
@@ -326,7 +329,7 @@ function refsFor(key) {
     if (/^ya_/.test(k)) return ['CLSI_M39', 'WHO_GLASS', 'CLSI_M100'];
     if (/^mdr/.test(k)) return ['MAGIORAKOS', 'CLSI_M100', 'CLSI_M39'];
     if (/^markers/.test(k)) return ['WHO_BPPL', 'WHO_GLASS', 'CLSI_M100'];
-    if (k === 'lab_blood') return ['CLSI_M47', 'ASM_BCC'];
+    if (k === 'lab_blood') return ['CLSI_M47', 'CDC_BCC', 'ASM_BCC'];
     if (k === 'lab_def') return ['WHONET', 'WHO_GLASS'];
     if (/^lab_/.test(k)) return ['WHO_GLASS', 'CLSI_M39'];
     if (/^abx_/.test(k)) return ['CLSI_M39', 'CLSI_M100', 'WHO_AWARE'];
@@ -623,7 +626,6 @@ function generateLiveSurveillance() {
 
     if (cleanRecords.length === 0) {
         $('#live_month_title').text('Target Month (No Data)');
-        $('#live_q_title').text('Target Quarter (No Data)');
         $('#live_y_title').text('Target Year (No Data)');
         liveCharts.forEach(c => c.destroy());
         liveCharts = [];
@@ -633,23 +635,18 @@ function generateLiveSurveillance() {
     // All windows end at the latest month with data
     const anchor = dashAnchor(cleanRecords);
     const targetMonthPrefix = anchor;
-    const q3from = ymShift(anchor, -2);
-    const qLabel = ymRange(q3from, anchor);
     let monthRecords = cleanRecords.filter(r => r.Date && String(r.Date).slice(0, 7) === targetMonthPrefix);
-    let quarterRecords = cleanRecords.filter(r => { const m = String(r.Date || '').slice(0, 7); return m >= q3from && m <= anchor; });
 
-    // Last Year tab: rolling 12 months by default (see dashboard_year.js)
+    // Annual Report tab: rolling 12 months by default (see dashboard_year.js)
     const fullYear = (typeof yaLabel === 'function' && typeof yaYear === 'function') ? yaLabel(yaYear()) : dashCalendarYear(cleanRecords);
 
     $('#live_y_title').text(`Surveillance Overview (${fullYear})`);
     $('#live_month_title').text(`Surveillance Overview (${ymLabel(targetMonthPrefix)})`);
-    $('#live_q_title').text(`Surveillance Overview (${qLabel})`);
 
     liveCharts.forEach(c => c.destroy());
     liveCharts = [];
 
     buildMobileLiveSection(monthRecords, 'm', settings, targetMonthPrefix);
-    buildMobileLiveSection(quarterRecords, 'q', settings, qLabel);
 }
 
 function buildMobileLiveSection(records, prefix, settings, timeLabel) {
@@ -689,91 +686,6 @@ function buildMobileLiveSection(records, prefix, settings, timeLabel) {
     $(`#live_${prefix}_bug`).text(formatOrgName(Object.keys(orgCounts).sort((a, b) => orgCounts[b] - orgCounts[a])[0]) || "-");
     $(`#live_${prefix}_spec`).text(Object.keys(specCounts).sort((a, b) => specCounts[b] - specCounts[a])[0] || "-");
 
-// --- 🚨 MDR / XDR Classification Algorithm ---
-    let mdrStats = { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0, 'PDR': 0 };
-    let possibleXdrCount = 0, possiblePdrCount = 0;
-    let wardMdrStats = {};
-
-    // MDR/XDR is evaluated on first isolates only (deduplicated), classifiable organisms only
-    surveillanceRecords.forEach(r => {
-        let ward = r['Ward'] || "Unknown";
-        let res = classifyMDR(r);
-        if (!res) return; // organism outside the Magiorakos category lists (or contaminant)
-
-        let classification = res.cls;
-        if (res.possibleXDR) possibleXdrCount++;
-        if (res.possiblePDR) possiblePdrCount++;
-        mdrStats[classification]++;
-
-        // حساب التوزيع حسب الردهات
-        if (!wardMdrStats[ward]) {
-            wardMdrStats[ward] = { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0, 'PDR': 0, total: 0 };
-        }
-        wardMdrStats[ward][classification]++;
-        wardMdrStats[ward].total++;
-    });
-
-    // 1. بناء مخطط الدونات (MDR/XDR Overall Burden)
-    let mdrData = [mdrStats['Non-MDR'], mdrStats['MDR'], mdrStats['XDR'], mdrStats['PDR']];
-    let mdrLabels = ['Non-MDR', 'MDR', 'XDR', 'PDR'];
-    let mdrColors = ['#10b981', '#f59e0b', '#e11d48', '#7f1d1d'];
-
-    if (mdrData.reduce((a, b) => a + b, 0) === 0) {
-        mdrData = [1]; mdrLabels = ['No Valid Data']; mdrColors = ['#e2e8f0'];
-    }
-
-    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_mdr_pie`), {
-        type: 'doughnut',
-        data: { labels: mdrLabels, datasets: [{ data: mdrData, backgroundColor: mdrColors, borderWidth: 2 }] },
-        options: { 
-            responsive: true, maintainAspectRatio: false, 
-            cutout: '65%',
-            plugins: { 
-                legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9, weight: 'bold' } } },
-                title: { display: true, text: ['Resistance Classification', `n=${mdrData.reduce((x, y) => x + y, 0)}`], font: { size: 10, weight: 'bold' }, padding: { bottom: 10 } }
-            } 
-        }
-    }));
-
-    setInfo('mdr_' + prefix, 'MDR / XDR / PDR classification', mdrInfoHtml(possibleXdrCount, possiblePdrCount));
-    attachInfo($(`#chart_${prefix}_mdr_pie`).parent().parent(), 'mdr_' + prefix);
-
-    // 2. بناء مخطط الأعمدة المتراكمة (Top Wards by MDR/XDR)
-    // فرز الردهات حسب عدد حالات (MDR + XDR) التراكمي
-    let sortedWards = Object.keys(wardMdrStats)
-        .sort((a, b) => (wardMdrStats[b]['MDR'] + wardMdrStats[b]['XDR'] + wardMdrStats[b]['PDR']) - (wardMdrStats[a]['MDR'] + wardMdrStats[a]['XDR'] + wardMdrStats[a]['PDR']))
-        .slice(0, 5); // أخذ أخطر 5 ردهات فقط
-
-    let stackLabels = sortedWards.map(w => w.length > 12 ? w.slice(0, 10) + '..' : w);
-    let stackNonMDR = sortedWards.map(w => wardMdrStats[w]['Non-MDR']);
-    let stackMDR = sortedWards.map(w => wardMdrStats[w]['MDR']);
-    let stackXDR = sortedWards.map(w => wardMdrStats[w]['XDR']);
-    let stackPDR = sortedWards.map(w => wardMdrStats[w]['PDR']);
-
-    liveCharts.push(new Chart(document.getElementById(`chart_${prefix}_mdr_bar`), {
-        type: 'bar',
-        data: {
-            labels: stackLabels,
-            datasets: [
-                { label: 'Non-MDR', data: stackNonMDR, backgroundColor: '#10b981', borderRadius: 2 },
-                { label: 'MDR', data: stackMDR, backgroundColor: '#f59e0b', borderRadius: 2 },
-                { label: 'XDR', data: stackXDR, backgroundColor: '#e11d48', borderRadius: 2 },
-                { label: 'PDR', data: stackPDR, backgroundColor: '#7f1d1d', borderRadius: 2 }
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { 
-                legend: { display: false }, // أخفينا اللجند لأن الدونات يوضحه
-                title: { display: true, text: 'Hotspots (Top 5 Wards)', font: { size: 10, weight: 'bold' }, padding: { bottom: 10 } }
-            },
-            scales: {
-                x: vAxisX(84, { stacked: true, grid: { display: false } }),
-                y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { stepSize: 1 } }
-            }
-        },
-        plugins: [centredAbxLabels]
-    }));
     // 🚨 Global Threat Watchlist Logic (Graphical & Detailed Edition)
     let watchBug = settings.watchlist_bug;
     if (watchBug && watchBug !== "") {

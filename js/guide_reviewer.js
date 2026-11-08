@@ -31,7 +31,10 @@
                 ['[R5]', 'World Health Organization. <i>WHO Bacterial Priority Pathogens List, 2024</i>. Geneva: WHO; 2024.', 'Choice of priority resistance indicators.'],
                 ['[R6]', 'World Health Organization. <i>GLASS manual for antimicrobial resistance surveillance in common bacteria causing human infection</i>. Geneva: WHO; 2023.', 'Surveillance principles and indicator selection.'],
                 ['[R7]', 'Australian Commission on Safety and Quality in Health Care (ACSQHC). <i>Specification for a Hospital Cumulative Antibiogram</i>. December 2019.', 'The 90% threshold used to identify selectively tested agents.'],
-                ['[R8]', 'CLSI. <i>Principles and Procedures for Blood Cultures</i> (M47).', 'Blood culture contamination benchmark.'],
+                ['[R8]', 'CLSI. <i>Principles and Procedures for Blood Cultures; Approved Guideline</i>, M47-A (Volume 27). The edition supplied for this review is M47-A; a later edition may differ.', 'Blood culture contamination: acceptable range (Section 5.6) and contaminant organisms (Section 8).'],
+                ['[R10]', 'World Health Organization. <i>Emerging antimicrobial resistance reporting framework</i>. Geneva: WHO; 2018 (ISBN 978-92-4-151459-0).', 'Priority alerts: critical resistance phenotypes (Annex 1), PDR and XDR reporting, C. auris as the fungal target.'],
+                ['[R11]', 'World Health Organization. <i>WHO fungal priority pathogens list to guide research, development and public health action</i>. Geneva: WHO; 2022 (ISBN 978-92-4-006024-1).', '<i>Candida auris</i> in the critical group; high outbreak potential.'],
+                ['[R12]', 'Centers for Disease Control and Prevention. <i>Preventing Adult Blood Culture Contamination: A Quality Tool for Clinical Laboratory Professionals</i>; and the CDC blood culture contamination summary (glossary).', 'Definition of the contamination rate and its denominator.'],
                 ['[R9]', 'Brown LD, Cai TT, DasGupta A. Interval estimation for a binomial proportion. <i>Stat Sci</i> 2001;16(2):101-133.', 'Choice of the Wilson interval.']]) +
             H('3. Evidence status codes') + L([
                 V + ' (verified): the statement was checked against the full text of the document supplied for this review. The section and the printed page are given.',
@@ -49,11 +52,12 @@
                 ['Urine-only agents (&sect;)', 'Flagged when results come from non-urine specimens; results kept.', '[R1] Table 1A-1 and related tables ("Urine Only"), p. 24', V],
                 ['Subsets (specimen, unit)', 'First isolate chosen within the subset; minimum 30.', '[R2] Section 11, p. 28', V],
                 ['MDR, XDR, PDR', 'Magiorakos categories and definitions; MRSA always MDR; intrinsic resistance removed.', '[R3] Tables 1-6, pp. 271-276; p. 278', V],
-                ['Priority indicators', 'Operational definitions chosen from the WHO priority list.', '[R5], [R6]; definitions are application policy', C + ' / ' + A],
+                ['Priority indicators', 'CRE, CRAB, CRPA, MRSA and 3GC-R are resistance types of the WHO priority list. VRE covers all <i>Enterococcus</i>, while the list names <i>E. faecium</i> only. VRSA is not on the 2024 list (WHO removed it). Operational definitions are application policy.', '[R5], Section on pathogens removed from the 2017 list and Fig. 1; [R6]', V + ' / ' + A],
                 ['Differences between periods', 'Two-proportion z-test; both groups 30 or more; no adjustment for multiple comparisons.', '[R2] Appendix H2 and H3, p. 63', V],
                 ['AWaRe tag', 'Informational tag only.', '[R4]', C],
-                ['Blood culture contamination', 'Benchmark 3% or less.', '[R8]', C],
-                ['Colour bands, cluster rule, alert list', 'Display and operational conventions.', 'Not defined by a standard', A]]) +
+                ['Blood culture contamination', 'Rate = contaminated blood cultures / all blood cultures received. Acceptable range typically 3% or less; it may not be possible to go below 2%.', '[R8] Sections 5.6 and 8 (acceptable range); [R12] (denominator)', V + ' / ' + W],
+                ['Priority alerts (Monthly Alerts)', 'All isolates of the month are checked. Flags: carbapenem-resistant Enterobacterales, <i>A. baumannii</i> and <i>P. aeruginosa</i>; VRE; <i>S. aureus</i> vancomycin I or R; PDR; XDR; Annex 1 phenotypes; <i>C. auris</i>.', '[R2] Section 9.4; [R1] Appendix A; [R10] Section 3.2.1 and Annex 1; [R11] <i>C. auris</i> section', V],
+                ['Colour bands', 'Display convention.', 'Not defined by a standard', A]]) +
             TIP('Where the application goes beyond a source document, the departure is declared in the section that describes the tool and is collected in the last section, <b>Known limitations and departures from the sources</b>.')],
 
         // ------------------------------------------------------------------ 1
@@ -103,7 +107,7 @@
                 'Unit comparisons (ICU, non-ICU, inpatient, outpatient) choose the first isolate across all wards and then split by unit, so that a patient is counted once. This is a design decision of the application; M39 describes stratification by location "at the time the infection is suspected or diagnosed" [R2, Section 11.1, p. 28].']) +
             H('4. Periods offered') + T(['Period', 'Definition', 'Basis'], [
                 ['Last 12 Months (default)', 'The 12 months ending at the latest month with data. Moves forward when newer data are loaded.', '[R2] Sections 6.3 and 6.4: analysis at least annually, analysis period "eg, one year". A fixed calendar year is not required.'],
-                ['Calendar year', 'The last complete calendar year before the latest month with data (default of the Last Year tab; the Analytics tab can also use a chosen calendar year, in Settings), or a calendar year chosen in Settings (Analytics tab).', 'Accepted analysis period; easier to compare between reports. Application choice.'],
+                ['Calendar year', 'The last complete calendar year before the latest month with data (default of the Annual Report tab; the Analytics tab can also use a chosen calendar year, in Settings), or a calendar year chosen in Settings (Analytics tab).', 'Accepted analysis period; easier to compare between reports. Application choice.'],
                 ['Last 3 Months and Last Month', 'The 3 months, or the single month, ending at the latest month with data.', '[R2] Section 6.3, p. 10: more frequent analysis is allowed but is "complicated by seasonal variations in resistance rates and imprecise measures due to small numbers of isolates". These periods are for follow-up and are labelled as indicators.'],
                 ['Specific period (Analytics tab, Settings; Heatmap From/To)', 'Any start and end month chosen by the user.', 'Application choice. The period is written under each chart.'],
                 ['All Times', 'Only calendar years in which every one of the 12 months has data. Years with a missing month are left out, and the years left out are named on the screen.', 'An incomplete year over-represents some seasons and does not meet the one-year analysis period of [R2]. Application policy.']]) +
@@ -166,7 +170,7 @@
 
         // ------------------------------------------------------------------ 5
         ['rv_cum', 'For reviewer: cumulative antibiogram and Analytics charts', () =>
-            H('1. Cumulative antibiogram (Last Year tab)') + L([
+            H('1. Cumulative antibiogram (Annual Report tab)') + L([
                 'Built from the first isolates of the analysis period (section on analysis period). Rows are organisms with 30 or more isolates (up to 15 shown); columns are agents with 30 or more tested results (up to 30 shown).',
                 'Cell value: %S, rounded to the nearest whole percent. Only S counts [R2, Section 6.6, p. 13].',
                 'Specimen-specific tables (all specimens, blood, urine and other types with 30 or more first isolates) choose the first isolate within the specimen type [R2, Section 11, p. 28].',
@@ -232,24 +236,26 @@
                 'PDR as applied here means that every applicable category was tested and no tested agent was susceptible; individual agents within a category may be untested. It is therefore an approximation of "all agents in all categories".'])],
 
         // ------------------------------------------------------------------ 8
-        ['rv_short', 'For reviewer: Last 3 Months and Last Month tools', () =>
-            P('These tabs are for follow-up and early warning. They use the same first-isolate rule as the annual report applied to a shorter window. Because the window is shorter than the analysis period recommended in [R2, Section 6.3, p. 10], percentages are labelled as indicators; small numbers are shown as counts.') +
-            H('1. Priority alerts (Last Month)') + L([
-                'Lists first isolates of the month that carry one of these flags: CRE, CRAB, CRPA, VRE, VRSA, VRSA candidate, <i>Candida auris</i>, XDR or PDR.',
-                'Ordering: VRSA, <i>C. auris</i> and PDR first; then other flagged isolates; then the rest.',
-                'The list is an <b>application policy</b> ' + A + ' based on the WHO priority pathogens [R5] and on the usual infection-control practice of notifying these organisms. Each alert should be reported to the infection control team.']) +
-            H('2. Possible clusters (14 days)') + L([
-                'A ward is flagged when <b>3 or more different patients</b> had the same organism with the same resistance type (CRE, CRAB, CRPA, MRSA, VRE, VRSA, XDR/PDR) within <b>14 days</b>, and the latest of them falls in the month shown. The look-back extends 14 days before the month.',
-                'The thresholds (3 patients, 14 days) are an <b>operational screening rule</b> ' + A + ' chosen to prompt review. No standard prescribes them.',
-                'The result is a <b>signal</b>, not a confirmed outbreak. Confirmation needs the infection control team: same unit, timing of admission, and typing where available.']) +
-            H('3. Comparison with earlier periods') + L([
-                'The month is compared with the previous month and with the same month of the previous year, using the two-proportion test described in the statistics section. Differences are marked only if both groups have 30 or more tested isolates. No adjustment is made for multiple comparisons.']) +
-            H('4. Trend over the last 8 three-month periods (Last 3 Months)') + L([
-                'Eight consecutive 3-month blocks ending at the report month. Each block uses its own first isolates. Points with fewer than 30 tested isolates are drawn hollow with a dashed line. The tooltip gives the counts and the 95% Wilson interval.']) +
-            H('5. ICU compared with non-ICU, and ward ranking') + L([
-                'Both use the first isolate chosen across all wards. The ward ranking orders wards by the share of MDR, XDR and PDR first isolates. Small numbers are indicative only.']) +
-            H('6. Blood isolates: possible contaminants') + L([
-                'Blood isolates of skin-flora organisms are listed for clinical review (see the analysis period section). The listing does not remove them from other analyses.'])],
+        ['rv_short', 'For reviewer: Monthly Alerts tab', () =>
+            P('The Monthly Alerts tab is for early warning, not for reporting resistance percentages. A cumulative antibiogram is required at least once a year [R2, Section 6.3, p. 10]; shorter windows are allowed but have small numbers and seasonal variation. The tab therefore shows alerts only, with the overview counts and the optional threat watchlist.') +
+            H('1. What was removed, and why') + L([
+                'Possible clusters (3 patients within 14 days): no standard gives these numbers. CDC does not give a case count or time window for MDRO clusters; the definition of one state health authority (Oregon) requires epidemiological linkage, which the laboratory file does not contain.',
+                'Comparison with earlier periods, the 8-quarter trend and the Last 3 Months tab: no standard method for monthly comparison; the annual report carries the quarterly trend.',
+                'Blood isolates as possible contaminants: its denominator was isolates, while the contamination rate uses blood cultures [R12]. The correct rate is in the Cultures tab.',
+                'Ward ranking by MDR count: no source; the count depends on how many cultures a ward sends. Ward-level results are available by the unit filter in the antibiogram.',
+                'ICU compared with non-ICU stays in the Annual Report tab, on an annual basis.']) +
+            H('2. Priority alerts') + L([
+                '<b>All isolates of the month</b> are checked, not only the first per patient, because a first-isolate summary can miss new resistance patterns [R2, Section 9.4] ' + V + '. A later isolate with the same flags from the same patient is marked <b>repeat</b>; screening swabs are marked <b>screening</b>.',
+                '<b>Carbapenem-resistant Enterobacterales, <i>Pseudomonas</i> and <i>Acinetobacter</i>; <i>Enterococcus</i> vancomycin-resistant; <i>S. aureus</i> vancomycin I or R:</b> results listed for confirmation and notification in [R1] Appendix A ' + V + '. The column positions of Category I, II and III could not be read reliably from the text supplied, so the reviewer should confirm the category of each item.',
+                '<b>PDR, XDR:</b> the WHO framework asks countries to report PDR and XDR not previously detected in the country [R10, Section 3.2.1] ' + V + '. The application cannot know what was previously detected in the country; every XDR and PDR isolate of the month is flagged for review.',
+                '<b>Annex 1 critical phenotypes</b> [R10, Annex 1] ' + V + ': Enterobacterales and non-fermenters that are XDR including colistin-R; <i>Enterococcus</i> VRE with daptomycin-NS, linezolid-R, or telavancin, dalbavancin or oritavancin NS; <i>S. aureus</i> with linezolid-R, daptomycin-NS, tigecycline-NS or telavancin, dalbavancin or oritavancin NS. Vancomycin-R <i>S. aureus</i> follows the VRSA rule. Coagulase-negative staphylococci and other organisms of Annex 1 are not classified by the application and are not flagged.',
+                '<b><i>Candida auris</i>:</b> critical group of the WHO fungal priority pathogens list, with high outbreak potential [R11] ' + V + '; it is the only fungus targeted by the WHO emerging AMR component [R10, footnote 6, p. 8] ' + V + '.',
+                'The WHO priority list [R5] names carbapenem-resistant <i>A. baumannii</i> and Enterobacterales, carbapenem-resistant <i>P. aeruginosa</i>, MRSA and vancomycin-resistant <i>E. faecium</i> ' + V + '. It does not list VRSA (removed in 2024). The list is a guide for what to watch; it sets no threshold.',
+                'Intrinsic resistance is never counted [R1, Appendix B]. Susceptibility to the new glycopeptides, daptomycin and tigecycline is counted only when the laboratory entered a result.',
+                'Ordering: VRSA, <i>C. auris</i>, PDR and Annex 1 phenotypes first; then other flagged isolates; then XDR only.',
+                'An alert is a result to confirm and report, not an outbreak diagnosis.']) +
+            H('3. Cluster reporting idea (not applied)') + L([
+                'Linking cases needs epidemiological information (unit, exposure, timing) that infection control staff judge. A report button with confirmation by the AMR or infection control team was considered and is not implemented.'])],
 
         // ------------------------------------------------------------------ 9
         ['rv_units', 'For reviewer: units, wards and specimen strata', () =>
@@ -268,7 +274,7 @@
                 'M39 mentions "ICU" and "MICU" only [R2, Section 11.1]. Neonatal, paediatric and coronary intensive care units are not mentioned. By default only wards recorded as ICU count as ICU; the surveillance team can add other wards in the Control app. This is a decision of the application ' + A + '.']) +
             H('5. Settings and defaults') + L([
                 'The MDR tab and every other tab follow the unit filter. The MDR tab keeps its own period picker (month, quarter, year, range, all).',
-                'Each user can change seven settings on their own device (gear button): exclusion of possible contaminants (default off), default unit filter, Analytics period (default last 12 months), Last Year period (calendar year by default, or last 12 months), how a repeat patient (linked across years) is counted in a period that crosses New Year (once, the M39 first-isolate rule and the default, or once per calendar year; explained by an (i) pop-up; calendar-year views are not affected), showing organisms with fewer than 30 isolates in the Last Year antibiogram (default off; shown as grey rows marked *, indicative only [R2, Section 7.2.2]) and the explanation notes. Nothing else can be changed by users; in particular the minimum of 30 isolates is fixed.',
+                'Each user can change seven settings on their own device (gear button): exclusion of possible contaminants (default off), default unit filter, Analytics period (default last 12 months), Last Year period (calendar year by default, or last 12 months), how a repeat patient (linked across years) is counted in a period that crosses New Year (once, the M39 first-isolate rule and the default, or once per calendar year; explained by an (i) pop-up; calendar-year views are not affected), showing organisms with fewer than 30 isolates in the Annual Report antibiogram (default off; shown as grey rows marked *, indicative only [R2, Section 7.2.2]) and the explanation notes. Nothing else can be changed by users; in particular the minimum of 30 isolates is fixed.',
                 'The defaults for all users are set by the surveillance team in the Control app. A choice made on a device is kept only while it differs from the default, so a later change of the default reaches every user who did not choose otherwise.'])],
 
         // ------------------------------------------------------------------ 10
@@ -282,7 +288,7 @@
 
         // ------------------------------------------------------------------ 11
         ['rv_quality', 'For reviewer: data quality and culture-burden metrics', () =>
-            H('1. Data quality table (Last Year tab)') + T(['Measure', 'Definition'], [
+            H('1. Data quality table (Annual Report tab)') + T(['Measure', 'Definition'], [
                 ['Records in the period', 'All records dated in the period, excluding records without an organism.'],
                 ['Screening cultures excluded', 'Records whose specimen is classed as screening.'],
                 ['Repeat isolates removed', 'Clinical records minus first isolates.'],
@@ -292,7 +298,8 @@
             P('The purpose is to let the reader judge how far each indicator can be trusted. WHO GLASS and CLSI M39 both stress that surveillance estimates are only as reliable as the completeness and representativeness of the underlying data [R2, Section 9; R6].') +
             H('2. Culture burden') + L([
                 'Monthly numbers of cultures received, with growth, without growth and contaminated, from the aggregate counts of the laboratory files.',
-                '<b>Blood culture contamination rate</b> = blood cultures reported as contaminated / all blood cultures. The benchmark shown is <b>3% or less</b> [R8] ' + C + '. M47 was not among the documents supplied; the reviewer should confirm the figure against the edition in use.',
+                '<b>Blood culture contamination rate</b> = blood cultures reported as contaminated / all blood cultures received. This denominator follows the CDC definition, "the number of contaminated cultures per number of blood cultures received by the laboratory" [R12] ' + W + '. CDC also defines a different measure, the false-positive rate, as contaminated cultures over positive cultures; it is not used here. M47-A does not state the denominator in the pages supplied; units vary between published studies.',
+                'The reference value shown is <b>3% or less</b>. M47-A, Section 5.6: laboratories should validate that their process keeps contamination within an acceptable range, "typically &le; 3%" [R8] ' + V + '. Section 8: even with the best collection protocols it may not be possible to go below 2% [R8] ' + V + '. The 3% limit is traditional and its supporting data are described as controversial in the ASM review, where lower rates are said to be achievable.',
                 'A month far below the others usually reflects an incomplete file and not a real fall in cultures.'])],
 
         // ------------------------------------------------------------------ 12

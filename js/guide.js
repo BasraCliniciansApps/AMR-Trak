@@ -23,19 +23,18 @@
                 'This dashboard only reads that copy. It never shows patient names.']) +
             TIP('This is a surveillance tool. It describes populations of isolates, not individual patients. It does not replace the susceptibility report of a single culture or clinical judgement.')],
 
-        ['tabs', 'The six tabs at a glance', () =>
+        ['tabs', 'The five tabs at a glance', () =>
             T(['Tab', 'Purpose', 'Typical question'], [
                 ['<b>Analytics</b>', 'Free exploration of all data with filters.', 'How resistant is <i>K. pneumoniae</i> to meropenem in blood?'],
-                ['<b>Last Year</b>', 'The annual report: the formal reference for the year.', 'What is our cumulative antibiogram and are we improving?'],
-                ['<b>Last 3 Months</b>', 'Medium-term trend and where resistance concentrates.', 'Is resistance rising over the last quarters? Which wards carry the burden?'],
-                ['<b>Last Month</b>', 'Operational follow-up and alerts.', 'Did anything urgent happen this month?'],
+                ['<b>Annual Report</b>', 'The annual report: the formal reference for the year.', 'What is our cumulative antibiogram and are we improving?'],
+                ['<b>Monthly Alerts</b>', 'Alerts for the latest month: results that need confirmation or reporting.', 'Did anything urgent happen this month?'],
                 ['<b>MDR</b>', 'Multidrug-resistant isolates (MDR, XDR, PDR) and where they concentrate.', 'How many isolates have very few treatment options, and in which wards?'],
                 ['<b>Cultures</b>', 'Laboratory activity and blood culture quality.', 'How many cultures grew, and how many were contaminated?']]) +
-            P('The Last Month, Last 3 Months and Last Year tabs end automatically at the latest month that has data, so everyone reads the same reporting period. The Last Year tab can use the last 12 months or the last complete calendar year; this is chosen in Settings (gear button).')],
+            P('The Monthly Alerts and Annual Report tabs end automatically at the latest month that has data, so everyone reads the same reporting period. The Annual Report tab can use the last 12 months or the last complete calendar year; this is chosen in Settings (gear button).')],
 
         ['tools', 'How to use the tools', () =>
             H('Moving around') + L([
-                '<b>Bottom bar:</b> switches between Analytics, Last Year, Last 3 Months, Last Month, MDR and Cultures. The open tab is raised and underlined.',
+                '<b>Bottom bar:</b> switches between Analytics, Annual Report, Monthly Alerts, MDR and Cultures. The open tab is raised and underlined.',
                 '<b>Top bar:</b> the AMR Trak name with the green live-connection dot, then (i) About, the open book (this Guide), the printer (prints the open tab) and the gear (Settings).',
                 '<b>Unit filter</b> (ALL, ICU, Non-ICU IP, Outpatient) filters everything on every tab.',
                 '<b>Section headers</b> in Analytics open and close when tapped. Open only the one you need.']) +
@@ -50,9 +49,9 @@
                 '<b>Exclude possible skin-flora contaminants:</b> off by default. When on, blood isolates of skin-flora organisms are removed before the first isolate is chosen, on every tab.',
                 '<b>Default unit filter:</b> the unit selected when the dashboard opens.',
                 '<b>Analysis period (Analytics tab):</b> Last 12 Months, All Times, Calendar year, Last 3 Months, Last Month or a specific period.',
-                '<b>Last Year tab period:</b> last 12 months or calendar year.',
+                '<b>Annual Report tab period:</b> last 12 months or calendar year.',
                 '<b>Repeat patient in a period that crosses New Year:</b> only for periods that cross New Year (for example Last 12 Months), and for patients linked in the importer. Count once (first isolate only, the CLSI M39 rule, default) or count once in each calendar year (two isolates). Calendar-year views are not affected. Tap the (i) button next to it for the explanation.',
-                '<b>Show organisms with fewer than 30 isolates:</b> off by default (this device only). When on, the Last Year antibiogram also lists those organisms as grey rows marked * (indicative only).',
+                '<b>Show organisms with fewer than 30 isolates:</b> off by default (this device only). When on, the Annual Report antibiogram also lists those organisms as grey rows marked * (indicative only).',
                 '<b>Show explanation notes under charts:</b> hides or shows the notes and chart keys. Warnings stay.',
                 'Your choices are saved on this device only. The defaults for everyone are set by the surveillance team in the Control app. <b>Reset to defaults</b> returns this device to them.']) +
             H('Reading and exploring') + L([
@@ -124,7 +123,7 @@
                 'They are the most widely used standards for hospital laboratories worldwide, and the WHO surveillance system (GLASS) and WHONET are built to work with them.',
                 'M100 and M39 fit together: M100 decides the result of each isolate, and M39 decides how the isolates are counted.',
                 'Using one recognised standard also makes the dashboard defensible when results are audited or shared with the Ministry or the WHO.']) +
-            TIP('One deliberate adaptation: M39 is designed for a yearly analysis. The Last Year tab follows it (a 12-month analysis period). The Last 3 Months and Last Month tabs apply the same first-isolate rule within the quarter or month, for follow-up and early warning, so their percentages should be read as indicators, not as a formal antibiogram.')],
+            TIP('One deliberate adaptation: M39 is designed for a yearly analysis. The Annual Report tab follows it (a 12-month analysis period). The Monthly Alerts tab does not report resistance percentages; it lists isolates that need confirmation or reporting.')],
 
         ['marks', 'How to read the bars: colours and symbols', () =>
             P('The three antibiotic charts in the Analytics tab use the same key. It is shown under each chart and lists only the signs that appear in that chart.') +
@@ -167,7 +166,7 @@
             H('Small numbers (n &lt; 30)') + L(['A small n does not change whether an isolate is MDR, XDR or PDR; it makes the percentage unstable.', 'The 95% CI (Wilson) is shown under the MDR+ and XDR+ percentages; a wide CI means an imprecise figure.', '<b>*</b> marks wards, months and groups with fewer than 30 isolates.', 'CLSI M39 sets no separate n rule for MDR; the 30-isolate rule and CIs come from its general sections.', 'Choose a longer period in Settings to get more isolates.']) +
                         H('Why it matters') + P('MDR and above are the isolates that drive prolonged stay, higher cost and mortality, and that need isolation precautions.')],
 
-        ['year', 'Last Year tab: the annual report', () =>
+        ['year', 'Annual Report tab: the annual report', () =>
             P('This tab is the formal yearly report. By default the analysis period is the last complete <b>calendar year</b> (easier to compare between reports). CLSI M39 asks for an analysis at least annually (Section 6.3) with an analysis period of, for example, one year (Section 6.4); it does not require a fixed calendar year. In Settings (gear button) you can choose the <b>latest 12 months with data</b> instead (for example Oct 2025 to Sep 2026), which moves forward whenever newer data are loaded; the tab always says which period it shows. Everything on the tab follows the chosen period. A warning is shown if a month in the period has no data.') +
             H('1. Key resistance indicators') + L(['<b>Why:</b> they are the standard measures used to compare hospitals and countries.', '<b>How to read:</b> compare the percentage with the previous year; trust the change only when it is marked as significant.']) +
             H('2. ICU compared with non-ICU') + L(['<b>Why:</b> ICU patients are sicker and more exposed to antibiotics, so a pooled annual figure can hide an ICU problem.', '<b>How to read:</b> the first table compares the priority indicators; the second compares the susceptibility of each main organism. The last column is ICU minus non-ICU in percentage points; it is marked as significant only when both groups have 30 or more tested.', '<b>Basis:</b> CLSI M39 supports stratifying by location. The first isolate of the year is chosen across all wards before the split.']) +
@@ -178,8 +177,8 @@
             H('7. Culture burden') + L(['<b>Why:</b> resistance percentages mean little without knowing how many cultures were taken.', '<b>How to read:</b> check the blood culture contamination against the 3% benchmark.']) +
             H('8. Data quality') + L(['<b>Why:</b> an estimate is only as good as its data.', '<b>How to read:</b> low completeness means the indicators should be read with caution.', 'Every line of this card is explained in the next section, <b>Data quality metrics explained</b>.'])],
 
-        ['dq', 'Data quality metrics explained (Last Year tab)', () =>
-            P('At the bottom of the Last Year tab is a <b>Data quality</b> card. It does not describe bacteria. It describes <b>how good the data are</b> that everything else is built on. A beautiful chart made from incomplete data can mislead, so these lines tell you how far you can trust the report. If you are new to surveillance, read this section once.') +
+        ['dq', 'Data quality metrics explained (Annual Report tab)', () =>
+            P('At the bottom of the Annual Report tab is a <b>Data quality</b> card. It does not describe bacteria. It describes <b>how good the data are</b> that everything else is built on. A beautiful chart made from incomplete data can mislead, so these lines tell you how far you can trust the report. If you are new to surveillance, read this section once.') +
             TIP('These lines follow the unit switch at the top (All units, ICU, Non-ICU), like the rest of the tab.') +
             H('Part 1. How the records are counted') +
             P('The first four lines are a small funnel. Each line is smaller than, or equal to, the one before it. A worked example: <b>290</b> records, <b>0</b> screening cultures, <b>2</b> repeats, leaving <b>288</b> first isolates.') +
@@ -216,24 +215,15 @@
                 'Repeat the check next year and see whether coverage improved. Improvement is itself a useful result.']) +
             TIP('These lines measure whether a result <b>exists</b>. They do not tell you whether testing was appropriate or correct. Quality of testing is checked by the laboratory with quality control strains (CLSI M100).')],
 
-        ['quarter', 'Last 3 Months tab: trend and where the burden is', () =>
-            P('A quarter has enough isolates to judge direction and to compare units, which a single month usually cannot.') +
-            H('Trend over the last 8 quarters') + L(['<b>Why:</b> one quarter can be a fluctuation; a direction over several quarters is a real signal.', '<b>How to read:</b> follow each line. Hollow points mean fewer than 30 isolates. Tap a point for the confidence interval; overlapping intervals suggest no real change.']) +
-            H('ICU compared with non-ICU') + L(['<b>Why:</b> ICUs have the sickest patients, the most antibiotic exposure and the most devices, so their resistance differs.', '<b>How to read:</b> compare the two columns. The last column gives the difference in percentage points and marks a statistically significant one (only when both groups have 30 or more tested).', '<b>Basis:</b> CLSI M39 supports stratifying results by location. The first isolate is chosen hospital-wide before the split.']) +
-            H('Ward ranking') + L(['<b>Why:</b> to direct stewardship and infection control to the wards with the greatest burden.', '<b>How to read:</b> wards are ranked by the number of MDR, XDR or PDR isolates. Do not compare percentages based on fewer than 10 isolates.']) +
-            H('MDR / XDR / PDR charts and watchlist') + P('The class distribution for the quarter, the wards with the most resistant isolates, and the pathogen chosen for special monitoring.')],
-
-        ['month', 'Last Month tab: follow-up and alerts', () =>
-            P('A month is too short for reliable percentages, so this tab is built for action, not for trend.') +
-            H('Priority alerts') + L(['<b>Why:</b> some isolates need a response the same week.', '<b>What:</b> CRE, CRAB, CRPA, VRE, VRSA (and candidates), <i>Candida auris</i>, and XDR or PDR isolates, with date and ward.', '<b>What to do:</b> inform the infection control team; send VRSA candidates to a reference laboratory.']) +
-            H('Possible clusters') + L(['<b>Why:</b> outbreaks are recognised earlier when the same organism and resistance type appear repeatedly in one ward.', '<b>Rule:</b> three or more different patients, same ward, same organism and same resistance type, within 14 days.', '<b>Caution:</b> this is a signal, not proof. Confirm with the infection control team.']) +
-            H('Comparison with earlier periods') + L(['<b>Why:</b> to put the month in context.', '<b>How to read:</b> compare with the previous month and the same month last year. Numbers are shown as counts: do not read a trend into one month.']) +
-            H('Blood isolates: possible contaminants') + P('The share of blood isolates that are usual skin organisms. A high share points to a sampling problem. The formal benchmark is in the Cultures tab.')],
+        ['month', 'Monthly Alerts tab: results that need action', () =>
+            P('A month is too short for reliable percentages, so this tab is built for action, not for trend. For trends, use the Annual Report tab.') +
+            H('Priority alerts') + L(['<b>Why:</b> some isolates need confirmation and a response the same week.', '<b>What:</b> carbapenem-resistant Enterobacterales, <i>Pseudomonas</i> and <i>Acinetobacter</i>; vancomycin-resistant enterococci; <i>S. aureus</i> with reduced vancomycin susceptibility (candidates); <i>Candida auris</i>; XDR and PDR isolates; and the critical resistance combinations listed by WHO (for example XDR with colistin resistance).', '<b>All isolates are checked,</b> not only the first per patient, so that a new resistance pattern is not missed. A later isolate with the same flags from the same patient is marked <b>repeat</b>.', '<b>What to do:</b> confirm the result, inform the infection control team, and send VRSA candidates to a reference laboratory.', '<b>Caution:</b> an alert is a result to confirm and report, not a diagnosis of an outbreak.']) +
+            H('Overview and watchlist') + P('The number of first isolates of the month with the most frequent organism and specimen, and the pathogen chosen for special monitoring.')],
 
         ['cultures', 'Cultures tab: laboratory activity and quality', () =>
             P('Describes how many cultures the laboratory received and what they grew. The numbers are aggregate counts, not patient records.') +
             L(['<b>Positive:</b> an organism was reported. <b>No growth:</b> nothing grew. <b>Contaminated:</b> reported as contaminated by the laboratory.', '<b>Volume per month:</b> workload. A very low month usually means an incomplete file.', '<b>Positivity by ward and specimen:</b> depends on case mix and on how often cultures are taken.']) +
-            H('Blood culture contamination') + L(['<b>Benchmark:</b> 3% or less of blood cultures (CLSI M47).', '<b>Reported as contaminated:</b> certain.', '<b>Possible skin-flora growth:</b> uncertain, because these organisms can also cause true infection.', '<b>Upper estimate:</b> the two added together. The real rate lies between the reported figure and the estimate.']) +
+            H('Blood culture contamination') + L(['<b>Acceptable range:</b> typically 3% or less of all blood cultures received (CLSI M47-A, Section 5.6).', '<b>Reported as contaminated:</b> certain.', '<b>Possible skin-flora growth:</b> uncertain, because these organisms can also cause true infection.', '<b>Upper estimate:</b> the two added together. The real rate lies between the reported figure and the estimate.']) +
             H('Why it matters') + P('Contaminated blood cultures lead to unnecessary antibiotics, longer stay and cost. The rate is a quality indicator for blood collection.')],
 
         ['scope', 'Unit scope and ICU', () =>
@@ -247,7 +237,7 @@
             H('Why ICU is shown separately') + P('Antimicrobial use, invasive devices and patient risk differ between intensive care and other wards, so a pooled result can hide ICU-specific resistance. CLSI M39 supports stratifying cumulative susceptibility data by patient location.') +
             H('How it is applied') + L([
                 'The first isolate per patient and organism is chosen across all wards first, and the ward filter is applied afterwards. A patient who moves between wards is therefore not counted twice.',
-                'The Last 3 Months ICU comparison always shows both units, whatever the switch is set to.',
+                'The Annual Report ICU comparison always shows both units, whatever the switch is set to.',
                 'The buttons may be hidden by the surveillance team; in that case the dashboard opens on the chosen default scope. Each user can also choose the default for their own device in Settings.',
                 'A note under each Analytics chart states the unit and the period shown.'])],
 

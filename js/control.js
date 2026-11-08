@@ -19,7 +19,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 
 // ---------------------------------------------------------------- configuration
 const TOGGLES = {
-    tabs: [['tab_year', 'Last Year'], ['tab_quarter', 'Last 3 Months'], ['tab_month', 'Last Month'], ['tab_lab', 'Culture Overview']],
+    tabs: [['tab_year', 'Annual Report'], ['tab_month', 'Monthly Alerts'], ['tab_lab', 'Culture Overview']],
     analytics: [['sec_prevalence', 'Clinical Prevalence & AST Profile'], ['sec_patho', 'Bacteria / Fungi Susceptibility Profile'], ['sec_abx', 'Antimicrobial In Vitro Activity Profile'], ['sec_heatmap', 'Advanced Cross-Search (Heatmaps)'], ['sec_mdr_panel', 'MDR / XDR / PDR Analysis']],
     content: [['sec_mdr', 'MDR / XDR / PDR card']]
 };
@@ -106,7 +106,7 @@ function render() {
         <div class="field"><label>Analysis period (Analytics tab)</label>
             <select class="select" data-k="dash_an_period">${[['year', 'Last 12 Months'], ['all', 'All Times (complete years)'], ['calyear', 'Last complete calendar year'], ['quarter', 'Last 3 Months'], ['month', 'Last Month']].map(([v, t]) => `<option value="${v}" ${cur.dash_an_period === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
             <p class="hint">Default for every user. A user can change it for their own device from the gear button.</p></div>
-        <div class="field"><label>Last Year tab period</label>
+        <div class="field"><label>Annual Report tab period</label>
             <select class="select" data-k="dash_ya_mode">${[['calendar', 'Calendar year'], ['rolling', 'Last 12 months']].map(([v, t]) => `<option value="${v}" ${cur.dash_ya_mode === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
         <div class="field"><label>Repeat patient in a period that crosses New Year</label>
             <select class="select" data-k="dash_dedup_mode">${[['block', 'Count once (first isolate only)'], ['calyear', 'Count once in each calendar year']].map(([v, t]) => `<option value="${v}" ${cur.dash_dedup_mode === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
@@ -134,7 +134,7 @@ function render() {
         card('periods', 'calendar', 'Reporting periods', periods) +
         card('tabs', 'tabs', 'Tabs', `<div>${toggleRows(TOGGLES.tabs)}</div>`) +
         card('analytics', 'chart', 'Analytics sections', `<div>${toggleRows(TOGGLES.analytics)}</div>`) +
-        card('content', 'layers', 'Period tab content', `<div>${toggleRows(TOGGLES.content)}</div><p class="hint" style="margin-top:8px">Applies to the Last Month, Last 3 Months and Last Year tabs.</p>`) +
+        card('content', 'layers', 'Period tab content', `<div>${toggleRows(TOGGLES.content)}</div><p class="hint" style="margin-top:8px">Applies to the Last Month, Last 3 Months and Annual Report tabs.</p>`) +
         card('scope', 'building', 'Unit scope', scope) +
         card('profiles', 'flask', 'Threat watchlist', profiles);
     open.forEach(id => $('#card_' + id) && $('#card_' + id).classList.add('open'));
