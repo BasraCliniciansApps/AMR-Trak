@@ -149,15 +149,49 @@ function opAlerts(isolates) {
         return;
     }
     const shown = rows.slice(0, 30);
-    const body = shown.map(x => `<tr><td class="ya-l">${escHtml(String(x.r.Date || '').slice(5))}</td><td class="ya-l">${escHtml(x.r.Ward || '-')}</td><td class="ya-l"><i>${escHtml(formatOrgName(x.r['Selective organism']))}</i><div class="ya-mute">${escHtml(x.r.Sample || '')}</div></td><td class="ya-l">${x.chips}${x.repeat ? opChip('repeat', '#e2e8f0', '#475569') : ''}${x.screening ? opChip('screening', '#e2e8f0', '#475569') : ''}</td></tr>`).join('');
+    window._opAlertRows = shown.map(x => x.r);
+    const body = shown.map((x, i) => `<tr style="cursor:pointer" onclick="opShowProfile(${i})"><td class="ya-l">${escHtml(String(x.r.Date || '').slice(5))}</td><td class="ya-l">${escHtml(x.r.Ward || '-')}</td><td class="ya-l"><i>${escHtml(formatOrgName(x.r['Selective organism']))}</i><div class="ya-mute">${escHtml(x.r.Sample || '')}</div></td><td class="ya-l">${x.chips}${x.repeat ? opChip('repeat', '#e2e8f0', '#475569') : ''}${x.screening ? opChip('screening', '#e2e8f0', '#475569') : ''}</td></tr>`).join('');
     $('#op_m_alerts_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Date</th><th class="ya-l">Ward</th><th class="ya-l">Organism</th><th class="ya-l">Flag</th></tr></thead><tbody>${body}</tbody></table>`);
     const pats = new Set(rows.filter(x => x.pid).map(x => x.pid)).size;
     setNote('#op_m_alerts_note', [
         `<b>${rows.length}</b> alert isolate${rows.length === 1 ? '' : 's'}${pats ? ' from ' + pats + ' patient' + (pats === 1 ? '' : 's') : ''} among ${isolates.length} isolates of the month${rows.length > shown.length ? ' (first ' + shown.length + ' shown)' : ''}.`,
         'All isolates are checked, not only the first per patient, so that a new resistance pattern is not missed (CLSI M39 Section 9.4). A later isolate with the same flags from the same patient is marked <b>repeat</b>.',
         'Confirm the result before reporting it (CLSI M100 Appendix A; WHO emerging AMR reporting framework).',
-        'VRSA candidates need confirmation by a reference laboratory before they are counted as VRSA.']);
+        'VRSA candidates need confirmation by a reference laboratory before they are counted as VRSA.',
+        'Tap a row to see the susceptibility profile of that isolate.']);
 }
+
+// Susceptibility profile of one alert isolate: resistant, intermediate and susceptible results as reported by the laboratory
+window.opShowProfile = function (i) {
+    const r = (window._opAlertRows || [])[i];
+    if (!r) return;
+    const orgRaw = String(r['Selective organism'] || '');
+    const org = orgRaw.trim().toLowerCase();
+    const names = [].concat(typeof abxList !== 'undefined' ? abxList : [], (typeof getCustomAntibiotics === 'function' ? getCustomAntibiotics() : []).map(a => a.name));
+    const groups = { R: [], I: [], S: [] };
+    [...new Set(names)].forEach(a => {
+        const v = opRes(r, a);
+        if (v === 'R') groups.R.push(a);
+        else if (v === 'I' || v === 'SDD') groups.I.push(a + (v === 'SDD' ? ' (SDD)' : ''));
+        else if (v === 'S') groups.S.push(a);
+    });
+    const list = (arr, color) => arr.length
+        ? arr.map(a => { const base = a.replace(/ \(SDD\)$/, ''); const intr = isIntrinsicResistance(org, base); return `<div style="padding:2px 0;color:${color}">${escHtml(a)}${intr ? ' <span style="color:#94a3b8;font-size:10px">(intrinsic)</span>' : ''}</div>`; }).join('')
+        : '<div style="color:#94a3b8">None</div>';
+    const flags = [];
+    if (r['Lab ESBL']) flags.push('Lab ESBL: ' + escHtml(String(r['Lab ESBL'])));
+    if (r['Lab Carbapenemase']) flags.push('Lab carbapenemase: ' + escHtml(String(r['Lab Carbapenemase'])));
+    if (r['Lab MRSA']) flags.push('Lab MRSA: ' + escHtml(String(r['Lab MRSA'])));
+    if (r['Vancomycin MIC']) flags.push('Vancomycin MIC: ' + escHtml(String(r['Vancomycin MIC'])));
+    if (r['VRSA Confirmation']) flags.push('VRSA confirmation: ' + escHtml(String(r['VRSA Confirmation'])));
+    const head = `<div style="font-size:12px;color:#475569;margin-bottom:8px">${escHtml(String(r.Date || ''))} &middot; ${escHtml(r.Ward || '-')} &middot; ${escHtml(r.Sample || '-')}</div>`;
+    const sec = (t, bg, fg, arr, c) => `<div style="margin-top:8px;text-align:left"><div style="font-weight:700;font-size:12px;background:${bg};color:${fg};padding:3px 8px;border-radius:6px">${t} (${arr.length})</div><div style="font-size:12px;padding:4px 8px">${list(arr, c)}</div></div>`;
+    const html = head + (flags.length ? `<div style="font-size:11px;color:#475569;text-align:left;margin-bottom:4px">${flags.join('<br>')}</div>` : '')
+        + sec('Resistant', '#fee2e2', '#991b1b', groups.R, '#991b1b')
+        + sec('Intermediate / SDD', '#fef3c7', '#92400e', groups.I, '#92400e')
+        + sec('Susceptible', '#dcfce7', '#166534', groups.S, '#166534');
+    if (typeof Swal !== 'undefined') Swal.fire({ title: '<i>' + escHtml(formatOrgName(orgRaw)) + '</i>', html, confirmButtonText: 'Close', width: 420 });
+};
 
 function opSetInfo() {
     // the reviewed text for this card is in info_texts.js (op_m_alerts)
