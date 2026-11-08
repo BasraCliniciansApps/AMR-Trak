@@ -272,10 +272,12 @@ function renderMdrPanel() {
     const counts = { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0, 'PDR': 0 };
     const byWard = {}, byMonth = {}, byGroup = {}, byOrg = {};
     let possibleX = 0, possibleP = 0, n = 0;
+    let nmN = 0, nmFew = 0, nmStep = 0;   // Non-MDR isolates: all, fewer than 3 categories tested, non-susceptible in exactly 2 categories with categories untested
     recs.forEach(r => {
         const res = classifyMDR(r);
         if (!res) return;
         n++; counts[res.cls]++;
+        if (res.cls === 'Non-MDR') { nmN++; if (res.tested < 3) nmFew++; if (res.ns === 2 && res.tested < res.total) nmStep++; }
         if (res.possibleXDR) possibleX++;
         if (res.possiblePDR) possibleP++;
         const on = r['Selective organism'] || 'Unknown';
@@ -358,13 +360,15 @@ function renderMdrPanel() {
     // CLSI M39 Section 12.1 style: the percentage MDR next to each organism name, with the definition used stated below
     const orgRows = Object.keys(byOrg).filter(o => byOrg[o].total > 0).sort((a, b) => byOrg[b].total - byOrg[a].total);
     const mdrOrgList = orgRows.length ? `<div class="mt-3"><div class="text-[10px] font-bold text-slate-600 mb-1">Percentage MDR+ by organism</div><ul class="text-[10px] text-slate-600 space-y-0.5">${orgRows.map(o => { const x = byOrg[o], small = x.total < minN(); return `<li class="${small ? 'text-slate-400' : ''}"><b>${escHtml(formatOrgName ? formatOrgName(o) : o)}</b> (${pct(x.mdr, x.total)}% MDR+, n=${x.total}${small ? '*' : ''})</li>`; }).join('')}</ul></div>` : '';
+    // Non-MDR is not a confirmation: routine panels never cover every category (Magiorakos 2012 validity condition, pp. 268 and 278)
+    const mdrCovNote = nmN ? `<ul class="note-list text-[9px] text-slate-400 mt-2 sym-note"><li><b>Non-MDR isolates: ${nmN}.</b> MDR and XDR percentages are minimum estimates, because categories that were not tested could still show non-susceptibility.</li><li><b>${nmFew} (${pct(nmFew, nmN)}%)</b> had fewer than 3 categories tested. MDR needs 3 or more non-susceptible categories, so these isolates could not have been confirmed as MDR whatever their results.</li><li><b>${nmStep} (${pct(nmStep, nmN)}%)</b> were non-susceptible in 2 categories and had other categories untested: one more non-susceptible category would make them MDR.</li></ul>` : '';
     const mdrDefNote = `<ul class="note-list text-[9px] text-slate-400 mt-2 sym-note"><li>Definitions (Magiorakos et al. 2012): MDR = non-susceptible to at least one agent in three or more antimicrobial categories.</li><li>XDR = non-susceptible to at least one agent in all but two or fewer categories. PDR = non-susceptible to all agents in all categories.</li><li>Non-susceptible = I, SDD or R. Intrinsic resistance is not counted. Only the categories listed for the organism group are used (CLSI M39 Section 12 asks the facility to state its definition).</li></ul>`;
     const rows = Object.keys(byGroup).sort((a, b) => byGroup[b].total - byGroup[a].total).map(g => {
         const x = byGroup[g], w = x.MDR + x.XDR + x.PDR;
         const poss = (x.px || x.pp) ? ` <span class="text-slate-400">(+${x.px} poss. XDR${x.pp ? ', +' + x.pp + ' poss. PDR' : ''})</span>` : '';
         return `<tr class="border-t border-slate-100"><td class="py-1.5 pr-2 font-bold text-slate-700">${gnames[g] || g}</td><td class="text-center">${x.total}${x.total < minN() ? '*' : ''}</td><td class="text-center text-amber-600 font-bold">${pct(w, x.total)}%${ciSub(w, x.total)}</td><td class="text-center text-rose-600 font-bold">${x.XDR + x.PDR}${ciSub(x.XDR + x.PDR, x.total, true)}${poss}</td><td class="text-center text-amber-700">${x.MDR} <span class="text-slate-400">(${pct(x.MDR, x.total)}%)</span></td><td class="text-center text-rose-700">${x.XDR} <span class="text-slate-400">(${pct(x.XDR, x.total)}%)</span></td><td class="text-center text-red-900 font-bold">${x.PDR} <span class="text-slate-400 font-normal">(${pct(x.PDR, x.total)}%)</span></td></tr>`;
     }).join('');
-    $('#mdr_group_table').html(rows ? `<table class="w-full text-[10px]"><thead><tr class="text-slate-500"><th class="text-left pb-1">Group</th><th>n</th><th>MDR+</th><th>XDR+</th><th>MDR only</th><th>XDR only</th><th>PDR</th></tr></thead><tbody>${rows}</tbody></table>${mdrOrgList}${mdrNNote}${mdrDefNote}` : '<p class="text-xs text-slate-400 text-center">No classifiable isolates in this period.</p>');
+    $('#mdr_group_table').html(rows ? `<table class="w-full text-[10px]"><thead><tr class="text-slate-500"><th class="text-left pb-1">Group</th><th>n</th><th>MDR+</th><th>XDR+</th><th>MDR only</th><th>XDR only</th><th>PDR</th></tr></thead><tbody>${rows}</tbody></table>${mdrOrgList}${mdrNNote}${mdrCovNote}${mdrDefNote}` : '<p class="text-xs text-slate-400 text-center">No classifiable isolates in this period.</p>');
 }
 const _pickerRendered = {};
 function renderPeriodPickerOnce(id, cb) {
