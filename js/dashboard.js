@@ -565,7 +565,16 @@ function applyCloudSnap(snap) {
             try { when = data.last_updated && data.last_updated.toDate ? data.last_updated.toDate().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : ''; } catch (e) {}
             setDashStatus(cloudRecords.length ? 'ok' : 'warn', `${cloudRecords.length} isolates${when ? ' - published ' + when : ''}`);
         } else {
+            // An empty answer served from the local cache is not proof that nothing is published: wait for the server's answer
+            if (snap.metadata && snap.metadata.fromCache) { refreshAll(); return; }
             hideLoading();
+            let saved = 0;
+            try { saved = (JSON.parse(localStorage.getItem('amr_dash_records')) || []).length; } catch (e) {}
+            if (saved) {                                                             // keep showing the copy saved on this phone
+                setDashStatus('warn', 'No published data found in the cloud. Showing the last saved data on this phone.');
+                refreshAll();
+                return;
+            }
             setDashStatus('warn', 'No published data found in the cloud.');
             Swal.fire({ icon: 'info', title: 'No data yet', text: 'The public dashboard data has not been published. Open the data-entry app and sign in once to publish it.' });
         }
