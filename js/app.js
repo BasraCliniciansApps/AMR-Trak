@@ -772,7 +772,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
     };
 
     // Lab-quality counts (growth / no growth / contaminated cultures): stored as aggregates only, never as isolates
-    const labAgg = buildLabQualityFromRows(rawData, { idx: { org: idxOrg, ward: idxWard, sample: idxSample, date: idxDate, pid: idxPatientID }, wardMap: wardMap, specimenMap: externalSpecimenMap });
+    const labAgg = buildLabQualityFromRows(rawData, { idx: { org: idxOrg, ward: idxWard, sample: idxSample, date: idxDate, pid: idxPatientID }, wardMap: wardMap, specimenMap: externalSpecimenMap, astCols: abxColumns.map(c => c.index), orgName: c => externalOrgMap[c] || whonetOrgMap[c] || (c.charAt(0).toUpperCase() + c.slice(1)) });
 
     for(let i = 1; i < rawData.length; i++) {
         const cols = rawData[i];

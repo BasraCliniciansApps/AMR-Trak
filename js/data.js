@@ -964,7 +964,7 @@ function parseWhonetDateParts(rawDate) {
 
 // ctx: { idx: {org, ward, sample, date, pid}, wardMap, specimenMap }
 function buildLabQualityFromRows(rows, ctx) {
-    const cultures = new Map();
+    const cultures = new Map(), orgAst = new Map();
     const rank = { growth: 3, con: 2, ng: 1 };
     for (let i = 1; i < rows.length; i++) {
         const cols = rows[i];
@@ -982,6 +982,13 @@ function buildLabQualityFromRows(rows, ctx) {
         const key = [pid, fullDate, sample.toLowerCase()].join('|');
         const prev = cultures.get(key);
         if (!prev || rank[status] > rank[prev.status]) cultures.set(key, { month, ward, sample, status });
+        // Organisms identified without any S/I/R result (counted per culture and organism)
+        if (status === 'growth' && ctx.astCols && ctx.astCols.length) {
+            const ok = key + '|' + org, hasR = ctx.astCols.some(ci => /^(s|i|r|sdd)$/i.test(String(cols[ci] || '').trim()));
+            const e = orgAst.get(ok) || { month, org: ctx.orgName ? ctx.orgName(org) : org, ast: false };
+            if (hasR) e.ast = true;
+            orgAst.set(ok, e);
+        }
     }
     const months = {};
     cultures.forEach(c => {
@@ -990,7 +997,11 @@ function buildLabQualityFromRows(rows, ctx) {
         const a = (m[k] = m[k] || [0, 0, 0]);
         if (c.status === 'growth') a[0]++; else if (c.status === 'ng') a[1]++; else a[2]++;
     });
-    return { v: 1, months };
+    const noAst = {};
+    orgAst.forEach(e => { if (!e.ast) { const m = (noAst[e.month] = noAst[e.month] || {}); m[e.org] = (m[e.org] || 0) + 1; } });
+    const out = { v: 1, months };
+    if (ctx.astCols && ctx.astCols.length) out.noAst = noAst;
+    return out;
 }
 function labMonthTotal(monthObj) {
     let t = 0;
@@ -1000,9 +1011,13 @@ function labMonthTotal(monthObj) {
 // Replaces a month only when the new import holds at least as many cultures (a partial file never shrinks a complete month)
 function mergeLabQuality(existing, incoming) {
     const out = { v: 1, months: Object.assign({}, (existing && existing.months) || {}) };
+    if (existing && existing.noAst) out.noAst = Object.assign({}, existing.noAst);
     const kept = [];
     Object.keys(incoming.months || {}).forEach(m => {
-        if (!out.months[m] || labMonthTotal(incoming.months[m]) >= labMonthTotal(out.months[m])) out.months[m] = incoming.months[m];
+        if (!out.months[m] || labMonthTotal(incoming.months[m]) >= labMonthTotal(out.months[m])) {
+            out.months[m] = incoming.months[m];
+            if (incoming.noAst) { out.noAst = out.noAst || {}; if (incoming.noAst[m]) out.noAst[m] = incoming.noAst[m]; else delete out.noAst[m]; }
+        }
         else kept.push(m);
     });
     return { merged: out, keptMonths: kept };

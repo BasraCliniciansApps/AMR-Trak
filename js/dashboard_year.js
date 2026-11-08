@@ -455,6 +455,9 @@ function yaQuality() {
         if (miss.length) neverTested.push(`<b>${grp}</b>: ${miss.join(', ')}`);
     });
     const list = a => a.length ? a.join(', ') : 'None';
+    const noAstOrg = {}; let noAstTot = 0, noAstKnown = false;
+    try { const lq = JSON.parse(localStorage.getItem('amr_dash_lab')) || {}; if (lq.noAst) { noAstKnown = true; yaMonths(y).forEach(m => Object.keys(lq.noAst[m] || {}).forEach(o2 => { noAstOrg[o2] = (noAstOrg[o2] || 0) + lq.noAst[m][o2]; noAstTot += lq.noAst[m][o2]; })); } } catch (e) {}
+    const noAstList = Object.keys(noAstOrg).sort((a, b) => noAstOrg[b] - noAstOrg[a]).map(o2 => `${escapeHtmlDash(o2)} (${noAstOrg[o2]})`);
     const rows = [
         ['Records in the year', n, ''],
         ['Screening cultures excluded', screening, ''],
@@ -469,6 +472,7 @@ function yaQuality() {
         ['Enterobacterales tested for a 3rd-gen. cephalosporin', tested('Enterobacterales', ['Ceftriaxone', 'Cefotaxime', 'Ceftazidime']), '3GC-R indicator'],
         ['<i>S. aureus</i> tested for cefoxitin or oxacillin', tested('Staphylococcus aureus', ['Cefoxitin', 'Oxacillin', 'Cefoxitin screen']), 'MRSA indicator'],
         ['<i>Enterococcus</i> tested for vancomycin', tested('Enterococcus', ['Vancomycin']), 'VRE indicator'],
+        ['Organisms identified without any susceptibility result', noAstKnown ? noAstTot : '-', noAstKnown ? (noAstList.length ? noAstList.join('<br>') + '<br>Not part of the antibiogram or prevalence figures' : '') : 'Available after the laboratory files of the year are imported again'],
         ['Antibiotics with results but outside every MDR category', outside.length, list(outside)],
         ['MDR categories never tested, by organism group', neverTested.length ? neverTested.length + ' group(s)' : 'None', neverTested.join('<br>')]
     ].map(([l, v, h]) => `<tr><td class="ya-l">${l}${h ? `<div class="ya-mute">${h}</div>` : ''}</td><td>${v}</td></tr>`).join('');
