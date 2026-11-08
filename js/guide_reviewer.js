@@ -312,7 +312,7 @@
                 ['10', 'Laboratory flags (ESBL, carbapenemase, MRSA) are used as reported.', 'Their accuracy is that of the laboratory method.', 'Not inferred from susceptibility patterns.'],
                 ['11', 'The blood culture contamination benchmark [R8] and the WHO priority categories [R5] were cited from published sources, not from documents supplied for this review.', 'Status C in the evidence map.', 'To be verified by the reviewer.'],
                 ['12', 'The application has not been validated against a second, independent antibiogram software.', 'No external concordance figure is available.', 'A comparison on a sample of one quarter is recommended before formal adoption.']]) +
-            TIP('Build information: AMR Tracker Dashboard, build 11.10, 6 November 2026. Documents checked: CLSI M100-Ed36 (2026), CLSI M39-A4 (2014), Magiorakos et al. (2012), ACSQHC Specification for a Hospital Cumulative Antibiogram (December 2019).')],
+            TIP('Build information: AMR Tracker Dashboard, build ' + ((((document.getElementById('app_ver') || {}).textContent || '').match(/v?(\d+(?:\.\d+)+)/) || [])[1] || '') + '. Documents checked: CLSI M100-Ed36 (2026), CLSI M39-A4 (2014), Magiorakos et al. (2012), ACSQHC Specification for a Hospital Cumulative Antibiogram (December 2019).')],
 
         // ------------------------------------------------------------------ 14
         ['rv_refs', 'For reviewer: references', () => {
