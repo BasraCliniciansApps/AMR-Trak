@@ -955,11 +955,19 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
     };
 
     // Same identification number + same year but different patient names: the user decides BEFORE anything is saved
-    const groups = findIdNameConflictGroups(records, newRecords);
+    // A decision is remembered for the same number, year and set of names, so a repeated import does not ask again
+    const allGroups = findIdNameConflictGroups(records, newRecords);
+    const icKey = g => [g.id.toLowerCase(), g.year, g.names.slice().sort().join('~')].join('|');
+    let icStore = {}; try { icStore = JSON.parse(localStorage.getItem('amr_id_conflicts')) || {}; } catch (e) {}
+    const known = allGroups.filter(g => icStore[icKey(g)]);
+    if (known.length) applyIdConflictDecisions(known, known.map(g => icStore[icKey(g)]));
+    const groups = allGroups.filter(g => !icStore[icKey(g)]);
     if (groups.length === 0) { finalize(); return; }
     reviewIdConflicts(groups).then(decisions => {
         if (decisions === null) { event.target.value = ''; Swal.fire('Import cancelled', 'Nothing was saved.', 'info'); return; }
         applyIdConflictDecisions(groups, decisions);
+        groups.forEach((g, gi) => { if (decisions[gi] && (decisions[gi].mode === 'same' || decisions[gi].mode === 'diff')) icStore[icKey(g)] = decisions[gi]; });
+        try { localStorage.setItem('amr_id_conflicts', JSON.stringify(icStore)); } catch (e) {}
         finalize();
     });
 }
@@ -1323,6 +1331,7 @@ window.downloadBackup = function() {
             amr_live_settings: JSON.parse(localStorage.getItem('amr_live_settings')) || null,
             amr_lab_quality: JSON.parse(localStorage.getItem('amr_lab_quality')) || null,
             amr_patient_links: JSON.parse(localStorage.getItem('amr_patient_links')) || null,
+            amr_id_conflicts: JSON.parse(localStorage.getItem('amr_id_conflicts')) || null,
             amr_ward_class: JSON.parse(localStorage.getItem('amr_ward_class')) || null
         };
 
@@ -1458,6 +1467,10 @@ window.processRestore = function() {
                             const cur = JSON.parse(localStorage.getItem('amr_patient_links') || '{"decisions":{}}'); cur.decisions = cur.decisions || {};
                             Object.keys(importedData.amr_patient_links.decisions).forEach(k => { if (!cur.decisions[k]) cur.decisions[k] = importedData.amr_patient_links.decisions[k]; });
                             localStorage.setItem('amr_patient_links', JSON.stringify(cur));
+                        }
+                        if (importedData.amr_id_conflicts) {
+                            const ic = Object.assign({}, importedData.amr_id_conflicts, JSON.parse(localStorage.getItem('amr_id_conflicts') || '{}'));
+                            localStorage.setItem('amr_id_conflicts', JSON.stringify(ic));
                         }
                         if (importedData.amr_ward_class) {
                             const wc = Object.assign({}, importedData.amr_ward_class, JSON.parse(localStorage.getItem('amr_ward_class') || '{}'));
