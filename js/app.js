@@ -948,7 +948,9 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         } catch (e) { console.warn('Lab quality aggregate failed', e); }
         initDataTable();
         if (typeof syncLocalToCloud === "function" && navigator.onLine) syncLocalToCloud();
-        Promise.resolve(showImportReport(report, audit, newRecords, skippedCount, fileNames)).then(() => ensureWardClasses()).then(ch => { if (ch && typeof syncLocalToCloud === 'function' && navigator.onLine) syncLocalToCloud(); }).then(() => { if (typeof openPatientLink === 'function') openPatientLink({ silent: true }); });
+        Promise.resolve(showImportReport(report, audit, newRecords, skippedCount, fileNames)).then(() => { try { return typeof openPatientLink === 'function' ? openPatientLink({ silent: true }) : null; } catch (e) { console.warn(e); } })
+            .catch(e => console.warn('Patient link review failed', e))
+            .then(() => ensureWardClasses()).then(ch => { if (ch && typeof syncLocalToCloud === 'function' && navigator.onLine) syncLocalToCloud(); }).catch(e => console.warn('Ward rules failed', e));
         event.target.value = '';
     };
 
@@ -1319,7 +1321,9 @@ window.downloadBackup = function() {
             amr_organisms: JSON.parse(localStorage.getItem('amr_organisms')) || [],
             amr_custom_abx_v2: JSON.parse(localStorage.getItem('amr_custom_abx_v2')) || [],
             amr_live_settings: JSON.parse(localStorage.getItem('amr_live_settings')) || null,
-            amr_lab_quality: JSON.parse(localStorage.getItem('amr_lab_quality')) || null
+            amr_lab_quality: JSON.parse(localStorage.getItem('amr_lab_quality')) || null,
+            amr_patient_links: JSON.parse(localStorage.getItem('amr_patient_links')) || null,
+            amr_ward_class: JSON.parse(localStorage.getItem('amr_ward_class')) || null
         };
 
         const dataStr = JSON.stringify(data, null, 2);
@@ -1448,6 +1452,18 @@ window.processRestore = function() {
                         const lq = mergeLabQuality(JSON.parse(localStorage.getItem('amr_lab_quality') || '{}'), importedData.amr_lab_quality);
                         localStorage.setItem('amr_lab_quality', JSON.stringify(lq.merged));
                     }
+                    // Repeat-patient decisions and ward rules: kept from the backup, local ones win on a clash
+                    try {
+                        if (importedData.amr_patient_links && importedData.amr_patient_links.decisions) {
+                            const cur = JSON.parse(localStorage.getItem('amr_patient_links') || '{"decisions":{}}'); cur.decisions = cur.decisions || {};
+                            Object.keys(importedData.amr_patient_links.decisions).forEach(k => { if (!cur.decisions[k]) cur.decisions[k] = importedData.amr_patient_links.decisions[k]; });
+                            localStorage.setItem('amr_patient_links', JSON.stringify(cur));
+                        }
+                        if (importedData.amr_ward_class) {
+                            const wc = Object.assign({}, importedData.amr_ward_class, JSON.parse(localStorage.getItem('amr_ward_class') || '{}'));
+                            localStorage.setItem('amr_ward_class', JSON.stringify(wc));
+                        }
+                    } catch (e) { console.warn('Restore of link decisions failed', e); }
                     if (!localStorage.getItem('amr_live_settings') && importedData.amr_live_settings) {
                         localStorage.setItem('amr_live_settings', JSON.stringify(importedData.amr_live_settings));
                     }
