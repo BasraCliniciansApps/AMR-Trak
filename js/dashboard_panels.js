@@ -537,7 +537,7 @@ const profTitle = (p, n) => () => $('#live_' + p + '_profile' + n + '_title').te
 function monthSection(p, label) {
     return {
         id: 'sec_' + label, title: () => $('#live_month_title').text() || 'Monthly Alerts',
-        infos: [['Overview', 'overview_' + p], ['Threat watchlist', 'sec_watch']],
+        infos: [['Threat watchlist', 'sec_watch']],
         charts: [
             { title: 'Global Threat Watchlist', el: '#chart_' + p + '_watch_abx' }
         ]

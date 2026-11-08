@@ -218,7 +218,7 @@
         ['month', 'Monthly Alerts tab: results that need action', () =>
             P('A month is too short for reliable percentages, so this tab is built for action, not for trend. For trends, use the Annual Report tab.') +
             H('Priority alerts') + L(['<b>Why:</b> some isolates need confirmation and a response the same week.', '<b>What:</b> carbapenem-resistant Enterobacterales, <i>Pseudomonas</i> and <i>Acinetobacter</i>; vancomycin-resistant enterococci; <i>S. aureus</i> with reduced vancomycin susceptibility (candidates); <i>Candida auris</i>; XDR and PDR isolates; and the critical resistance combinations listed by WHO (for example XDR with colistin resistance).', '<b>All isolates are checked,</b> not only the first per patient, so that a new resistance pattern is not missed. A later isolate with the same flags from the same patient is marked <b>repeat</b>.', '<b>What to do:</b> confirm the result, inform the infection control team, and send VRSA candidates to a reference laboratory.', '<b>Caution:</b> an alert is a result to confirm and report, not a diagnosis of an outbreak.']) +
-            H('Overview and watchlist') + P('The number of first isolates of the month with the most frequent organism and specimen, and the pathogen chosen for special monitoring.')],
+            H('Threat watchlist') + P('The pathogen chosen for special monitoring in Settings, drawn for the month when it is set.')],
 
         ['cultures', 'Cultures tab: laboratory activity and quality', () =>
             P('Describes how many cultures the laboratory received and what they grew. The numbers are aggregate counts, not patient records.') +

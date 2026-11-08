@@ -650,41 +650,13 @@ function generateLiveSurveillance() {
 }
 
 function buildMobileLiveSection(records, prefix, settings, timeLabel) {
-    const inScope = scopeRecs(records);   // raw count in the selected unit filter, before the first isolate is chosen
-    $(`#live_${prefix}_total`).text(inScope.length);
-    if(inScope.length === 0) {
-        $(`#live_${prefix}_bug`).text("-");
-        $(`#live_${prefix}_spec`).text("-");
+    // Monthly Alerts tab: only the threat watchlist is drawn here (the alerts are in dashboard_period.js)
+    if (scopeRecs(records).length === 0) {
         $(`#live_${prefix}_watchlist_container`).addClass('hidden');
         return;
     }
-
-
-    // --- CLSI M39 DEDUPLICATION (First isolate per patient per organism per year) ---
+    // CLSI M39: first isolate per patient and organism
     records = applyDeduplication(records);
-    const surveillanceRecords = records;
-    $(`#live_${prefix}_total`).text(records.length);
-
-    // Overview details (i): method + possible contaminants (flagged, not removed)
-    const contamN = records.filter(isPossibleContaminant).length;
-    let overviewHtml = `<h5>What it shows</h5><p>The period contains <b>${records.length}</b> first isolates, with the most frequent organism and specimen.</p>` +
-        '<h5>How the numbers are counted</h5><ul><li>Only the first isolate per patient and organism within the reported period is counted (CLSI M39).</li><li>Screening cultures (for example rectal or nasal swabs) are excluded.</li></ul>';
-    if (contamN > 0) overviewHtml += `<h5>Possible contaminants</h5><p><b>${contamN}</b> blood isolate(s) are possible skin-flora contaminants (coagulase-negative staphylococci, <i>Corynebacterium</i>, <i>Micrococcus</i>, viridans streptococci and similar). They are counted, not removed, and should be reviewed clinically.</p>`;
-    setInfo('overview_' + prefix, 'Surveillance overview', overviewHtml);
-    attachInfo($(`#live_${prefix}_total`).closest('.grid').prev(), 'overview_' + prefix);
-
-    let orgCounts = {}, specCounts = {};
-
-
-    // Prevalence is tallied on first isolates only
-    records.forEach(r => {
-        let org = r['Selective organism'] || "", spec = r['Sample'];
-        orgCounts[org] = (orgCounts[org] || 0) + 1;
-        if (spec && spec !== "-") specCounts[spec] = (specCounts[spec] || 0) + 1;
-    });
-
-    $(`#live_${prefix}_bug`).text(formatOrgName(Object.keys(orgCounts).sort((a, b) => orgCounts[b] - orgCounts[a])[0]) || "-");
-    $(`#live_${prefix}_spec`).text(Object.keys(specCounts).sort((a, b) => specCounts[b] - specCounts[a])[0] || "-");
 
     // 🚨 Global Threat Watchlist Logic (Graphical & Detailed Edition)
     let watchBug = settings.watchlist_bug;
