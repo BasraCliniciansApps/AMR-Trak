@@ -67,27 +67,22 @@
                 'The category of each agent is taken <b>as exported</b>. The application does not recompute interpretations from MIC or zone values, so the edition of M100 applied is that used by the laboratory when the test was interpreted.']) +
             H('2. Categories stored') + L([
                 'S, I, R and <b>SDD</b> (susceptible-dose dependent) are stored as four distinct values. SDD is a separate category in M100 and is not counted as susceptible [R2, Section 6.6, p. 13].',
-                'Non-susceptible (NS) = I + SDD + R. Resistant (R) = R only. Susceptible (S) = S only.',
-                'Version note: before build 11.10 an SDD result was stored as S during import. Records imported before that build keep the stored value. In the laboratory file used for validation, 46 SDD results were present (cefepime, piperacillin-tazobactam, piperacillin), so %S for those agents in earlier imports may be overstated. Re-importing the affected months corrects it (see the section on known limitations).']) +
-            H('3. Rows that are not imported, and why') + T(['Row', 'Treatment', 'Reason'], [
-                ['No organism, "xxx", "con" or "no growth"', 'Not imported as an isolate. Counted in the monthly culture counts (growth, no growth, contaminated).', 'There is no isolate to analyse. The counts are kept as aggregates for the culture-burden table.'],
-                ['Organism identified but no S, I or R result', 'Not imported.', 'An isolate without susceptibility data cannot contribute to %S.'],
-                ['No specimen type', 'Not imported.', 'The source cannot be analysed, and screening cultures cannot be excluded [R2, Section 6.4, p. 10].'],
-                ['No usable date', 'Not imported.', 'Needed for the analysis period.'],
-                ['Antibiotic columns outside the current M100 and WHO lists (legacy WHONET codes)', 'Recognised and not imported.', 'No current interpretive criteria.'],
+                'Non-susceptible (NS) = I + SDD + R. Resistant (R) = R only. Susceptible (S) = S only.']) +
+            H('3. Records not included in the analysis, and why') + T(['Row', 'Treatment', 'Reason'], [
+                ['No organism, "xxx", "con" or "no growth"', 'Not included as an isolate. Counted in the monthly culture counts (growth, no growth, contaminated).', 'There is no isolate to analyse. The counts are kept as aggregates for the culture-burden table.'],
+                ['Organism identified but no S, I or R result', 'Not included.', 'An isolate without susceptibility data cannot contribute to %S.'],
+                ['No specimen type', 'Not included.', 'The source cannot be analysed, and screening cultures cannot be excluded [R2, Section 6.4, p. 10].'],
+                ['No usable date', 'Not included.', 'Needed for the analysis period.'],
+                ['Antibiotic columns outside the current M100 and WHO lists (legacy WHONET codes)', 'Recognised and not included.', 'No current interpretive criteria.'],
                 ['Beta-haemolytic streptococci: penicillin or ampicillin by disk, result I or R', 'Ignored.', 'M100 Table 2H-1 (p. 129) gives only a susceptible disk breakpoint for these agents (zone &ge; 24 mm); a disk result cannot be reported as I or R [R1].'],
                 ['Staphylococcus: vancomycin by disk', 'Not used.', 'M100 Table 2C comment (p. 100): MIC tests should be performed for staphylococci; the disk test does not differentiate susceptible from intermediate or resistant isolates [R1].']]) +
             H('4. Staphylococcal vancomycin: the only re-interpretation') + L([
                 'When the MIC is available, the category is derived from M100 Table 2C (p. 101): <i>S. aureus</i> S &le; 2, I 4-8, R &ge; 16 &micro;g/mL; other staphylococci S &le; 4, I 8-16, R &ge; 32 &micro;g/mL [R1].',
                 'MIC values must lie on the two-fold dilution scale. Other values are treated as recording errors and the vancomycin result is not stored.',
-                'A derived category that differs from the category exported by the laboratory is flagged in the import report. An <i>S. aureus</i> MIC of 16 or more is reported as a VRSA <b>candidate</b> until a reference laboratory confirms it (M100 comment 16: send <i>S. aureus</i> with vancomycin MIC &ge; 8 &micro;g/mL to a referral laboratory, p. 101).']) +
-            H('5. Repeated import and manual entries') + L([
-                'Repeated import of the same export does not create duplicates. The duplicate key is patient number, month, organism and specimen.',
-                'Records entered by hand are marked <b>manual</b>. When a laboratory file is imported, all manual records of the months covered by that file are removed and replaced by the laboratory data. The laboratory file is treated as the authoritative record. The import report states the number replaced.',
-                'A laboratory record edited by hand keeps its origin (it is not marked manual).']) +
-            H('6. Culture counts') + L([
+                'An <i>S. aureus</i> MIC of 16 or more is reported as a VRSA <b>candidate</b> until a reference laboratory confirms it (M100 comment 16: send <i>S. aureus</i> with vancomycin MIC &ge; 8 &micro;g/mL to a referral laboratory, p. 101).']) +
+            H('5. Culture counts') + L([
                 'For each month, ward and specimen type the numbers of cultures with growth, without growth and contaminated are stored as aggregate counts. No patient data are involved. They feed the culture-burden table.']) +
-            H('7. De-identification of the published copy') + L([
+            H('6. De-identification of the published copy') + L([
                 'Names and internal identifiers are removed before the dashboard copy is published.',
                 'The patient number is replaced by a <b>salted SHA-256 pseudonym</b> (first 16 hexadecimal characters). The same patient gives the same pseudonym, so first-isolate selection still works. Records without a patient number have an empty identifier and are always counted.',
                 'The dashboard shows no patient name and no patient number.'])],
@@ -300,20 +295,12 @@
                 'The reference value shown is <b>3% or less</b>. M47-A, Section 5.6: laboratories should validate that their process keeps contamination within an acceptable range, "typically &le; 3%" [R8] ' + V + '. Section 8: even with the best collection protocols it may not be possible to go below 2% [R8] ' + V + '. The 3% limit is traditional and its supporting data are described as controversial in the ASM review, where lower rates are said to be achievable.',
                 'A month far below the others usually reflects an incomplete file and not a real fall in cultures.'])],
 
-        // ------------------------------------------------------------------ 12
-        ['rv_export', 'For reviewer: Ministry antibiogram export', () =>
-            L([
-                'The quarterly antibiogram can be exported to the Ministry template (<i>Antibiogram_5.xlsx</i>) for a chosen year and quarter.',
-                'The export is built from the <b>stored records</b> dated in the months of the quarter. It does not use the report month, the period selectors or the manual/laboratory mark. A month entered by hand is included until the laboratory file for that month replaces it.',
-                'The export is not a first-isolate analysis: the aggregation follows the layout of the Ministry template. The programme should confirm with the Ministry which counting rule the template assumes.',
-                'A file that has been delivered does not change when data are later replaced; the delivered file should be kept.'])],
-
         // ------------------------------------------------------------------ 13
         ['rv_limits', 'For reviewer: known limitations and departures from the sources', () =>
             P('The following points are declared so that the reviewer can judge their effect. None of them is hidden in the results.') +
             T(['No.', 'Point', 'Effect', 'Handling'], [
                 ['1', 'The edition of CLSI M39 reviewed is the 4th edition (M39-A4, 2014). A later edition exists and was not reviewed.', 'Recommendations may have been updated.', 'The reviewer should compare the sections cited here with the current edition.'],
-                ['2', 'Linking the same patient across years depends on the user. The laboratory number restarts every year, so unlinked records are identified by number, organism and calendar year. M39 Section 6.4 asks for the first isolate per patient per analysis period [R2, p. 10].', 'A patient with isolates in two calendar years of a 12-month period that crosses New Year is counted twice unless the person was linked. In the laboratory file used for validation (4,385 records, 2021 to 2026), 77% of patient numbers recurred in more than one year and none belonged to the same name, so the number cannot be used for linking. Linking by name found 41 probable repeat patients (102 records); counting them once changed the first-isolate total of a 12-month period by about 0.5%.', 'Each probable repeat patient is confirmed individually. Unconfirmed people stay unlinked. Blocks of 12 months start at the first month with data in the period, a choice of this application that M39 does not specify.'],
+                ['2', 'Linking the same patient across years depends on the confirmation of repeat patients. The laboratory number restarts every year, so unlinked records are identified by number, organism and calendar year. M39 Section 6.4 asks for the first isolate per patient per analysis period [R2, p. 10].', 'A patient with isolates in two calendar years of a 12-month period that crosses New Year is counted twice unless the person was linked. In the laboratory file used for validation (4,385 records, 2021 to 2026), 77% of patient numbers recurred in more than one year and none belonged to the same name, so the number cannot be used for linking. Linking by name found 41 probable repeat patients (102 records); counting them once changed the first-isolate total of a 12-month period by about 0.5%.', 'Each probable repeat patient is confirmed individually. Unconfirmed people stay unlinked. Blocks of 12 months start at the first month with data in the period, a choice of this application that M39 does not specify.'],
                 ['3', 'Surrogate rule (cefoxitin for oxacillin) of M39 Section 6.5.1 is not applied; no separate MRSA-subset row.', 'S. aureus rows list the agents as recorded.', 'MRSA is reported as an indicator.'],
                 ['4', 'The 90% selective-testing threshold comes from ACSQHC, not from CLSI.', 'A different threshold would change which agents are marked &dagger;.', 'Attributed to ACSQHC wherever it appears.'],
                 ['5', 'The agent-level minimum of 30 tested results in the cumulative antibiogram is stricter than M39.', 'Some cells are blank that M39 would allow with a note.', 'Declared as application policy.'],
@@ -322,9 +309,8 @@
                 ['8', 'MDR, XDR and PDR rest on [R3], an interim expert proposal. Routine panels do not test all categories.', 'Confirmed XDR and PDR are minimum estimates; comparison with external studies is limited.', 'Validity condition stated; "possible" label used.'],
                 ['9', 'Interpretive categories are those assigned by the laboratory. The application does not audit them.', 'Results follow the M100 edition used by the laboratory at the time of testing.', 'The laboratory should state the edition. Only staphylococcal vancomycin is re-derived.'],
                 ['10', 'Laboratory flags (ESBL, carbapenemase, MRSA) are used as reported.', 'Their accuracy is that of the laboratory method.', 'Not inferred from susceptibility patterns.'],
-                ['11', 'Before build 11.10, SDD results were stored as S on import.', 'For records imported earlier, %S for agents that have SDD (cefepime, piperacillin-tazobactam) may be overstated and %NS understated. In the development file, 46 results were affected.', 'Corrected for new imports. Re-importing the affected months after removing them corrects older records.'],
-                ['12', 'The blood culture contamination benchmark [R8] and the WHO priority categories [R5] were cited from published sources, not from documents supplied for this review.', 'Status C in the evidence map.', 'To be verified by the reviewer.'],
-                ['13', 'The application has not been validated against a second, independent antibiogram software.', 'No external concordance figure is available.', 'A comparison on a sample of one quarter is recommended before formal adoption.']]) +
+                ['11', 'The blood culture contamination benchmark [R8] and the WHO priority categories [R5] were cited from published sources, not from documents supplied for this review.', 'Status C in the evidence map.', 'To be verified by the reviewer.'],
+                ['12', 'The application has not been validated against a second, independent antibiogram software.', 'No external concordance figure is available.', 'A comparison on a sample of one quarter is recommended before formal adoption.']]) +
             TIP('Build information: AMR Tracker Dashboard, build 11.10, 6 November 2026. Documents checked: CLSI M100-Ed36 (2026), CLSI M39-A4 (2014), Magiorakos et al. (2012), ACSQHC Specification for a Hospital Cumulative Antibiogram (December 2019).')],
 
         // ------------------------------------------------------------------ 14
