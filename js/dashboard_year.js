@@ -315,20 +315,44 @@ function yaTrend() {
 // ---------------------------------------------------------------- 3b. antibiotic trend (any agent over years or quarters)
 const YA_ORG_COLORS = ['#2563eb', '#e11d48', '#0d9488', '#f59e0b', '#7c3aed', '#475569'];
 window.yaAbxSet = function (k, v) { YA.abx[k] = v; try { localStorage.setItem('amr_trend_sel', JSON.stringify(YA.abx)); } catch (e) {} yaAbxTrend(); };
+// A plotted period counts as complete when every month of it has data
+function yaPeriodOk(p) { return !p || !p.meta || p.meta.complete; }
+window.yaYrToggle = function (key, on) {
+    let cur = (YA._sel || []).slice();
+    cur = on ? cur.concat([key]) : cur.filter(k => k !== key);
+    YA.yrOpen = true; window.yaAbxSet('yrSel', cur);
+};
+window.yaYrOpen = function (ev) { if (ev) ev.stopPropagation(); YA.yrOpen = !YA.yrOpen; const el = document.getElementById('ya_yr_panel'); if (el) el.style.display = YA.yrOpen ? '' : 'none'; };
+document.addEventListener('click', function (e) { if (YA.yrOpen && !e.target.closest('#ya_yr_wrap')) { YA.yrOpen = false; const el = document.getElementById('ya_yr_panel'); if (el) el.style.display = 'none'; } });
+// Drop-down with one check box per available year; incomplete years are unchecked by default and show their months with data
+function yaYearsCtl() {
+    const cands = YA._cands || [], sel = YA._sel || [];
+    if (!cands.length) return '';
+    const summary = cands.filter(c => sel.indexOf(c.key) >= 0).map(c => c.label + (c.complete ? '' : '*')).join(', ') || '-';
+    const rows = cands.slice().reverse().map(c => `<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;font-size:12px;font-weight:600;color:${c.complete ? '#334155' : '#94a3b8'};cursor:pointer"><input type="checkbox" ${sel.indexOf(c.key) >= 0 ? 'checked' : ''} onchange="yaYrToggle('${escHtml(c.key)}', this.checked)" style="width:16px;height:16px;accent-color:#0d9488"><span>${escHtml(c.label)}${c.complete ? '' : ' <span style="font-weight:500">(' + c.have + '/' + c.total + ' months)</span>'}</span></label>`).join('');
+    return `<div id="ya_yr_wrap" style="position:relative;grid-column:1 / -1"><button type="button" class="ya-sel" onclick="yaYrOpen(event)" style="display:flex;align-items:center;justify-content:space-between;text-align:left"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Years: ${escHtml(summary)}</span><span aria-hidden="true" style="margin-left:6px">&#9662;</span></button>
+        <div id="ya_yr_panel" style="display:${YA.yrOpen ? '' : 'none'};position:absolute;z-index:20;left:0;right:0;top:40px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 6px 18px rgba(15,23,42,.12);max-height:260px;overflow:auto">${rows}</div></div>`;
+}
 function yaAbxTrend() {
     const y = yaYear(), S = YA.abx;
     if (!abxList.includes(S.abx)) S.abx = abxList.includes('Meropenem') ? 'Meropenem' : abxList[0];
     // periods
-    let periods = [], skippedOlder = false;
+    let periods = [];
     if (S.mode === 'quarter') {
         const recs = yaFirst(y, 'all', false);
         yaQuarters(y).forEach(([q, ms]) => periods.push({ label: q + (String(y).indexOf('..') > 0 ? '' : ' ' + y), recs: recs.filter(r => ms.includes(String(r.Date).slice(0, 7))) }));
     } else {
-        // successive complete 12-month periods ending with the current one (older incomplete periods are left out)
-        let k = y, n = 0; const keys = [];
-        while (n < 10 && (k === y || yaIsComplete(k)) && yaRaw(k).length) { keys.unshift(k); k = yaPrev(k); n++; }
-        skippedOlder = n < 10 && k !== y && yaRaw(k).length > 0 && !yaIsComplete(k);
-        keys.forEach(kk => periods.push({ label: yaLabel(kk), recs: yaFirst(kk, 'all', false) }));
+        // every 12-month period that has data, newest first; the user chooses which ones to plot (complete periods are selected by default)
+        let k = y, n = 0; const cands = [];
+        while (n < 10 && yaRaw(k).length) {
+            const miss = yaMissingMonths(k), tot = yaMonths(k).length;
+            cands.unshift({ key: String(k), label: yaLabel(k), have: tot - miss.length, total: tot, missing: miss, complete: miss.length === 0 });
+            k = yaPrev(k); n++;
+        }
+        let sel = Array.isArray(S.yrSel) ? cands.filter(c => S.yrSel.indexOf(c.key) >= 0) : [];
+        if (!sel.length) { sel = cands.filter(c => c.complete); if (!sel.length && cands.length) sel = [cands[cands.length - 1]]; }
+        YA._cands = cands; YA._sel = sel.map(c => c.key);
+        sel.forEach(c => periods.push({ label: c.label, recs: yaFirst(c.key, 'all', false), meta: c }));
     }
     // organisms: per period tested counts for this antibiotic
     const tally = (recs, org) => { let t = 0, r = 0, s = 0; recs.forEach(x => { if (org && x['Selective organism'] !== org) return; const v = String(x[S.abx] || '').trim().toUpperCase(); if (!yaIsSIR(v)) return; t++; if (v === 'R') r++; if (v === 'S') s++; }); return { t, r, s }; };
@@ -344,7 +368,8 @@ function yaAbxTrend() {
         ${sel('abx', abxList.map(a => [a, a]), S.abx)}
         ${sel('org', [['top', 'Top organisms'], ['all', 'All organisms']].concat(orgOpts.map(o => [o, formatOrgName(o)])), S.org)}
         ${sel('mode', [['year', 'By year'], ['quarter', 'By quarter of ' + yaLabel(y)]], S.mode)}
-        ${sel('metric', [['R', '% Resistant'], ['S', '% Susceptible']], S.metric)}</div>`);
+        ${sel('metric', [['R', '% Resistant'], ['S', '% Susceptible']], S.metric)}
+        ${S.mode === 'quarter' ? '' : yaYearsCtl()}</div>`);
     const pctOf = c => c.t ? Math.round(((S.metric === 'S' ? c.s : c.r) / c.t) * 1000) / 10 : null;
     const data = series.map(se => ({ se, cells: periods.map(pd => tally(pd.recs, se.org)) }));
     if (YA.abxChart) { try { YA.abxChart.destroy(); } catch (e) {} YA.abxChart = null; }
@@ -361,8 +386,8 @@ function yaAbxTrend() {
             data: { labels: periods.map(p => p.label), datasets: data.map((d, i) => {
                 const col = YA_ORG_COLORS[i % YA_ORG_COLORS.length];
                 return { label: d.se.name, data: d.cells.map(c => c.t ? pctOf(c) : null), borderColor: col, backgroundColor: col, spanGaps: true, tension: 0.2, borderWidth: 2,
-                    pointRadius: 4, pointBackgroundColor: d.cells.map(c => c.t >= minN() ? col : '#fff'), pointBorderColor: col, pointBorderWidth: 2,
-                    segment: { borderDash: ctx => (d.cells[ctx.p0DataIndex].t < minN() || d.cells[ctx.p1DataIndex].t < minN()) ? [5, 4] : undefined }, _cells: d.cells };
+                    pointRadius: 4, pointBackgroundColor: d.cells.map((c, ci) => (c.t >= minN() && yaPeriodOk(periods[ci])) ? col : '#fff'), pointBorderColor: col, pointBorderWidth: 2,
+                    segment: { borderDash: ctx => (d.cells[ctx.p0DataIndex].t < minN() || d.cells[ctx.p1DataIndex].t < minN() || !yaPeriodOk(periods[ctx.p0DataIndex]) || !yaPeriodOk(periods[ctx.p1DataIndex])) ? [5, 4] : undefined }, _cells: d.cells };
             }) },
             options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'nearest', intersect: true },
                 scales: { y: { min: 0, max: 100, title: { display: true, text: S.metric === 'S' ? '% susceptible' : '% resistant' } } },
@@ -370,10 +395,10 @@ function yaAbxTrend() {
                     tooltip: { callbacks: { label: c => { const k = c.dataset._cells[c.dataIndex]; const ci = wilsonScoreCI(S.metric === 'S' ? k.s : k.r, k.t); return `${c.dataset.label}: ${c.parsed.y}% (n=${k.t}, 95% CI ${ci.lower}-${ci.upper})${k.t < minN() ? ' n<' + minN() : ''}`; } } } } }
         });
     }
-    const head = periods.map(p => `<th>${escHtml(p.label)}</th>`).join('');
+    const head = periods.map(p => `<th>${escHtml(p.label)}${yaPeriodOk(p) ? '' : `<div class="ya-mute" style="font-weight:400">${p.meta.have}/${p.meta.total} months</div>`}</th>`).join('');
     const rows = data.map(d => `<tr><td class="ya-l"><b>${escHtml(d.se.name)}</b></td>${d.cells.map(c => c.t ? `<td style="${c.t < minN() ? 'color:#94a3b8' : ''}"><b>${yaFmt(pctOf(c))}%</b><div class="ya-mute">n=${c.t}</div></td>` : '<td class="ya-mute">-</td>').join('')}</tr>`).join('');
     $('#ya_abx_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Organism</th>${head}</tr></thead><tbody>${rows}</tbody></table>`);
-    setNote('#ya_abx_note', [`${escHtml(S.abx)}: first isolate per patient and organism in each period (CLSI M39).`, '<b>Hollow point and dashed line</b> = fewer than 30 isolates tested: indicative only.', 'Only organisms with 30 or more results over the whole period are listed.', skippedOlder ? 'Earlier periods with months missing are not shown: an incomplete period does not meet the one-year analysis period recommended by CLSI M39 (Sections 6.3 and 6.4).' : '', 'Tap a point to see n and the 95% confidence interval.']);
+    setNote('#ya_abx_note', [`${escHtml(S.abx)}: first isolate per patient and organism in each period (CLSI M39).`, '<b>Hollow point and dashed line</b> = fewer than 30 isolates tested: indicative only.', 'Only organisms with 30 or more results over the whole period are listed.', (function () { const inc = periods.filter(p => !yaPeriodOk(p)); if (!inc.length) return ''; const mm = []; inc.forEach(p => p.meta.missing.forEach(m => mm.push(ymLabel(m)))); return '<b>Hollow point and dashed line</b> also mark an incomplete year (months missing).<br>Missing months: ' + mm.join(', ') + '.<br>Percentages may be biased by seasonality (CLSI M39 Section 6.3).'; })(), 'Tap a point to see n and the 95% confidence interval.']);
 }
 
 // ---------------------------------------------------------------- 4. MDR / XDR / PDR by organism group
