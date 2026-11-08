@@ -270,6 +270,7 @@ function renderMdrPanel() {
     $('#mdr_range_label').text(`${range.label} - ${scopeLabel()}`);
 
     const counts = { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0, 'PDR': 0 };
+    MDR_DRILL = {};
     const byWard = {}, byMonth = {}, byGroup = {}, byOrg = {};
     let possibleX = 0, possibleP = 0, n = 0;
     let nmN = 0, nmFew = 0, nmStep = 0;   // Non-MDR isolates: all, fewer than 3 categories tested, non-susceptible in exactly 2 categories with categories untested
@@ -287,6 +288,7 @@ function renderMdrPanel() {
         const m = r.Date.slice(0, 7);
         (byMonth[m] = byMonth[m] || { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0, 'PDR': 0, total: 0 })[res.cls]++; byMonth[m].total++;
         const g = res.group;
+        if (res.cls !== 'Non-MDR') (MDR_DRILL[g] = MDR_DRILL[g] || []).push({ r, res });
         (byGroup[g] = byGroup[g] || { 'Non-MDR': 0, 'MDR': 0, 'XDR': 0, 'PDR': 0, total: 0, px: 0, pp: 0 })[res.cls]++; byGroup[g].total++;
         if (res.possibleXDR) byGroup[g].px++;
         if (res.possiblePDR) byGroup[g].pp++;
@@ -366,7 +368,7 @@ function renderMdrPanel() {
     const rows = Object.keys(byGroup).sort((a, b) => byGroup[b].total - byGroup[a].total).map(g => {
         const x = byGroup[g], w = x.MDR + x.XDR + x.PDR;
         const poss = (x.px || x.pp) ? ` <span class="text-slate-400">(+${x.px} poss. XDR${x.pp ? ', +' + x.pp + ' poss. PDR' : ''})</span>` : '';
-        return `<tr class="border-t border-slate-100"><td class="py-1.5 pr-2 font-bold text-slate-700">${gnames[g] || g}</td><td class="text-center">${x.total}${x.total < minN() ? '*' : ''}</td><td class="text-center text-amber-600 font-bold">${pct(w, x.total)}%${ciSub(w, x.total)}</td><td class="text-center text-rose-600 font-bold">${x.XDR + x.PDR}${ciSub(x.XDR + x.PDR, x.total, true)}${poss}</td><td class="text-center text-amber-700">${x.MDR} <span class="text-slate-400">(${pct(x.MDR, x.total)}%)</span></td><td class="text-center text-rose-700">${x.XDR} <span class="text-slate-400">(${pct(x.XDR, x.total)}%)</span></td><td class="text-center text-red-900 font-bold">${x.PDR} <span class="text-slate-400 font-normal">(${pct(x.PDR, x.total)}%)</span></td></tr>`;
+        return `<tr class="border-t border-slate-100"><td class="py-1.5 pr-2 font-bold text-slate-700">${MDR_DRILL[g] && MDR_DRILL[g].length ? `<a href="#" class="mdr-drill" data-g="${escHtml(g)}" style="color:#0f766e;text-decoration:underline dotted">${gnames[g] || g}</a>` : (gnames[g] || g)}</td><td class="text-center">${x.total}${x.total < minN() ? '*' : ''}</td><td class="text-center text-amber-600 font-bold">${pct(w, x.total)}%${ciSub(w, x.total)}</td><td class="text-center text-rose-600 font-bold">${x.XDR + x.PDR}${ciSub(x.XDR + x.PDR, x.total, true)}${poss}</td><td class="text-center text-amber-700">${x.MDR} <span class="text-slate-400">(${pct(x.MDR, x.total)}%)</span></td><td class="text-center text-rose-700">${x.XDR} <span class="text-slate-400">(${pct(x.XDR, x.total)}%)</span></td><td class="text-center text-red-900 font-bold">${x.PDR} <span class="text-slate-400 font-normal">(${pct(x.PDR, x.total)}%)</span></td></tr>`;
     }).join('');
     $('#mdr_group_table').html(rows ? `<table class="w-full text-[10px]"><thead><tr class="text-slate-500"><th class="text-left pb-1">Group</th><th>n</th><th>MDR+</th><th>XDR+</th><th>MDR only</th><th>XDR only</th><th>PDR</th></tr></thead><tbody>${rows}</tbody></table>${mdrOrgList}${mdrNNote}${mdrCovNote}${mdrDefNote}` : '<p class="text-xs text-slate-400 text-center">No classifiable isolates in this period.</p>');
 }
@@ -516,6 +518,56 @@ function renderLabQuality() {
     }).join('');
     $('#lab_sample_table').html(`<table class="w-full text-[10px]"><thead><tr class="text-slate-500"><th class="text-left pb-1">Specimen</th><th>n</th><th>Positive</th><th>No growth</th><th>Contaminated</th></tr></thead><tbody>${srows}</tbody></table><p class="text-[9px] text-slate-400 mt-1">Grey ward bars: fewer than 30 cultures.</p>`);
 }
+// ---------- MDR drill-down: browse the MDR / XDR / PDR isolates of one organism group (no patient information is shown) ----------
+let MDR_DRILL = {};
+const MDR_DEF_TEXT = {
+    MDR: 'MDR: non-susceptible to at least one agent in three or more antimicrobial categories.',
+    XDR: 'XDR: non-susceptible to at least one agent in all but two or fewer categories.',
+    PDR: 'PDR: non-susceptible to all agents in all categories.'
+};
+function mdrDrillHtml(items, i) {
+    const it = items[i], r = it.r, res = it.res, ex = explainMDR(r);
+    const col = { MDR: '#b45309', XDR: '#be123c', PDR: '#7f1d1d' }[res.cls] || '#334155';
+    const li = t => '<li style="margin:2px 0">' + t + '</li>';
+    const ul = a => a.length ? '<ul style="list-style:none;padding:0;margin:0;font-size:12px">' + a.map(li).join('') + '</ul>' : '<div style="font-size:12px;color:#94a3b8">None</div>';
+    const head = t => '<div style="font-weight:700;font-size:12px;color:#334155;margin:10px 0 3px">' + t + '</div>';
+    const resTxt = a => a.results.map(x => escHtml(x[0]) + ' <b>' + x[1] + '</b>').join(', ');
+    let h = '<div style="text-align:left">';
+    h += '<div style="font-weight:800;font-size:15px;color:#0f172a">' + escHtml(formatOrgName ? formatOrgName(r['Selective organism']) : r['Selective organism']) + '</div>';
+    h += '<div style="margin:4px 0"><span style="background:' + col + ';color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:800">' + res.cls + '</span>' + (res.possibleXDR ? ' <span style="font-size:11px;color:#64748b">possible XDR (not all categories tested)</span>' : '') + (res.possiblePDR ? ' <span style="font-size:11px;color:#64748b">possible PDR (not all categories tested)</span>' : '') + '</div>';
+    h += '<div style="font-size:12px;color:#475569">' + MDR_DEF_TEXT[res.cls] + '</div>';
+    h += '<div style="font-size:12px;color:#475569;margin-top:4px">Non-susceptible in <b>' + res.ns + '</b> of <b>' + res.total + '</b> categories that apply to this organism (' + res.tested + ' tested).</div>';
+    if (ex) {
+        h += head('Non-susceptible categories (' + ex.ns.length + ')') + ul(ex.ns.map(a => '<b>' + escHtml(a.cat) + '</b>: ' + resTxt(a)));
+        h += head('Susceptible categories (' + ex.s.length + ')') + ul(ex.s.map(a => '<b>' + escHtml(a.cat) + '</b>: ' + resTxt(a)));
+        h += head('Not tested (' + ex.untested.length + ')') + ul(ex.untested.map(a => '<b>' + escHtml(a.cat) + '</b>'));
+        const notes = [];
+        if (ex.mrsa) notes.push('MRSA is classified as MDR by definition (Magiorakos 2012, Table 6 footnote).');
+        if (ex.intrinsic.length) notes.push('Categories removed because of intrinsic resistance: ' + ex.intrinsic.map(escHtml).join(', ') + '.');
+        if (notes.length) h += head('Notes') + ul(notes);
+    }
+    return h + '</div>';
+}
+function openMdrGroup(g) {
+    const rank = { PDR: 0, XDR: 1, MDR: 2 };
+    const items = (MDR_DRILL[g] || []).slice().sort((a, b) => rank[a.res.cls] - rank[b.res.cls] || String(a.r['Selective organism']).localeCompare(String(b.r['Selective organism'])));
+    if (!items.length) return;
+    let i = 0;
+    const nav = () => '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><button type="button" id="mdr_prev" style="font-size:20px;padding:2px 14px;border:1px solid #cbd5e1;border-radius:8px;background:#fff">&#8249;</button><span style="font-size:12px;color:#64748b;font-weight:700">' + (i + 1) + ' / ' + items.length + '</span><button type="button" id="mdr_next" style="font-size:20px;padding:2px 14px;border:1px solid #cbd5e1;border-radius:8px;background:#fff">&#8250;</button></div>';
+    const paint = () => { const c = Swal.getHtmlContainer(); if (!c) return; c.innerHTML = nav() + '<div id="mdr_body">' + mdrDrillHtml(items, i) + '</div>'; bind(); };
+    const step = d => { i = (i + d + items.length) % items.length; paint(); };
+    const bind = () => { const p = document.getElementById('mdr_prev'), n = document.getElementById('mdr_next'); if (p) p.onclick = () => step(-1); if (n) n.onclick = () => step(1); };
+    const key = e => { if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'ArrowRight') step(1); };
+    Swal.fire({
+        title: (typeof MDR_GROUP_NAMES !== 'undefined' && MDR_GROUP_NAMES[g]) || g, html: nav() + '<div id="mdr_body">' + mdrDrillHtml(items, 0) + '</div>',
+        showConfirmButton: true, confirmButtonText: 'Close', buttonsStyling: false, width: 'min(94vw, 460px)',
+        customClass: { popup: 'info-popup', title: 'info-title', htmlContainer: 'info-container', confirmButton: 'info-close' },
+        didOpen: () => { bind(); document.addEventListener('keydown', key); let sx = null; const c = Swal.getHtmlContainer(); c.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true }); c.addEventListener('touchend', e => { if (sx === null) return; const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1); sx = null; }, { passive: true }); },
+        willClose: () => document.removeEventListener('keydown', key)
+    });
+}
+$(document).on('click', 'a.mdr-drill', function (e) { e.preventDefault(); openMdrGroup($(this).data('g')); });
+
 function escapeHtmlDash(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 

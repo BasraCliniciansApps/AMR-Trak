@@ -451,6 +451,31 @@ function classifyMDR(r) {
     return { cls, ns, tested, total, group, possibleXDR, possiblePDR };
 }
 
+// Per-category breakdown behind a classification (same rules as classifyMDR): which categories were non-susceptible, susceptible or not tested
+function explainMDR(r) {
+    const orgLower = String(r['Selective organism'] || '').trim().toLowerCase();
+    const group = getMdrGroup(orgLower);
+    if (!group) return null;
+    const excluded = new Set();
+    MDR_INTRINSIC_RULES.forEach(rule => { if (rule.test.test(orgLower)) rule.exclude.forEach(c => excluded.add(c)); });
+    const isMrsa = group === 'Staphylococcus aureus' && (['Cefoxitin', 'Cefoxitin screen', 'Oxacillin'].some(a => String(r[a] || '').trim().toUpperCase() === 'R') || r['Lab MRSA'] === '+');
+    const irSet = intrinsicResistanceSet(orgLower);
+    const out = { ns: [], s: [], untested: [], intrinsic: [], mrsa: isMrsa };
+    Object.keys(MDR_TABLES[group]).forEach(cat => {
+        if (excluded.has(cat)) { out.intrinsic.push(cat); return; }
+        const all = MDR_TABLES[group][cat];
+        const agents = all.filter(a => !irSet.has(a));
+        if (!agents.length) { out.intrinsic.push(cat); return; }
+        if (isMrsa && cat === 'Anti-staphylococcal beta-lactams') { out.ns.push({ cat, results: [['MRSA', 'R']] }); return; }
+        const res = [];
+        agents.forEach(a => { const v = String(r[a] || '').trim().toUpperCase(); if (v === 'S' || v === 'I' || v === 'R' || v === 'SDD') res.push([a, v]); });
+        if (!res.length) out.untested.push({ cat, agents });
+        else if (res.some(x => x[1] !== 'S')) out.ns.push({ cat, results: res });
+        else out.s.push({ cat, results: res });
+    });
+    return out;
+}
+
 
 // =====================================================================
 // MIC helpers and staphylococcal vancomycin rules (CLSI M100)
