@@ -261,7 +261,7 @@ async function syncLocalToCloud(opts) {
 
         const w1 = await writeFamily("amr_sync", "hospital_main", cloudReadyRecords, { salt: salt });
         const wardList = [...new Set([...(typeof defaultWards !== 'undefined' ? defaultWards : []), ...localRecords.map(r => r.Ward).filter(Boolean)])].sort();
-        const w2 = await writeFamily("amr_public", "dashboard", publicRecords, { labQuality: labQuality, wards: wardList });
+        const w2 = await writeFamily("amr_public", "dashboard", publicRecords, { labQuality: labQuality, wards: wardList, wardClass: getWardClassMap() || {} });
 
         if (w1) localStorage.setItem('amr_cloud_rev', rev);
         result = { ok: true, wrote: !!(w1 || w2), count: localRecords.length };
@@ -687,7 +687,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
     const abxColumns = [];
     const allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
     
-    // Complete WHONET Antibiotics Dictionary
+    // WHONET antibiotics dictionary (codes checked against the WHONET Antibiotics.txt file: for example KAC is kanamycin/cephalexin, KAH kanamycin-high, STH streptomycin-high, CLO cloxacillin)
     const whonetAbxMap = {
         "amp": "Ampicillin", "amc": "Amoxicillin/Clavulanic acid", "amx": "Amoxicillin",
         "sam": "Ampicillin/Sulbactam", "axs": "Amoxicillin/Sulbactam", "tzp": "Piperacillin/Tazobactam", 
@@ -697,11 +697,11 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         "cfm": "Cefixime", "cro": "Ceftriaxone", "ctx": "Cefotaxime", "caz": "Ceftazidime", 
         "fep": "Cefepime", "cep": "Cephalothin", "cec": "Cefaclor", "cpd": "Cefpodoxime", 
         "cdr": "Cefdinir", "cfp": "Cefoperazone", "ctt": "Cefotetan", "cpt": "Ceftaroline", 
-        "czx": "Ceftizoxime", "cfb": "Ceftobiprole", "cza": "Ceftazidime/Avibactam", "czt": "Ceftolozane/Tazobactam",
+        "czx": "Ceftizoxime", "cza": "Ceftazidime/Avibactam", "czt": "Ceftolozane/Tazobactam",
         "ipm": "Imipenem", "mem": "Meropenem", "etp": "Ertapenem", "dor": "Doripenem", 
         "mev": "Meropenem/Vaborbactam", "imr": "Imipenem/Relebactam", "atm": "Aztreonam",
         "ami": "Amikacin", "amk": "Amikacin", "gen": "Gentamicin", "tob": "Tobramycin", 
-        "net": "Netilmicin", "str": "Streptomycin", "kan": "Kanamycin", "geh": "Gentamicin high-level", "kac": "Kanamycin high-level", "plz": "Plazomicin", "spt": "Spectinomycin",
+        "net": "Netilmicin", "str": "Streptomycin", "kan": "Kanamycin", "geh": "Gentamicin high-level", "kah": "Kanamycin high-level", "sth": "Streptomycin high-level", "plz": "Plazomicin", "spt": "Spectinomycin",
         "cip": "Ciprofloxacin", "lev": "Levofloxacin", "lvx": "Levofloxacin", "mfx": "Moxifloxacin",   // WHONET: MFX = moxifloxacin (MOX = moxalactam)
         "ofx": "Ofloxacin", "nor": "Norfloxacin", "nal": "Nalidixic acid",
         "ery": "Erythromycin", "azi": "Azithromycin", "azm": "Azithromycin", 
@@ -712,10 +712,10 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         "sxt": "Trimethoprim/Sulfamethoxazole", "tmp": "Trimethoprim", "sss": "Sulfonamides",
         "nit": "Nitrofurantoin", "fos": "Fosfomycin", "col": "Colistin", "pol": "Polymyxin B",
         "lnz": "Linezolid", "rif": "Rifampicin", "chl": "Chloramphenicol",
-        "fct": "Fusidic acid", "fdc": "Fusidic acid", "fuc": "Fusidic acid",
-        "met": "Metronidazole", "mtr": "Metronidazole",
+        "fus": "Fusidic acid", "fuc": "Fusidic acid",
+        "mtr": "Metronidazole",
         "flu": "Fluconazole", "cas": "Caspofungin", "vor": "Voriconazole", 
-        "mif": "Micafungin", "ani": "Anidulafungin", "rzf": "Rezafungin", "clo": "Clotrimazole"
+        "mif": "Micafungin", "ani": "Anidulafungin", "rzf": "Rezafungin", "clo": "Cloxacillin"
     };
 
     for(let i = 0; i < actualHeaders.length; i++) {
@@ -948,7 +948,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         } catch (e) { console.warn('Lab quality aggregate failed', e); }
         initDataTable();
         if (typeof syncLocalToCloud === "function" && navigator.onLine) syncLocalToCloud();
-        Promise.resolve(showImportReport(report, audit, newRecords, skippedCount, fileNames)).then(() => { if (typeof openPatientLink === 'function') openPatientLink({ silent: true }); });
+        Promise.resolve(showImportReport(report, audit, newRecords, skippedCount, fileNames)).then(() => ensureWardClasses()).then(ch => { if (ch && typeof syncLocalToCloud === 'function' && navigator.onLine) syncLocalToCloud(); }).then(() => { if (typeof openPatientLink === 'function') openPatientLink({ silent: true }); });
         event.target.value = '';
     };
 
@@ -2013,7 +2013,7 @@ if (editIndex > -1) {
         syncLocalToCloud();
     }
 
-    Swal.fire({ icon: 'success', title: 'Saved!', timer: 1500, showConfirmButton: false });
+    Swal.fire({ icon: 'success', title: 'Saved!', timer: 1500, showConfirmButton: false }).then(() => ensureWardClasses()).then(ch => { if (ch && typeof syncLocalToCloud === 'function' && navigator.onLine) syncLocalToCloud(); });
 });
 
 function editRecord(index) {
@@ -2138,6 +2138,55 @@ window.deleteCustomSample = function(sample) {
     loadSampleOptions(); 
     manageSamples();
 };
+
+// ---------- Unit class of each ward (inpatient / outpatient): the user decides once, the choice is kept as a rule ----------
+function getWardClassMap() { try { const m = JSON.parse(localStorage.getItem('amr_ward_class')); return (m && typeof m === 'object') ? m : null; } catch (e) { return null; } }
+function saveWardClassMap(m) { localStorage.setItem('amr_ward_class', JSON.stringify(m)); }
+function wardsInUse() {
+    let recs = []; try { recs = JSON.parse(localStorage.getItem('amr_records')) || []; } catch (e) {}
+    let saved = []; try { saved = JSON.parse(localStorage.getItem('amr_wards')) || []; } catch (e) {}
+    const seen = new Map();
+    recs.map(r => r.Ward).concat(saved, (typeof defaultWards !== 'undefined' ? defaultWards : [])).forEach(w => {
+        const t = String(w || '').trim(); if (t && t !== '-' && t.toLowerCase() !== 'unknown' && !seen.has(t.toLowerCase())) seen.set(t.toLowerCase(), t);
+    });
+    return Array.from(seen.values()).sort();
+}
+// Resolves true when a rule was added. First use: the wards already in the data get the class suggested by their name, so only wards that appear later are asked about.
+async function ensureWardClasses() {
+    let map = getWardClassMap(), changed = false;
+    const all = wardsInUse();
+    if (!map) {
+        map = {};
+        all.forEach(w => { const g = guessWardClass(w); if (g === 'inpatient' || g === 'outpatient') map[w.toLowerCase()] = g; });
+        saveWardClassMap(map);
+        return true;
+    }
+    for (const w of all.filter(x => !map[x.toLowerCase()])) {
+        const r = await Swal.fire({
+            icon: 'question', title: 'New ward',
+            html: '<div style="text-align:left;font-size:14px">Is <b>' + escapeHtml(w) + '</b> an inpatient or an outpatient unit?<div style="font-size:12px;color:#64748b;margin-top:6px">The choice is saved as the rule for this ward. Intensive care units are set separately.</div></div>',
+            showDenyButton: true, showCancelButton: true, confirmButtonText: 'Inpatient', denyButtonText: 'Outpatient', cancelButtonText: 'Decide later', allowOutsideClick: false
+        });
+        if (r.isConfirmed) map[w.toLowerCase()] = 'inpatient'; else if (r.isDenied) map[w.toLowerCase()] = 'outpatient'; else continue;
+        saveWardClassMap(map); changed = true;
+    }
+    return changed;
+}
+function manageWardClasses() {
+    const map = getWardClassMap() || {};
+    const rows = wardsInUse().map(w => {
+        const c = map[w.toLowerCase()] || '';
+        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f1f5f9"><span style="font-size:13px;font-weight:600;color:#334155">' + escapeHtml(w) + '</span>'
+            + '<select data-ward="' + escapeHtml(w) + '" style="border:1px solid #cbd5e1;border-radius:8px;padding:5px 8px;font-size:12px"><option value=""' + (c ? '' : ' selected') + '>Not set</option><option value="inpatient"' + (c === 'inpatient' ? ' selected' : '') + '>Inpatient</option><option value="outpatient"' + (c === 'outpatient' ? ' selected' : '') + '>Outpatient</option></select></div>';
+    }).join('');
+    Swal.fire({
+        title: 'Ward classes', html: '<div style="text-align:left;max-height:55vh;overflow-y:auto">' + rows + '</div><div style="font-size:11px;color:#64748b;margin-top:8px;text-align:left">A ward that is not set is left out of the Non-ICU and Outpatient views and is listed in Data quality.</div>',
+        showCancelButton: true, confirmButtonText: 'Save', preConfirm: () => {
+            const m = {}; document.querySelectorAll('.swal2-html-container select[data-ward]').forEach(el => { if (el.value) m[el.dataset.ward.toLowerCase()] = el.value; });
+            return m;
+        }
+    }).then(r => { if (r.isConfirmed) { saveWardClassMap(r.value); if (typeof syncLocalToCloud === 'function' && navigator.onLine) syncLocalToCloud(); } });
+}
 
 function manageWards() {
     let savedWards = JSON.parse(localStorage.getItem('amr_wards')) || defaultWards;

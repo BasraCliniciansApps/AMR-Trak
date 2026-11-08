@@ -49,7 +49,7 @@ function wardInScope(ward, scope) {
     if (scope === 'nonicu') return !isIcu;
     const inpatient = isIcu || wardClass(ward) === 'inpatient';
     if (scope === 'nonicuip') return !isIcu && wardClass(ward) === 'inpatient';
-    if (scope === 'outpatient') return !inpatient;
+    if (scope === 'outpatient') return !inpatient && wardClass(ward) !== 'unclassified';
     return true;
 }
 // Applies the unit filter to records that are already de-duplicated (see applyDeduplication)
@@ -80,7 +80,7 @@ function scopeBanner(custom) {
     const lines = ['<b>Showing: ' + scopeShort() + ' &middot; ' + (custom || periodText()) + '</b>',
         'Unit: change it with the buttons at the top of the page.',
         custom ? 'Period: set by the From and To dates of this search.' : 'Period: change it in Settings (gear button).',
-        'Records without a ward are excluded and counted in Data quality.'];
+        'Records without a ward, or from a ward without a unit rule, are excluded from the unit views and counted in Data quality.'];
     const cn = custom ? '' : combinedYearsNote(); if (cn) lines.push('<b>' + cn + '</b>');
     return '<div class="scope-note" style="font-size:11px;line-height:1.45;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:8px 10px;color:#3730a3;margin-top:10px"><ul class="note-list keep" style="margin:0">' + lines.map(t => '<li>' + t + '</li>').join('') + '</ul></div>';
 }

@@ -38,11 +38,17 @@ let currentAbxMetric = 'S';
 // --- WARD FILTER LOGIC (Inpatient / Outpatient) ---
 // Ward classification. Outpatient = outpatient / OPD / clinic wards and the emergency department (patients not admitted).
 // Inpatient = an admitted ward. Records without a ward cannot be assigned, so they appear only under "Total".
+// Ward class comes from the rule recorded for each ward and published with the data (key = ward name in lower case).
+// Without any published rules the class is suggested from the ward name; with rules, a ward that has none is "unclassified".
+function dashWardClassMap() {
+    try { const m = JSON.parse(localStorage.getItem('amr_dash_ward_class')); return (m && typeof m === 'object') ? m : null; } catch (e) { return null; }
+}
 function wardClass(ward) {
     const w = String(ward || '').toLowerCase().trim();
     if (!w || w === 'unknown') return 'unassigned';
-    if (/^(outpatient|out-patient|opd)$|clinic|ambulatory|out patient|emergency|casualty|\ber\b|\bed\b|accident/.test(w)) return 'outpatient';
-    return 'inpatient';
+    const map = dashWardClassMap();
+    if (map && Object.keys(map).length) { const c = map[w]; return (c === 'inpatient' || c === 'outpatient') ? c : 'unclassified'; }
+    return guessWardClass(ward);
 }
 function applyWardFilter(records, filterValue) {
     if (filterValue === 'inpatient' || filterValue === 'outpatient') return records.filter(r => wardClass(r.Ward) === filterValue);
@@ -557,6 +563,7 @@ function applyCloudSnap(snap) {
                 localStorage.setItem('amr_dash_records', JSON.stringify(cloudRecords));
                 localStorage.setItem('amr_live_settings', JSON.stringify(cloudSettings));
                 localStorage.setItem('amr_dash_lab', JSON.stringify(data.labQuality || {}));
+                if (data.wardClass && typeof data.wardClass === 'object') localStorage.setItem('amr_dash_ward_class', JSON.stringify(data.wardClass));
             } catch (e) { console.warn('Local cache full', e); }
 
             refreshAll();

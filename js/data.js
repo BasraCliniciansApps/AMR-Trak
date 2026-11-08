@@ -90,7 +90,7 @@ const abxGroups = {
     "Penicillins": ["Benzylpenicillin", "Penicillin", "Ampicillin", "Amoxicillin", "Cloxacillin", "Oxacillin", "Amoxicillin/Clavulanic acid", "Ampicillin/Sulbactam", "Amoxicillin/Sulbactam", "Piperacillin", "Piperacillin/Tazobactam", "Ticarcillin", "Ticarcillin/Clavulanic acid", "Mecillinam"],
     "Cephalosporins": ["Cefazolin", "Cefoxitin", "Cefuroxime", "Cefixime", "Ceftriaxone", "Cefotaxime", "Ceftazidime", "Cefepime", "Cefaclor", "Cefpodoxime", "Cefdinir", "Cephalothin", "Cefoperazone", "Cefotetan", "Ceftaroline", "Ceftizoxime", "Ceftobiprole", "Ceftazidime/Avibactam", "Ceftolozane/Tazobactam", "Cefoxitin screen"],
     "Carbapenems & Monobactams": ["Imipenem", "Meropenem", "Ertapenem", "Doripenem", "Meropenem/Vaborbactam", "Imipenem/Relebactam", "Aztreonam"],
-    "Aminoglycosides": ["Amikacin", "Gentamicin", "Gentamicin high-level", "Kanamycin high-level", "Tobramycin", "Netilmicin", "Streptomycin", "Kanamycin", "Plazomicin", "Spectinomycin"],
+    "Aminoglycosides": ["Amikacin", "Gentamicin", "Gentamicin high-level", "Kanamycin high-level", "Tobramycin", "Netilmicin", "Streptomycin", "Streptomycin high-level", "Kanamycin", "Plazomicin", "Spectinomycin"],
     "Fluoroquinolones": ["Nalidixic acid", "Ciprofloxacin", "Levofloxacin", "Moxifloxacin", "Ofloxacin", "Norfloxacin"],
     "Macrolides & Lincosamides": ["Erythromycin", "Azithromycin", "Clarithromycin", "Clindamycin", "Quinupristin/Dalfopristin", "Inducible Clindamycin Resistance"],
     "Glycopeptides": ["Vancomycin", "Teicoplanin", "Daptomycin", "Dalbavancin", "Oritavancin", "Telavancin"],
@@ -137,6 +137,18 @@ const orgMapExport = {
     "streptococcus viridans": 40, "anaerobes": 41, "Enterococcus faecium": 42,
     "Enterococcus gallinarum/E. casseliflavus": 43
 };
+
+// ---------------------------------------------------------------------
+// Unit class of a ward (inpatient / outpatient).
+// guessWardClass() is only a suggestion made from the ward name. The class that counts is the rule recorded for each ward
+// (see getWardClassMap); a ward without a rule is "unclassified" and is listed in Data quality.
+// ---------------------------------------------------------------------
+function guessWardClass(ward) {
+    const w = String(ward || '').toLowerCase().trim();
+    if (!w || w === 'unknown') return 'unassigned';
+    if (/^(outpatient|out-patient|opd)$|clinic|ambulatory|out patient|emergency|casualty|\ber\b|\bed\b|accident/.test(w)) return 'outpatient';
+    return 'inpatient';
+}
 
 const defaultSamples = ["Blood", "Urine", "Sputum", "Wound Swab", "CSF", "Pus", "Stool", "Aspirate"];
 const defaultWards = [
@@ -361,7 +373,7 @@ const MDR_TABLES = {
     // Magiorakos 2012 Table 2: 11 categories (high-level aminoglycoside screens are the relevant tests)
     'Enterococcus spp.': {
         'Aminoglycosides (except streptomycin)': ['Gentamicin high-level'],
-        'Streptomycin': ['Streptomycin'],
+        'Streptomycin': ['Streptomycin high-level'],
         'Carbapenems': ['Imipenem', 'Meropenem', 'Doripenem'],
         'Fluoroquinolones': ['Ciprofloxacin', 'Levofloxacin', 'Moxifloxacin'],
         'Glycopeptides': ['Vancomycin', 'Teicoplanin'],

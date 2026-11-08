@@ -442,6 +442,19 @@ function yaQuality() {
         const t = g.filter(r => agents.some(a => yaIsSIR(String(r[a] || '').trim().toUpperCase()))).length;
         return g.length ? `${yaFmt(yaPct(t, g.length))}% <span class="ya-mute">(${t}/${g.length})</span>` : '-';
     };
+    // Wards without a unit rule, antibiotics outside every MDR category, MDR categories never tested (all calculated from the records of the year)
+    const wardNames = {}; raw.forEach(r => { const w = String(r.Ward || '').trim(); if (w && w !== '-' && wardClass(w) === 'unclassified') wardNames[w] = (wardNames[w] || 0) + 1; });
+    const unclass = Object.keys(wardNames).sort();
+    const inMdr = new Set(); Object.values(MDR_TABLES).forEach(g => Object.values(g).forEach(a => a.forEach(x => inMdr.add(x))));
+    const outside = abxList.filter(a => !inMdr.has(a) && raw.some(r => yaIsSIR(String(r[a] || '').trim().toUpperCase())));
+    const neverTested = [];
+    Object.keys(MDR_TABLES).forEach(grp => {
+        const g = first.filter(r => getMdrGroup(String(r['Selective organism'] || '').toLowerCase()) === grp);
+        if (!g.length) return;
+        const miss = Object.keys(MDR_TABLES[grp]).filter(cat => !g.some(r => MDR_TABLES[grp][cat].some(a => yaIsSIR(String(r[a] || '').trim().toUpperCase()))));
+        if (miss.length) neverTested.push(`<b>${grp}</b>: ${miss.join(', ')}`);
+    });
+    const list = a => a.length ? a.join(', ') : 'None';
     const rows = [
         ['Records in the year', n, ''],
         ['Screening cultures excluded', screening, ''],
@@ -449,12 +462,15 @@ function yaQuality() {
         ['First isolates analysed', first.length, ''],
         ['With patient identifier', share(r => !!getDedupPatientId(r)), 'Needed for de-duplication'],
         ['With ward', share(r => !!r.Ward && r.Ward !== '-'), 'Needed for unit scope'],
+        ['Wards without a unit rule', unclass.length, unclass.length ? list(unclass) + '<br>Left out of the Non-ICU and Outpatient views' : ''],
         ['With specimen type', share(r => !!r.Sample && r.Sample !== '-'), 'Needed for specimen reports'],
         ['With at least one AST result', share(hasAst), ''],
         ['Enterobacterales tested for a carbapenem', tested('Enterobacterales', ['Meropenem', 'Imipenem', 'Ertapenem', 'Doripenem']), 'CRE indicator'],
         ['Enterobacterales tested for a 3rd-gen. cephalosporin', tested('Enterobacterales', ['Ceftriaxone', 'Cefotaxime', 'Ceftazidime']), '3GC-R indicator'],
         ['<i>S. aureus</i> tested for cefoxitin or oxacillin', tested('Staphylococcus aureus', ['Cefoxitin', 'Oxacillin', 'Cefoxitin screen']), 'MRSA indicator'],
-        ['<i>Enterococcus</i> tested for vancomycin', tested('Enterococcus', ['Vancomycin']), 'VRE indicator']
+        ['<i>Enterococcus</i> tested for vancomycin', tested('Enterococcus', ['Vancomycin']), 'VRE indicator'],
+        ['Antibiotics with results but outside every MDR category', outside.length, list(outside)],
+        ['MDR categories never tested, by organism group', neverTested.length ? neverTested.length + ' group(s)' : 'None', neverTested.join('<br>')]
     ].map(([l, v, h]) => `<tr><td class="ya-l">${l}${h ? `<div class="ya-mute">${h}</div>` : ''}</td><td>${v}</td></tr>`).join('');
     $('#ya_q_table').html(`<table class="ya-table"><thead><tr><th class="ya-l">Measure</th><th>${yaLabel(y)}</th></tr></thead><tbody>${rows}</tbody></table>`);
     setNote('#ya_q_note', ['Indicators are only as reliable as the share of isolates tested for the agents they depend on.', 'Low completeness limits what can be reported.']);
@@ -473,7 +489,7 @@ function yaSetInfo() {
         P + 'Each first isolate of the year is counted once, in the quarter in which it appeared, so the quarters add up to the annual figure. Quarters with fewer than 30 tested isolates are marked and should be read as indicative only.' + E, ['CLSI_M39', 'WHO_GLASS']);
     setInfo('ya_abx', 'Antibiotic trend', P + 'Follows the resistance (or susceptibility) of one chosen antibiotic over the years, or across the quarters of the selected year, for all organisms together or for individual organisms.' + E +
         P + 'Each period uses first isolates per patient and organism (CLSI M39). Hollow points and dashed segments mark periods with fewer than 30 tested isolates; the tooltip shows n and the 95% Wilson confidence interval. Overlapping intervals mean a change may be chance.' + E, ['CLSI_M39', 'WHO_GLASS']);
-    setInfo('ya_mdr', 'MDR / XDR / PDR by organism group', P + 'Multidrug-resistant (MDR), extensively drug-resistant (XDR) and pandrug-resistant (PDR) isolates among Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp. and <i>S. aureus</i>, using the standard definitions of Magiorakos et al. (2012).' + E +
+    setInfo('ya_mdr', 'MDR / XDR / PDR by organism group', P + 'Multidrug-resistant (MDR), extensively drug-resistant (XDR) and pandrug-resistant (PDR) isolates among Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp., <i>S. aureus</i> and <i>Enterococcus</i> spp., using the standard definitions of Magiorakos et al. (2012).' + E +
         P + 'Intrinsic resistance is excluded. A category that was not tested is treated as unknown, not as susceptible, so XDR and PDR are conservative; isolates with fewer than 3 susceptible categories found, whose untested categories could still make them XDR, are shown as "possible" (Magiorakos 2012) and counted as MDR. Validity condition (Magiorakos 2012): the XDR and PDR definitions are valid only when isolates were tested against all or nearly all agents of each category and selective reporting or suppression of results was avoided. With incomplete testing an isolate can only be called possible XDR or possible PDR, and such results should not be compared with confirmed XDR or PDR from other studies.' + E, ['MAGIORAKOS', 'CLSI_M100', 'CLSI_M39']);
     setInfo('ya_cult', 'Culture burden', P + 'Monthly number of cultures received, the share with growth, without growth and reported as contaminated, and the contamination rate of blood cultures.' + E +
         P + 'The acceptable range for blood culture contamination is typically 3% or less (CLSI M47-A, Section 5.6), divided by all blood cultures received (CDC definition). These counts are aggregate laboratory counts collected from the monthly WHONET files; no patient data are involved.' + E, ['CLSI_M47', 'CDC_BCC', 'ASM_BCC']);
