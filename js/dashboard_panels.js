@@ -135,6 +135,7 @@ function refreshAll() {
     try { renderLabQuality(); } catch (e) { console.error(e); }
     try { renderAnnualReport(); } catch (e) { console.error(e); }
     try { renderPeriodPanels(); } catch (e) { console.error(e); }
+    try { updatePeriodTags(); } catch (e) { console.error(e); }
 }
 
 // ---------- tabs ----------

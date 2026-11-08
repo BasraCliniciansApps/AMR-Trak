@@ -110,6 +110,10 @@
         .ya-cum thead th.ya-l { background: #f8fafc; z-index: 3; }
         /* sticky name column: separate borders (collapsed borders scroll away and let columns show through), opaque cells, corner above scrolled headers */
         .ya-table, .gd-tbl table { border-collapse: separate; border-spacing: 0; }
+        .per-host { position: relative; padding-top: 30px !important; }
+        .per-tag { position: absolute; top: 0; right: 14px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px 4px; font-size: 9.5px; font-weight: 700; letter-spacing: .01em; color: #0f766e; background: #ccfbf1; border: 1px solid #99f6e4; border-top: 0; border-radius: 0 0 9px 9px; line-height: 1.2; cursor: pointer; z-index: 5; }
+        .per-tag:active { background: #99f6e4; }
+        @media print { .per-tag { display: none; } }
         .ya-cum { border-top: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0; }
         .ya-cum th, .ya-cum td { border: 0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; }
         .ya-table th.ya-l:first-child, .ya-table td.ya-l:first-child, .ya-cum th.ya-l, .ya-cum td.ya-l { background-clip: padding-box; border-right: 1px solid #cbd5e1; box-shadow: 4px 0 6px -4px rgba(15,23,42,.18); padding-right: 6px; }
@@ -288,7 +292,7 @@
 
     <header class="bg-white px-4 py-3 sticky top-0 z-40 border-b border-slate-200 shadow-sm flex flex-wrap justify-between items-center">
         <div class="flex items-center gap-2 -ml-2" id="brand">
-            <img src="img/logo.png?v=11.67" alt="AMR Trak" style="height:30px;width:auto;display:block">
+            <img src="img/logo.png?v=11.68" alt="AMR Trak" style="height:30px;width:auto;display:block">
             <span id="brandName" style="font-family:'Space Grotesk','Inter',system-ui,sans-serif;font-weight:700;font-size:21px;line-height:30px;letter-spacing:-.01em;color:#0f4c5c">AMR <span style="color:#0d9488">Trak</span></span>
                         <span id="connection_status" title="Live connection" aria-label="Live connection" class="flex items-center justify-center text-emerald-600 bg-emerald-50 rounded-full border border-emerald-100" style="width:14px;height:14px;margin-left:-6px;align-self:flex-start;margin-top:4px">
                 <span class="relative flex h-2 w-2"><span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
@@ -683,15 +687,16 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=11.67"></script>
-    <script src="js/dashboard.js?v=11.67"></script>
-    <script src="js/info_texts.js?v=11.67"></script>
-    <script src="js/dashboard_panels.js?v=11.67"></script>
-    <script src="js/dashboard_year.js?v=11.67"></script>
-    <script src="js/dashboard_period.js?v=11.67"></script>
-    <script src="js/guide_reviewer.js?v=11.67"></script>
-    <script src="js/guide.js?v=11.67"></script>
-    <script src="js/nav.js?v=11.67"></script>
+    <script src="js/data.js?v=11.68"></script>
+    <script src="js/dashboard.js?v=11.68"></script>
+    <script src="js/info_texts.js?v=11.68"></script>
+    <script src="js/dashboard_panels.js?v=11.68"></script>
+    <script src="js/period_tag.js?v=11.68"></script>
+    <script src="js/dashboard_year.js?v=11.68"></script>
+    <script src="js/dashboard_period.js?v=11.68"></script>
+    <script src="js/guide_reviewer.js?v=11.68"></script>
+    <script src="js/guide.js?v=11.68"></script>
+    <script src="js/nav.js?v=11.68"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>
@@ -703,6 +708,6 @@
         });
     }
 </script>
-<div style="text-align:center;font-size:10px;color:#94a3b8;padding:8px 0 16px" id="app_ver">AMR Trak v11.67</div>
+<div style="text-align:center;font-size:10px;color:#94a3b8;padding:8px 0 16px" id="app_ver">AMR Trak v11.68</div>
 </body>
 </html>
