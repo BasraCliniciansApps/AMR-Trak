@@ -319,7 +319,7 @@ const MDR_TABLES = {
         'Cephalosporins (1st/2nd gen)': ['Cefazolin', 'Cefuroxime'],
         'Cephalosporins (3rd/4th gen)': ['Cefotaxime', 'Ceftriaxone', 'Ceftazidime', 'Cefepime'],
         'Cephamycins': ['Cefoxitin', 'Cefotetan'],
-        'Fluoroquinolones': ['Ciprofloxacin', 'Levofloxacin', 'Ofloxacin', 'Moxifloxacin'],
+        'Fluoroquinolones': ['Ciprofloxacin'],
         'Folate pathway inhibitors': ['Trimethoprim/Sulfamethoxazole'],
         'Glycylcyclines': ['Tigecycline'],
         'Monobactams': ['Aztreonam'],
@@ -327,7 +327,7 @@ const MDR_TABLES = {
         'Penicillins + BLI': ['Amoxicillin/Clavulanic acid', 'Ampicillin/Sulbactam'],
         'Phenicols': ['Chloramphenicol'],
         'Phosphonic acids': ['Fosfomycin'],
-        'Polymyxins': ['Colistin', 'Polymyxin B'],
+        'Polymyxins': ['Colistin'],
         'Tetracyclines': ['Tetracycline', 'Doxycycline', 'Minocycline']
     },
     'Pseudomonas aeruginosa': {
@@ -356,14 +356,14 @@ const MDR_TABLES = {
         'Ansamycins': ['Rifampicin'],
         'Anti-MRSA cephalosporins': ['Ceftaroline'],
         'Anti-staphylococcal beta-lactams': ['Oxacillin', 'Cefoxitin', 'Cefoxitin screen'],
-        'Fluoroquinolones': ['Ciprofloxacin', 'Levofloxacin', 'Moxifloxacin'],
+        'Fluoroquinolones': ['Ciprofloxacin', 'Moxifloxacin'],
         'Folate pathway inhibitors': ['Trimethoprim/Sulfamethoxazole'],
         'Fusidane': ['Fusidic acid'],
         'Glycopeptides': ['Vancomycin', 'Teicoplanin', 'Telavancin'],
         'Glycylcyclines': ['Tigecycline'],
         'Lincosamides': ['Clindamycin'],
         'Lipopeptides': ['Daptomycin'],
-        'Macrolides': ['Erythromycin', 'Azithromycin', 'Clarithromycin'],
+        'Macrolides': ['Erythromycin'],
         'Oxazolidinones': ['Linezolid'],
         'Phenicols': ['Chloramphenicol'],
         'Phosphonic acids': ['Fosfomycin'],
@@ -392,6 +392,13 @@ const MDR_INTRINSIC_RULES = [
     { test: /enterococcus faecium/, exclude: ['Carbapenems'] }
 ];
 
+// Magiorakos 2012 Table 3: ceftaroline (anti-MRSA cephalosporins) is "approved only for Escherichia coli, Klebsiella pneumoniae, Klebsiella oxytoca",
+// so for other Enterobacterales this category does not apply and is not counted.
+function mdrNotApplicable(orgLower, group) {
+    const s = new Set();
+    if (group === 'Enterobacterales' && !/^(escherichia coli|klebsiella pneumoniae|klebsiella oxytoca)/.test(orgLower)) s.add('Anti-MRSA cephalosporins');
+    return s;
+}
 function getMdrGroup(orgLower) {
     if (/^(escherichia|klebsiella|raoultella|enterobacter|proteus|morganella|providencia|serratia|citrobacter|salmonella|shigella|yersinia|hafnia|pantoea|cronobacter|edwardsiella|enterobacteriaceae)/.test(orgLower)) return 'Enterobacterales';
     if (orgLower.includes('pseudomonas aeruginosa')) return 'Pseudomonas aeruginosa';
@@ -409,6 +416,7 @@ function classifyMDR(r) {
 
     const excluded = new Set();
     MDR_INTRINSIC_RULES.forEach(rule => { if (rule.test.test(orgLower)) rule.exclude.forEach(c => excluded.add(c)); });
+    mdrNotApplicable(orgLower, group).forEach(c => excluded.add(c));
 
     // Magiorakos 2012: an MRSA isolate is considered resistant to all beta-lactams except the anti-MRSA cephalosporins,
     // so the anti-staphylococcal beta-lactam category counts as non-susceptible even when only the laboratory MRSA flag is available.
@@ -460,9 +468,11 @@ function explainMDR(r) {
     MDR_INTRINSIC_RULES.forEach(rule => { if (rule.test.test(orgLower)) rule.exclude.forEach(c => excluded.add(c)); });
     const isMrsa = group === 'Staphylococcus aureus' && (['Cefoxitin', 'Cefoxitin screen', 'Oxacillin'].some(a => String(r[a] || '').trim().toUpperCase() === 'R') || r['Lab MRSA'] === '+');
     const irSet = intrinsicResistanceSet(orgLower);
-    const out = { ns: [], s: [], untested: [], intrinsic: [], irDetail: [], irPartial: [], mrsa: isMrsa };
+    const out = { ns: [], s: [], untested: [], intrinsic: [], irDetail: [], irPartial: [], na: [], mrsa: isMrsa };
+    const naSet = mdrNotApplicable(orgLower, group);
     Object.keys(MDR_TABLES[group]).forEach(cat => {
         const all = MDR_TABLES[group][cat];
+        if (naSet.has(cat)) { out.na.push({ cat, agents: all }); return; }
         if (excluded.has(cat)) { out.intrinsic.push(cat); out.irDetail.push({ cat, agents: all }); return; }
         const agents = all.filter(a => !irSet.has(a));
         if (!agents.length) { out.intrinsic.push(cat); out.irDetail.push({ cat, agents: all }); return; }
