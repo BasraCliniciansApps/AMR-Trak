@@ -1456,7 +1456,7 @@ window.generateAdvancedAnalytics = function() {
     const endDate = $('#adv_end').val();
     let targetOrgs = $('#adv_organism').val() || [];
     let targetAbxs = $('#adv_antibiotic').val() || [];
-    const metric = $('#adv_metric').val() || 'R'; 
+    const metric = $('#adv_metric').val() || 'S'; 
 
     if (startDate && endDate && startDate > endDate) {
         $('#heatmapBanner').empty(); $('#heatmapNote').empty(); $('#heatmapLegend').empty(); $('#heatmapWrapper').html('<div class="flex items-center justify-center h-[100px] w-full text-amber-700 font-bold text-sm text-center px-4">The From month is after the To month. Please correct the dates.</div>');
