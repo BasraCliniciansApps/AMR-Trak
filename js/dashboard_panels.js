@@ -662,7 +662,10 @@ function chartDataTable(canvas) {
         const labels = (ch.data.labels || []).map(l => Array.isArray(l) ? l.join(' ') : String(l));
         const ds = ch.data.datasets.filter(d => Array.isArray(d.data));
         if (!labels.length || !ds.length) return '';
-        const head = '<tr><th></th>' + ds.slice(0, 12).map(d => `<th>${escHtml(d.label || 'Value')}</th>`).join('') + '</tr>';
+        // one-series bar charts show the selected metric (S / R / NS) instead of a generic "Value"
+        const mk = { chartGuidedAMR: typeof currentGuidedMetric !== 'undefined' && currentGuidedMetric, chartPathoAMR: typeof currentPathoMetric !== 'undefined' && currentPathoMetric, chartAbxAMR: typeof currentAbxMetric !== 'undefined' && currentAbxMetric }[canvas.id];
+        const mName = { S: '% Susceptible', R: '% Resistant', NS: '% Non-susceptible' }[mk] || 'Value';
+        const head = '<tr><th></th>' + ds.slice(0, 12).map(d => `<th>${escHtml(d.label || mName)}</th>`).join('') + '</tr>';
         const rows = labels.slice(0, 60).map((l, i) => `<tr><th>${escHtml(l)}</th>` + ds.slice(0, 12).map(d => `<td>${d.data[i] === undefined || d.data[i] === null ? '' : escHtml(typeof d.data[i] === 'object' ? JSON.stringify(d.data[i]) : d.data[i])}</td>`).join('') + '</tr>').join('');
         return `<table class="vals">${head}${rows}</table>`;
     } catch (e) { return ''; }
