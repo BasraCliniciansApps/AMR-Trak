@@ -1,19 +1,19 @@
-const CACHE_NAME = 'amr-dashboard-cache-v138';
+const CACHE_NAME = 'amr-dashboard-cache-v139';
 
 // قائمة بالملفات والروابط الخارجية التي يعتمد عليها تطبيق الهاتف
 const PRECACHE_URLS = [
     './',
     './dashboard.html',
-    './js/data.js?v=11.89',
-    './js/dashboard.js?v=11.89',
-    './js/dashboard_panels.js?v=11.89',
-    './js/period_tag.js?v=11.89',
-    './js/dashboard_year.js?v=11.89',
-    './js/dashboard_period.js?v=11.89',
-    './js/info_texts.js?v=11.89',
-    './js/guide_reviewer.js?v=11.89',
-    './js/guide.js?v=11.89',
-    './js/nav.js?v=11.89',
+    './js/data.js?v=11.90',
+    './js/dashboard.js?v=11.90',
+    './js/dashboard_panels.js?v=11.90',
+    './js/period_tag.js?v=11.90',
+    './js/dashboard_year.js?v=11.90',
+    './js/dashboard_period.js?v=11.90',
+    './js/info_texts.js?v=11.90',
+    './js/guide_reviewer.js?v=11.90',
+    './js/guide.js?v=11.90',
+    './js/nav.js?v=11.90',
     './manifest.json',
     './manifest-control.json',
     './icon.png',

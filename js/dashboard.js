@@ -780,6 +780,10 @@ function specimenIsNonUrine(sel) {
     if (sel && sel.indexOf('sp:') === 0) return !isUrinarySpecimen({ Sample: sel.slice(3) });
     return false;
 }
+function specListNote(card, msg) {
+    const $n = $('#' + card + '_list_note');
+    if ($n.length) $n.html(msg ? hintsHtml([msg]) : '');
+}
 function renderSpecimenNotes() {
     const sel = anSpecimen, lines = [];
     if (sel !== 'all') {
@@ -799,9 +803,9 @@ $(document).on('change', '.an-specimen', function () {
     if (v === anSpecimen) return;
     anSpecimen = v;
     $('.an-specimen').not(this).each(function () { $(this).val(v); $(this).trigger('change.select2'); });
-    renderSpecimenNotes();
-    if ($('#patho_bug').val()) renderPathoChart();
-    if ($('#abx_drug').val()) renderAbxChart();
+    specListNote('patho', ''); specListNote('abx', '');
+    updatePathoDropdowns();
+    updateAbxDropdowns();
     if (!$('#advContainer').hasClass('hidden') && typeof generateAdvancedAnalytics === 'function') generateAdvancedAnalytics();
 });
 
@@ -1163,7 +1167,7 @@ function updatePathoDropdowns() {
     let period = anPeriod();
 
     let records = getDashRecords();
-    records = filterByPeriod(records, period);
+    records = specimenFilter(filterByPeriod(records, period), anSpecimen);
     // فصلنا فلتر الردهة عن القائمة المنسدلة لتبقى ثابتة
 
     let orgs = new Set();
@@ -1173,7 +1177,8 @@ function updatePathoDropdowns() {
     let currentVal = bugSelect.val();
     
     if (currentVal && !orgs.has(currentVal)) {
-        orgs.add(currentVal);
+        if (anSpecimen === 'all') orgs.add(currentVal);
+        else { currentVal = ''; specListNote('patho', 'The previous bacteria has no isolates in this specimen group, so the selection was cleared.'); }
     }
 
     bugSelect.empty().append(new Option("Select a bacteria...", ""));
@@ -1302,7 +1307,7 @@ function updateAbxDropdowns() {
     let period = anPeriod();
 
     let records = getDashRecords();
-    records = filterByPeriod(records, period);
+    records = specimenFilter(filterByPeriod(records, period), anSpecimen);
     // تم فصل فلتر الردهة للحفاظ على قائمة المضادات
 
     let abxs = new Set();
@@ -1315,7 +1320,8 @@ function updateAbxDropdowns() {
     let currentVal = drugSelect.val();
     
     if (currentVal && !abxs.has(currentVal)) {
-        abxs.add(currentVal);
+        if (anSpecimen === 'all') abxs.add(currentVal);
+        else { currentVal = ''; specListNote('abx', 'The previous antimicrobial was not tested in this specimen group, so the selection was cleared.'); }
     }
 
     drugSelect.empty().append(new Option("Select an antimicrobial...", ""));
