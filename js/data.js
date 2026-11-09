@@ -478,7 +478,13 @@ function explainMDR(r) {
         if (!agents.length) { out.intrinsic.push(cat); out.irDetail.push({ cat, agents: all }); return; }
         const removedAg = all.filter(a => irSet.has(a));
         if (removedAg.length) out.irPartial.push({ cat, agents: removedAg });
-        if (isMrsa && cat === 'Anti-staphylococcal beta-lactams') { out.ns.push({ cat, results: [['MRSA', 'R']] }); return; }
+        if (isMrsa && cat === 'Anti-staphylococcal beta-lactams') {
+            // show the real tests behind the call (cefoxitin / oxacillin), never a pseudo-agent
+            const tested = ['Cefoxitin', 'Cefoxitin screen', 'Oxacillin'].map(a => [a, String(r[a] || '').trim().toUpperCase()]).filter(x => x[1]);
+            const rs = tested.filter(x => x[1] === 'R');
+            out.ns.push({ cat, results: rs.length ? rs : [['Laboratory MRSA flag', 'positive']].concat(tested) });
+            return;
+        }
         const res = [];
         agents.forEach(a => { const v = String(r[a] || '').trim().toUpperCase(); if (v === 'S' || v === 'I' || v === 'R' || v === 'SDD') res.push([a, v]); });
         if (!res.length) out.untested.push({ cat, agents });
