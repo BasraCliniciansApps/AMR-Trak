@@ -814,7 +814,7 @@ function buildPrintDoc(items, o) {
     const small = (c, el) => {
         if (c.kind === 'tiles' || c.landscape) return false;
         // two small tables share a row; the screen width of the phone says nothing about the page, so the size is judged by rows x columns
-        if (c.kind === 'table') { const t = el.querySelector('table'); if (!t) return false; const rows = t.querySelectorAll('tbody tr').length, cols = Math.max.apply(null, [...t.querySelectorAll('tr')].map(r => r.children.length).concat([1])); return rows <= 12 && rows * cols <= 40; }
+        if (c.kind === 'table') { const t = el.querySelector('table'); if (!t) return false; const rows = t.querySelectorAll('tbody tr').length, cols = Math.max.apply(null, [...t.querySelectorAll('tr')].map(r => r.children.length).concat([1])); return rows <= 12 && cols <= 5 && rows * cols <= 40; }
         return (el.clientWidth || el.width || 0) <= 520;
     };
     const keyHtml = (c, el) => {
@@ -917,7 +917,7 @@ function buildPrintDoc(items, o) {
         h1 { font-size: 20px; margin: 4px 0 4px; letter-spacing: -0.01em; }
         .ctx { font-size: 11px; color: #475569; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #cbd5e1; }
         .grid { display: block; text-align: center; }
-        .blk { margin-bottom: 14px; text-align: center; ${o.layout === 'single' ? 'page-break-after: always; break-after: page;' : 'break-inside: auto; page-break-inside: auto;'} } .keep { break-inside: avoid; page-break-inside: avoid; break-after: avoid; page-break-after: avoid; } .blk.half { break-inside: avoid; page-break-inside: avoid; } table.vals tr { break-inside: avoid; page-break-inside: avoid; } table.vals thead { display: table-header-group; }
+        .blk { margin-bottom: 14px; text-align: center; ${o.layout === 'single' ? 'page-break-after: always; break-after: page;' : 'break-inside: auto; page-break-inside: auto;'} } .keep { break-inside: avoid; page-break-inside: avoid; } .blk.half { break-inside: avoid; page-break-inside: avoid; } table.vals tr { break-inside: avoid; page-break-inside: avoid; } table.vals thead { display: table-header-group; }
         .blk.splittable { break-inside: auto; page-break-inside: auto; } .splittable tr { break-inside: avoid; page-break-inside: avoid; } .splittable thead { display: table-header-group; } .blk.full { display: block; width: 100%; } .blk.half { display: inline-block; width: 49%; margin-left: .4%; margin-right: .4%; vertical-align: top; }
         .tbl table.ya-cum { table-layout: fixed; width: 100%; } .tbl table.ya-cum th:first-child, .tbl table.ya-cum td:first-child { width: 74px; text-align: left; } .tbl table.ya-cum td, .tbl table.ya-cum th { padding: 3px 0; overflow: hidden; } .tbl table.ya-cum * { font-size: 7px !important; }
         .tbl.wide { display: block; } .tbl.wide table { width: 100%; } .tbl.wide table.ya-cum { width: 100%; } .tbl.wide td, .tbl.wide th { word-break: break-word; padding: 2px 1px; } .tbl.wide table:not(.ya-cum) * { font-size: 7px !important; }
@@ -927,7 +927,7 @@ function buildPrintDoc(items, o) {
         .blk:last-of-type { page-break-after: auto; break-after: auto; }
         h2 { font-size: 13px; margin: 0 0 4px; color: #0f172a; text-align: center; } .sub { font-size: 10px; color: #0f766e; font-weight: 600; margin: 0 0 6px; text-align: center; }
         .chart { display: block; max-width: 100%; ${o.layout === 'single' ? 'max-height: 620px;' : 'max-height: 380px;'} margin: 0 auto; object-fit: contain; }
-        .tbl { display: flex; justify-content: center; } .tbl table, table.vals { border-collapse: collapse; font-size: 9px; margin: 6px auto 0; } .tbl td, .tbl th, .vals td, .vals th { border: 1px solid #cbd5e1; padding: 3px 6px; text-align: center; } .vals th:first-child { text-align: left; }
+        .tbl { display: flex; flex-direction: column; align-items: center; } .tbl > * { max-width: 100%; } .tbl a { text-decoration: none; color: inherit; } .tbl ul, .tbl ol { margin: 4px 0 0; padding-left: 14px; font-size: 9px !important; color: #475569; text-align: left; } .tbl li, .tbl li * { font-size: 9px !important; font-weight: 400; } .tbl li b, .tbl li b * { font-weight: 700; } .tbl table, table.vals { border-collapse: collapse; font-size: 9px; margin: 6px auto 0; } .tbl td, .tbl th, .vals td, .vals th { border: 1px solid #cbd5e1; padding: 3px 6px; text-align: center; } .vals th:first-child { text-align: left; }
         .tiles { display: flex; flex-wrap: wrap; gap: 8px; } .tile { border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; min-width: 110px; } .tl { font-size: 9px; color: #64748b; font-weight: 600; } .tv { font-size: 15px; font-weight: 700; } .ts { font-size: 9px; color: #64748b; margin-top: 1px; } .tn { font-size: 10px; color: #475569; margin: 6px 0 0; }
         h4.sect { break-after: avoid; page-break-after: avoid; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin: 18px 0 6px; }
         .note { font-size: 10.5px; line-height: 1.55; color: #334155; margin-bottom: 8px; break-inside: avoid; } .note h3 { font-size: 11px; margin: 0 0 2px; color: #0f172a; } .note p { margin: 0 0 4px; } .note ul { margin: 2px 0 4px 16px; padding: 0; }
