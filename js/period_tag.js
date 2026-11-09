@@ -3,7 +3,7 @@
 (function () {
     var NAMES = { year: 'Last 12 months', all: 'All completed years', alltimes: 'All times', calyear: 'Calendar year', quarter: 'Last 3 months', month: 'Last month', range: 'Specific period' };
     // [element id, host selector]: the card or panel that holds the chart
-    var TARGETS = ['chartGuidedPie', 'chartGuidedAMR', 'chartPathoAMR', 'chartAbxAMR', 'heatmapWrapper'];
+    var TARGETS = ['chartGuidedPie', 'chartPathoAMR', 'chartAbxAMR', 'heatmapWrapper'];
     function hostOf(id) { var el = document.getElementById(id); return el ? (el.closest('[id$="_content"]') || el.closest('.mobile-card')) : null; }
     function nameFor(id) {
         if (id === 'heatmapWrapper') {
