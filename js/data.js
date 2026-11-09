@@ -752,22 +752,23 @@ const _IR_GRAMPOS_NOTE = ['Aztreonam', 'Colistin', 'Polymyxin B', 'Nalidixic aci
 const INTRINSIC_RESISTANCE_RULES = [
     { test: /^(escherichia|klebsiella|raoultella|enterobacter|proteus|morganella|providencia|serratia|citrobacter|salmonella|shigella|yersinia|hafnia|pantoea|cronobacter|edwardsiella|enterobacteriaceae)/, drugs: _IR_ENTEROBACTERALES },
     { test: /citrobacter freundii/, drugs: _AMP.concat(_AC, _AS, _CEPH1, _CMY, _CEPH2) },
-    { test: /citrobacter koseri|citrobacter diversus|citrobacter amalonaticus|escherichia hermannii|^klebsiella (pneumoniae|oxytoca|variicola)|^raoultella/, drugs: _AMP.concat(['Ticarcillin']) },
-    { test: /^enterobacter|klebsiella aerogenes|hafnia/, drugs: _AMP.concat(_AC, _AS, _CEPH1, _CMY) },
-    { test: /hafnia/, drugs: _POLY },
+    { test: /citrobacter (koseri|diversus|amalonaticus|farmeri|sedlakii)|escherichia hermannii|^klebsiella (pneumoniae|oxytoca|variicola)|^raoultella/, drugs: _AMP.concat(['Ticarcillin']) },
+    { test: /^enterobacter (cloacae|asburiae|hormaechei|aerogenes)|^klebsiella aerogenes|^hafnia alvei/, drugs: _AMP.concat(_AC, _AS, _CEPH1, _CMY) },
+    { test: /^hafnia (alvei|paralvei)/, drugs: _POLY },
     { test: /morganella/, drugs: _AMP.concat(_AC, _CEPH1, _CEPH2, ['Tigecycline', 'Nitrofurantoin'], _POLY) },
     { test: /proteus mirabilis/, drugs: _TETRA.concat(['Tigecycline', 'Nitrofurantoin'], _POLY) },
-    { test: /proteus (vulgaris|penneri)|proteus \(other/, drugs: _AMP.concat(_CEPH1, _CEPH2, _TETRA, ['Tigecycline', 'Nitrofurantoin'], _POLY) },
-    { test: /providencia/, drugs: _AMP.concat(_AC, _CEPH1, _TETRA, ['Tigecycline', 'Nitrofurantoin'], _POLY) },
+    { test: /proteus (vulgaris|penneri)/, drugs: _AMP.concat(_CEPH1, _CEPH2, _TETRA, ['Tigecycline', 'Nitrofurantoin'], _POLY) },
+    { test: /providencia (rettgeri|stuartii)/, drugs: _AMP.concat(_AC, _CEPH1, _TETRA, ['Tigecycline', 'Nitrofurantoin'], _POLY) },
     { test: /providencia stuartii/, drugs: ['Gentamicin', 'Netilmicin', 'Tobramycin'] },
     { test: /serratia/, drugs: _AMP.concat(_AC, _AS, _CEPH1, _CMY, _CEPH2, ['Nitrofurantoin'], _POLY) },
     { test: /yersinia enterocolitica/, drugs: _AMP.concat(_AC, ['Ticarcillin'], _CEPH1) },
     { test: /pseudomonas aeruginosa/, drugs: _IR_NONFERMENTERS.concat(_AMP, _AC, _AS, ['Cefotaxime', 'Ceftriaxone', 'Ertapenem', 'Tigecycline', 'Trimethoprim', 'Trimethoprim/Sulfamethoxazole', 'Chloramphenicol'], _TETRA) },
-    { test: /^acinetobacter/, drugs: _IR_NONFERMENTERS.concat(_AMP, _AC, ['Aztreonam', 'Ertapenem', 'Trimethoprim', 'Chloramphenicol', 'Fosfomycin']) },
+    { test: /^acinetobacter (baumannii|calcoaceticus)/, drugs: _IR_NONFERMENTERS.concat(_AMP, _AC, ['Aztreonam', 'Ertapenem', 'Trimethoprim', 'Chloramphenicol', 'Fosfomycin']) },
     { test: /^staphylococcus/, drugs: _IR_GRAMPOS_NOTE },
     { test: /staphylococcus saprophyticus/, drugs: ['Fosfomycin', 'Fusidic acid'] },
     { test: /staphylococcus capitis/, drugs: ['Fosfomycin'] },
-    { test: /^enterococcus/, drugs: _CEPH_ALL.concat(_AMINO, ['Clindamycin', 'Trimethoprim/Sulfamethoxazole', 'Trimethoprim', 'Fusidic acid'], _IR_GRAMPOS_NOTE) },
+    { test: /staphylococcus (saprophyticus|cohnii|xylosus)/, drugs: ['Novobiocin'] },
+    { test: /^enterococcus (faecalis|faecium|gallinarum|casseliflavus)/, drugs: _CEPH_ALL.concat(_AMINO, ['Clindamycin', 'Trimethoprim/Sulfamethoxazole', 'Trimethoprim', 'Fusidic acid'], _IR_GRAMPOS_NOTE) },
     { test: /enterococcus faecalis/, drugs: ['Quinupristin/Dalfopristin'] },
     { test: /enterococcus gallinarum|casseliflavus/, drugs: ['Vancomycin', 'Quinupristin/Dalfopristin'] },
     // Second source: Magiorakos et al. 2012, Table 3 (column "Species with intrinsic resistance"; the paper cites the EUCAST Expert Rules).
@@ -894,10 +895,10 @@ function normalizeOrganismNames(records) {
 // and disagreement between laboratory flags and the antibiotic results.
 // =====================================================================
 const EXPECTED_RESISTANCE = [
-    { test: /^(klebsiella|raoultella|citrobacter koseri)/, abx: ['Ampicillin', 'Amoxicillin'] },
-    { test: /^(enterobacter|klebsiella aerogenes|citrobacter freundii|serratia)/, abx: ['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Ampicillin/Sulbactam', 'Cefazolin', 'Cefoxitin'] },
-    { test: /^(proteus|morganella|providencia|serratia)/, abx: ['Colistin', 'Polymyxin B'] },
-    { test: /^(proteus mirabilis|providencia)/, abx: ['Tetracycline', 'Tigecycline'] },
+    { test: /^(klebsiella (pneumoniae|oxytoca|variicola)|raoultella|citrobacter (koseri|diversus|amalonaticus|farmeri|sedlakii))/, abx: ['Ampicillin', 'Amoxicillin'] },
+    { test: /^(enterobacter (cloacae|asburiae|hormaechei|aerogenes)|klebsiella aerogenes|hafnia alvei|citrobacter freundii|serratia)/, abx: ['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Ampicillin/Sulbactam', 'Cefazolin', 'Cefoxitin'] },
+    { test: /^(proteus (mirabilis|penneri|vulgaris)|morganella|providencia (rettgeri|stuartii)|serratia|hafnia (alvei|paralvei))/, abx: ['Colistin', 'Polymyxin B'] },
+    { test: /^(proteus mirabilis|providencia (rettgeri|stuartii))/, abx: ['Tetracycline', 'Tigecycline'] },
     // Morganella morganii: M100-Ed36 Appendix B1 (ampicillin, amoxicillin-clavulanate, cephalosporins I and II, tigecycline, nitrofurantoin, colistin / polymyxin B)
     // plus Magiorakos 2012 Table 3 (tetracycline, doxycycline, minocycline). Both sources are combined.
     { test: /^morganella/, abx: ['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Cefazolin', 'Cefuroxime', 'Tigecycline', 'Tetracycline', 'Doxycycline', 'Minocycline'] },
@@ -907,7 +908,7 @@ const EXPECTED_RESISTANCE = [
     { test: /^providencia rettgeri/, abx: ['Gentamicin', 'Tobramycin', 'Netilmicin', 'Ampicillin/Sulbactam'] },
     { test: /^pseudomonas aeruginosa/, abx: ['Ampicillin', 'Amoxicillin/Clavulanic acid', 'Cefazolin', 'Ceftriaxone', 'Cefotaxime', 'Ertapenem', 'Trimethoprim/Sulfamethoxazole', 'Tetracycline'] },
     { test: /^acinetobacter baumannii/, abx: ['Ampicillin', 'Cefazolin', 'Ertapenem'] },
-    { test: /^enterococcus/, abx: ['Cefazolin', 'Cefuroxime', 'Ceftriaxone', 'Cefotaxime', 'Ceftazidime', 'Cefepime', 'Clindamycin', 'Trimethoprim/Sulfamethoxazole'] },
+    { test: /^enterococcus (faecalis|faecium|gallinarum|casseliflavus)/, abx: ['Cefazolin', 'Cefuroxime', 'Ceftriaxone', 'Cefotaxime', 'Ceftazidime', 'Cefepime', 'Clindamycin', 'Trimethoprim/Sulfamethoxazole'] },
     { test: /^streptococcus pyogenes/, abx: [] }
 ];
 function auditRecord(r) {
