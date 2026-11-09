@@ -589,6 +589,21 @@ setInfo('sec_patho', 'Susceptibility profile of one organism', '<p>For the selec
 setInfo('sec_abx', 'Activity of one antibiotic', '<p>For the selected antibiotic, each bar shows the percentage of isolates of an organism that are susceptible (S), intermediate (I) or resistant (R). Interpretation follows CLSI M100. Organisms with fewer than 30 tested isolates are faded and should be interpreted with caution (CLSI M39).</p>');
 setInfo('sec_heatmap', 'Organism by antibiotic heatmap', '<p>Each cell is the percentage of the chosen category (S, I or R) for one organism and antibiotic among tested isolates. An asterisk marks cells with fewer than 30 tested isolates. Isolates are de-duplicated (CLSI M39) and interpreted with CLSI M100.</p>');
 
+// Printed subtitle: what the chart on the page is showing (selection, metric, specimen, ward), so the paper stands alone
+const PRINT_METRIC = { S: '% Susceptible', R: '% Resistant', NS: '% Non-susceptible', I: '% Intermediate' };
+const PRINT_WARD = { total: 'All wards', inpatient: 'Inpatient', outpatient: 'Outpatient' };
+function printSub(card) {
+    const t = sel => ($(sel + ' option:selected').text() || '').replace(/\s+/g, ' ').trim();
+    const spec = k => (typeof anSpec !== 'undefined' && typeof specimenLabel === 'function') ? specimenLabel(anSpec[k]) : '';
+    const ward = n => PRINT_WARD[$('input[name="' + n + '"]:checked').val() || 'total'] || '';
+    const low = id => $('#' + id).is(':checked') ? 'organisms/antibiotics with n < 30 hidden' : '';
+    let parts = [];
+    if (card === 'patho') parts = [t('#patho_bug'), PRINT_METRIC[currentPathoMetric], 'Specimen: ' + spec('patho'), ward('patho_ward'), low('patho_hide_low')];
+    else if (card === 'abx') parts = [t('#abx_drug'), PRINT_METRIC[currentAbxMetric], 'Specimen: ' + spec('abx'), ward('abx_ward'), low('abx_hide_low')];
+    else if (card === 'guided') parts = [t('#guided_bug_select'), PRINT_METRIC[currentGuidedMetric], low('guided_hide_low')];
+    else if (card === 'heatmap') parts = [PRINT_METRIC[$('#adv_metric').val()] || '', 'Specimen: ' + spec('adv'), ward('adv_ward')];
+    return parts.filter(Boolean).join('  |  ');
+}
 function chartTitleOf(selOrFn) { return typeof selOrFn === 'function' ? selOrFn() : selOrFn; }
 const profTitle = (p, n) => () => $('#live_' + p + '_profile' + n + '_title').text() || ('Resistance profile ' + n);
 
@@ -601,13 +616,13 @@ function monthSection(p, label) {
 }
 const SECTIONS = {
     prevalence: { id: 'prevalence', title: 'Clinical Prevalence & AST Profile', infos: [['Organism prevalence', 'sec_prevalence'], ['AST profile of the selected organism', 'abx_guidedAmrContainer']],
-        charts: [{ title: 'Organism Prevalence', el: '#chartGuidedPie', hint: 'Choose a specimen in this section first.' }, { title: 'AST Profile of the selected organism', el: '#chartGuidedAMR', key: 'guided', hint: 'Choose a specimen in this section first.' }] },
+        charts: [{ title: 'Organism Prevalence', el: '#chartGuidedPie', hint: 'Choose a specimen in this section first.' }, { title: 'AST Profile of the selected organism', el: '#chartGuidedAMR', key: 'guided', sub: () => printSub('guided'), hint: 'Choose a specimen in this section first.' }] },
     patho: { id: 'patho', title: 'Bacteria/Fungi Susceptibility Profile', infos: [['How to read this chart', 'sec_patho'], ['Sample size and AWaRe', 'abx_pathoAmrContainer']],
-        charts: [{ title: 'Bacteria/Fungi Susceptibility Profile', el: '#chartPathoAMR', key: 'patho', hint: 'Choose a bacteria in this section first.' }] },
+        charts: [{ title: 'Bacteria/Fungi Susceptibility Profile', el: '#chartPathoAMR', key: 'patho', sub: () => printSub('patho'), hint: 'Choose a bacteria in this section first.' }] },
     abx: { id: 'abx', title: 'Antimicrobial In Vitro Activity Profile', infos: [['How to read this chart', 'sec_abx']],
-        charts: [{ title: 'Antimicrobial In Vitro Activity Profile', el: '#chartAbxAMR', key: 'abx' }] },
+        charts: [{ title: 'Antimicrobial In Vitro Activity Profile', el: '#chartAbxAMR', key: 'abx', sub: () => printSub('abx') }] },
     heatmap: { id: 'heatmap', title: 'Advanced Cross-Search (Heatmap)', infos: [['How to read the heatmap', 'sec_heatmap']],
-        charts: [{ title: 'Advanced Heatmap', el: '#heatmapWrapper', kind: 'table', landscape: true, noteSel: '#heatmapNote', legendSel: '#heatmapLegend', hint: 'Run the search in this section first.' }] },
+        charts: [{ title: 'Advanced Heatmap', el: '#heatmapWrapper', kind: 'table', landscape: true, sub: () => printSub('heatmap'), noteSel: '#heatmapNote', legendSel: '#heatmapLegend', hint: 'Run the search in this section first.' }] },
     mdr: { id: 'mdr', title: 'MDR / XDR / PDR Analysis', labelSel: '#mdr_range_label',
         infos: [['Definitions and method', 'mdr_panel'], ['Summary figures', 'mdr_tiles'], ['Monthly trend', 'mdr_trend'], ['Distribution by ward', 'mdr_wards'], ['By organism group', 'mdr_group']],
         charts: [{ title: 'Summary', el: '#mdr_tiles', kind: 'tiles' }, { title: 'Resistance classification', el: '#chart_mdr_panel_pie' }, { title: 'Monthly trend (% of classified isolates)', el: '#chart_mdr_panel_trend' }, { title: 'All wards', el: '#chart_mdr_panel_wards' }, { title: 'By organism group', el: '#mdr_group_table', kind: 'table' }] },
@@ -665,14 +680,24 @@ function chartDataTable(canvas) {
         // one-series bar charts show the selected metric (S / R / NS) instead of a generic "Value"
         const mk = { chartGuidedAMR: typeof currentGuidedMetric !== 'undefined' && currentGuidedMetric, chartPathoAMR: typeof currentPathoMetric !== 'undefined' && currentPathoMetric, chartAbxAMR: typeof currentAbxMetric !== 'undefined' && currentAbxMetric }[canvas.id];
         const mName = { S: '% Susceptible', R: '% Resistant', NS: '% Non-susceptible' }[mk] || 'Value';
-        const head = '<tr><th></th>' + ds.slice(0, 12).map(d => `<th>${escHtml(d.label || mName)}</th>`).join('') + '</tr>';
-        const rows = labels.slice(0, 60).map((l, i) => `<tr><th>${escHtml(l)}</th>` + ds.slice(0, 12).map(d => `<td>${d.data[i] === undefined || d.data[i] === null ? '' : escHtml(typeof d.data[i] === 'object' ? JSON.stringify(d.data[i]) : d.data[i])}</td>`).join('') + '</tr>').join('');
+        // bar charts with isolate counts: add n tested and the 95% CI, which the screen only shows on tap
+        const d0 = ds[0], withN = ds.length === 1 && Array.isArray(d0.nData);
+        const ciTxt = i => { const c = d0.ciData && d0.ciData[i]; return c && typeof c.lower === 'number' ? Math.round(c.lower) + ' to ' + Math.round(c.upper) : ''; };
+        const head = '<tr><th></th>' + ds.slice(0, 12).map(d => `<th>${escHtml(d.label || mName)}</th>`).join('') + (withN ? '<th>n tested</th>' + (Array.isArray(d0.ciData) ? '<th>95% CI</th>' : '') : '') + '</tr>';
+        const rows = labels.slice(0, 60).map((l, i) => `<tr><th>${escHtml(l)}</th>` + ds.slice(0, 12).map(d => `<td>${d.data[i] === undefined || d.data[i] === null ? '' : escHtml(typeof d.data[i] === 'object' ? JSON.stringify(d.data[i]) : d.data[i])}</td>`).join('') + (withN ? `<td>${escHtml(d0.nData[i] === undefined ? '' : d0.nData[i])}</td>` + (Array.isArray(d0.ciData) ? `<td>${escHtml(ciTxt(i))}</td>` : '') : '') + '</tr>').join('');
         return `<table class="vals">${head}${rows}</table>`;
     } catch (e) { return ''; }
 }
+// Paper has no taps, buttons or Settings screen: drop the screen-only instructions from printed notes
+function printClean(html) {
+    return String(html)
+        .replace(/<(li|p)(?:\s[^>]*)?>(?:(?!<\/\1>)[\s\S])*?(?:\bTap (?:a|any|the|on)\b|\bPress\b|buttons? above|\bChoose (?:the|a|an) )(?:(?!<\/\1>)[\s\S])*?<\/\1>/gi, '')
+        .replace(/;? ?\(?(?:not shown; )?to show them, turn on the option in Settings\)?/gi, '')
+        .replace(/<(ul|ol)(?:\s[^>]*)?>\s*<\/\1>/gi, '');
+}
 function tilesToHtml(el) {
     const tiles = [...el.querySelectorAll('.grid > div')].filter(d => d.children.length >= 2);
-    const items = (tiles.length ? tiles : [...el.children].filter(d => d.children.length >= 2)).map(d => `<div class="tile"><div class="tl">${escHtml(d.children[0].textContent)}</div><div class="tv">${escHtml(d.children[1].textContent)}</div></div>`).join('');
+    const items = (tiles.length ? tiles : [...el.children].filter(d => d.children.length >= 2)).map(d => { const ln = (d.children[1].innerText || d.children[1].textContent || '').split(/\n+/).map(x => x.trim()).filter(Boolean); return `<div class="tile"><div class="tl">${escHtml(d.children[0].textContent.trim())}</div><div class="tv">${escHtml(ln[0] || '')}</div>${ln.length > 1 ? `<div class="ts">${escHtml(ln.slice(1).join(' | '))}</div>` : ''}</div>`; }).join('');
     const notes = [...el.querySelectorAll(':scope > div > div.mt-2, :scope > div > p, :scope > p')].map(n => `<p class="tn">${escHtml(n.textContent.replace(/\s+/g, ' ').trim())}</p>`).join('');
     return `<div class="tiles">${items}</div>${notes}`;
 }
@@ -715,7 +740,7 @@ window.openPrintDialog = function () {
             <div class="pd-h">Content</div>
             ${chk('pd_notes', 'Notes and definitions', saved.notes !== false)}
             ${chk('pd_refs', 'References', saved.refs !== false)}
-            ${chk('pd_values', 'Data values table under each chart', !!saved.values)}
+            ${chk('pd_values', 'Data values table under each chart (with n and 95% CI)', saved.values !== false)}
             <div class="pd-h">Report title (optional)</div>
             <input id="pd_title" class="pd-input" type="text" maxlength="80" placeholder="e.g. hospital or department name" value="${escHtml(saved.title || '')}">
         </div>`,
@@ -787,6 +812,8 @@ function buildPrintDoc(items, o) {
         const nel = nid ? document.getElementById(nid) : null;
         if (nel && nel.innerHTML.trim()) h += '<div class="cn">' + nel.innerHTML + '</div>';
         if (c.legendSel) { const lg = document.querySelector(c.legendSel); if (lg && lg.textContent.trim()) h += '<div class="lg">' + inlineColors(lg).innerHTML + '</div>'; }
+        // screen-only hints (tap / press) mean nothing on paper
+        h = printClean(h);
         return h;
     };
     const blocks = secs.map(sec => {
@@ -806,7 +833,8 @@ function buildPrintDoc(items, o) {
             } else if (c.kind === 'table') media = '<div class="tbl' + (c.landscape ? ' wide' : '') + '">' + inlineColors(el).innerHTML + '</div>';
             else media = tilesToHtml(el);
             const cls = (o.layout !== 'single' && small(c, el)) ? 'half' : 'full';
-            return `<section class="blk ${cls}"><h2>${escHtml(chartTitleOf(c.title))}</h2>${media}${keyHtml(c, el)}${vals}</section>`;
+            const subTxt = typeof c.sub === 'function' ? c.sub() : '';
+            return `<section class="blk ${cls}${c.kind === 'table' && cls === 'full' ? ' splittable' : ''}"><h2>${escHtml(chartTitleOf(c.title))}</h2>${subTxt ? `<div class="sub">${escHtml(subTxt)}</div>` : ''}${media}${keyHtml(c, el)}${vals}</section>`;
         }).join('') + '</div>';
     }).join('');
     // filters in force, so the printed page states exactly what it shows
@@ -819,7 +847,7 @@ function buildPrintDoc(items, o) {
         if (hs !== '|') fl.push(['Heatmap dates', (hs.split('|')[0] || 'first data') + ' to ' + (hs.split('|')[1] || 'latest data') + ' (replace the analysis period)']);
     }
     if (tab !== 'analytics' && tab !== 'lab' && labels[0]) fl.push(['Analysis period', labels[0]]);
-    if (tab !== 'lab') fl.push(['Possible skin-flora contaminants', contamExcluded() ? 'Excluded' : 'Included (flagged only)']);
+    if (tab !== 'lab') fl.push(['Skin-flora contaminants', contamExcluded() ? 'Excluded' : 'Included (flagged only)']);
     fl.push(['Minimum isolates for a reliable result', String(minN())]);
     const dstat = (document.getElementById('dashStatus') || {}).textContent;
     if (dstat) fl.push(['Data', dstat.trim()]);
@@ -829,7 +857,7 @@ function buildPrintDoc(items, o) {
     const notes = secs.map(sec => sec.infos.map(([t, k]) => {
         const inf = INFO_STORE[k]; if (!inf) return '';
         (inf.refs || []).forEach(r => { if (!used.includes(r)) used.push(r); });
-        return `<div class="note"><h3>${escHtml(t)}</h3>${inf.html}</div>`;
+        return `<div class="note"><h3>${escHtml(t)}</h3>${printClean(inf.html)}</div>`;
     }).join('')).join('');
     const refs = used.map(k => REFS[k]).filter(Boolean).map(r => `<li>${escHtml(r.t)} ${escHtml(r.u)}</li>`).join('');
     const when = new Date().toLocaleString([], { dateStyle: 'long', timeStyle: 'short' });
@@ -843,17 +871,17 @@ function buildPrintDoc(items, o) {
         .ctx { font-size: 11px; color: #475569; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #cbd5e1; }
         .grid { display: block; text-align: center; }
         .blk { margin-bottom: 14px; text-align: center; ${o.layout === 'single' ? 'page-break-after: always; break-after: page;' : 'break-inside: avoid; page-break-inside: avoid;'} }
-        .blk.full { display: block; width: 100%; } .blk.half { display: inline-block; width: 49%; margin-left: .4%; margin-right: .4%; vertical-align: top; }
+        .blk.splittable { break-inside: auto; page-break-inside: auto; } .splittable tr { break-inside: avoid; page-break-inside: avoid; } .splittable thead { display: table-header-group; } .blk.full { display: block; width: 100%; } .blk.half { display: inline-block; width: 49%; margin-left: .4%; margin-right: .4%; vertical-align: top; }
         .tbl table.ya-cum { table-layout: fixed; width: 100%; } .tbl table.ya-cum th:first-child, .tbl table.ya-cum td:first-child { width: 74px; text-align: left; } .tbl table.ya-cum td, .tbl table.ya-cum th { padding: 3px 0; overflow: hidden; } .tbl table.ya-cum * { font-size: 7px !important; }
         .tbl.wide { display: block; } .tbl.wide table { width: 100%; } .tbl.wide table.ya-cum { width: 100%; } .tbl.wide td, .tbl.wide th { word-break: break-word; padding: 2px 1px; } .tbl.wide table:not(.ya-cum) * { font-size: 7px !important; }
         .head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; } .head img { height: 34px; width: auto; }
         .flt { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; font-size: 10.5px; margin: 0 0 14px; padding: 8px 10px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; } .flt div { display: flex; gap: 6px; } .flt span { color: #64748b; } .flt span:after { content: ':'; } .flt b { color: #0f172a; font-weight: 600; }
         .ck { list-style: none; margin: 6px auto 0; padding: 0; font-size: 9px; color: #475569; text-align: left; display: inline-block; max-width: 100%; } .ck li { margin: 0 0 2px; } .cn, .lg { font-size: 9px; color: #475569; text-align: left; margin-top: 6px; } .cn ul { margin: 0; padding-left: 14px; } .lg span { display: inline-block; padding: 1px 6px; margin: 0 4px 2px 0; border-radius: 3px; font-weight: 600; } .cn .note-list { margin: 0; }
         .blk:last-of-type { page-break-after: auto; break-after: auto; }
-        h2 { font-size: 13px; margin: 0 0 6px; color: #0f172a; text-align: center; }
-        .chart { display: block; max-width: 100%; ${o.layout === 'single' ? 'max-height: 620px;' : 'max-height: 300px;'} margin: 0 auto; object-fit: contain; }
+        h2 { font-size: 13px; margin: 0 0 4px; color: #0f172a; text-align: center; } .sub { font-size: 10px; color: #0f766e; font-weight: 600; margin: 0 0 6px; text-align: center; }
+        .chart { display: block; max-width: 100%; ${o.layout === 'single' ? 'max-height: 620px;' : 'max-height: 380px;'} margin: 0 auto; object-fit: contain; }
         .tbl { display: flex; justify-content: center; } .tbl table, table.vals { border-collapse: collapse; font-size: 9px; margin: 6px auto 0; } .tbl td, .tbl th, .vals td, .vals th { border: 1px solid #cbd5e1; padding: 3px 6px; text-align: center; } .vals th:first-child { text-align: left; }
-        .tiles { display: flex; flex-wrap: wrap; gap: 8px; } .tile { border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; min-width: 110px; } .tl { font-size: 9px; color: #64748b; font-weight: 600; } .tv { font-size: 15px; font-weight: 700; } .tn { font-size: 10px; color: #475569; margin: 6px 0 0; }
+        .tiles { display: flex; flex-wrap: wrap; gap: 8px; } .tile { border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; min-width: 110px; } .tl { font-size: 9px; color: #64748b; font-weight: 600; } .tv { font-size: 15px; font-weight: 700; } .ts { font-size: 9px; color: #64748b; margin-top: 1px; } .tn { font-size: 10px; color: #475569; margin: 6px 0 0; }
         h4.sect { break-after: avoid; page-break-after: avoid; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin: 18px 0 6px; }
         .note { font-size: 10.5px; line-height: 1.55; color: #334155; margin-bottom: 8px; break-inside: avoid; } .note h3 { font-size: 11px; margin: 0 0 2px; color: #0f172a; } .note p { margin: 0 0 4px; } .note ul { margin: 2px 0 4px 16px; padding: 0; }
         ol { margin: 0; padding-left: 16px; font-size: 9.5px; line-height: 1.5; color: #475569; } li { margin-bottom: 3px; word-break: break-word; }
