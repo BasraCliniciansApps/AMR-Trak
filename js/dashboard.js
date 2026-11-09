@@ -774,13 +774,24 @@ function refreshSpecimenSelects() {
     });
     renderSpecimenNotes();
 }
+// True when the selected specimen group contains no urine specimens (urine-only agents are not reported there, CLSI M100)
+function specimenIsNonUrine(sel) {
+    if (sel === 'nonurine' || sel === 'blood') return true;
+    if (sel && sel.indexOf('sp:') === 0) return !isUrinarySpecimen({ Sample: sel.slice(3) });
+    return false;
+}
 function renderSpecimenNotes() {
-    const h = anSpecimen === 'all' ? '' : hintsHtml([
-        'Specimen group: ' + specimenLabel(anSpecimen) + '.',
-        'First isolate per patient within this group (CLSI M39 Section 11).',
-        'Non Urine includes blood and every other specimen except urine.',
-        'Results of this view should not be compared with the All Specimens view.'
-    ]);
+    const sel = anSpecimen, lines = [];
+    if (sel !== 'all') {
+        lines.push('Specimen group: ' + specimenLabel(sel) + '.');
+        lines.push('First isolate of each species per patient within this group (CLSI M39 Section 11).');
+        if (sel === 'nonurine') lines.push('Includes blood and every other specimen except urine.');
+        if (sel === 'blood') lines.push('Blood is also part of Non Urine.');
+        if (specimenIsNonUrine(sel)) lines.push('Urine-only agents (' + URINE_ONLY_ABX.join(', ') + ') are reported only on urine isolates (CLSI M100), so they have no results here.');
+        else if (sel === 'urine') lines.push('Urine-only agents are reported in this group (CLSI M100).');
+        lines.push('Do not compare this view with the All Specimens view.');
+    }
+    const h = hintsHtml(lines);
     $('#patho_spec_note, #abx_spec_note').html(h);
 }
 $(document).on('change', '.an-specimen', function () {
@@ -1357,7 +1368,13 @@ function renderAbxChart() {
 
     if (testedOrgs.length === 0) {
         $('#extra_abxAmrContainer').empty(); updateChartKey('abx', []);
-        $('#abxAmrContainer').html('<div class="flex items-center justify-center h-[200px] w-full text-slate-400 font-bold text-sm">No Data Available</div>');
+        if (specimenIsNonUrine(anSpecimen) && URINE_ONLY_ABX.indexOf(drug) >= 0) {
+            $('#abxAmrContainer').html('<div class="w-full p-3 text-left">' + hintsHtml([
+                '<b>' + escHtml(drug) + '</b> is a urine-only agent.',
+                'CLSI M100 reports it only on isolates from the urinary tract, so it has no results for ' + escHtml(specimenLabel(anSpecimen)) + '.',
+                'Choose Urine or All Specimens to see it.'
+            ]) + '</div>');
+        } else $('#abxAmrContainer').html('<div class="flex items-center justify-center h-[200px] w-full text-slate-400 font-bold text-sm">No Data Available</div>');
         return;
     }
     
