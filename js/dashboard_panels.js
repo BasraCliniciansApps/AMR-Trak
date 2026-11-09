@@ -699,7 +699,7 @@ function chartDataTable(canvas) {
         if (!labels.length || !ds.length) return '';
         // one-series bar charts show the selected metric (S / R / NS) instead of a generic "Value"
         const mk = { chartGuidedAMR: typeof currentGuidedMetric !== 'undefined' && currentGuidedMetric, chartPathoAMR: typeof currentPathoMetric !== 'undefined' && currentPathoMetric, chartAbxAMR: typeof currentAbxMetric !== 'undefined' && currentAbxMetric }[canvas.id];
-        const mName = { S: '% Susceptible', R: '% Resistant', NS: '% NS (all non-susceptible: SDD, I, R)' }[mk] || 'Value';
+        const mName = { S: '% Susceptible', R: '% Resistant', NS: '% NS (all non-susceptible: SDD, I, R)' }[mk] || (/^(pie|doughnut)$/.test(ch.config.type) ? 'Isolates (n)' : ((((ch.options || {}).scales || {}).y || {}).title || {}).text || 'n');
         // bar charts with isolate counts: add n tested and the 95% CI, which the screen only shows on tap
         const d0 = ds[0], withN = ds.length === 1 && Array.isArray(d0.nData);
         const ciTxt = i => { const c = d0.ciData && d0.ciData[i]; return c && typeof c.lower === 'number' ? Math.round(c.lower) + ' to ' + Math.round(c.upper) : ''; };
