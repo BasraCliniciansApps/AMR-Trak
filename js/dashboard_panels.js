@@ -848,7 +848,24 @@ function buildPrintDoc(items, o) {
         if (hs !== '|') fl.push(['Heatmap dates', (hs.split('|')[0] || 'first data') + ' to ' + (hs.split('|')[1] || 'latest data') + ' (replace the analysis period)']);
     }
     if (tab !== 'analytics' && tab !== 'lab' && labels[0]) fl.push(['Analysis period', labels[0]]);
-    if (tab !== 'lab') fl.push(['Skin-flora contaminants', contamExcluded() ? 'Excluded' : 'Included (flagged only)']);
+    // Skin-flora contaminants concern blood isolates only: stated only when the printed data can contain blood, with the number found
+    {
+        let n = null, relevant = tab !== 'lab';
+        try {
+            if (tab === 'analytics') {
+                const specs = items.map(x => x.sec.id === 'patho' ? anSpec.patho : x.sec.id === 'abx' ? anSpec.abx : x.sec.id === 'heatmap' ? anSpec.adv : 'all');
+                relevant = specs.some(v => v === 'all' || v === 'blood' || v === 'nonurine' || (v && v.indexOf('sp:') === 0 && /blood/.test(v)));
+                if (relevant) n = filterByPeriod(getDashRecords(), anPeriod()).filter(isPossibleContaminant).length;
+            } else if (tab === 'last_year' && typeof yaRaw === 'function' && typeof yaYear === 'function') n = yaRaw(yaYear()).filter(isPossibleContaminant).length;
+        } catch (e) { n = null; }
+        if (relevant) {
+            const ex = contamExcluded();
+            const v = n === null ? (ex ? 'excluded from blood isolates' : 'not excluded')
+                : n === 0 ? (ex ? 'excluded (none in this period)' : 'none in this period')
+                : (ex ? 'excluded (' + n + ' isolate' + (n === 1 ? '' : 's') + ' removed)' : 'not excluded (' + n + ' isolate' + (n === 1 ? '' : 's') + ' in this period)');
+            fl.push(['Skin-flora contaminants (blood)', v]);
+        }
+    }
     fl.push(['Minimum isolates for a reliable result', String(minN())]);
     const dstat = (document.getElementById('dashStatus') || {}).textContent;
     if (dstat) fl.push(['Data', dstat.trim()]);
