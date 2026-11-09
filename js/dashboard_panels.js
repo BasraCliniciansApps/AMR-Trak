@@ -685,7 +685,7 @@ function chartDataTable(canvas) {
         const ciTxt = i => { const c = d0.ciData && d0.ciData[i]; return c && typeof c.lower === 'number' ? Math.round(c.lower) + ' to ' + Math.round(c.upper) : ''; };
         const head = '<tr><th></th>' + ds.slice(0, 12).map(d => `<th>${escHtml(d.label || mName)}</th>`).join('') + (withN ? '<th>n tested</th>' + (Array.isArray(d0.ciData) ? '<th>95% CI</th>' : '') : '') + '</tr>';
         const rows = labels.slice(0, 60).map((l, i) => `<tr><th>${escHtml(l)}</th>` + ds.slice(0, 12).map(d => `<td>${d.data[i] === undefined || d.data[i] === null ? '' : escHtml(typeof d.data[i] === 'object' ? JSON.stringify(d.data[i]) : d.data[i])}</td>`).join('') + (withN ? `<td>${escHtml(d0.nData[i] === undefined ? '' : d0.nData[i])}</td>` + (Array.isArray(d0.ciData) ? `<td>${escHtml(ciTxt(i))}</td>` : '') : '') + '</tr>').join('');
-        return `<table class="vals">${head}${rows}</table>`;
+        return `<table class="vals"><thead>${head}</thead><tbody>${rows}</tbody></table>`;
     } catch (e) { return ''; }
 }
 // Paper has no taps, buttons or Settings screen: drop the screen-only instructions from printed notes
@@ -796,7 +796,8 @@ function buildPrintDoc(items, o) {
     const secs = []; items.forEach(x => { if (!secs.includes(x.sec)) secs.push(x.sec); });
     const labels = secs.map(s => s.labelSel ? ((document.querySelector(s.labelSel) || {}).textContent || '').replace(' - ' + scopeLabel(), '') : '').filter(Boolean);
     const context = [secs.length === 1 ? sectionTitle(secs[0]) : '', labels[0] || ''].filter(Boolean).join('  |  ');
-    const landscape = o.orient === 'landscape' || (o.orient === 'auto' && items.some(x => x.c.landscape));
+    const landscape = o.orient === 'landscape';   // Automatic: portrait pages, and only the wide tables get landscape pages
+    const autoWide = o.orient === 'auto';
     const hideNotes = document.body.classList.contains('no-sym-notes');
     const small = (c, el) => {
         if (c.kind === 'tiles' || c.landscape) return false;
@@ -834,7 +835,7 @@ function buildPrintDoc(items, o) {
             else media = tilesToHtml(el);
             const cls = (o.layout !== 'single' && small(c, el)) ? 'half' : 'full';
             const subTxt = typeof c.sub === 'function' ? c.sub() : '';
-            return `<section class="blk ${cls}${c.kind === 'table' && cls === 'full' ? ' splittable' : ''}"><h2>${escHtml(chartTitleOf(c.title))}</h2>${subTxt ? `<div class="sub">${escHtml(subTxt)}</div>` : ''}${media}${keyHtml(c, el)}${vals}</section>`;
+            return `<section class="blk ${cls}${autoWide && c.landscape ? ' pg-land' : ''}${c.kind === 'table' && cls === 'full' ? ' splittable' : ''}"><div class="keep"><h2>${escHtml(chartTitleOf(c.title))}</h2>${subTxt ? `<div class="sub">${escHtml(subTxt)}</div>` : ''}${c.kind === 'table' ? '' : media}</div>${c.kind === 'table' ? media : ''}${keyHtml(c, el)}${vals}</section>`;
         }).join('') + '</div>';
     }).join('');
     // filters in force, so the printed page states exactly what it shows
@@ -854,23 +855,40 @@ function buildPrintDoc(items, o) {
     const filtersHtml = '<div class="flt">' + fl.map(([k, v]) => `<div><span>${escHtml(k)}</span><b>${escHtml(v)}</b></div>`).join('') + '</div>';
     let logo = ''; try { const im = document.querySelector('#brand img'); if (im && im.naturalWidth) { const lc = document.createElement('canvas'); lc.width = im.naturalWidth; lc.height = im.naturalHeight; lc.getContext('2d').drawImage(im, 0, 0); logo = lc.toDataURL('image/png'); } } catch (e) {}
     const used = [];
-    const notes = secs.map(sec => sec.infos.map(([t, k]) => {
+    // Notes only for the charts that are printed (plus the section's general notes); the same text is never printed twice
+    const INFO_FOR = {
+        'Organism Prevalence': 'sec_prevalence', 'AST Profile of the selected organism': 'abx_guidedAmrContainer',
+        'Bacteria/Fungi Susceptibility Profile': ['sec_patho', 'abx_pathoAmrContainer'], 'Antimicrobial In Vitro Activity Profile': 'sec_abx', 'Advanced Heatmap': 'sec_heatmap',
+        'Summary': 'mdr_tiles', 'Resistance classification': 'mdr_panel', 'Monthly trend (% of classified isolates)': 'mdr_trend', 'All wards': 'mdr_wards', 'By organism group': 'mdr_group',
+        'Priority alerts': 'op_m_alerts',
+        'Key resistance indicators': 'ya_ind', 'ICU compared with non-ICU': 'ya_icu', 'ICU compared with non-ICU: susceptibility by organism': 'ya_icu',
+        'Cumulative antibiogram (% susceptible)': 'ya_cum', 'Quarterly trend': 'ya_trend', 'Quarterly values': 'ya_trend', 'Antibiotic trend': 'ya_abx', 'Antibiotic trend values': 'ya_abx',
+        'MDR / XDR / PDR by organism group': 'ya_mdr', 'Culture burden': 'ya_cult', 'Data quality': 'ya_qual',
+        'Cultures received': 'lab_tiles', 'Blood cultures: contamination indicators': 'lab_blood', 'Culture volume per month': 'lab_volume', 'Positivity by ward': 'lab_wards', 'By specimen type': 'lab_sample'
+    };
+    const keysOf = c => [].concat(INFO_FOR[chartTitleOf(c.title)] || []);
+    const seenHtml = {};
+    const notes = secs.map(sec => {
+        const claimed = new Set(); sec.charts.forEach(c => keysOf(c).forEach(k => claimed.add(k)));
+        const want = new Set(); items.filter(x => x.sec === sec).forEach(x => keysOf(x.c).forEach(k => want.add(k)));
+        return sec.infos.filter(([t, k]) => want.has(k) || !claimed.has(k)).map(([t, k]) => {
         const inf = INFO_STORE[k]; if (!inf) return '';
+        const sig = printClean(inf.html); if (seenHtml[sig]) return ''; seenHtml[sig] = 1;
         (inf.refs || []).forEach(r => { if (!used.includes(r)) used.push(r); });
-        return `<div class="note"><h3>${escHtml(t)}</h3>${printClean(inf.html)}</div>`;
-    }).join('')).join('');
+        return `<div class="note"><h3>${escHtml(t)}</h3>${sig}</div>`;
+    }).join(''); }).join('');
     const refs = used.map(k => REFS[k]).filter(Boolean).map(r => `<li>${escHtml(r.t)} ${escHtml(r.u)}</li>`).join('');
     const when = new Date().toLocaleString([], { dateStyle: 'long', timeStyle: 'short' });
     return `<!doctype html><html><head><meta charset="utf-8"><title>${escHtml(tabTitle)}</title><style>
 
-        @page { size: ${o.paper === 'Letter' ? 'Letter' : 'A4'} ${landscape ? 'landscape' : 'portrait'}; margin: 14mm; }
+        @page { size: ${o.paper === 'Letter' ? 'Letter' : 'A4'} ${landscape ? 'landscape' : 'portrait'}; margin: 14mm; } @page land { size: ${o.paper === 'Letter' ? 'Letter' : 'A4'} landscape; margin: 14mm; } .pg-land { page: land; }
         * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #0f172a; margin: 0; }
         .brand { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #64748b; font-weight: 700; }
         h1 { font-size: 20px; margin: 4px 0 4px; letter-spacing: -0.01em; }
         .ctx { font-size: 11px; color: #475569; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #cbd5e1; }
         .grid { display: block; text-align: center; }
-        .blk { margin-bottom: 14px; text-align: center; ${o.layout === 'single' ? 'page-break-after: always; break-after: page;' : 'break-inside: avoid; page-break-inside: avoid;'} }
+        .blk { margin-bottom: 14px; text-align: center; ${o.layout === 'single' ? 'page-break-after: always; break-after: page;' : 'break-inside: auto; page-break-inside: auto;'} } .keep { break-inside: avoid; page-break-inside: avoid; break-after: avoid; page-break-after: avoid; } .blk.half { break-inside: avoid; page-break-inside: avoid; } table.vals tr { break-inside: avoid; page-break-inside: avoid; } table.vals thead { display: table-header-group; }
         .blk.splittable { break-inside: auto; page-break-inside: auto; } .splittable tr { break-inside: avoid; page-break-inside: avoid; } .splittable thead { display: table-header-group; } .blk.full { display: block; width: 100%; } .blk.half { display: inline-block; width: 49%; margin-left: .4%; margin-right: .4%; vertical-align: top; }
         .tbl table.ya-cum { table-layout: fixed; width: 100%; } .tbl table.ya-cum th:first-child, .tbl table.ya-cum td:first-child { width: 74px; text-align: left; } .tbl table.ya-cum td, .tbl table.ya-cum th { padding: 3px 0; overflow: hidden; } .tbl table.ya-cum * { font-size: 7px !important; }
         .tbl.wide { display: block; } .tbl.wide table { width: 100%; } .tbl.wide table.ya-cum { width: 100%; } .tbl.wide td, .tbl.wide th { word-break: break-word; padding: 2px 1px; } .tbl.wide table:not(.ya-cum) * { font-size: 7px !important; }
