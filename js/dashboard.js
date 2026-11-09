@@ -743,20 +743,63 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
     liveCharts.push(chart);
 }
 
+// ---------- One specimen choice shared by the susceptibility profile, the in vitro activity profile and the heatmap ----------
+// CLSI M39 Section 11: data may be stratified by specimen type; only the first isolate of the species from that specimen group per patient is counted.
+let anSpecimen = 'all';
+function specimenFilter(records, sel) {
+    if (!sel || sel === 'all') return records;
+    if (sel === 'urine') return records.filter(isUrinarySpecimen);
+    if (sel === 'nonurine') return records.filter(r => !isUrinarySpecimen(r));
+    if (sel === 'blood') return records.filter(r => /\bblood\b/i.test(String(r.Sample || '')));
+    if (sel.indexOf('sp:') === 0) { const k = sel.slice(3); return records.filter(r => String(r.Sample || '').trim().toLowerCase() === k); }
+    return records;
+}
+function specimenLabel(sel) {
+    if (sel === 'urine') return 'Urine';
+    if (sel === 'nonurine') return 'Non Urine (All except urine)';
+    if (sel === 'blood') return 'Blood';
+    if (sel && sel.indexOf('sp:') === 0) return sel.slice(3).replace(/\b\w/g, c => c.toUpperCase());
+    return 'All Specimens';
+}
+function refreshSpecimenSelects() {
+    const names = {};
+    getDashRecords().forEach(r => { const n = String(r.Sample || '').trim(); if (n && !isUrinarySpecimen(r) && !/\bblood\b/i.test(n)) names[n.toLowerCase()] = n; });
+    const opts = [['all', 'All Specimens'], ['urine', 'Urine'], ['nonurine', 'Non Urine (All except urine)'], ['blood', 'Blood']]
+        .concat(Object.keys(names).sort().map(k => ['sp:' + k, names[k]]));
+    if (!opts.some(o => o[0] === anSpecimen)) anSpecimen = 'all';
+    $('.an-specimen').each(function () {
+        const $s = $(this); $s.empty();
+        opts.forEach(o => $s.append(new Option(o[1], o[0])));
+        $s.val(anSpecimen); $s.trigger('change.select2');
+    });
+    renderSpecimenNotes();
+}
+function renderSpecimenNotes() {
+    const h = anSpecimen === 'all' ? '' : hintsHtml([
+        'Specimen group: ' + specimenLabel(anSpecimen) + '.',
+        'First isolate per patient within this group (CLSI M39 Section 11).',
+        'Non Urine includes blood and every other specimen except urine.',
+        'Results of this view should not be compared with the All Specimens view.'
+    ]);
+    $('#patho_spec_note, #abx_spec_note').html(h);
+}
+$(document).on('change', '.an-specimen', function () {
+    const v = $(this).val() || 'all';
+    if (v === anSpecimen) return;
+    anSpecimen = v;
+    $('.an-specimen').not(this).each(function () { $(this).val(v); $(this).trigger('change.select2'); });
+    renderSpecimenNotes();
+    if ($('#patho_bug').val()) renderPathoChart();
+    if ($('#abx_drug').val()) renderAbxChart();
+    if (!$('#advContainer').hasClass('hidden') && typeof generateAdvancedAnalytics === 'function') generateAdvancedAnalytics();
+});
+
 window.toggleAdvancedSearch = function() {
     $('#adv_content').toggleClass('hidden');
     $('#adv_icon').toggleClass('rotate-180');
     syncResultsCollapse('#adv_content', ['#advContainer']);
     
-    // Populate the all specimens dropdown when opened
-    if(!$('#adv_content').hasClass('hidden')) {
-        let allRecords = getDashRecords();
-        let allSamples = new Set(allRecords.map(r => r.Sample).filter(Boolean));
-        let currentAdvSample = $('#adv_sample').val();
-        $('#adv_sample').empty().append(new Option("All Specimens", ""));
-        Array.from(allSamples).sort().forEach(s => $('#adv_sample').append(new Option(s, s)));
-        if(currentAdvSample) $('#adv_sample').val(currentAdvSample);
-    }
+    if(!$('#adv_content').hasClass('hidden')) refreshSpecimenSelects();
 };
 
 function loadAnalyticsFilters() {
@@ -1127,6 +1170,7 @@ function updatePathoDropdowns() {
     
     if(currentVal) bugSelect.val(currentVal);
     bugSelect.trigger('change.select2');
+    refreshSpecimenSelects();
     renderPathoChart();
 }
 
@@ -1146,6 +1190,7 @@ function renderPathoChart() {
     let records = getDashRecords();
     records = filterByPeriod(records, period);
     records = records.filter(r => r['Selective organism'] === bug);
+    records = specimenFilter(records, anSpecimen);
     // CLSI M39: the first isolate per patient is chosen across all wards; the ward filter is applied afterwards
     records = applyDeduplication(records);
     records = applyWardFilter(records, $('input[name="patho_ward"]:checked').val() || 'total');
@@ -1284,6 +1329,7 @@ function renderAbxChart() {
     let period = anPeriod();
     let records = getDashRecords();
     records = filterByPeriod(records, period);
+    records = specimenFilter(records, anSpecimen);
     // CLSI M39: the first isolate per patient is chosen across all wards; the ward filter is applied afterwards
     records = applyDeduplication(records);
     records = applyWardFilter(records, $('input[name="abx_ward"]:checked').val() || 'total');
@@ -1379,7 +1425,6 @@ function hmPeriodNote(records) {
 window.generateAdvancedAnalytics = function() {
     const startDate = $('#adv_start').val();
     const endDate = $('#adv_end').val();
-    const targetSample = $('#adv_sample').val();
     let targetOrgs = $('#adv_organism').val() || [];
     let targetAbxs = $('#adv_antibiotic').val() || [];
     const metric = $('#adv_metric').val() || 'R'; 
@@ -1405,10 +1450,8 @@ window.generateAdvancedAnalytics = function() {
     // No From/To: the Analytics period applies
     if (!startDate && !endDate) records = filterByPeriod(records, anPeriod());
 
-    // Filter ONLY if the user selected a sample
-    if (targetSample) { 
-        records = records.filter(r => r.Sample === targetSample); 
-    }
+    // Specimen group (shared choice); the first isolate is chosen inside it
+    records = specimenFilter(records, anSpecimen);
 
     // Apply Ward Filter (All / Inpatient / Outpatient)
     // CLSI M39: the first isolate per patient is chosen across all wards; the ward filter is applied afterwards
