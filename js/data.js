@@ -775,6 +775,7 @@ const INTRINSIC_RESISTANCE_RULES = [
     // The two sources are COMBINED: an agent-organism pair is intrinsic when EITHER M100-Ed36 Appendix B OR Magiorakos Table 3 lists it.
     // Only the pairs that M100 does not already list are added here; the pairs of M100 that the paper does not list stay (union, not replacement).
     // Magiorakos Tables 1, 4 and 5 have no intrinsic column; Table 2 (enterococci) agrees with M100 (see MDR_INTRINSIC_RULES).
+    { test: /^klebsiella/, drugs: ['Ampicillin'] },   // Magiorakos Table 3 names "Klebsiellae spp." (the whole genus) for ampicillin
     { test: /citrobacter koseri/, drugs: ['Ampicillin/Sulbactam'] },
     { test: /escherichia hermannii/, drugs: ['Ticarcillin/Clavulanic acid', 'Piperacillin/Tazobactam'] },
     { test: /morganella/, drugs: ['Tetracycline', 'Doxycycline', 'Minocycline'] },
@@ -895,7 +896,7 @@ function normalizeOrganismNames(records) {
 // and disagreement between laboratory flags and the antibiotic results.
 // =====================================================================
 const EXPECTED_RESISTANCE = [
-    { test: /^(klebsiella (pneumoniae|oxytoca|variicola)|raoultella|citrobacter (koseri|diversus|amalonaticus|farmeri|sedlakii))/, abx: ['Ampicillin', 'Amoxicillin'] },
+    { test: /^(klebsiella|raoultella|citrobacter (koseri|diversus|amalonaticus|farmeri|sedlakii))/, abx: ['Ampicillin', 'Amoxicillin'] },
     { test: /^(enterobacter (cloacae|asburiae|hormaechei|aerogenes)|klebsiella aerogenes|hafnia alvei|citrobacter freundii|serratia)/, abx: ['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Ampicillin/Sulbactam', 'Cefazolin', 'Cefoxitin'] },
     { test: /^(proteus (mirabilis|penneri|vulgaris)|morganella|providencia (rettgeri|stuartii)|serratia|hafnia (alvei|paralvei))/, abx: ['Colistin', 'Polymyxin B'] },
     { test: /^(proteus mirabilis|providencia (rettgeri|stuartii))/, abx: ['Tetracycline', 'Tigecycline'] },
@@ -923,6 +924,10 @@ function auditRecord(r) {
         const fq = ['Levofloxacin', 'Ofloxacin'].filter(a => val(a) === 'R');
         if (fq.length && val('Ciprofloxacin') === 'S') issues.push({ code: 'fq_discord', text: `${r['Selective organism']}: ${fq.join('/')} resistant but ciprofloxacin susceptible - check the result (cross-resistance expected)` });
     }
+    // Genera for which M100 Appendix B / Magiorakos Table 3 name only certain species: for any other (or unspecified) species of these genera no intrinsic resistance is assumed, so flag it for review.
+    if (/^(enterobacter|hafnia|providencia|proteus|acinetobacter|enterococcus|citrobacter)\b/.test(org) &&
+        !/^(enterobacter (cloacae|asburiae|hormaechei|aerogenes)|klebsiella aerogenes|hafnia (alvei|paralvei)|providencia (rettgeri|stuartii)|proteus (mirabilis|vulgaris|penneri)|acinetobacter (baumannii|calcoaceticus)|enterococcus (faecalis|faecium|gallinarum|casseliflavus)|citrobacter (freundii|koseri|diversus|amalonaticus|farmeri|sedlakii))/.test(org))
+        issues.push({ code: 'species_not_named', text: `${r['Selective organism']}: species not named in M100 Appendix B / Magiorakos tables (or not specified); intrinsic resistance is not assumed, review the results` });
     if (org.startsWith('streptococcus pyogenes') && val('Penicillin') && val('Penicillin') !== 'S')
         issues.push({ code: 'intrinsic', text: 'Streptococcus pyogenes: penicillin non-susceptible is not expected - confirm identification/result' });
     if (org.includes('staphylococcus aureus')) {
