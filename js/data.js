@@ -460,12 +460,14 @@ function explainMDR(r) {
     MDR_INTRINSIC_RULES.forEach(rule => { if (rule.test.test(orgLower)) rule.exclude.forEach(c => excluded.add(c)); });
     const isMrsa = group === 'Staphylococcus aureus' && (['Cefoxitin', 'Cefoxitin screen', 'Oxacillin'].some(a => String(r[a] || '').trim().toUpperCase() === 'R') || r['Lab MRSA'] === '+');
     const irSet = intrinsicResistanceSet(orgLower);
-    const out = { ns: [], s: [], untested: [], intrinsic: [], irDetail: [], mrsa: isMrsa };
+    const out = { ns: [], s: [], untested: [], intrinsic: [], irDetail: [], irPartial: [], mrsa: isMrsa };
     Object.keys(MDR_TABLES[group]).forEach(cat => {
         const all = MDR_TABLES[group][cat];
         if (excluded.has(cat)) { out.intrinsic.push(cat); out.irDetail.push({ cat, agents: all }); return; }
         const agents = all.filter(a => !irSet.has(a));
         if (!agents.length) { out.intrinsic.push(cat); out.irDetail.push({ cat, agents: all }); return; }
+        const removedAg = all.filter(a => irSet.has(a));
+        if (removedAg.length) out.irPartial.push({ cat, agents: removedAg });
         if (isMrsa && cat === 'Anti-staphylococcal beta-lactams') { out.ns.push({ cat, results: [['MRSA', 'R']] }); return; }
         const res = [];
         agents.forEach(a => { const v = String(r[a] || '').trim().toUpperCase(); if (v === 'S' || v === 'I' || v === 'R' || v === 'SDD') res.push([a, v]); });
@@ -875,9 +877,11 @@ function normalizeOrganismNames(records) {
 // =====================================================================
 const EXPECTED_RESISTANCE = [
     { test: /^(klebsiella|raoultella|citrobacter koseri)/, abx: ['Ampicillin', 'Amoxicillin'] },
-    { test: /^(enterobacter|klebsiella aerogenes|citrobacter freundii|serratia|morganella)/, abx: ['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Ampicillin/Sulbactam', 'Cefazolin', 'Cefoxitin'] },
+    { test: /^(enterobacter|klebsiella aerogenes|citrobacter freundii|serratia)/, abx: ['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Ampicillin/Sulbactam', 'Cefazolin', 'Cefoxitin'] },
     { test: /^(proteus|morganella|providencia|serratia)/, abx: ['Colistin', 'Polymyxin B'] },
-    { test: /^(proteus mirabilis|morganella|providencia)/, abx: ['Tetracycline', 'Tigecycline'] },
+    { test: /^(proteus mirabilis|providencia)/, abx: ['Tetracycline', 'Tigecycline'] },
+    // M100-Ed36 Appendix B1, Morganella morganii: ampicillin, amoxicillin-clavulanate, cephalosporins I and II, tigecycline, nitrofurantoin, colistin / polymyxin B (not ampicillin-sulbactam, cephamycins or tetracyclines)
+    { test: /^morganella/, abx: ['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Cefazolin', 'Cefuroxime', 'Tigecycline'] },
     { test: /^pseudomonas aeruginosa/, abx: ['Ampicillin', 'Amoxicillin/Clavulanic acid', 'Cefazolin', 'Ceftriaxone', 'Cefotaxime', 'Ertapenem', 'Trimethoprim/Sulfamethoxazole', 'Tetracycline'] },
     { test: /^acinetobacter baumannii/, abx: ['Ampicillin', 'Cefazolin', 'Ertapenem'] },
     { test: /^enterococcus/, abx: ['Cefazolin', 'Cefuroxime', 'Ceftriaxone', 'Cefotaxime', 'Ceftazidime', 'Cefepime', 'Clindamycin', 'Trimethoprim/Sulfamethoxazole'] },
