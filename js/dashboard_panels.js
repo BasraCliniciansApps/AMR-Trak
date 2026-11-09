@@ -552,13 +552,19 @@ function mdrDrillHtml(items, i) {
     h += '<div style="font-size:12px;color:#475569">' + MDR_DEF_TEXT[res.cls] + '</div>';
     h += '<div style="font-size:12px;color:#475569;margin-top:4px">Non-susceptible in <b>' + res.ns + '</b> of <b>' + res.total + '</b> categories that apply to this organism (' + res.tested + ' tested).</div>';
     if (ex) {
-        h += head('Non-susceptible categories (' + ex.ns.length + ')') + ul(ex.ns.map(a => '<b>' + escHtml(a.cat) + '</b>: ' + resTxt(a)));
-        h += head('Susceptible categories (' + ex.s.length + ')') + ul(ex.s.map(a => '<b>' + escHtml(a.cat) + '</b>: ' + resTxt(a)));
-        h += head('Not tested (' + ex.untested.length + ')') + ul(ex.untested.map(a => '<b>' + escHtml(a.cat) + '</b>'));
-        const notes = [];
-        if (ex.mrsa) notes.push('MRSA is classified as MDR by definition (Magiorakos 2012, Table 6 footnote).');
-        if (ex.intrinsic.length) notes.push('Categories removed because of intrinsic resistance: ' + ex.intrinsic.map(escHtml).join(', ') + '.');
-        if (notes.length) h += head('Notes') + ul(notes);
+        const chip = v => { const c = { S: '#047857', I: '#b45309', SDD: '#b45309', R: '#be123c' }[v] || '#334155'; return '<span style="font-weight:800;color:' + c + '">' + v + '</span>'; };
+        const agentsTxt = a => a.results.map(x => escHtml(x[0]) + ' ' + chip(x[1])).join('<br>');
+        const pill = (t, bg) => '<span style="display:inline-block;background:' + bg + ';color:#fff;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;white-space:nowrap">' + t + '</span>';
+        const td = 'style="border:1px solid #e2e8f0;padding:4px 6px;vertical-align:top;font-size:11px;line-height:1.35"';
+        const rows = [];
+        ex.ns.forEach(a => rows.push([escHtml(a.cat), agentsTxt(a), pill('Non-susceptible', '#be123c'), '#fff1f2']));
+        ex.s.forEach(a => rows.push([escHtml(a.cat), agentsTxt(a), pill('Susceptible', '#047857'), '#f0fdf4']));
+        ex.untested.forEach(a => rows.push([escHtml(a.cat), '<span style="color:#64748b">' + a.agents.map(escHtml).join(', ') + '</span>', pill('Not tested', '#64748b'), '#f8fafc']));
+        (ex.irDetail || []).forEach(a => rows.push([escHtml(a.cat), '<span style="color:#64748b">' + a.agents.map(escHtml).join(', ') + '</span>', pill('Intrinsic', '#94a3b8'), '#f8fafc']));
+        h += '<table style="width:100%;border-collapse:collapse;margin-top:10px"><thead><tr style="background:#f1f5f9"><th ' + td + '>Category</th><th ' + td + '>Agents tested and result</th><th ' + td + '>Status</th></tr></thead><tbody>' +
+            rows.map(r => '<tr style="background:' + r[3] + '"><td ' + td + '><b>' + r[0] + '</b></td><td ' + td + '>' + r[1] + '</td><td ' + td + '>' + r[2] + '</td></tr>').join('') + '</tbody></table>';
+        h += '<div style="font-size:10px;color:#64748b;margin-top:6px">Non-susceptible = I, SDD or R. Not tested = no result for any agent of the category (unknown, not counted as susceptible). Intrinsic = category removed because the organism is intrinsically resistant to every agent in it (CLSI M100 Appendix B / Magiorakos 2012), so it is not counted.</div>';
+        if (ex.mrsa) h += '<div style="font-size:11px;color:#475569;margin-top:6px">MRSA is classified as MDR by definition (Magiorakos 2012, Table 6 footnote).</div>';
     }
     return h + '</div>';
 }

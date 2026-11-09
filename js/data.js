@@ -460,12 +460,12 @@ function explainMDR(r) {
     MDR_INTRINSIC_RULES.forEach(rule => { if (rule.test.test(orgLower)) rule.exclude.forEach(c => excluded.add(c)); });
     const isMrsa = group === 'Staphylococcus aureus' && (['Cefoxitin', 'Cefoxitin screen', 'Oxacillin'].some(a => String(r[a] || '').trim().toUpperCase() === 'R') || r['Lab MRSA'] === '+');
     const irSet = intrinsicResistanceSet(orgLower);
-    const out = { ns: [], s: [], untested: [], intrinsic: [], mrsa: isMrsa };
+    const out = { ns: [], s: [], untested: [], intrinsic: [], irDetail: [], mrsa: isMrsa };
     Object.keys(MDR_TABLES[group]).forEach(cat => {
-        if (excluded.has(cat)) { out.intrinsic.push(cat); return; }
         const all = MDR_TABLES[group][cat];
+        if (excluded.has(cat)) { out.intrinsic.push(cat); out.irDetail.push({ cat, agents: all }); return; }
         const agents = all.filter(a => !irSet.has(a));
-        if (!agents.length) { out.intrinsic.push(cat); return; }
+        if (!agents.length) { out.intrinsic.push(cat); out.irDetail.push({ cat, agents: all }); return; }
         if (isMrsa && cat === 'Anti-staphylococcal beta-lactams') { out.ns.push({ cat, results: [['MRSA', 'R']] }); return; }
         const res = [];
         agents.forEach(a => { const v = String(r[a] || '').trim().toUpperCase(); if (v === 'S' || v === 'I' || v === 'R' || v === 'SDD') res.push([a, v]); });
