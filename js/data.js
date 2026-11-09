@@ -769,7 +769,15 @@ const INTRINSIC_RESISTANCE_RULES = [
     { test: /staphylococcus capitis/, drugs: ['Fosfomycin'] },
     { test: /^enterococcus/, drugs: _CEPH_ALL.concat(_AMINO, ['Clindamycin', 'Trimethoprim/Sulfamethoxazole', 'Trimethoprim', 'Fusidic acid'], _IR_GRAMPOS_NOTE) },
     { test: /enterococcus faecalis/, drugs: ['Quinupristin/Dalfopristin'] },
-    { test: /enterococcus gallinarum|casseliflavus/, drugs: ['Vancomycin', 'Quinupristin/Dalfopristin'] }
+    { test: /enterococcus gallinarum|casseliflavus/, drugs: ['Vancomycin', 'Quinupristin/Dalfopristin'] },
+    // Second source: Magiorakos et al. 2012, Table 3 (column "Species with intrinsic resistance"; the paper cites the EUCAST Expert Rules).
+    // The two sources are COMBINED: an agent-organism pair is intrinsic when EITHER M100-Ed36 Appendix B OR Magiorakos Table 3 lists it.
+    // Only the pairs that M100 does not already list are added here; the pairs of M100 that the paper does not list stay (union, not replacement).
+    // Magiorakos Tables 1, 4 and 5 have no intrinsic column; Table 2 (enterococci) agrees with M100 (see MDR_INTRINSIC_RULES).
+    { test: /citrobacter koseri/, drugs: ['Ampicillin/Sulbactam'] },
+    { test: /escherichia hermannii/, drugs: ['Ticarcillin/Clavulanic acid', 'Piperacillin/Tazobactam'] },
+    { test: /morganella/, drugs: ['Tetracycline', 'Doxycycline', 'Minocycline'] },
+    { test: /providencia rettgeri/, drugs: ['Gentamicin', 'Tobramycin', 'Netilmicin', 'Ampicillin/Sulbactam'] }
 ];
 const _irCache = {};
 function intrinsicResistanceSet(org) {
@@ -890,8 +898,13 @@ const EXPECTED_RESISTANCE = [
     { test: /^(enterobacter|klebsiella aerogenes|citrobacter freundii|serratia)/, abx: ['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Ampicillin/Sulbactam', 'Cefazolin', 'Cefoxitin'] },
     { test: /^(proteus|morganella|providencia|serratia)/, abx: ['Colistin', 'Polymyxin B'] },
     { test: /^(proteus mirabilis|providencia)/, abx: ['Tetracycline', 'Tigecycline'] },
-    // M100-Ed36 Appendix B1, Morganella morganii: ampicillin, amoxicillin-clavulanate, cephalosporins I and II, tigecycline, nitrofurantoin, colistin / polymyxin B (not ampicillin-sulbactam, cephamycins or tetracyclines)
-    { test: /^morganella/, abx: ['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Cefazolin', 'Cefuroxime', 'Tigecycline'] },
+    // Morganella morganii: M100-Ed36 Appendix B1 (ampicillin, amoxicillin-clavulanate, cephalosporins I and II, tigecycline, nitrofurantoin, colistin / polymyxin B)
+    // plus Magiorakos 2012 Table 3 (tetracycline, doxycycline, minocycline). Both sources are combined.
+    { test: /^morganella/, abx: ['Ampicillin', 'Amoxicillin', 'Amoxicillin/Clavulanic acid', 'Cefazolin', 'Cefuroxime', 'Tigecycline', 'Tetracycline', 'Doxycycline', 'Minocycline'] },
+    // Magiorakos 2012 Table 3 pairs that M100 does not list (combined with M100)
+    { test: /^citrobacter koseri/, abx: ['Ampicillin/Sulbactam'] },
+    { test: /^escherichia hermannii/, abx: ['Ticarcillin/Clavulanic acid', 'Piperacillin/Tazobactam'] },
+    { test: /^providencia rettgeri/, abx: ['Gentamicin', 'Tobramycin', 'Netilmicin', 'Ampicillin/Sulbactam'] },
     { test: /^pseudomonas aeruginosa/, abx: ['Ampicillin', 'Amoxicillin/Clavulanic acid', 'Cefazolin', 'Ceftriaxone', 'Cefotaxime', 'Ertapenem', 'Trimethoprim/Sulfamethoxazole', 'Tetracycline'] },
     { test: /^acinetobacter baumannii/, abx: ['Ampicillin', 'Cefazolin', 'Ertapenem'] },
     { test: /^enterococcus/, abx: ['Cefazolin', 'Cefuroxime', 'Ceftriaxone', 'Cefotaxime', 'Ceftazidime', 'Cefepime', 'Clindamycin', 'Trimethoprim/Sulfamethoxazole'] },
