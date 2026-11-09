@@ -67,7 +67,7 @@
                 'The category of each agent is taken <b>as exported</b>. The application does not recompute interpretations from MIC or zone values, so the edition of M100 applied is that used by the laboratory when the test was interpreted.']) +
             H('2. Categories stored') + L([
                 'S, I, R and <b>SDD</b> (susceptible-dose dependent) are stored as four distinct values. SDD is a separate category in M100 and is not counted as susceptible [R2, Section 6.6, p. 13].',
-                'Non-susceptible (NS) = I + SDD + R. Resistant (R) = R only. Susceptible (S) = S only.']) +
+                'NS = all non-susceptible results (SDD, I and R). Resistant (R) = R only. Susceptible (S) = S only.']) +
             H('3. Records not included in the analysis, and why') + T(['Row', 'Treatment', 'Reason'], [
                 ['No organism, "xxx", "con" or "no growth"', 'Not included as an isolate. Counted in the monthly culture counts (growth, no growth, contaminated).', 'There is no isolate to analyse. The counts are kept as aggregates for the culture-burden table.'],
                 ['Organism identified but no S, I or R result', 'Not included.', 'An isolate without susceptibility data cannot contribute to %S.'],

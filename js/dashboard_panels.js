@@ -590,7 +590,7 @@ setInfo('sec_abx', 'Activity of one antibiotic', '<p>For the selected antibiotic
 setInfo('sec_heatmap', 'Organism by antibiotic heatmap', '<p>Each cell is the percentage of the chosen category (S, I or R) for one organism and antibiotic among tested isolates. An asterisk marks cells with fewer than 30 tested isolates. Isolates are de-duplicated (CLSI M39) and interpreted with CLSI M100.</p>');
 
 // Printed subtitle: what the chart on the page is showing (selection, metric, specimen, ward), so the paper stands alone
-const PRINT_METRIC = { S: '% Susceptible', R: '% Resistant', NS: '% Non-susceptible (I + SDD + R)', I: '% Intermediate' };
+const PRINT_METRIC = { S: '% Susceptible', R: '% Resistant', NS: '% NS (all non-susceptible: SDD, I, R)', I: '% Intermediate' };
 const PRINT_WARD = { total: 'All wards', inpatient: 'Inpatient', outpatient: 'Outpatient' };
 function printSub(card) {
     const t = sel => ($(sel + ' option:selected').text() || '').replace(/\s+/g, ' ').trim();
@@ -679,7 +679,7 @@ function chartDataTable(canvas) {
         if (!labels.length || !ds.length) return '';
         // one-series bar charts show the selected metric (S / R / NS) instead of a generic "Value"
         const mk = { chartGuidedAMR: typeof currentGuidedMetric !== 'undefined' && currentGuidedMetric, chartPathoAMR: typeof currentPathoMetric !== 'undefined' && currentPathoMetric, chartAbxAMR: typeof currentAbxMetric !== 'undefined' && currentAbxMetric }[canvas.id];
-        const mName = { S: '% Susceptible', R: '% Resistant', NS: '% Non-susceptible (I + SDD + R)' }[mk] || 'Value';
+        const mName = { S: '% Susceptible', R: '% Resistant', NS: '% NS (all non-susceptible: SDD, I, R)' }[mk] || 'Value';
         // bar charts with isolate counts: add n tested and the 95% CI, which the screen only shows on tap
         const d0 = ds[0], withN = ds.length === 1 && Array.isArray(d0.nData);
         const ciTxt = i => { const c = d0.ciData && d0.ciData[i]; return c && typeof c.lower === 'number' ? Math.round(c.lower) + ' to ' + Math.round(c.upper) : ''; };
