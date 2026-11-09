@@ -306,6 +306,18 @@ function renderMdrPanel() {
         ['PDR', n ? `${counts.PDR} (${pct(counts.PDR, n)}%)` : '-', 'text-red-900']
     ].map(t => `<div class="bg-slate-50 border border-slate-100 rounded-lg p-2 text-center"><div class="text-[9px] font-bold text-slate-500">${t[0]}</div><div class="text-sm font-black ${t[2]}">${t[1]}</div></div>`).join(''));
 
+    // How many isolates of the period could be classified, and which organisms could not (no Magiorakos category table)
+    {
+        const tot = recs.length, un = tot - n, unOrg = {};
+        recs.forEach(r => { if (!classifyMDR(r)) { const o = formatOrgName(r['Selective organism'] || 'Unknown'); unOrg[o] = (unOrg[o] || 0) + 1; } });
+        const names = Object.keys(unOrg).sort((a, b) => unOrg[b] - unOrg[a] || a.localeCompare(b)).map(o => o + ' (' + unOrg[o] + ')').join(', ');
+        const lines = !tot ? [] : [
+            '<b>Classified:</b> ' + n + ' of ' + tot + ' isolates (organisms with a Magiorakos category table).',
+            un ? '<b>Not classified:</b> ' + un + ' of ' + tot + ' isolates (organisms with no Magiorakos category table).' : '',
+            un ? 'Not classified organisms: ' + escHtml(names) + '.' : ''
+        ].filter(Boolean);
+        $('#mdr_cls_note').html(lines.length ? '<div class="text-[10px] text-slate-500 sym-note">' + hintsHtml(lines) + '</div>' : '');
+    }
     setInfo('mdr_panel', 'MDR / XDR / PDR analysis', mdrInfoHtml(possibleX, possibleP));
     attachInfo('#mdrPanel .mdr-title', 'mdr_panel');
     setInfo('mdr_tiles', 'Summary figures', '<p><b>Classified isolates:</b> first isolates that could be assigned a class (Enterobacterales, <i>P. aeruginosa</i>, <i>Acinetobacter</i> spp., <i>S. aureus</i> and <i>Enterococcus</i> spp.).</p><p style="margin-top:8px"><b>MDR or worse:</b> MDR, XDR and PDR combined. <b>XDR or worse:</b> XDR and PDR combined. Percentages are of classified isolates in the selected period and unit scope.</p>');
@@ -625,7 +637,7 @@ const SECTIONS = {
         charts: [{ title: 'Advanced Heatmap', el: '#heatmapWrapper', kind: 'table', landscape: true, sub: () => printSub('heatmap'), noteSel: '#heatmapNote', legendSel: '#heatmapLegend', hint: 'Run the search in this section first.' }] },
     mdr: { id: 'mdr', title: 'MDR / XDR / PDR Analysis', labelSel: '#mdr_range_label',
         infos: [['Definitions and method', 'mdr_panel'], ['Summary figures', 'mdr_tiles'], ['Monthly trend', 'mdr_trend'], ['Distribution by ward', 'mdr_wards'], ['By organism group', 'mdr_group']],
-        charts: [{ title: 'Summary', el: '#mdr_tiles', kind: 'tiles' }, { title: 'Resistance classification', el: '#chart_mdr_panel_pie' }, { title: 'Monthly trend (% of classified isolates)', el: '#chart_mdr_panel_trend' }, { title: 'All wards', el: '#chart_mdr_panel_wards' }, { title: 'By organism group', el: '#mdr_group_table', kind: 'table' }] },
+        charts: [{ title: 'Summary', el: '#mdr_tiles', kind: 'tiles', noteSel: '#mdr_cls_note' }, { title: 'Resistance classification', el: '#chart_mdr_panel_pie' }, { title: 'Monthly trend (% of classified isolates)', el: '#chart_mdr_panel_trend' }, { title: 'All wards', el: '#chart_mdr_panel_wards' }, { title: 'By organism group', el: '#mdr_group_table', kind: 'table' }] },
     year: { id: 'sec_year', title: () => $('#live_y_title').text() || 'Annual Report', infos: [], charts: [] },
     month: monthSection('m', 'month'),
     lab: { id: 'lab', title: 'Culture Overview', labelSel: '#lab_range_label',
