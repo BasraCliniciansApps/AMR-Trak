@@ -319,7 +319,7 @@ const MDR_TABLES = {
         'Cephalosporins (1st/2nd gen)': ['Cefazolin', 'Cefuroxime'],
         'Cephalosporins (3rd/4th gen)': ['Cefotaxime', 'Ceftriaxone', 'Ceftazidime', 'Cefepime'],
         'Cephamycins': ['Cefoxitin', 'Cefotetan'],
-        'Fluoroquinolones': ['Ciprofloxacin', 'Levofloxacin', 'Ofloxacin', 'Moxifloxacin'],
+        'Fluoroquinolones': ['Ciprofloxacin'],
         'Folate pathway inhibitors': ['Trimethoprim/Sulfamethoxazole'],
         'Glycylcyclines': ['Tigecycline'],
         'Monobactams': ['Aztreonam'],
@@ -327,7 +327,7 @@ const MDR_TABLES = {
         'Penicillins + BLI': ['Amoxicillin/Clavulanic acid', 'Ampicillin/Sulbactam'],
         'Phenicols': ['Chloramphenicol'],
         'Phosphonic acids': ['Fosfomycin'],
-        'Polymyxins': ['Colistin', 'Polymyxin B'],
+        'Polymyxins': ['Colistin'],
         'Tetracyclines': ['Tetracycline', 'Doxycycline', 'Minocycline']
     },
     'Pseudomonas aeruginosa': {
@@ -356,14 +356,14 @@ const MDR_TABLES = {
         'Ansamycins': ['Rifampicin'],
         'Anti-MRSA cephalosporins': ['Ceftaroline'],
         'Anti-staphylococcal beta-lactams': ['Oxacillin', 'Cefoxitin', 'Cefoxitin screen'],
-        'Fluoroquinolones': ['Ciprofloxacin', 'Levofloxacin', 'Moxifloxacin'],
+        'Fluoroquinolones': ['Ciprofloxacin', 'Moxifloxacin'],
         'Folate pathway inhibitors': ['Trimethoprim/Sulfamethoxazole'],
         'Fusidane': ['Fusidic acid'],
         'Glycopeptides': ['Vancomycin', 'Teicoplanin', 'Telavancin'],
         'Glycylcyclines': ['Tigecycline'],
         'Lincosamides': ['Clindamycin'],
         'Lipopeptides': ['Daptomycin'],
-        'Macrolides': ['Erythromycin', 'Azithromycin', 'Clarithromycin'],
+        'Macrolides': ['Erythromycin'],
         'Oxazolidinones': ['Linezolid'],
         'Phenicols': ['Chloramphenicol'],
         'Phosphonic acids': ['Fosfomycin'],
@@ -905,6 +905,10 @@ function auditRecord(r) {
         if (!rule.test.test(org)) return;
         rule.abx.forEach(a => { if (val(a) === 'S') issues.push({ code: 'intrinsic', text: `${r['Selective organism']}: ${a} reported susceptible (expected resistant)` }); });
     });
+    if (/^(escherichia|klebsiella|enterobacter|citrobacter|proteus|serratia|morganella|salmonella|shigella|providencia|raoultella|pantoea|hafnia)/.test(org)) {
+        const fq = ['Levofloxacin', 'Ofloxacin'].filter(a => val(a) === 'R');
+        if (fq.length && val('Ciprofloxacin') === 'S') issues.push({ code: 'fq_discord', text: `${r['Selective organism']}: ${fq.join('/')} resistant but ciprofloxacin susceptible - check the result (cross-resistance expected)` });
+    }
     if (org.startsWith('streptococcus pyogenes') && val('Penicillin') && val('Penicillin') !== 'S')
         issues.push({ code: 'intrinsic', text: 'Streptococcus pyogenes: penicillin non-susceptible is not expected - confirm identification/result' });
     if (org.includes('staphylococcus aureus')) {
