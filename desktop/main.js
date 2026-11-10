@@ -60,7 +60,7 @@ ipcMain.on('store:set', (e, k, v) => { loadData()[k] = v; scheduleWrite(); });
 ipcMain.on('store:remove', (e, k) => { delete loadData()[k]; scheduleWrite(); });
 ipcMain.on('store:clear', () => { cache = {}; scheduleWrite(); });
 
-const DASHBOARD_URL = 'https://basracliniciansapps.github.io/amr-trak/dashboard.html';
+const DASHBOARD_URL = 'https://basracliniciansapps.github.io/AMR-Trak/dashboard';
 let dashWin = null;
 // Phone-sized window showing the REAL dashboard (top-level page, own persistent profile) so its
 // service worker + cached data work offline exactly like the installed phone app, and it
@@ -77,6 +77,9 @@ function openDashboard() {
   const wc = dashWin.webContents;
   wc.on('dom-ready', () => {   // desktop already is the "installed" app: skip the install prompt
     wc.executeJavaScript("try{localStorage.setItem('amr_dashboard_install_prompted','true')}catch(e){}").catch(() => {});
+  });
+  wc.on('did-navigate', (e, url, code) => {          // 404 / server error page -> friendly message
+    if (/^https?:/.test(url) && code >= 400) dashWin.loadURL('app://local/dashboard-offline.html');
   });
   wc.on('did-fail-load', (e, code, desc, url, isMain) => {
     if (isMain && code !== -3) dashWin.loadURL('app://local/dashboard-offline.html');
