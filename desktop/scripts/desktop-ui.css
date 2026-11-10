@@ -1,10 +1,37 @@
 /* Desktop-only visual layer (injected at build time; web app files are untouched) */
 #mainAppContainer aside { display: none !important; }
+
+/* brand */
 #dtBrand { display: flex; align-items: center; gap: 8px; padding-right: 18px; margin-right: 6px; border-right: 1px solid #e2e8f0; }
 #dtBrand img { height: 30px; width: auto; display: block; }
 #dtBrand .dt-name { font-family: 'Space Grotesk','Inter',system-ui,sans-serif; font-weight: 700; font-size: 21px; line-height: 30px; letter-spacing: -.01em; color: #0f4c5c; }
 #dtBrand .dt-name span { color: #0d9488; }
-#dtExportSlot button { margin: 0 !important; width: auto !important; padding: 8px 16px !important; font-size: 14px; white-space: nowrap; }
-#dtExportSlot { display: flex; align-items: center; }
-#dtDashBtn { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 8px; border: 1px solid #99d6cf; background: #f0fdfa; color: #0f766e; font-weight: 700; font-size: 14px; white-space: nowrap; transition: all .15s; }
-#dtDashBtn:hover { background: #ccfbf1; }
+
+/* two modes: home (buttons) / records (patient table) */
+body.dt-home #viewRecords { display: none !important; }
+body.dt-home #mainAppContainer header > div:last-child,
+body.dt-home #dtTitleBlock, body.dt-home #dtBack { display: none !important; }
+body.dt-home #dtBrand { border-right: 0; }
+body.dt-records #dtHome { display: none !important; }
+body.dt-records #mainAppContainer header > div:last-child > *:not(button[onclick*="openModal"]):not(#dtNamesBtn) { display: none !important; }
+
+#dtBack { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; color: #334155; font-weight: 600; font-size: 14px; }
+#dtBack:hover { background: #f1f5f9; }
+#dtNamesBtn { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 8px; border: 1px solid #99d6cf; background: #f0fdfa; color: #0f766e; font-weight: 700; font-size: 14px; white-space: nowrap; }
+#dtNamesBtn:hover { background: #ccfbf1; }
+
+/* home */
+#dtHome { max-width: 860px; margin: 8vh auto 0; padding: 0 12px; }
+#dtHome h1 { font-size: 26px; font-weight: 700; color: #0f172a; margin: 0 0 4px; }
+#dtHome p.dt-sub { color: #64748b; margin: 0 0 26px; font-size: 14px; }
+#dtGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.dt-card { text-align: left; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px; box-shadow: 0 1px 2px rgba(15,23,42,.04); transition: all .15s; display: flex; flex-direction: column; gap: 10px; min-height: 132px; cursor: pointer; }
+.dt-card:hover { border-color: #5eead4; box-shadow: 0 6px 18px rgba(13,148,136,.12); transform: translateY(-1px); }
+.dt-card .ic { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: #f0fdfa; color: #0d9488; }
+.dt-card.primary .ic { background: #1d4ed8; color: #fff; }
+.dt-card .t { font-weight: 700; color: #0f172a; font-size: 16px; }
+.dt-card .d { color: #64748b; font-size: 12.5px; line-height: 1.4; }
+
+/* masked patient names */
+td.dt-name-cell { cursor: pointer; user-select: none; }
+td.dt-name-cell.dt-masked { letter-spacing: 2px; color: #94a3b8 !important; }
