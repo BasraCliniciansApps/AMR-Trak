@@ -37,10 +37,24 @@
   "build": {
     "appId": "iq.amrtrak.desktop",
     "productName": "AMR Trak",
-    "directories": { "output": "dist" },
-    "files": ["main.js", "preload.js", "app/**/*", "package.json"],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*",
+      "package.json"
+    ],
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "build/icon.png"
     },
     "nsis": {
@@ -50,6 +64,13 @@
       "createDesktopShortcut": true,
       "shortcutName": "AMR Trak"
     },
-    "publish": [{ "provider": "github", "owner": "BasraCliniciansApps", "repo": "AMR-Trak" }]
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "BasraCliniciansApps",
+        "repo": "AMR-Trak",
+        "releaseType": "release"
+      }
+    ]
   }
 }
