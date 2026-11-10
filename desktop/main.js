@@ -60,6 +60,32 @@ ipcMain.on('store:set', (e, k, v) => { loadData()[k] = v; scheduleWrite(); });
 ipcMain.on('store:remove', (e, k) => { delete loadData()[k]; scheduleWrite(); });
 ipcMain.on('store:clear', () => { cache = {}; scheduleWrite(); });
 
+const DASHBOARD_URL = 'https://basracliniciansapps.github.io/amr-trak/dashboard.html';
+let dashWin = null;
+// Phone-sized window showing the REAL dashboard (top-level page, own persistent profile) so its
+// service worker + cached data work offline exactly like the installed phone app, and it
+// always follows whatever is published for the dashboard.
+function openDashboard() {
+  if (dashWin && !dashWin.isDestroyed()) { dashWin.focus(); return; }
+  dashWin = new BrowserWindow({
+    useContentSize: true, width: 400, height: 860, resizable: false, maximizable: false, fullscreenable: false,
+    autoHideMenuBar: true, title: 'AMR Trak Dashboard', backgroundColor: '#ffffff',
+    icon: path.join(__dirname, 'build', 'icon.png'),
+    webPreferences: { partition: 'persist:dashboard', contextIsolation: true, nodeIntegration: false }
+  });
+  dashWin.setMenuBarVisibility(false);
+  const wc = dashWin.webContents;
+  wc.on('dom-ready', () => {   // desktop already is the "installed" app: skip the install prompt
+    wc.executeJavaScript("try{localStorage.setItem('amr_dashboard_install_prompted','true')}catch(e){}").catch(() => {});
+  });
+  wc.on('did-fail-load', (e, code, desc, url, isMain) => {
+    if (isMain && code !== -3) dashWin.loadURL('app://local/dashboard-offline.html');
+  });
+  wc.setWindowOpenHandler(({ url }) => { if (/^https?:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });
+  dashWin.loadURL(DASHBOARD_URL);
+}
+ipcMain.on('dashboard:open', openDashboard);
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1366, height: 860, show: false, autoHideMenuBar: true,

@@ -1,0 +1,10 @@
+/* Desktop-only visual layer (injected at build time; web app files are untouched) */
+#mainAppContainer aside { display: none !important; }
+#dtBrand { display: flex; align-items: center; gap: 8px; padding-right: 18px; margin-right: 6px; border-right: 1px solid #e2e8f0; }
+#dtBrand img { height: 30px; width: auto; display: block; }
+#dtBrand .dt-name { font-family: 'Space Grotesk','Inter',system-ui,sans-serif; font-weight: 700; font-size: 21px; line-height: 30px; letter-spacing: -.01em; color: #0f4c5c; }
+#dtBrand .dt-name span { color: #0d9488; }
+#dtExportSlot button { margin: 0 !important; width: auto !important; padding: 8px 16px !important; font-size: 14px; white-space: nowrap; }
+#dtExportSlot { display: flex; align-items: center; }
+#dtDashBtn { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 8px; border: 1px solid #99d6cf; background: #f0fdfa; color: #0f766e; font-weight: 700; font-size: 14px; white-space: nowrap; transition: all .15s; }
+#dtDashBtn:hover { background: #ccfbf1; }

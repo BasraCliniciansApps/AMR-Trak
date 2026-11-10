@@ -5,3 +5,6 @@ contextBridge.exposeInMainWorld('desktopStore', {
   remove: k => ipcRenderer.send('store:remove', k),
   clear: () => ipcRenderer.send('store:clear')
 });
+contextBridge.exposeInMainWorld('desktopApp', {
+  openDashboard: () => ipcRenderer.send('dashboard:open')
+});

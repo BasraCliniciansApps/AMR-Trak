@@ -63,6 +63,23 @@ html = html.replace(/(src|href)="(https?:\/\/[^"]+)"/g, (m, attr, url) => {
   if (!hit) { console.warn('UNMAPPED remote URL:', url); return m; }
   return `${attr}="vendor/${hit[2]}"`;
 });
+// desktop-only UI layer
+html = html.replace('</head>', '<link rel="stylesheet" href="vendor/fonts.css">\n<link rel="stylesheet" href="vendor/desktop-ui.css">\n<script src="vendor/desktop-ui.js"></script>\n</head>');
+fs.copyFileSync(path.join(__dirname, 'dashboard-offline.html'), path.join(out, 'dashboard-offline.html'));
+fs.copyFileSync(path.join(__dirname, 'desktop-ui.css'), path.join(out, 'vendor', 'desktop-ui.css'));
+fs.copyFileSync(path.join(__dirname, 'desktop-ui.js'), path.join(out, 'vendor', 'desktop-ui.js'));
+// bundled fonts (no Google Fonts needed): Inter + Space Grotesk
+fs.mkdirSync(path.join(out, 'vendor', 'fonts'), { recursive: true });
+let fcss = '';
+for (const [pkg, fam, w] of [['inter','Inter',400],['inter','Inter',500],['inter','Inter',600],['inter','Inter',700],['space-grotesk','Space Grotesk',600],['space-grotesk','Space Grotesk',700]]) {
+  const f = `${pkg}-latin-${w}-normal.woff2`;
+  fs.copyFileSync(nm(`@fontsource/${pkg}/files/${f}`), path.join(out, 'vendor', 'fonts', f));
+  fcss += `@font-face{font-family:'${fam}';font-weight:${w};font-style:normal;font-display:swap;src:url(fonts/${f}) format('woff2');}\n`;
+}
+fs.writeFileSync(path.join(out, 'vendor', 'fonts.css'), fcss);
+// css/style.css imports Google Fonts: drop it (fonts are bundled above)
+const sp = path.join(out, 'css', 'style.css');
+fs.writeFileSync(sp, fs.readFileSync(sp, 'utf8').replace(/@import url\('https:\/\/fonts\.googleapis\.com[^;]*;/, ''));
 fs.writeFileSync(path.join(out, 'index.html'), html);
 fs.copyFileSync(path.join(__dirname, 'storage-shim.js'), path.join(out, 'vendor', 'storage-shim.js'));
 
