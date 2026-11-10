@@ -8,6 +8,13 @@
     phone: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
     ctl: '<path stroke-linecap="round" stroke-linejoin="round" d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
     cog: '<path stroke-linecap="round" stroke-linejoin="round" d="M10.3 4.3c.4-1.8 2.9-1.8 3.4 0a1.7 1.7 0 002.6 1.1c1.5-.9 3.3.8 2.4 2.4a1.7 1.7 0 001 2.6c1.8.4 1.8 2.9 0 3.4a1.7 1.7 0 00-1.1 2.6c.9 1.5-.8 3.3-2.4 2.4a1.7 1.7 0 00-2.6 1c-.4 1.8-2.9 1.8-3.4 0a1.7 1.7 0 00-2.6-1.1c-1.5.9-3.3-.8-2.4-2.4a1.7 1.7 0 00-1-2.6c-1.8-.4-1.8-2.9 0-3.4a1.7 1.7 0 001.1-2.6c-.9-1.5.8-3.3 2.4-2.4.9.5 2.1.1 2.6-1z"/><circle cx="12" cy="12" r="3"/>',
+    imp: '<path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"/>',
+    hist: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+    link: '<path stroke-linecap="round" stroke-linejoin="round" d="M13.8 10.2a4 4 0 00-5.7 0l-3 3a4 4 0 105.7 5.7l1-1m-.8-5.3a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/>',
+    bak: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.6-4A12 12 0 0112 3a12 12 0 01-8.6 3A12 12 0 003 9c0 5.6 3.8 10.3 9 11.6 5.2-1.3 9-6 9-11.6 0-1-.1-2-.4-3z"/>',
+    pub: '<path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.9-7.9A5 5 0 1115.9 6 5 5 0 0118 16m-9-3l3-3m0 0l3 3m-3-3v12"/>',
+    book: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.3C10.8 5.2 9.2 4.5 7.5 4.5S4.2 5.2 3 6.3v13c1.2-1.1 2.8-1.8 4.5-1.8s3.3.7 4.5 1.8m0-13c1.2-1.1 2.8-1.8 4.5-1.8s3.3.7 4.5 1.8v13c-1.2-1.1-2.8-1.8-4.5-1.8s-3.3.7-4.5 1.8m0-13v13"/>',
+    warn: '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.9L2.4 17.6A2 2 0 004.1 20.6h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/>',
     info: '<path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>'
   };
   function svg(k) { return '<svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">' + ICONS[k] + '</svg>'; }
@@ -79,24 +86,92 @@
     right.insertBefore(nb, right.firstChild);
 
     // home screen
-    var cards = [
-      ['add', 'Add Isolate', 'Enter a new patient isolate record.', 'openModal()', true],
-      ['db', 'Isolate Database', 'Browse, search, edit and manage records.', 'dtShowRecords()'],
-      ['exp', 'Export Antibiogram', 'Generate the ministry antibiogram file.', 'showExportModal()'],
-      ['phone', 'Dashboard', 'Open the live dashboard in a phone-sized window.', 'desktopApp.openDashboard()'],
-      ['ctl', 'Dashboard Control', 'Manage what the dashboard shows.', 'showDashControl()'],
-      ['cog', 'Settings', 'System settings, backup and restore.', 'showSettingsModal()']
+    var groups = [
+      ['Records', [
+        ['add', 'Add Isolate', 'Enter a new patient isolate record.', 'openModal()', true],
+        ['db', 'Isolate Database', 'Browse, search, edit and manage records.', 'dtShowRecords()']]],
+      ['Data', [
+        ['imp', 'Import Data', 'Extract isolates from WHONET / CSV / TXT files.', 'triggerDataExtractor()'],
+        ['hist', 'Import History', 'Review previous imports.', 'showImportHistory()'],
+        ['link', 'Link Repeat Patients', 'Confirm repeat patients across records.', 'openPatientLink()'],
+        ['bak', 'Backup & Restore', 'Save your data or restore with Smart Merge.', 'showBackupModal()']]],
+      ['Reports', [
+        ['exp', 'Export Antibiogram', 'Generate the ministry antibiogram file.', 'showExportModal()'],
+        ['phone', 'Dashboard', 'Open the live dashboard in a phone-sized window.', 'desktopApp.openDashboard()'],
+        ['ctl', 'Dashboard Control', 'Manage what the dashboard shows.', 'showDashControl()']]],
+      ['System', [
+        ['pub', 'Publish Now', 'Send records to the mobile dashboard immediately.', 'publishNow()', false, 'sync'],
+        ['cog', 'Settings', 'Organism abbreviations and maintenance.', 'showSettingsModal()']]]
     ];
     var home = document.createElement('div'); home.id = 'dtHome';
-    home.innerHTML = '<h1>AMR Trak</h1><p class="dt-sub">Clinical Microbiology Information System</p><div id="dtGrid"></div>';
-    var grid = home.querySelector('#dtGrid');
-    cards.forEach(function (c) {
-      if (c[3].indexOf('desktopApp') === 0 && !window.desktopApp) return;
-      var b = document.createElement('button'); b.type = 'button'; b.className = 'dt-card' + (c[4] ? ' primary' : '');
-      b.innerHTML = '<div class="ic">' + svg(c[0]) + '</div><div class="t">' + c[1] + '</div><div class="d">' + c[2] + '</div>';
-      b.setAttribute('onclick', c[3]); grid.appendChild(b);
+    home.innerHTML = '<p class="dt-sub">Clinical Microbiology Information System</p>';
+    groups.forEach(function (g) {
+      var t = document.createElement('div'); t.className = 'dt-group-title'; t.textContent = g[0]; home.appendChild(t);
+      var grid = document.createElement('div'); grid.className = 'dt-grid'; home.appendChild(grid);
+      g[1].forEach(function (c) {
+        if (c[3].indexOf('desktopApp') === 0 && !window.desktopApp) return;
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'dt-card' + (c[4] ? ' primary' : '');
+        b.innerHTML = '<div class="ic">' + svg(c[0]) + '</div><div class="t">' + c[1] + '</div><div class="d">' + c[2] + '</div>' + (c[5] ? '<div class="st"></div>' : '');
+        b.setAttribute('onclick', c[3]); grid.appendChild(b);
+        if (c[5] === 'sync') { var st = document.getElementById('syncStatus'); if (st) b.querySelector('.st').appendChild(st); }   // keep the app's own status element
+      });
     });
     main.insertBefore(home, main.firstChild);
+
+
+    /* ---- Settings: moved items live on the home screen; the rest become collapsible sections ---- */
+    var sbox = document.querySelector('#settingsModal .space-y-8');
+    if (sbox) {
+      var chev = '<svg class="dt-chev" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>';
+      Array.prototype.slice.call(sbox.children).forEach(function (sec) {
+        var h = sec.querySelector('h4'); if (!h) return;
+        var txt = h.textContent;
+        if (/Publishing|Extractor|Backup/i.test(txt)) { sec.hidden = true; sec.style.display = 'none'; return; }   // now on the home screen (nodes stay in the DOM)
+        var danger = /Danger/i.test(txt), icon = danger ? 'warn' : 'book';
+        h.textContent = txt.replace(/^[^A-Za-z]+/, '');
+        var headBlock = h.closest('div'); while (headBlock && headBlock.parentElement !== sec) headBlock = headBlock.parentElement;
+        var p = sec.querySelector('p');
+        var head = document.createElement('div'); head.className = 'dt-sec-head';
+        head.innerHTML = '<span class="dt-ic">' + svg(icon) + '</span>';
+        var tbox = document.createElement('div'); tbox.appendChild(h); if (p && !tbox.contains(p) && headBlock === h.parentElement) {}
+        if (p) { var pc = p; if (!danger) { tbox.appendChild(pc); } else { tbox.appendChild(pc); } }
+        head.appendChild(tbox); head.insertAdjacentHTML('beforeend', chev);
+        var body = document.createElement('div'); body.className = 'dt-sec-body';
+        while (sec.firstChild) body.appendChild(sec.firstChild);
+        // the original header wrapper (if any) is now empty: drop it
+        Array.prototype.slice.call(body.children).forEach(function (el) { if (!el.textContent.trim() && !el.querySelector('input,button,table,select')) el.remove(); });
+        sec.className = 'dt-sec dt-collapsed' + (danger ? ' dt-danger' : '');
+        sec.appendChild(head); sec.appendChild(body);
+        head.onclick = function () { sec.classList.toggle('dt-collapsed'); };
+      });
+    }
+
+    /* ---- Add/Edit form: separate Name and ID fields (same nodes, ids and handlers) ---- */
+    var nm = document.getElementById('p_name'), idf = document.getElementById('p_id');
+    if (nm && idf && nm.parentElement === idf.parentElement) {
+      var wrap = nm.parentElement, lab = wrap.querySelector('label');
+      wrap.className = 'md:col-span-2'; if (lab) lab.textContent = 'Patient Name';
+      var w2 = document.createElement('div'); w2.className = 'md:col-span-1';
+      w2.innerHTML = '<label class="block text-xs font-bold text-slate-600 mb-1">Patient ID</label>';
+      w2.appendChild(idf); wrap.insertAdjacentElement('afterend', w2);
+      nm.classList.remove('rounded-t-lg', 'border-b-0'); idf.classList.remove('rounded-b-lg', 'bg-slate-50');
+    }
+
+    /* ---- Cancel / close of the record form asks first, but only if the user typed something ---- */
+    var fm = document.getElementById('formModal');
+    if (fm && window.Swal) {
+      var dirty = false;
+      fm.addEventListener('input', function (e) { if (e.isTrusted) dirty = true; }, true);
+      fm.addEventListener('change', function (e) { if (e.isTrusted) dirty = true; }, true);
+      new MutationObserver(function () { if (fm.classList.contains('hidden')) dirty = false; }).observe(fm, { attributes: true, attributeFilter: ['class'] });
+      fm.addEventListener('click', function (e) {
+        var btn = e.target.closest('button[onclick="closeModal()"]'); if (!btn || !dirty) return;
+        e.stopImmediatePropagation(); e.preventDefault();
+        Swal.fire({ title: 'Discard this record?', text: 'The information you entered has not been saved.', icon: 'warning', showCancelButton: true,
+          confirmButtonText: 'Discard', cancelButtonText: 'Keep editing', confirmButtonColor: '#dc2626', cancelButtonColor: '#64748b' })
+          .then(function (r) { if (r.isConfirmed) { dirty = false; closeModal(); } });
+      }, true);
+    }
 
     // keep names masked when the table redraws (search / sort / page / edit)
     if (window.jQuery) $(document).on('draw.dt init.dt', '#recordsTable', function () { setTimeout(applyMask, 0); });
