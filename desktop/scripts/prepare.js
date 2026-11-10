@@ -16,6 +16,7 @@ for (const f of ['index.html', 'icon.png', 'organisms_dictionary.json', 'specime
 fs.cpSync(path.join(root, 'js'), path.join(out, 'js'), { recursive: true });
 fs.cpSync(path.join(root, 'img'), path.join(out, 'img'), { recursive: true });
 fs.cpSync(path.join(root, 'css'), path.join(out, 'css'), { recursive: true });
+fs.mkdirSync(path.join(__dirname, '..', 'build'), { recursive: true });
 fs.copyFileSync(path.join(root, 'icon.png'), path.join(__dirname, '..', 'build', 'icon.png'));
 
 // 2) vendor libraries (url fragment -> node_modules file)
