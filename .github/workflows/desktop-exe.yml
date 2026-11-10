@@ -2,6 +2,7 @@ name: Build AMR Trak Windows installer
 on:
   push:
     tags: ['desktop-v*']
+    branches: ['desktop-exe']
   workflow_dispatch:
 permissions:
   contents: write
@@ -16,7 +17,11 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: npm install --no-audit --no-fund
-      - name: Build + publish installer to GitHub Release
-        run: npm run release
+      - name: Build installer (tag => publish to Release, otherwise artifact only)
+        run: npm run ${{ startsWith(github.ref, 'refs/tags/') && 'release' || 'dist' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AMR-Trak-Setup
+          path: desktop/dist/*.exe
