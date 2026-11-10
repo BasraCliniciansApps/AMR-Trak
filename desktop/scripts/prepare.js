@@ -17,7 +17,8 @@ fs.cpSync(path.join(root, 'js'), path.join(out, 'js'), { recursive: true });
 fs.cpSync(path.join(root, 'img'), path.join(out, 'img'), { recursive: true });
 fs.cpSync(path.join(root, 'css'), path.join(out, 'css'), { recursive: true });
 fs.mkdirSync(path.join(__dirname, '..', 'build'), { recursive: true });
-fs.copyFileSync(path.join(root, 'icon.png'), path.join(__dirname, '..', 'build', 'icon.png'));
+fs.copyFileSync(path.join(__dirname, '..', 'assets', 'icon.png'), path.join(__dirname, '..', 'build', 'icon.png'));
+fs.copyFileSync(path.join(__dirname, '..', 'assets', 'icon.ico'), path.join(__dirname, '..', 'build', 'icon.ico'));
 
 // 2) vendor libraries (url fragment -> node_modules file)
 const libs = [
