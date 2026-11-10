@@ -481,7 +481,7 @@ function yaQuality() {
     });
     const list = a => a.length ? a.join(', ') : 'None';
     const noAstOrg = {}; let noAstTot = 0, noAstKnown = false;
-    try { const lq = JSON.parse(localStorage.getItem('amr_dash_lab')) || {}; if (lq.noAst) { noAstKnown = true; yaMonths(y).forEach(m => Object.keys(lq.noAst[m] || {}).forEach(o2 => { noAstOrg[o2] = (noAstOrg[o2] || 0) + lq.noAst[m][o2]; noAstTot += lq.noAst[m][o2]; })); } } catch (e) {}
+    try { const lq = getLabData(); if (lq.noAst) { noAstKnown = true; yaMonths(y).forEach(m => Object.keys(lq.noAst[m] || {}).forEach(o2 => { noAstOrg[o2] = (noAstOrg[o2] || 0) + lq.noAst[m][o2]; noAstTot += lq.noAst[m][o2]; })); } } catch (e) {}
     const noAstList = Object.keys(noAstOrg).sort((a, b) => noAstOrg[b] - noAstOrg[a]).map(o2 => `${escapeHtmlDash(o2)} (${noAstOrg[o2]})`);
     const rows = [
         ['Records in the year', n, ''],

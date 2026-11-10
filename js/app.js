@@ -222,7 +222,8 @@ async function syncLocalToCloud(opts) {
             localStorage.setItem('amr_hash_salt', salt);
         }
         const publicRecords = await buildPublicRecords(cloudReadyRecords, salt);
-        const labQuality = JSON.parse(localStorage.getItem('amr_lab_quality') || '{}');
+        const labQuality = pruneFutureLab(JSON.parse(localStorage.getItem('amr_lab_quality') || '{}'));
+        try { localStorage.setItem('amr_lab_quality', JSON.stringify(labQuality)); } catch (e) {}
 
         const rev = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
         const stamp = firebase.firestore.FieldValue.serverTimestamp();
@@ -772,7 +773,9 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
     };
 
     // Lab-quality counts (growth / no growth / contaminated cultures): stored as aggregates only, never as isolates
-    const labAgg = buildLabQualityFromRows(rawData, { idx: { org: idxOrg, ward: idxWard, sample: idxSample, date: idxDate, pid: idxPatientID }, wardMap: wardMap, specimenMap: externalSpecimenMap, astCols: abxColumns.map(c => c.index), orgName: c => externalOrgMap[c] || whonetOrgMap[c] || (c.charAt(0).toUpperCase() + c.slice(1)) });
+    const labCtx = { idx: { org: idxOrg, ward: idxWard, sample: idxSample, date: idxDate, pid: idxPatientID }, wardMap: wardMap, specimenMap: externalSpecimenMap, astCols: abxColumns.map(c => c.index), orgName: c => externalOrgMap[c] || whonetOrgMap[c] || (c.charAt(0).toUpperCase() + c.slice(1)) };
+    const labAgg = buildLabQualityFromRows(rawData, labCtx);
+    report.futureCultures = labCtx.futureRows || [];
 
     for(let i = 1; i < rawData.length; i++) {
         const cols = rawData[i];
@@ -1067,6 +1070,7 @@ function buildImportReport(report, audit, newRecords, skippedCount) {
 
     // --- needs attention ---
     if (report.blankOrg) attention.push({ t: `Rows with susceptibility results but no organism name (not imported): ${report.blankOrg}`, d: 'Fix the organism in WHONET and import again.' });
+    if (report.futureCultures && report.futureCultures.length) attention.push({ t: `Cultures dated in the future (not counted): ${report.futureCultures.length} (${report.futureCultures.slice(0, 10).map(escapeHtml).join(', ')})`, d: 'The collection date is after today, usually a year typed wrongly. Fix the date in WHONET and import again.' });
     if (report.noSpecimen.length) attention.push({ t: `Rows without a specimen type (not imported): ${report.noSpecimen.length} (${report.noSpecimen.slice(0, 10).map(escapeHtml).join(', ')})`, d: 'Complete the specimen type in WHONET and import again, or add the record manually.' });
     if (audit.unknownOrg.size) attention.push({ t: `Unrecognised organism codes: ${topList(audit.unknownOrg)}`, d: 'These were stored under the raw code. Add them to organisms_dictionary.json so they get a proper name.' });
     if (audit.ignoredAbx.size) auto.push(`Legacy WHONET antibiotic columns recognised and not imported (outside the current CLSI M100 lists): ${topList(audit.ignoredAbx)}`);
@@ -1587,7 +1591,7 @@ function showInstallGuide() {
 function clearAllDatabase() {
     Swal.fire({
         title: 'Are you absolutely sure?',
-        text: "This will permanently delete ALL patient isolate records. Your custom dictionaries and settings will NOT be affected. You cannot undo this action!",
+        text: "This will permanently delete ALL patient isolate records and the stored culture counts. Your custom dictionaries and settings will NOT be affected. You cannot undo this action!",
         icon: 'error',
         showCancelButton: true,
         confirmButtonColor: '#dc2626',
@@ -1597,6 +1601,7 @@ function clearAllDatabase() {
         if (result.isConfirmed) {
             // Delete ONLY the records key from local storage
             localStorage.removeItem('amr_records');
+            localStorage.removeItem('amr_lab_quality');   // culture counts (growth / no growth) are built from the same imports
             
             // Refresh the data table to show it is empty
             initDataTable();

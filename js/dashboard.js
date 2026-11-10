@@ -578,7 +578,7 @@ function applyCloudSnap(snap) {
             try {
                 localStorage.setItem('amr_dash_records', JSON.stringify(cloudRecords));
                 localStorage.setItem('amr_live_settings', JSON.stringify(cloudSettings));
-                localStorage.setItem('amr_dash_lab', JSON.stringify(data.labQuality || {}));
+                localStorage.setItem('amr_dash_lab', JSON.stringify(pruneFutureLab(data.labQuality) || {}));
                 if (data.wardClass && typeof data.wardClass === 'object') localStorage.setItem('amr_dash_ward_class', JSON.stringify(data.wardClass));
             } catch (e) { console.warn('Local cache full', e); }
 
