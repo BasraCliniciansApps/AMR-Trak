@@ -177,4 +177,35 @@
     if (window.jQuery) $(document).on('draw.dt init.dt', '#recordsTable', function () { setTimeout(applyMask, 0); });
     setMode('home');
   });
+
+  /* ---- one look for every popup: normalise button colours, drop emoji from titles/buttons (line-style UI) ---- */
+  (function () {
+    var EMO = /[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]+\s*/gu;
+    var RED = /^(#dc2626|#e11d48|#ef4444|#b91c1c|red)$/i;
+    function clean(t) { return typeof t === 'string' ? t.replace(EMO, '') : t; }
+    function scrub(root) {
+      var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), n, list = [];
+      while ((n = w.nextNode())) { if (EMO.test(n.nodeValue)) list.push(n); EMO.lastIndex = 0; }
+      list.forEach(function (t) { t.nodeValue = t.nodeValue.replace(EMO, ''); });
+    }
+    function install() {
+      if (!window.Swal || Swal.__dtWrapped) return; Swal.__dtWrapped = true;
+      var orig = Swal.fire.bind(Swal);
+      Swal.fire = function () {
+        var a = arguments;
+        if (a.length && typeof a[0] === 'object' && a[0] !== null) {
+          var o = Object.assign({}, a[0]);
+          ['title', 'confirmButtonText', 'cancelButtonText', 'denyButtonText'].forEach(function (k) { if (o[k]) o[k] = clean(o[k]); });
+          o.confirmButtonColor = RED.test(o.confirmButtonColor || '') ? '#dc2626' : '#0d9488';
+          o.denyButtonColor = '#dc2626'; o.cancelButtonColor = '#ffffff';
+          var od = o.didOpen;
+          o.didOpen = function (el) { scrub(el); if (od) return od.apply(this, arguments); };
+          return orig(o);
+        }
+        if (typeof a[0] === 'string') return orig(clean(a[0]), a[1], a[2]);
+        return orig.apply(null, a);
+      };
+    }
+    install(); document.addEventListener('DOMContentLoaded', install);
+  })();
 })();
