@@ -69,7 +69,7 @@ function openDashboard() {
   if (dashWin && !dashWin.isDestroyed()) { dashWin.focus(); return; }
   // phone-shaped frameless window: the bezel is drawn by phone-frame.html, the real dashboard
   // runs in a child view (top-level page with its own persistent profile => SW + cache work offline)
-  const W = 446, H = 880, SX = 28, SY = 40, SW = 390, SH = 800;
+  const W = 482, H = 880, SX = 28, SY = 40, SW = 390, SH = 800;
   dashWin = new BrowserWindow({
     width: W, height: H, useContentSize: true, frame: false, transparent: true, hasShadow: false,
     resizable: false, maximizable: false, fullscreenable: false, backgroundColor: '#00000000',
