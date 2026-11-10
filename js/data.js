@@ -1011,6 +1011,16 @@ function getMinistryCategory(name) {
 // A "culture" = one patient + date + specimen type (polymicrobial rows count once).
 // Status priority: growth > contaminated > no growth.
 // =====================================================================
+// A culture cannot be collected after today: months in the future come from date typos in the source file
+// (e.g. 2027 instead of 2026). They are never stored, and any already stored are dropped.
+function currentYearMonth() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function pruneFutureLab(lq) {
+    if (!lq || typeof lq !== 'object' || !lq.months) return lq;
+    const cur = currentYearMonth(), out = Object.assign({}, lq, { months: {} });
+    Object.keys(lq.months).forEach(m => { if (m <= cur) out.months[m] = lq.months[m]; });
+    if (lq.noAst) { out.noAst = {}; Object.keys(lq.noAst).forEach(m => { if (m <= cur) out.noAst[m] = lq.noAst[m]; }); }
+    return out;
+}
 function parseWhonetDateParts(rawDate) {
     rawDate = String(rawDate || '').trim();
     if (!rawDate) return '';
@@ -1041,6 +1051,7 @@ function buildLabQualityFromRows(rows, ctx) {
         const rawSample = ctx.idx.sample > -1 && cols[ctx.idx.sample] ? String(cols[ctx.idx.sample]).toLowerCase() : '';
         const month = parseWhonetDateParts(ctx.idx.date > -1 ? cols[ctx.idx.date] : '');
         if (!rawSample || !month) continue;
+        if (month > currentYearMonth()) { (ctx.futureRows = ctx.futureRows || []).push(String(ctx.idx.pid > -1 && cols[ctx.idx.pid] ? cols[ctx.idx.pid] : 'row ' + i).trim() + ' (' + String(cols[ctx.idx.date] || '').trim() + ')'); continue; }
         const sample = ctx.specimenMap[rawSample] || (rawSample.charAt(0).toUpperCase() + rawSample.slice(1));
         const rawWard = ctx.idx.ward > -1 && cols[ctx.idx.ward] ? String(cols[ctx.idx.ward]).toLowerCase() : '';
         const ward = ctx.wardMap[rawWard] || (rawWard ? rawWard.charAt(0).toUpperCase() + rawWard.slice(1) : '-');
@@ -1078,6 +1089,7 @@ function labMonthTotal(monthObj) {
 }
 // Replaces a month only when the new import holds at least as many cultures (a partial file never shrinks a complete month)
 function mergeLabQuality(existing, incoming) {
+    existing = pruneFutureLab(existing); incoming = pruneFutureLab(incoming) || {};
     const out = { v: 1, months: Object.assign({}, (existing && existing.months) || {}) };
     if (existing && existing.noAst) out.noAst = Object.assign({}, existing.noAst);
     const kept = [];

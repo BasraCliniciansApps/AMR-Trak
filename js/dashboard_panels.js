@@ -176,7 +176,7 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 function availableMonths() {
     const set = new Set();
     getAllDashRecordsUnscoped().forEach(r => { if (r.Date && /^\d{4}-\d{2}/.test(r.Date)) set.add(r.Date.slice(0, 7)); });
-    try { Object.keys((JSON.parse(localStorage.getItem('amr_dash_lab')) || {}).months || {}).forEach(m => set.add(m)); } catch (e) {}
+    try { Object.keys(getLabData().months || {}).forEach(m => set.add(m)); } catch (e) {}
     return [...set].sort();
 }
 function monthLabel(m) { return MONTH_NAMES[parseInt(m.slice(5, 7), 10) - 1] + ' ' + m.slice(0, 4); }
@@ -399,7 +399,7 @@ function renderPeriodPickerOnce(id, cb) {
 }
 
 // ---------- Culture Overview tab ----------
-function getLabData() { try { return JSON.parse(localStorage.getItem('amr_dash_lab')) || {}; } catch (e) { return {}; } }
+function getLabData() { try { return pruneFutureLab(JSON.parse(localStorage.getItem('amr_dash_lab'))) || {}; } catch (e) { return {}; } }
 
 function renderLabQuality() {
     if (!document.getElementById('viewLab')) return;
