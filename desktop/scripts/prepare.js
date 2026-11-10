@@ -58,6 +58,8 @@ html = html.replace(/<script src="https:\/\/cdn\.tailwindcss\.com"><\/script>/, 
 html = html.replace(/<script>\s*tailwind\.config\s*=[\s\S]*?<\/script>/, '');
 // storage shim must run before everything else
 html = html.replace(/<head>/i, '<head>\n<script src="vendor/storage-shim.js"></script>');
+// English-only UI: patient name field is left-to-right
+html = html.replace(' dir="rtl" lang="ar"', ' dir="ltr" lang="en"');
 // map every remaining remote URL to its vendored file
 html = html.replace(/(src|href)="(https?:\/\/[^"]+)"/g, (m, attr, url) => {
   const hit = libs.find(([frag]) => url.includes(frag));
