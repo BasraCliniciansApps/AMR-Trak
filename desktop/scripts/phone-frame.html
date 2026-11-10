@@ -3,13 +3,17 @@
   html,body{margin:0;height:100%;background:transparent;overflow:hidden;user-select:none}
   .body{position:absolute;left:8px;top:0;width:430px;height:880px;box-sizing:border-box;border-radius:56px;
     background:linear-gradient(145deg,#1f2937,#0b0f14 40%,#111827);border:3px solid #374151;
-    box-shadow:inset 0 0 0 2px #000, 0 10px 30px rgba(0,0,0,.45);-webkit-app-region:drag}
+    box-shadow:inset 0 0 0 2px #000, 0 10px 30px rgba(0,0,0,.45)}
+  /* drag only on the bezel strips; the screen area (x28..418, y40..840) must stay free for clicks */
+  .drag{position:absolute;-webkit-app-region:drag}
+  .d-top{left:8px;top:0;width:430px;height:40px}.d-bot{left:8px;top:840px;width:430px;height:40px}
+  .d-l{left:8px;top:40px;width:20px;height:800px}.d-r{left:418px;top:40px;width:20px;height:800px}
   .side{position:absolute;width:4px;border-radius:2px 0 0 2px;background:#374151}
   .side.r{left:auto;border-radius:0 2px 2px 0}
   .speaker{position:absolute;top:15px;left:50%;transform:translateX(-50%);width:78px;height:8px;border-radius:6px;background:#050709;box-shadow:inset 0 1px 2px #000}
   .cam{position:absolute;top:13px;left:calc(50% + 52px);width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#334155,#020617 70%)}
   .home{position:absolute;bottom:13px;left:50%;transform:translateX(-50%);width:130px;height:5px;border-radius:3px;background:#9ca3af;opacity:.7}
-  .btns{position:absolute;top:14px;left:34px;display:flex;gap:8px;-webkit-app-region:no-drag}
+  .btns{position:absolute;top:14px;left:34px;display:flex;gap:8px;-webkit-app-region:no-drag;z-index:5}
   .btns button{width:13px;height:13px;border-radius:50%;border:0;padding:0;cursor:pointer;opacity:.9}
   .btns .c{background:#ef4444}.btns .m{background:#f59e0b}.btns button:hover{opacity:1;filter:brightness(1.15)}
 </style>
@@ -20,3 +24,4 @@
   <div class="speaker"></div><div class="cam"></div><div class="home"></div>
   <div class="btns"><button class="c" title="Close" onclick="desktopApp.closePhone()"></button><button class="m" title="Minimize" onclick="desktopApp.minimizePhone()"></button></div>
 </div>
+<div class="drag d-top"></div><div class="drag d-bot"></div><div class="drag d-l"></div><div class="drag d-r"></div>
