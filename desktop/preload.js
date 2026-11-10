@@ -6,5 +6,7 @@ contextBridge.exposeInMainWorld('desktopStore', {
   clear: () => ipcRenderer.send('store:clear')
 });
 contextBridge.exposeInMainWorld('desktopApp', {
-  openDashboard: () => ipcRenderer.send('dashboard:open')
+  openDashboard: () => ipcRenderer.send('dashboard:open'),
+  closePhone: () => ipcRenderer.send('phone:close'),
+  minimizePhone: () => ipcRenderer.send('phone:minimize')
 });

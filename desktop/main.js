@@ -1,4 +1,4 @@
-const { app, BrowserWindow, protocol, net, ipcMain, shell, Menu } = require('electron');
+const { app, BrowserWindow, WebContentsView, protocol, net, ipcMain, shell, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
@@ -67,26 +67,37 @@ let dashWin = null;
 // always follows whatever is published for the dashboard.
 function openDashboard() {
   if (dashWin && !dashWin.isDestroyed()) { dashWin.focus(); return; }
+  // phone-shaped frameless window: the bezel is drawn by phone-frame.html, the real dashboard
+  // runs in a child view (top-level page with its own persistent profile => SW + cache work offline)
+  const W = 446, H = 880, SX = 28, SY = 40, SW = 390, SH = 800;
   dashWin = new BrowserWindow({
-    useContentSize: true, width: 400, height: 860, resizable: false, maximizable: false, fullscreenable: false,
-    autoHideMenuBar: true, title: 'AMR Trak Dashboard', backgroundColor: '#ffffff',
-    icon: path.join(__dirname, 'build', 'icon.png'),
-    webPreferences: { partition: 'persist:dashboard', contextIsolation: true, nodeIntegration: false }
+    width: W, height: H, useContentSize: true, frame: false, transparent: true, hasShadow: false,
+    resizable: false, maximizable: false, fullscreenable: false, backgroundColor: '#00000000',
+    title: 'AMR Trak Dashboard', icon: path.join(__dirname, 'build', 'icon.png'),
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
   });
   dashWin.setMenuBarVisibility(false);
-  const wc = dashWin.webContents;
+  dashWin.loadURL('app://local/phone-frame.html');
+  const view = new WebContentsView({ webPreferences: { partition: 'persist:dashboard', contextIsolation: true, nodeIntegration: false } });
+  dashWin.contentView.addChildView(view);
+  view.setBounds({ x: SX, y: SY, width: SW, height: SH });
+  try { view.setBorderRadius(34); } catch (e) { /* older Electron */ }
+  const wc = view.webContents;
   wc.on('dom-ready', () => {   // desktop already is the "installed" app: skip the install prompt
     wc.executeJavaScript("try{localStorage.setItem('amr_dashboard_install_prompted','true')}catch(e){}").catch(() => {});
   });
   wc.on('did-navigate', (e, url, code) => {          // 404 / server error page -> friendly message
-    if (/^https?:/.test(url) && code >= 400) dashWin.loadURL('app://local/dashboard-offline.html');
+    if (/^https?:/.test(url) && code >= 400) wc.loadURL('app://local/dashboard-offline.html');
   });
   wc.on('did-fail-load', (e, code, desc, url, isMain) => {
-    if (isMain && code !== -3) dashWin.loadURL('app://local/dashboard-offline.html');
+    if (isMain && code !== -3) wc.loadURL('app://local/dashboard-offline.html');
   });
   wc.setWindowOpenHandler(({ url }) => { if (/^https?:/.test(url)) shell.openExternal(url); return { action: 'deny' }; });
-  dashWin.loadURL(DASHBOARD_URL);
+  wc.loadURL(DASHBOARD_URL);
+  dashWin.on('closed', () => { try { wc.close(); } catch (e) {} dashWin = null; });
 }
+ipcMain.on('phone:close', () => { if (dashWin && !dashWin.isDestroyed()) dashWin.close(); });
+ipcMain.on('phone:minimize', () => { if (dashWin && !dashWin.isDestroyed()) dashWin.minimize(); });
 ipcMain.on('dashboard:open', openDashboard);
 
 function createWindow() {

@@ -66,6 +66,7 @@ html = html.replace(/(src|href)="(https?:\/\/[^"]+)"/g, (m, attr, url) => {
 });
 // desktop-only UI layer
 html = html.replace('</head>', '<link rel="stylesheet" href="vendor/fonts.css">\n<link rel="stylesheet" href="vendor/desktop-ui.css">\n<script src="vendor/desktop-ui.js"></script>\n</head>');
+fs.copyFileSync(path.join(__dirname, 'phone-frame.html'), path.join(out, 'phone-frame.html'));
 fs.copyFileSync(path.join(__dirname, 'dashboard-offline.html'), path.join(out, 'dashboard-offline.html'));
 fs.copyFileSync(path.join(__dirname, 'desktop-ui.css'), path.join(out, 'vendor', 'desktop-ui.css'));
 fs.copyFileSync(path.join(__dirname, 'desktop-ui.js'), path.join(out, 'vendor', 'desktop-ui.js'));
