@@ -104,7 +104,7 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1366, height: 860, show: false, autoHideMenuBar: true,
     icon: path.join(__dirname, 'build', 'icon.png'),
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, nodeIntegrationInSubFrames: true }
   });
   win.maximize();
   win.once('ready-to-show', () => win.show());

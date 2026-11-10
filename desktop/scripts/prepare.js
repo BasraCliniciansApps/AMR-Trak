@@ -11,7 +11,7 @@ fs.mkdirSync(path.join(out, 'vendor'), { recursive: true });
 fs.mkdirSync(path.join(out, 'vendor', 'images'), { recursive: true });
 
 // 1) copy web app files needed by the PC (data entry) page
-for (const f of ['index.html', 'icon.png', 'organisms_dictionary.json', 'specimens_dictionary.json', 'Antibiogram_5.xlsx'])
+for (const f of ['index.html', 'control.html', 'manifest-control.json', 'icon.png', 'organisms_dictionary.json', 'specimens_dictionary.json', 'Antibiogram_5.xlsx'])
   fs.copyFileSync(path.join(root, f), path.join(out, f));
 fs.cpSync(path.join(root, 'js'), path.join(out, 'js'), { recursive: true });
 fs.cpSync(path.join(root, 'img'), path.join(out, 'img'), { recursive: true });
@@ -84,6 +84,18 @@ const sp = path.join(out, 'css', 'style.css');
 fs.writeFileSync(sp, fs.readFileSync(sp, 'utf8').replace(/@import url\('https:\/\/fonts\.googleapis\.com[^;]*;/, ''));
 fs.writeFileSync(path.join(out, 'index.html'), html);
 fs.copyFileSync(path.join(__dirname, 'storage-shim.js'), path.join(out, 'vendor', 'storage-shim.js'));
+
+// control.html (embedded Dashboard Control page): same treatment
+let ctl = fs.readFileSync(path.join(out, 'control.html'), 'utf8');
+ctl = ctl.replace(/<head>/i, '<head>\n<link rel="stylesheet" href="vendor/fonts.css">\n<script src="vendor/storage-shim.js"></script>');
+ctl = ctl.replace(/(src|href)="(https?:\/\/[^"]+)"/g, (m, attr, url) => {
+  const hit = libs.find(([frag]) => url.includes(frag));
+  if (!hit) { console.warn('UNMAPPED remote URL (control):', url); return m; }
+  return `${attr}="vendor/${hit[2]}"`;
+});
+fs.writeFileSync(path.join(out, 'control.html'), ctl);
+const leftCtl = ctl.match(/(src|href)="https?:\/\/[^"]+"/g);
+console.log(leftCtl ? 'CONTROL REMOTE:\n' + leftCtl.join('\n') : 'OK: no remote URLs left in control.html');
 
 const left = html.match(/(src|href)="https?:\/\/[^"]+"/g);
 console.log(left ? 'REMAINING REMOTE:\n' + left.join('\n') : 'OK: no remote URLs left in index.html');
