@@ -683,7 +683,7 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
     const audit = { unknownOrg: new Map(), unknownWard: new Map(), unknownSpec: new Map(), unmappedAbx: new Map(), ignoredAbx: new Map(), renamed: new Map() };
     // Legacy WHONET codes for agents outside the current CLSI M100 / WHO AWaRe lists: recognised and deliberately not imported
     const KNOWN_IGNORED_ABX = new Set(['KAC', 'GAT', 'LOM', 'PNV', 'GEM', 'CPR', 'CIC', 'CCV', 'CLA', 'OPT']);
-    const report = { noSpecimen: [], strepPenDisk: 0, duplicates: 0, blankOrg: 0, added: 0, noGrowth: 0, noSri: 0, noDate: 0, vancDisk: 0, vancTypedIR: 0, vancInvalidMic: 0, vancMismatch: 0, vancCandidates: [], vancNeedsMic: 0, vancFromMic: 0, valuesFile: valuesAligned, valuesFileIgnored: !!valuesTable && !valuesAligned };
+    const report = { noSpecimen: [], genericSpecimen: [], strepPenDisk: 0, duplicates: 0, blankOrg: 0, added: 0, noGrowth: 0, noSri: 0, noDate: 0, vancDisk: 0, vancTypedIR: 0, vancInvalidMic: 0, vancMismatch: 0, vancCandidates: [], vancNeedsMic: 0, vancFromMic: 0, valuesFile: valuesAligned, valuesFileIgnored: !!valuesTable && !valuesAligned };
 
     const abxColumns = [];
     const allPossibleAbxs = [...abxList, ...getCustomAntibiotics().map(a=>a.name)];
@@ -858,6 +858,8 @@ function parseAndInjectData(rawData, externalOrgMap, externalSpecimenMap, event,
         let sample = externalSpecimenMap[rawSample] || (rawSample ? rawSample.charAt(0).toUpperCase() + rawSample.slice(1) : "-");
         // No specimen type: the source cannot be analysed (and screening cultures cannot be excluded), so the row is not imported
         if (!rawSample || sample === '-') { skippedCount++; report.noSpecimen.push(patientID || ('row ' + (i + 1))); continue; }
+        // A generic label (Other, Unknown...) names no real source, so the row cannot be analysed by specimen and is not imported
+        if (/^(other|others|unknown|not specified|n\/a)$/i.test(sample) || /^(other|others|unknown|not specified|n\/a)$/i.test(rawSample)) { skippedCount++; report.genericSpecimen.push(patientID || ('row ' + (i + 1))); continue; }
 
         let rawDate = idxDate > -1 && cols[idxDate] ? String(cols[idxDate]).trim() : "";
         let formattedDate = ""; 
@@ -1071,6 +1073,7 @@ function buildImportReport(report, audit, newRecords, skippedCount) {
     // --- needs attention ---
     if (report.blankOrg) attention.push({ t: `Rows with susceptibility results but no organism name (not imported): ${report.blankOrg}`, d: 'Fix the organism in WHONET and import again.' });
     if (report.futureCultures && report.futureCultures.length) attention.push({ t: `Cultures dated in the future (not counted): ${report.futureCultures.length} (${report.futureCultures.slice(0, 10).map(escapeHtml).join(', ')})`, d: 'The collection date is after today, usually a year typed wrongly. Fix the date in WHONET and import again.' });
+    if (report.genericSpecimen.length) attention.push({ t: `Rows with a generic specimen label "Other" or "Unknown" (not imported): ${report.genericSpecimen.length} (${report.genericSpecimen.slice(0, 10).map(escapeHtml).join(', ')})`, d: 'Enter the actual specimen type in the source file and import these rows again.' });
     if (report.noSpecimen.length) attention.push({ t: `Rows without a specimen type (not imported): ${report.noSpecimen.length} (${report.noSpecimen.slice(0, 10).map(escapeHtml).join(', ')})`, d: 'Complete the specimen type in WHONET and import again, or add the record manually.' });
     if (audit.unknownOrg.size) attention.push({ t: `Unrecognised organism codes: ${topList(audit.unknownOrg)}`, d: 'These were stored under the raw code. Add them to organisms_dictionary.json so they get a proper name.' });
     if (audit.ignoredAbx.size) auto.push(`Legacy WHONET antibiotic columns recognised and not imported (outside the current CLSI M100 lists): ${topList(audit.ignoredAbx)}`);
