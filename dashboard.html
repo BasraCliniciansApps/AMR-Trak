@@ -298,7 +298,7 @@
 
     <header class="bg-white px-4 py-3 sticky top-0 z-40 border-b border-slate-200 shadow-sm flex flex-wrap justify-between items-center">
         <div class="flex items-center gap-2 -ml-2" id="brand">
-            <img src="img/logo.png?v=11.118" alt="AMR Trak" style="height:30px;width:auto;display:block">
+            <img src="img/logo.png?v=11.119" alt="AMR Trak" style="height:30px;width:auto;display:block">
             <span id="brandName" style="font-family:'Space Grotesk','Inter',system-ui,sans-serif;font-weight:700;font-size:21px;line-height:30px;letter-spacing:-.01em;color:#0f4c5c">AMR <span style="color:#0d9488">Trak</span></span>
                         <span id="connection_status" title="Live connection" aria-label="Live connection" class="flex items-center justify-center text-emerald-600 bg-emerald-50 rounded-full border border-emerald-100" style="width:14px;height:14px;margin-left:-6px;align-self:flex-start;margin-top:4px">
                 <span class="relative flex h-2 w-2"><span class="animate-ping absolute h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span>
@@ -478,12 +478,12 @@
 
             <!-- 2. ANTIMICROBIAL EFFICACY PROFILE (Collapsible) -->
             <div data-sec="abx" class="mobile-card border border-slate-200 p-0 overflow-hidden mb-4">
-                <button onclick="toggleAbxSearch()" class="w-full flex justify-between items-center bg-blue-50 p-3 text-left focus:outline-none border-b border-blue-100">
-                    <span class="text-xs font-bold text-blue-800 flex items-center gap-2">
+                <button onclick="toggleAbxSearch()" class="w-full flex justify-between items-center bg-sky-50 p-3 text-left focus:outline-none border-b border-sky-100">
+                    <span class="text-xs font-bold text-sky-800 flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                         Antimicrobial In Vitro Activity Profile
                     </span>
-                    <svg id="abx_icon" class="w-4 h-4 text-blue-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    <svg id="abx_icon" class="w-4 h-4 text-sky-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 </button>
                 <div id="abx_content" class="hidden p-4 space-y-3 bg-white">
                     
@@ -529,12 +529,12 @@
 
             <!-- CUMULATIVE ANTIBIOGRAM (own collapsible card, Analytics period) -->
             <div data-sec="cum" id="anCumCard" class="mobile-card border border-slate-200 p-0 overflow-hidden">
-                <button onclick="toggleAnCum()" class="w-full flex justify-between items-center bg-emerald-50 p-3 text-left focus:outline-none border-b border-emerald-100">
-                    <span class="text-xs font-bold text-emerald-800 flex items-center gap-2">
+                <button onclick="toggleAnCum()" class="w-full flex justify-between items-center bg-cyan-50 p-3 text-left focus:outline-none border-b border-cyan-100">
+                    <span class="text-xs font-bold text-cyan-800 flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M10 4v16M14 4v16M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"></path></svg>
                         Cumulative Antibiogram
                     </span>
-                    <svg id="an_cum_icon" class="w-4 h-4 text-emerald-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    <svg id="an_cum_icon" class="w-4 h-4 text-cyan-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 </button>
                 <div id="an_cum_content" class="hidden p-4 space-y-3 bg-white border-t border-slate-200">
                     <div>
@@ -557,12 +557,12 @@
 
             <!-- ADVANCED SEARCH (Collapsible) -->
             <div data-sec="heatmap" class="mobile-card border border-slate-200 p-0 overflow-hidden">
-                <button onclick="toggleAdvancedSearch()" class="w-full flex justify-between items-center bg-emerald-50 p-3 text-left focus:outline-none border-b border-emerald-100">
-                    <span class="text-xs font-bold text-emerald-800 flex items-center gap-2">
+                <button onclick="toggleAdvancedSearch()" class="w-full flex justify-between items-center bg-lime-50 p-3 text-left focus:outline-none border-b border-lime-100">
+                    <span class="text-xs font-bold text-lime-800 flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
                         Advanced Cross-Search (Heatmaps)
                     </span>
-                    <svg id="adv_icon" class="w-4 h-4 text-emerald-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    <svg id="adv_icon" class="w-4 h-4 text-lime-600 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 </button>
                 
                 <div id="adv_content" class="hidden p-4 space-y-3 bg-white border-t border-slate-200">
@@ -743,17 +743,17 @@
         </button>
     </nav>
 
-    <script src="js/data.js?v=11.118"></script>
-    <script src="js/dashboard.js?v=11.118"></script>
-    <script src="js/info_texts.js?v=11.118"></script>
-    <script src="js/dashboard_panels.js?v=11.118"></script>
-    <script src="js/period_tag.js?v=11.118"></script>
-    <script src="js/dashboard_year.js?v=11.118"></script>
-    <script src="js/dashboard_period.js?v=11.118"></script>
-    <script src="js/dashboard_extra.js?v=11.118"></script>
-    <script src="js/guide_reviewer.js?v=11.118"></script>
-    <script src="js/guide.js?v=11.118"></script>
-    <script src="js/nav.js?v=11.118"></script>
+    <script src="js/data.js?v=11.119"></script>
+    <script src="js/dashboard.js?v=11.119"></script>
+    <script src="js/info_texts.js?v=11.119"></script>
+    <script src="js/dashboard_panels.js?v=11.119"></script>
+    <script src="js/period_tag.js?v=11.119"></script>
+    <script src="js/dashboard_year.js?v=11.119"></script>
+    <script src="js/dashboard_period.js?v=11.119"></script>
+    <script src="js/dashboard_extra.js?v=11.119"></script>
+    <script src="js/guide_reviewer.js?v=11.119"></script>
+    <script src="js/guide.js?v=11.119"></script>
+    <script src="js/nav.js?v=11.119"></script>
 
     <!-- تسجيل Service Worker لعمل التطبيق أوفلاين بصمت -->
 <script>
@@ -765,6 +765,6 @@
         });
     }
 </script>
-<div style="text-align:center;font-size:10px;color:#94a3b8;padding:8px 0 16px" id="app_ver">AMR Trak v11.118</div>
+<div style="text-align:center;font-size:10px;color:#94a3b8;padding:8px 0 16px" id="app_ver">AMR Trak v11.119</div>
 </body>
 </html>
