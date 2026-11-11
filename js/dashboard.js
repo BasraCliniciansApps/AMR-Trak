@@ -764,7 +764,10 @@ function specimenLabel(sel) {
 }
 function refreshSpecimenSelects() {
     const names = {};
-    getDashRecords().forEach(r => { const n = String(r.Sample || '').trim(); if (n && !isUrinarySpecimen(r) && !/\bblood\b/i.test(n)) names[n.toLowerCase()] = n; });
+    // Only specimens present in the selected Analytics period; generic placeholders are not offered as a filter
+    let pool = getDashRecords();
+    try { pool = filterByPeriod(pool, anPeriod()); } catch (e) {}
+    pool.forEach(r => { const n = String(r.Sample || '').trim(); if (n && !/^(other|others|unknown|not specified|n\/a|-)$/i.test(n) && !isUrinarySpecimen(r) && !/\bblood\b/i.test(n)) names[n.toLowerCase()] = n; });
     const opts = [['all', 'All Specimens'], ['urine', 'Urine'], ['nonurine', 'Non Urine (All except urine)'], ['blood', 'Blood']]
         .concat(Object.keys(names).sort().map(k => ['sp:' + k, names[k]]));
     $('.an-specimen').each(function () {

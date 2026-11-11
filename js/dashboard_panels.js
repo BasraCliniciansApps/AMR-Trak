@@ -132,6 +132,7 @@ function refreshAll() {
     try { updatePathoDropdowns(); } catch (e) { console.error(e); }
     try { updateAbxDropdowns(); } catch (e) { console.error(e); }
     try { if (!$('#advContainer').hasClass('hidden') && $('#advContainer').children().length) generateAdvancedAnalytics(); } catch (e) { console.error(e); }
+    try { if (!$('#an_cum_content').hasClass('hidden')) refreshSpecimenSelects(); } catch (e) {}
     try { if (typeof anCumRender === 'function') anCumRender(); } catch (e) { console.error(e); }
     try { generateLiveSurveillance(); } catch (e) { console.error(e); }
     try { renderMdrPanel(); } catch (e) { console.error(e); }
