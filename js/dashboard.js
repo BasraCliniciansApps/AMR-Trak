@@ -745,8 +745,8 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
 
 // ---------- One specimen choice shared by the susceptibility profile, the in vitro activity profile and the heatmap ----------
 // CLSI M39 Section 11: data may be stratified by specimen type; only the first isolate of the species from that specimen group per patient is counted.
-const anSpec = { patho: 'all', abx: 'all', adv: 'all' };  // each card keeps its own specimen choice
-const SPEC_CARD = { patho_specimen: 'patho', abx_specimen: 'abx', adv_sample: 'adv' };
+const anSpec = { patho: 'all', abx: 'all', adv: 'all', cum: 'all' };  // each card keeps its own specimen choice
+const SPEC_CARD = { patho_specimen: 'patho', abx_specimen: 'abx', adv_sample: 'adv', cum_sample: 'cum' };
 function specimenFilter(records, sel) {
     if (!sel || sel === 'all') return records;
     if (sel === 'urine') return records.filter(isUrinarySpecimen);
@@ -764,7 +764,10 @@ function specimenLabel(sel) {
 }
 function refreshSpecimenSelects() {
     const names = {};
-    getDashRecords().forEach(r => { const n = String(r.Sample || '').trim(); if (n && !isUrinarySpecimen(r) && !/\bblood\b/i.test(n)) names[n.toLowerCase()] = n; });
+    // Only specimens present in the selected Analytics period; generic placeholders are not offered as a filter
+    let pool = getDashRecords();
+    try { pool = filterByPeriod(pool, anPeriod()); } catch (e) {}
+    pool.forEach(r => { const n = String(r.Sample || '').trim(); if (n && !/^(other|others|unknown|not specified|n\/a|-)$/i.test(n) && !isUrinarySpecimen(r) && !/\bblood\b/i.test(n)) names[n.toLowerCase()] = n; });
     const opts = [['all', 'All Specimens'], ['urine', 'Urine'], ['nonurine', 'Non Urine (All except urine)'], ['blood', 'Blood']]
         .concat(Object.keys(names).sort().map(k => ['sp:' + k, names[k]]));
     $('.an-specimen').each(function () {
@@ -807,6 +810,7 @@ $(document).on('change', '.an-specimen', function () {
     const v = $(this).val() || 'all', c = SPEC_CARD[this.id];
     if (!c || v === anSpec[c]) return;
     anSpec[c] = v;
+    if (c === 'cum') { if (typeof anCumRender === 'function') anCumRender(); return; }
     if (c === 'adv') {
         if (!$('#advContainer').hasClass('hidden') && typeof generateAdvancedAnalytics === 'function') generateAdvancedAnalytics();
         return;

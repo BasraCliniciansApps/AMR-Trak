@@ -132,6 +132,8 @@ function refreshAll() {
     try { updatePathoDropdowns(); } catch (e) { console.error(e); }
     try { updateAbxDropdowns(); } catch (e) { console.error(e); }
     try { if (!$('#advContainer').hasClass('hidden') && $('#advContainer').children().length) generateAdvancedAnalytics(); } catch (e) { console.error(e); }
+    try { if (!$('#an_cum_content').hasClass('hidden')) refreshSpecimenSelects(); } catch (e) {}
+    try { if (typeof anCumRender === 'function') anCumRender(); } catch (e) { console.error(e); }
     try { generateLiveSurveillance(); } catch (e) { console.error(e); }
     try { renderMdrPanel(); } catch (e) { console.error(e); }
     try { renderLabQuality(); } catch (e) { console.error(e); }
@@ -385,6 +387,7 @@ function renderMdrPanel() {
         return `<tr class="border-t border-slate-100"><td class="py-1.5 pr-2 font-bold text-slate-700">${MDR_DRILL[g] && MDR_DRILL[g].length ? `<a href="#" class="mdr-drill" data-g="${escHtml(g)}" style="color:#0f766e;text-decoration:underline dotted">${gnames[g] || g}</a>` : (gnames[g] || g)}</td><td class="text-center">${x.total}${x.total < minN() ? '*' : ''}</td><td class="text-center text-amber-600 font-bold">${pct(w, x.total)}%${ciSub(w, x.total)}</td><td class="text-center text-rose-600 font-bold">${x.XDR + x.PDR}${ciSub(x.XDR + x.PDR, x.total, true)}${poss}</td><td class="text-center text-amber-700">${x.MDR} <span class="text-slate-400">(${pct(x.MDR, x.total)}%)</span></td><td class="text-center text-rose-700">${x.XDR} <span class="text-slate-400">(${pct(x.XDR, x.total)}%)</span></td><td class="text-center text-red-900 font-bold">${x.PDR} <span class="text-slate-400 font-normal">(${pct(x.PDR, x.total)}%)</span></td></tr>`;
     }).join('');
     $('#mdr_group_table').html(rows ? `<table class="w-full text-[10px]"><thead><tr class="text-slate-500"><th class="text-left pb-1">Group</th><th>n</th><th>MDR+</th><th>XDR+</th><th>MDR only</th><th>XDR only</th><th>PDR</th></tr></thead><tbody>${rows}</tbody></table>${mdrOrgList}${mdrNNote}${mdrCovNote}${mdrDefNote}` : '<p class="text-xs text-slate-400 text-center">No classifiable isolates in this period.</p>');
+    try { if (typeof renderMdrKri === 'function') renderMdrKri(recs); } catch (e) { console.error(e); }
 }
 const _pickerRendered = {};
 function renderPeriodPickerOnce(id, cb) {
@@ -621,6 +624,7 @@ function printSub(card) {
     if (card === 'patho') parts = [t('#patho_bug'), PRINT_METRIC[currentPathoMetric], 'Specimen: ' + spec('patho'), ward('patho_ward'), low('patho_hide_low')];
     else if (card === 'abx') parts = [t('#abx_drug'), PRINT_METRIC[currentAbxMetric], 'Specimen: ' + spec('abx'), ward('abx_ward'), low('abx_hide_low')];
     else if (card === 'guided') parts = [t('#guided_bug_select'), PRINT_METRIC[currentGuidedMetric], low('guided_hide_low')];
+    else if (card === 'cum') parts = [PRINT_METRIC[(document.querySelector('#an_cum_seg .on') || {}).dataset ? document.querySelector('#an_cum_seg .on').dataset.v : 'S'] || '', 'Specimen: ' + spec('cum'), low('an_cum_hide')];
     else if (card === 'heatmap') parts = [PRINT_METRIC[$('#adv_metric').val()] || '', 'Specimen: ' + spec('adv'), ward('adv_ward')];
     return parts.filter(Boolean).join('  |  ');
 }
@@ -644,8 +648,10 @@ const SECTIONS = {
     heatmap: { id: 'heatmap', title: 'Advanced Cross-Search (Heatmap)', infos: [['How to read the heatmap', 'sec_heatmap']],
         charts: [{ title: 'Advanced Heatmap', el: '#heatmapWrapper', kind: 'table', landscape: true, sub: () => printSub('heatmap'), noteSel: '#heatmapNote', legendSel: '#heatmapLegend', hint: 'Run the search in this section first.' }] },
     mdr: { id: 'mdr', title: 'MDR / XDR / PDR Analysis', labelSel: '#mdr_range_label',
-        infos: [['Definitions and method', 'mdr_panel'], ['Summary figures', 'mdr_tiles'], ['Monthly trend', 'mdr_trend'], ['Distribution by ward', 'mdr_wards'], ['By organism group', 'mdr_group']],
+        infos: [['Definitions and method', 'mdr_panel'], ['Summary figures', 'mdr_tiles'], ['Monthly trend', 'mdr_trend'], ['Distribution by ward', 'mdr_wards'], ['By organism group', 'mdr_group'], ['Key resistance indicators', 'mdr_kri']],
         charts: [{ title: 'Summary', el: '#mdr_tiles', kind: 'tiles', noteSel: '#mdr_cls_note' }, { title: 'Resistance classification', el: '#chart_mdr_panel_pie' }, { title: 'Monthly trend (% of classified isolates)', el: '#chart_mdr_panel_trend' }, { title: 'All wards', el: '#chart_mdr_panel_wards' }, { title: 'By organism group', el: '#mdr_group_table', kind: 'table' }] },
+    cum: { id: 'cum', title: 'Cumulative Antibiogram', infos: [['How to read the antibiogram', 'an_cum']],
+        charts: [{ title: 'Cumulative Antibiogram', el: '#an_cum_table', kind: 'table', landscape: true, sub: () => printSub('cum'), noteSel: '#an_cum_note', hint: 'Open this section first.' }, { title: 'Key resistance indicators (% resistant)', el: '#chart_mdr_kri', noteSel: '#mdr_kri_note' }] },
     year: { id: 'sec_year', title: () => $('#live_y_title').text() || 'Annual Report', infos: [], charts: [] },
     month: monthSection('m', 'month'),
     lab: { id: 'lab', title: 'Culture Overview', labelSel: '#lab_range_label',
@@ -722,7 +728,7 @@ function tilesToHtml(el) {
     return `<div class="tiles">${items}</div>${notes}`;
 }
 
-const TAB_SECTIONS = { analytics: ['prevalence', 'patho', 'abx', 'heatmap'], last_year: ['year'], last_month: ['month'], mdr: ['mdr'], lab: ['lab'] };
+const TAB_SECTIONS = { analytics: ['prevalence', 'patho', 'abx', 'heatmap', 'cum'], last_year: ['year'], last_month: ['month'], mdr: ['mdr'], lab: ['lab'] };
 
 function printGroups(withWaiting) {
     const tab = window._currentTab || 'analytics';
@@ -873,7 +879,7 @@ function buildPrintDoc(items, o) {
         let n = null, relevant = tab !== 'lab';
         try {
             if (tab === 'analytics') {
-                const specs = items.map(x => x.sec.id === 'patho' ? anSpec.patho : x.sec.id === 'abx' ? anSpec.abx : x.sec.id === 'heatmap' ? anSpec.adv : 'all');
+                const specs = items.map(x => x.sec.id === 'patho' ? anSpec.patho : x.sec.id === 'abx' ? anSpec.abx : x.sec.id === 'heatmap' ? anSpec.adv : x.sec.id === 'cum' ? anSpec.cum : 'all');
                 relevant = specs.some(v => v === 'all' || v === 'blood' || v === 'nonurine' || (v && v.indexOf('sp:') === 0 && /blood/.test(v)));
                 if (relevant) n = filterByPeriod(getDashRecords(), anPeriod()).filter(isPossibleContaminant).length;
             } else if (tab === 'last_year' && typeof yaRaw === 'function' && typeof yaYear === 'function') n = yaRaw(yaYear()).filter(isPossibleContaminant).length;
@@ -895,7 +901,7 @@ function buildPrintDoc(items, o) {
     // Notes only for the charts that are printed (plus the section's general notes); the same text is never printed twice
     const INFO_FOR = {
         'Organism Prevalence': 'sec_prevalence', 'AST Profile of the selected organism': 'abx_guidedAmrContainer',
-        'Bacteria/Fungi Susceptibility Profile': ['sec_patho', 'abx_pathoAmrContainer'], 'Antimicrobial In Vitro Activity Profile': 'sec_abx', 'Advanced Heatmap': 'sec_heatmap',
+        'Bacteria/Fungi Susceptibility Profile': ['sec_patho', 'abx_pathoAmrContainer'], 'Antimicrobial In Vitro Activity Profile': 'sec_abx', 'Advanced Heatmap': 'sec_heatmap', 'Cumulative Antibiogram': 'an_cum', 'Key resistance indicators (% resistant)': 'mdr_kri',
         'Summary': 'mdr_tiles', 'Resistance classification': 'mdr_panel', 'Monthly trend (% of classified isolates)': 'mdr_trend', 'All wards': 'mdr_wards', 'By organism group': 'mdr_group',
         'Priority alerts': 'op_m_alerts',
         'Key resistance indicators': 'ya_ind', 'ICU compared with non-ICU': 'ya_icu', 'ICU compared with non-ICU: susceptibility by organism': 'ya_icu',
@@ -980,7 +986,7 @@ function showPrintPreview(doc) {
 function toolbarHtml() { return ''; }
 function mountSectionToolbars() {
     // Collapsible card headers: [ title .......... print info  chevron ]
-    [['prevalence', 'toggleGuidedSearch()'], ['patho', 'togglePathoSearch()'], ['abx', 'toggleAbxSearch()'], ['heatmap', 'toggleAdvancedSearch()'], ['mdr', 'toggleMdrPanel()']].forEach(([id, fn]) => {
+    [['prevalence', 'toggleGuidedSearch()'], ['patho', 'togglePathoSearch()'], ['abx', 'toggleAbxSearch()'], ['heatmap', 'toggleAdvancedSearch()'], ['cum', 'toggleAnCum()'], ['mdr', 'toggleMdrPanel()']].forEach(([id, fn]) => {
         const btn = document.querySelector(`button[onclick="${fn}"]`);
         if (!btn || btn.parentElement.classList.contains('sec-head')) return;
         const cls = btn.className.split(/\s+/);
@@ -1030,7 +1036,7 @@ window.showUserSettings = function () {
     const row = (title, desc, ctl) => `<div style="display:flex;gap:10px;align-items:flex-start;justify-content:space-between;margin-bottom:14px"><div><b>${title}</b><div style="font-size:10.5px;color:#64748b;margin-top:2px">${desc}</div></div>${ctl}</div>`;
     const sel = (id, opts, cur) => `<select id="${id}" style="width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:12px;background:#fff">${opts.map(o => `<option value="${o[0]}" ${o[0] === cur ? 'selected' : ''}>${o[1]}</option>`).join('')}</select>`;
     const blk = (title, desc, ctl) => `<div style="margin-bottom:14px"><b>${title}</b>${ctl}<div style="font-size:10.5px;color:#64748b;margin-top:4px">${desc}</div></div>`;
-    const html = `<style>.us-sl{position:absolute;inset:0;background:#cbd5e1;border-radius:22px;transition:.2s}.us-sl:before{content:"";position:absolute;height:16px;width:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}input:checked+.us-sl{background:#0d9488}input:checked+.us-sl:before{transform:translateX(18px)}</style>
+    const html = `<style>.us-sl{position:absolute;inset:0;background:#cbd5e1;border-radius:22px;transition:.2s}.us-sl:before{content:"";position:absolute;height:16px;width:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}input:checked+.us-sl{background:#059669}input:checked+.us-sl:before{transform:translateX(18px)}</style>
     <div style="text-align:left;font-size:12px;color:#334155;max-height:62vh;overflow-y:auto;padding-right:4px">
       ${row('Exclude possible skin-flora contaminants', 'Removes blood isolates of skin-flora organisms (for example coagulase-negative staphylococci) before the first isolate is chosen. Applies to every tab and chart.', tg('us_contam', contamExcluded()))}
       ${blk('Default unit filter', 'The unit filter selected when the dashboard opens.', sel('us_scope', [['all', 'ALL'], ['icu', 'ICU'], ['nonicuip', 'Non-ICU IP'], ['outpatient', 'Outpatient']], getUnitScope()))}
