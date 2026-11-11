@@ -54,14 +54,14 @@
         const valueLabels = { id: 'kriValues', afterDatasetsDraw(ch) {
             const c = ch.ctx, m = ch.getDatasetMeta(0);
             c.save(); c.font = 'bold 10px sans-serif'; c.fillStyle = '#334155'; c.textBaseline = 'middle';
-            m.data.forEach((bar, i) => { const s = rows[i]; c.fillText(Math.round(pct(s)) + '% (' + s.resistant + '/' + s.tested + ')', Math.min(bar.x + 4, ch.chartArea.right - 62), bar.y); });
+            m.data.forEach((bar, i) => { const s = rows[i]; c.fillText(Math.round(pct(s)) + '% (' + s.resistant + '/' + s.tested + ')', ch.chartArea.right + 8, bar.y); });
             c.restore();
         } };
         kriChart = new Chart(cv, {
             type: 'bar',
             data: { labels: labels, datasets: [{ label: '% Resistant', data: rows.map(pct), nData: rows.map(s => s.tested), ciData: ci,
                 backgroundColor: rows.map(s => s.tested < minN() ? '#94a3b8' : '#e11d48'), borderRadius: 3 }] },
-            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 84 } },
                 plugins: { legend: { display: false }, tooltip: { callbacks: {
                     label: c => { const s = rows[c.dataIndex], k = ci[c.dataIndex]; return s.label + ': ' + c.raw + '% resistant (' + s.resistant + ' of ' + s.tested + ' tested)'; },
                     afterLabel: c => '95% CI ' + ci[c.dataIndex].lower + '-' + ci[c.dataIndex].upper + '%' + (rows[c.dataIndex].tested < minN() ? ' | fewer than ' + minN() + ' tested: indicative only' : '') } } },
