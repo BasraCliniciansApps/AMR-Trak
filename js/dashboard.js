@@ -745,8 +745,8 @@ function buildMobileAbxProfileChart(abxName, canvasId, countElId, records, prima
 
 // ---------- One specimen choice shared by the susceptibility profile, the in vitro activity profile and the heatmap ----------
 // CLSI M39 Section 11: data may be stratified by specimen type; only the first isolate of the species from that specimen group per patient is counted.
-const anSpec = { patho: 'all', abx: 'all', adv: 'all' };  // each card keeps its own specimen choice
-const SPEC_CARD = { patho_specimen: 'patho', abx_specimen: 'abx', adv_sample: 'adv' };
+const anSpec = { patho: 'all', abx: 'all', adv: 'all', cum: 'all' };  // each card keeps its own specimen choice
+const SPEC_CARD = { patho_specimen: 'patho', abx_specimen: 'abx', adv_sample: 'adv', cum_sample: 'cum' };
 function specimenFilter(records, sel) {
     if (!sel || sel === 'all') return records;
     if (sel === 'urine') return records.filter(isUrinarySpecimen);
@@ -807,6 +807,7 @@ $(document).on('change', '.an-specimen', function () {
     const v = $(this).val() || 'all', c = SPEC_CARD[this.id];
     if (!c || v === anSpec[c]) return;
     anSpec[c] = v;
+    if (c === 'cum') { if (typeof anCumRender === 'function') anCumRender(); return; }
     if (c === 'adv') {
         if (!$('#advContainer').hasClass('hidden') && typeof generateAdvancedAnalytics === 'function') generateAdvancedAnalytics();
         return;
