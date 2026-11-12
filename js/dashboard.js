@@ -478,7 +478,7 @@ function updateChartKey(id, labels) {
     if (L.some(l => !/\*$/.test(l))) h += li('<span class="sw sw-solid"></span>', '<b>Solid bar:</b> ' + n + ' or more isolates tested. The result is reliable.');
     if (L.some(l => /\*$/.test(l))) h += li('<span class="sw sw-grey"></span>', '<b>Faded grey bar, name ending with *:</b> fewer than ' + n + ' isolates tested. Interpret with caution.');
     if (has(' \u2021')) h += li('<span class="sym">&Dagger;</span>', '<b>Intrinsic resistance</b> (after the name): resistance is expected for this organism (CLSI M100 Appendix B), not acquired.');
-    if (has(' \u2020')) h += li('<span class="sym">&dagger;</span>', '<b>Selective test</b>: tested on fewer than 90% of the isolates, so the percentage may be biased (CLSI M39 Section 6.5.3, Supplemental Drug Testing; the 90% threshold is from ACSQHC, Section 3.2).');
+    if (has(' \u2020')) h += li('<span class="sym">&dagger;</span>', '<b>Selective test</b>: tested on fewer than 90% of the isolates, so the percentage may be biased (CLSI M39 Section 6.5.3, Supplemental Drug Testing; the 90% threshold is from the Australian Commission on Safety and Quality in Health Care (ACSQHC), Specification for a Hospital Cumulative Antibiogram, Section 3.2).');
     if (has(' \u00a7')) h += li('<span class="sym">&sect;</span>', '<b>Urine-only agent</b> that also includes non-urine specimens.');
     if (L.length) h += li('<span class="sym">i</span>', 'Tap a bar: shows n (number of isolates tested) and the 95% CI. The bar height is always the selected percentage.');
     $('#keylist_' + id).html(h); $('#key_' + id).toggle(L.length > 0);
@@ -491,7 +491,7 @@ function renderChartNotes(containerSel, selectiveNotes, contaminantCount, shownA
         '<li><b>Solid bar:</b> 30 or more isolates were tested. The result is considered reliable.</li>' +
         (hasLow ? '<li><b>Faded grey bar, name ending with *:</b> fewer than 30 isolates were tested. Interpret with caution (CLSI M39).</li>' : '') +
         (hasIr ? '<li><b>Name ending with &Dagger;:</b> intrinsic resistance (expected for this organism, not acquired).</li>' : '') +
-        (hasSel ? '<li><b>Name ending with &dagger;:</b> selective test. The antibiotic was tested on fewer than 90% of the isolates, so the percentage may be biased (CLSI M39 Section 6.5.3, Supplemental Drug Testing; the 90% threshold is from ACSQHC, Section 3.2).</li>' : '') +
+        (hasSel ? '<li><b>Name ending with &dagger;:</b> selective test. The antibiotic was tested on fewer than 90% of the isolates, so the percentage may be biased (CLSI M39 Section 6.5.3, Supplemental Drug Testing; the 90% threshold is from the Australian Commission on Safety and Quality in Health Care (ACSQHC), Specification for a Hospital Cumulative Antibiogram, Section 3.2).</li>' : '') +
         '<li>Tap a bar: shows n (number of isolates tested) and the 95% CI. The bar height is always the selected percentage.</li></ul>';
     const groups = { A: [], W: [], R: [] };
     (shownAbx || []).forEach(a => { if (AWARE_CLASS[a]) groups[AWARE_CLASS[a]].push(a); });
@@ -1599,7 +1599,7 @@ window.generateAdvancedAnalytics = function() {
     setNote('#heatmapNote', [
         (lowCells || irCells) ? '<b>Grey cell:</b> the value is not a reliable susceptibility result.' : '',
         lowCells ? '<b>*</b> = fewer than 30 isolates tested (CLSI M39): ' + lowCells + ' cell' + (lowCells === 1 ? '' : 's') + '.' : '',
-        daggerCells ? '<b>&dagger;</b> = selective test: the agent was tested on fewer than 90% of the organism\'s isolates, so the percentage may be biased (CLSI M39 Section 6.5.3, Supplemental Drug Testing; the 90% threshold is from ACSQHC, Section 3.2): ' + daggerCells + ' cell' + (daggerCells === 1 ? '' : 's') + '.' : '',
+        daggerCells ? '<b>&dagger;</b> = selective test: the agent was tested on fewer than 90% of the organism\'s isolates, so the percentage may be biased (CLSI M39 Section 6.5.3, Supplemental Drug Testing; the 90% threshold is from the Australian Commission on Safety and Quality in Health Care (ACSQHC), Specification for a Hospital Cumulative Antibiogram, Section 3.2): ' + daggerCells + ' cell' + (daggerCells === 1 ? '' : 's') + '.' : '',
         irCells ? '<b>&Dagger;</b> = intrinsic resistance (expected for the organism, CLSI M100 Appendix B), not acquired resistance: ' + irCells + ' cell' + (irCells === 1 ? '' : 's') + '.' : '',
         '<b>Colour bands</b> (same as the antibiogram): green = 80% or more susceptible (20% or less resistant), amber = 50-79% susceptible, red = below 50% susceptible. They are a visual aid only. They are not CLSI or WHO categories, and WHO does not provide a reference for these colours.',
         'The colours are not a treatment guide or an indicator for therapy; follow the hospital antibiotic policy.',
