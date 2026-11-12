@@ -1030,7 +1030,8 @@ function generateGuidedAnalytics() {
         type: 'doughnut', 
         data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: vibrantColors }] },
         options: { 
-            responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: {boxWidth: 10, font:{size: 9}} } },
+            responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: {boxWidth: 10, font:{size: 9}} },
+                tooltip: { callbacks: { label: c => { const tot = c.dataset.data.reduce((a, b) => a + b, 0); return ` ${c.raw} (${tot ? (c.raw / tot * 100).toFixed(1) : 0}%)`; } } } },
             onClick: (e, elements) => {
                 if (elements.length > 0) {
                     const index = elements[0].index;
@@ -1042,10 +1043,11 @@ function generateGuidedAnalytics() {
         }
     });
 
+    const pieTotal = pieData.reduce((a, b) => a + b, 0) || 1;
     let bugSelect = $('#guided_bug_select');
     bugSelect.empty();
     currentGuidedOrgs.forEach(org => {
-        bugSelect.append(new Option(`${formatScientificName(org)} (n=${orgCounts[org]})`, org));
+        bugSelect.append(new Option(`${formatScientificName(org)} (n=${orgCounts[org]}, ${(orgCounts[org] / pieTotal * 100).toFixed(1)}%)`, org));
     });
 
     currentGuidedBug = currentGuidedOrgs[0];
