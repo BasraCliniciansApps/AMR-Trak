@@ -168,8 +168,8 @@
             showCI ? '<b>95% CI</b> (Wilson score) is shown under each percentage and in the tooltip (CLSI M39 Section 10.1 recommends confidence intervals). It is calculated for the percentage displayed.' : '',
             nLow ? '<b>*</b> (grey) = fewer than ' + min + ' isolates (CLSI M39): indicative only.' : '',
             nIR ? '<b>&Dagger;</b> = intrinsic resistance (CLSI M100 Appendix B, Magiorakos 2012), not acquired resistance.' : '',
-            nSel ? '<b>&dagger;</b> = selective test: the agent was tested on fewer than 90% of the organism\'s isolates, so it is not reported.' : '',
-            nNu ? '<b>&sect;</b> = urine-only agent that also includes non-urine isolates; interpret with clinical judgement.' : '',
+            nSel ? '<b>&dagger;</b> = selective test: the agent was tested on fewer than 90% of the organism\'s isolates, so it is not reported (CLSI M39 Section 6.5.3; the 90% threshold is from ACSQHC, Section 3.2).' : '',
+            nNu ? '<b>&sect;</b> = urine-only agent (CLSI M100-Ed36) that also includes non-urine isolates; interpret with clinical judgement.' : '',
             hide && small.length ? 'Organisms below ' + min + ' isolates (hidden): ' + small.slice(0, 8).map(o => esc(formatOrgName(o)) + ' (' + byOrg[o].length + ')').join(', ') + '.' : '',
             'Cells are in vitro results.'
         ].concat(note));
