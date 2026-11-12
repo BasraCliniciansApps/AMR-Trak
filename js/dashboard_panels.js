@@ -551,6 +551,8 @@ function mdrDrillHtml(items, i) {
     const resTxt = a => a.results.map(x => escHtml(x[0]) + ' <b>' + x[1] + '</b>').join(', ');
     let h = '<div style="text-align:left">';
     h += '<div style="font-weight:800;font-size:15px;color:#0f172a">' + escHtml(formatOrgName ? formatOrgName(r['Selective organism']) : r['Selective organism']) + '</div>';
+    const smp = String(r.Sample || '').trim();
+    if (smp) h += '<div style="display:inline-flex;align-items:center;gap:6px;margin:6px 0 2px;padding:3px 10px 3px 8px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:999px;font-size:11px;color:#475569"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6.5L5.5 18a2.2 2.2 0 0 0 2 3.2h9a2.2 2.2 0 0 0 2-3.2L14 9.5V3"/><path d="M7.5 15h9"/></svg><span style="font-weight:600;color:#64748b">Specimen</span><span style="font-weight:800;color:#0f172a">' + escHtml(smp) + '</span></div>';
     h += '<div style="margin:4px 0"><span style="background:' + col + ';color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:800">' + res.cls + '</span>' + (res.possibleXDR ? ' <span style="font-size:11px;color:#64748b">possible XDR (not all categories tested)</span>' : '') + (res.possiblePDR ? ' <span style="font-size:11px;color:#64748b">possible PDR (not all categories tested)</span>' : '') + '</div>';
     h += '<div style="font-size:12px;color:#475569">' + MDR_DEF_TEXT[res.cls] + '</div>';
     h += '<div style="font-size:12px;color:#475569;margin-top:4px">Non-susceptible in <b>' + res.ns + '</b> of <b>' + res.total + '</b> categories that apply to this organism (' + res.tested + ' tested).</div>';
