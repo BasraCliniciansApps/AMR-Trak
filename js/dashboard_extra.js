@@ -92,7 +92,7 @@
         $('#an_cum_seg button').each(function () { $(this).toggleClass('on', $(this).data('v') === m); });
         window.anCumRender();
     };
-    $(document).on('change', '#an_cum_hide, #an_cum_ci', function () { window.anCumRender(); });
+    $(document).on('change', '#an_cum_hide', function () { window.anCumRender(); });
 
     window.anCumRender = function () {
         const host = document.getElementById('an_cum_table');
@@ -131,7 +131,7 @@
             });
         });
         const cols = abxList.filter(a => colTot[a]).slice(0, 30);
-        const showCI = $('#an_cum_ci').is(':checked');
+        const showCI = true;   // the 95% CI is always shown
         const ciOf = c => { const k = wilsonScoreCI(val(c), c.t); return k.lower + '\u2013' + k.upper; };
         const ciDiv = c => showCI ? '<div style="font-size:8px;font-weight:500;opacity:.75;line-height:1.1">' + ciOf(c) + '</div>' : '';
         const val = c => cumMetric === 'R' ? c.r : cumMetric === 'NS' ? c.ns : c.s;
