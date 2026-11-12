@@ -824,7 +824,8 @@ function buildPrintDoc(items, o) {
     const secs = []; items.forEach(x => { if (!secs.includes(x.sec)) secs.push(x.sec); });
     const labels = secs.map(s => s.labelSel ? ((document.querySelector(s.labelSel) || {}).textContent || '').replace(' - ' + scopeLabel(), '') : '').filter(Boolean);
     const context = [secs.length === 1 ? sectionTitle(secs[0]) : '', labels[0] || ''].filter(Boolean).join('  |  ');
-    const landscape = o.orient === 'landscape';   // Automatic: portrait pages, and only the wide tables get landscape pages
+    // Automatic: portrait pages, and the wide tables get landscape pages; when everything printed is a wide table the whole document is landscape
+    const landscape = o.orient === 'landscape' || (o.orient === 'auto' && items.length > 0 && items.every(x => x.c && x.c.landscape));
     const autoWide = o.orient === 'auto';
     const hideNotes = document.body.classList.contains('no-sym-notes');
     const small = (c, el) => {
