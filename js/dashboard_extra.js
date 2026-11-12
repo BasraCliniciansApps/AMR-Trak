@@ -138,22 +138,27 @@
         // Same three bands as the heatmap and the annual antibiogram (an application convention, not a CLSI or WHO category)
         const color = d => d <= 20 ? 'background:#d1fae5;color:#065f46' : d <= 50 ? 'background:#fed7aa;color:#9a3412' : 'background:#fecaca;color:#991b1b';
         let nIR = 0, nSel = 0, nLow = 0, nNu = 0;
+        // Same look as the Advanced Heatmap: heatmap-table, organism (n) in the sticky first column, % and 95% CI in every cell
         const body = orgs.map(o => {
             const n = byOrg[o].length, isSmall = n < min;
             const cells = cols.map(a => {
                 const c = stats[o][a];
-                if (!c) return '<td class="ya-mute">-</td>';
-                const p = Math.round((val(c) / c.t) * 100), ttl = esc(a) + ': ' + val(c) + '/' + c.t + ' (95% CI ' + ciOf(c) + '%)';
-                if (c.t < min || isSmall) { nLow++; return '<td style="background:#e2e8f0;color:#64748b" title="' + ttl + '. Fewer than ' + min + ' isolates: indicative only">' + p + '*' + ciDiv(c) + '</td>'; }
-                if (isIntrinsicResistance(o, a)) { nIR++; return '<td class="ya-mute" style="background:#e2e8f0" title="' + esc(a) + ': intrinsic resistance (not reported as acquired)">&Dagger;</td>'; }
-                if (isSelectivelyTested(c.t, n)) { nSel++; return '<td class="ya-mute" style="background:#f1f5f9" title="' + ttl + '. Selectively tested; not reported (CLSI M39 Section 6.5.3)">&dagger;</td>'; }
+                if (!c) return '<td class="bg-slate-50 text-slate-300">-</td>';
+                const p = Math.round((val(c) / c.t) * 100), ttl = esc(a) + ': ' + val(c) + '/' + c.t;
+                const ciTxt = '<div class="text-[7.5px] font-medium opacity-80 tracking-tighter mt-1 whitespace-nowrap">95% CI (' + wilsonScoreCI(val(c), c.t).lower + '% - ' + wilsonScoreCI(val(c), c.t).upper + '%)</div>';
+                const grey = 'bg-slate-200 text-slate-500 align-middle';
+                if (c.t < min || isSmall) { nLow++; return '<td class="' + grey + '" title="' + ttl + '. Fewer than ' + min + ' isolates: indicative only"><div class="leading-none">' + p + '% <span class="text-black font-bold">*</span></div>' + ciTxt + '</td>'; }
+                if (isIntrinsicResistance(o, a)) { nIR++; return '<td class="' + grey + '" title="' + esc(a) + ': intrinsic resistance (not reported as acquired)"><div class="leading-none font-bold">&Dagger;</div></td>'; }
+                if (isSelectivelyTested(c.t, n)) { nSel++; return '<td class="bg-slate-100 text-slate-500 align-middle" title="' + ttl + '. Selectively tested; not reported (CLSI M39 Section 6.5.3)"><div class="leading-none font-bold">&dagger;</div></td>'; }
                 if (c.nu) nNu++;
-                return '<td style="' + color(cumMetric === 'S' ? 100 - p : p) + '" title="' + ttl + (c.nu ? '; includes ' + c.nu + ' non-urine isolates of a urine-only agent' : '') + '">' + p + (c.nu ? '&sect;' : '') + ciDiv(c) + '</td>';
+                const d = cumMetric === 'S' ? 100 - p : p;
+                const cls = d <= 20 ? 'bg-emerald-100 text-emerald-800' : d <= 50 ? 'bg-orange-200 text-orange-900' : 'bg-red-200 text-red-800';
+                return '<td class="' + cls + ' align-middle" title="' + ttl + (c.nu ? '; includes ' + c.nu + ' non-urine isolates of a urine-only agent' : '') + '"><div class="leading-none">' + p + '%' + (c.nu ? ' <span class="font-bold text-blue-700">&sect;</span>' : '') + '</div>' + ciTxt + '</td>';
             }).join('');
-            return '<tr' + (isSmall ? ' style="opacity:.8"' : '') + '><td class="ya-l"><b' + (isSmall ? ' style="color:#94a3b8"' : '') + '>' + esc(formatOrgName(o)) + (isSmall ? '*' : '') + '</b><div class="ya-mute">n=' + n + '</div></td>' + cells + '</tr>';
+            return '<tr><th class="text-[10px] text-left leading-tight">' + esc(formatOrgName(o)) + (isSmall ? ' *' : '') + ' <br><span class="text-[9px] font-normal text-slate-400">(' + n + ')</span></th>' + cells + '</tr>';
         }).join('');
         const headH = abxHeadHeight(cols);
-        host.innerHTML = '<table class="ya-table ya-cum"><thead><tr><th class="ya-l">Organism</th>' + cols.map(a => '<th class="ya-v">' + abxHeadSpan(a, headH) + '</th>').join('') + '</tr></thead><tbody>' + body + '</tbody></table>';
+        host.innerHTML = '<table class="heatmap-table"><thead><tr><th>Org (n)</th>' + cols.map(a => '<th style="vertical-align:bottom;padding:6px 2px">' + abxHeadSpan(a, headH) + '</th>').join('') + '</tr></thead><tbody>' + body + '</tbody></table>';
         const metricName = { S: 'susceptible (% S)', R: 'resistant (% R)', NS: 'non-susceptible (% NS: SDD, I or R)' }[cumMetric];
         let note = [];
         try { note = hmPeriodNote(recs); } catch (e) {}
