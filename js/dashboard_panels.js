@@ -646,7 +646,7 @@ const SECTIONS = {
     patho: { id: 'patho', title: 'Bacteria/Fungi Susceptibility Profile', infos: [['How to read this chart', 'sec_patho'], ['Sample size and AWaRe', 'abx_pathoAmrContainer']],
         charts: [{ title: 'Bacteria/Fungi Susceptibility Profile', el: '#chartPathoAMR', key: 'patho', sub: () => printSub('patho'), hint: 'Choose a bacteria in this section first.' }] },
     abx: { id: 'abx', title: 'Antimicrobial In Vitro Activity Profile', infos: [['How to read this chart', 'sec_abx']],
-        charts: [{ title: 'Antimicrobial In Vitro Activity Profile', el: '#chartAbxAMR', key: 'abx', sub: () => printSub('abx') }] },
+        charts: [{ title: 'Antimicrobial In Vitro Activity Profile', el: '#chartAbxAMR', key: 'abx', sub: () => printSub('abx'), hint: 'Choose an antibiotic in this section first.' }] },
     heatmap: { id: 'heatmap', title: 'Advanced Cross-Search (Heatmap)', infos: [['How to read the heatmap', 'sec_heatmap']],
         charts: [{ title: 'Advanced Heatmap', el: '#heatmapWrapper', kind: 'table', landscape: true, sub: () => printSub('heatmap'), noteSel: '#heatmapNote', legendSel: '#heatmapLegend', hint: 'Run the search in this section first.' }] },
     mdr: { id: 'mdr', title: 'MDR / XDR / PDR Analysis', labelSel: '#mdr_range_label',
@@ -730,7 +730,7 @@ function tilesToHtml(el) {
     return `<div class="tiles">${items}</div>${notes}`;
 }
 
-const TAB_SECTIONS = { analytics: ['prevalence', 'patho', 'abx', 'heatmap', 'cum'], last_year: ['year'], last_month: ['month'], mdr: ['mdr'], lab: ['lab'] };
+const TAB_SECTIONS = { analytics: ['prevalence', 'patho', 'abx', 'cum', 'heatmap'], last_year: ['year'], last_month: ['month'], mdr: ['mdr'], lab: ['lab'] };
 
 function printGroups(withWaiting) {
     const tab = window._currentTab || 'analytics';
