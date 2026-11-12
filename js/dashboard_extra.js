@@ -17,7 +17,16 @@
         + '.amr-sw input:focus-visible+.amr-sl{outline:2px solid #0d9488;outline-offset:2px}'
         + '.amr-seg{display:inline-flex;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;background:#fff}'
         + '.amr-seg button{padding:5px 10px;font-size:10px;font-weight:700;color:#475569;background:#fff;border:0;border-right:1px solid #e2e8f0}'
-        + '.amr-seg button:last-child{border-right:0}.amr-seg button.on{background:#0f766e;color:#fff}';
+        + '.amr-seg button:last-child{border-right:0}.amr-seg button.on{background:#0f766e;color:#fff}'
+        // % S / % R / % NS selectors: one look everywhere; the selected button takes the colour of the bars it draws
+        + '.amr-seg3 label{display:block;margin:0;cursor:pointer;padding:5px 12px!important;font-size:10px;font-weight:700!important;color:#475569!important;background:#fff!important;box-shadow:none!important;border-radius:0!important;border-right:1px solid #e2e8f0}'
+        + '.amr-seg3 label:last-child{border-right:0}'
+        + '.amr-seg3 label.on[data-v="S"],.amr-seg button.on[data-v="S"]{background:#10b981!important;color:#fff!important}'
+        + '.amr-seg3 label.on[data-v="R"],.amr-seg button.on[data-v="R"]{background:#e11d48!important;color:#fff!important}'
+        + '.amr-seg3 label.on[data-v="NS"],.amr-seg button.on[data-v="NS"]{background:#f59e0b!important;color:#451a03!important}'
+        + '.amr-seg3 label:has(input:checked)[data-v="S"]{background:#10b981!important;color:#fff!important}'
+        + '.amr-seg3 label:has(input:checked)[data-v="R"]{background:#e11d48!important;color:#fff!important}'
+        + '.amr-seg3 label:has(input:checked)[data-v="NS"]{background:#f59e0b!important;color:#451a03!important}';
     document.head.appendChild(st);
     const sw = (id, on) => '<label class="amr-sw"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '><span class="amr-sl"></span></label>';
 
@@ -92,6 +101,10 @@
         $('#an_cum_seg button').each(function () { $(this).toggleClass('on', $(this).data('v') === m); });
         window.anCumRender();
     };
+    // keep the selected look of the % S / % R / % NS selectors in step with the radio buttons
+    function syncSeg3() { $('.amr-seg3 label').each(function () { $(this).toggleClass('on', $(this).find('input').prop('checked')); }); }
+    $(document).on('change', '.amr-seg3 input', syncSeg3);
+    $(syncSeg3);
     $(document).on('change', '#an_cum_hide', function () { window.anCumRender(); });
 
     window.anCumRender = function () {
