@@ -860,11 +860,11 @@ function buildPrintDoc(items, o) {
                     media = `<img class="chart" src="${cv.toDataURL('image/png')}" alt="">`;
                     if (o.values) vals = chartDataTable(el);
                 }
-            } else if (c.kind === 'table') media = '<div class="tbl' + (c.landscape ? ' wide' : '') + '">' + inlineColors(el).innerHTML + '</div>';
+            } else if (c.kind === 'table') media = '<div class="tbl' + (c.landscape ? ' wide' : '') + '">' + inlineColors(el).innerHTML.replace(/95% CI \((\d+)% - (\d+)%\)/g, '$1&ndash;$2') + '</div>';
             else media = tilesToHtml(el);
             const cls = (o.layout !== 'single' && small(c, el)) ? 'half' : 'full';
             const subTxt = typeof c.sub === 'function' ? c.sub() : '';
-            return `<section class="blk ${cls}${autoWide && c.landscape ? ' pg-land' : ''}${c.kind === 'table' && cls === 'full' ? ' splittable' : ''}"><div class="keep"><h2>${escHtml(chartTitleOf(c.title))}</h2>${subTxt ? `<div class="sub">${escHtml(subTxt)}</div>` : ''}${c.kind === 'table' ? '' : media}</div>${c.kind === 'table' ? media : ''}${keyHtml(c, el)}${vals}</section>`;
+            return `<section class="blk ${cls}${autoWide && !landscape && c.landscape ? ' pg-land' : ''}${c.kind === 'table' && cls === 'full' ? ' splittable' : ''}"><div class="keep"><h2>${escHtml(chartTitleOf(c.title))}</h2>${subTxt ? `<div class="sub">${escHtml(subTxt)}</div>` : ''}${c.kind === 'table' ? '' : media}</div>${c.kind === 'table' ? media : ''}${keyHtml(c, el)}${vals}</section>`;
         }).join('') + '</div>';
     }).join('');
     // filters in force, so the printed page states exactly what it shows
@@ -937,7 +937,7 @@ function buildPrintDoc(items, o) {
         .blk { margin-bottom: 14px; text-align: center; ${o.layout === 'single' ? 'page-break-after: always; break-after: page;' : 'break-inside: auto; page-break-inside: auto;'} } .keep { break-inside: avoid; page-break-inside: avoid; } .blk.half { break-inside: avoid; page-break-inside: avoid; } table.vals tr { break-inside: avoid; page-break-inside: avoid; } table.vals thead { display: table-header-group; }
         .blk.splittable { break-inside: auto; page-break-inside: auto; } .splittable tr { break-inside: avoid; page-break-inside: avoid; } .splittable thead { display: table-header-group; } .blk.full { display: block; width: 100%; } .blk.half { display: inline-block; width: 49%; margin-left: .4%; margin-right: .4%; vertical-align: top; }
         .tbl table.ya-cum { table-layout: fixed; width: 100%; } .tbl table.ya-cum th:first-child, .tbl table.ya-cum td:first-child { width: 74px; text-align: left; } .tbl table.ya-cum td, .tbl table.ya-cum th { padding: 3px 0; overflow: hidden; } .tbl table.ya-cum * { font-size: 7px !important; }
-        .tbl.wide { display: block; } .tbl.wide table { width: 100%; } .tbl.wide table.ya-cum { width: 100%; } .tbl.wide td, .tbl.wide th { word-break: break-word; padding: 2px 1px; } .tbl.wide table:not(.ya-cum) * { font-size: 7px !important; }
+        .tbl.wide table.heatmap-table tbody th, .tbl.wide table.heatmap-table thead th:first-child { white-space: nowrap; word-break: normal; min-width: 64px; } .tbl.wide { display: block; } .tbl.wide table { width: 100%; } .tbl.wide table.ya-cum { width: 100%; } .tbl.wide td, .tbl.wide th { word-break: break-word; padding: 2px 1px; } .tbl.wide table:not(.ya-cum) * { font-size: 7px !important; }
         .head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; } .head img { height: 34px; width: auto; }
         .flt { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; font-size: 10.5px; margin: 0 0 14px; padding: 8px 10px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; } .flt div { display: flex; gap: 6px; } .flt span { color: #64748b; } .flt span:after { content: ':'; } .flt b { color: #0f172a; font-weight: 600; }
         .ck { list-style: none; margin: 6px auto 0; padding: 0; font-size: 9px; color: #475569; text-align: left; display: inline-block; max-width: 100%; } .ck li { margin: 0 0 2px; } .cn, .lg { font-size: 9px; color: #475569; text-align: left; margin-top: 6px; } .cn ul { margin: 0; padding-left: 14px; } .lg span { display: inline-block; padding: 1px 6px; margin: 0 4px 2px 0; border-radius: 3px; font-weight: 600; } .cn .note-list { margin: 0; }
