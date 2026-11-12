@@ -92,7 +92,7 @@
         $('#an_cum_seg button').each(function () { $(this).toggleClass('on', $(this).data('v') === m); });
         window.anCumRender();
     };
-    $(document).on('change', '#an_cum_hide', function () { window.anCumRender(); });
+    $(document).on('change', '#an_cum_hide, #an_cum_ci', function () { window.anCumRender(); });
 
     window.anCumRender = function () {
         const host = document.getElementById('an_cum_table');
@@ -131,6 +131,9 @@
             });
         });
         const cols = abxList.filter(a => colTot[a]).slice(0, 30);
+        const showCI = $('#an_cum_ci').is(':checked');
+        const ciOf = c => { const k = wilsonScoreCI(val(c), c.t); return k.lower + '\u2013' + k.upper; };
+        const ciDiv = c => showCI ? '<div style="font-size:8px;font-weight:500;opacity:.75;line-height:1.1">' + ciOf(c) + '</div>' : '';
         const val = c => cumMetric === 'R' ? c.r : cumMetric === 'NS' ? c.ns : c.s;
         // Same three bands as the heatmap and the annual antibiogram (an application convention, not a CLSI or WHO category)
         const color = d => d <= 20 ? 'background:#d1fae5;color:#065f46' : d <= 50 ? 'background:#fed7aa;color:#9a3412' : 'background:#fecaca;color:#991b1b';
@@ -140,12 +143,12 @@
             const cells = cols.map(a => {
                 const c = stats[o][a];
                 if (!c) return '<td class="ya-mute">-</td>';
-                const p = Math.round((val(c) / c.t) * 100), ttl = esc(a) + ': ' + val(c) + '/' + c.t;
-                if (c.t < min || isSmall) { nLow++; return '<td style="background:#e2e8f0;color:#64748b" title="' + ttl + '. Fewer than ' + min + ' isolates: indicative only">' + p + '*</td>'; }
+                const p = Math.round((val(c) / c.t) * 100), ttl = esc(a) + ': ' + val(c) + '/' + c.t + ' (95% CI ' + ciOf(c) + '%)';
+                if (c.t < min || isSmall) { nLow++; return '<td style="background:#e2e8f0;color:#64748b" title="' + ttl + '. Fewer than ' + min + ' isolates: indicative only">' + p + '*' + ciDiv(c) + '</td>'; }
                 if (isIntrinsicResistance(o, a)) { nIR++; return '<td class="ya-mute" style="background:#e2e8f0" title="' + esc(a) + ': intrinsic resistance (not reported as acquired)">&Dagger;</td>'; }
                 if (isSelectivelyTested(c.t, n)) { nSel++; return '<td class="ya-mute" style="background:#f1f5f9" title="' + ttl + '. Selectively tested; not reported (CLSI M39 Section 6.5.3)">&dagger;</td>'; }
                 if (c.nu) nNu++;
-                return '<td style="' + color(cumMetric === 'S' ? 100 - p : p) + '" title="' + ttl + (c.nu ? '; includes ' + c.nu + ' non-urine isolates of a urine-only agent' : '') + '">' + p + (c.nu ? '&sect;' : '') + '</td>';
+                return '<td style="' + color(cumMetric === 'S' ? 100 - p : p) + '" title="' + ttl + (c.nu ? '; includes ' + c.nu + ' non-urine isolates of a urine-only agent' : '') + '">' + p + (c.nu ? '&sect;' : '') + ciDiv(c) + '</td>';
             }).join('');
             return '<tr' + (isSmall ? ' style="opacity:.8"' : '') + '><td class="ya-l"><b' + (isSmall ? ' style="color:#94a3b8"' : '') + '>' + esc(formatOrgName(o)) + (isSmall ? '*' : '') + '</b><div class="ya-mute">n=' + n + '</div></td>' + cells + '</tr>';
         }).join('');
@@ -157,6 +160,7 @@
         setNote('#an_cum_note', [
             'Each cell is the percentage ' + metricName + ' among first isolates (one per patient and species) with a result for that antibiotic.',
             '<b>Colour bands</b> (same as the heatmap): green = 80% or more susceptible (20% or less resistant), amber = 50-79% susceptible, red = below 50% susceptible. A visual aid only, not a treatment guide.',
+            showCI ? '<b>95% CI</b> (Wilson score) is shown under each percentage and in the tooltip (CLSI M39 Section 10.1 recommends confidence intervals). It is calculated for the percentage displayed.' : '',
             nLow ? '<b>*</b> (grey) = fewer than ' + min + ' isolates (CLSI M39): indicative only.' : '',
             nIR ? '<b>&Dagger;</b> = intrinsic resistance (CLSI M100 Appendix B, Magiorakos 2012), not acquired resistance.' : '',
             nSel ? '<b>&dagger;</b> = selective test: the agent was tested on fewer than 90% of the organism\'s isolates, so it is not reported.' : '',
