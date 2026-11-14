@@ -160,7 +160,7 @@
                 const p = Math.round((val(c) / c.t) * 100), ttl = esc(a) + ': ' + val(c) + '/' + c.t;
                 const ciTxt = '<div class="text-[7.5px] font-medium opacity-80 tracking-tighter mt-1 whitespace-nowrap">95% CI (' + wilsonScoreCI(val(c), c.t).lower + '% - ' + wilsonScoreCI(val(c), c.t).upper + '%)</div>';
                 const grey = 'bg-slate-200 text-slate-500 align-middle';
-                if (c.t < min || isSmall) { nLow++; return '<td class="' + grey + '" title="' + ttl + '. Fewer than ' + min + ' isolates: indicative only"><div class="leading-none">' + p + '% <span class="text-black font-bold">*</span></div>' + ciTxt + '</td>'; }
+                if (isSmall || (c.t < min && !isSelectivelyTested(c.t, n))) { nLow++; return '<td class="' + grey + '" title="' + ttl + '. Fewer than ' + min + ' isolates: indicative only"><div class="leading-none">' + p + '% <span class="text-black font-bold">*</span></div>' + ciTxt + '</td>'; }
                 if (isIntrinsicResistance(o, a)) { nIR++; return '<td class="' + grey + '" title="' + esc(a) + ': intrinsic resistance (not reported as acquired)"><div class="leading-none font-bold">&Dagger;</div></td>'; }
                 if (isSelectivelyTested(c.t, n)) { nSel++; return '<td class="bg-slate-100 text-slate-500 align-middle" title="' + ttl + '. Selectively tested; not reported (CLSI M39 Section 6.5.3)"><div class="leading-none font-bold">&dagger;</div></td>'; }
                 if (c.nu) nNu++;
