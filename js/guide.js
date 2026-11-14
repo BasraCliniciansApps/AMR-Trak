@@ -15,7 +15,7 @@
             H('What it is used for') + L([
                 'Choosing sensible <b>empirical antibiotic therapy</b> from local data (the cumulative antibiogram).',
                 'Following <b>resistance trends</b> over months, quarters and years.',
-                'Detecting <b>priority pathogens</b> and possible <b>clusters</b> early, so infection control can act.',
+                'Detecting <b>priority pathogens</b> early, so infection control can act.',
                 'Supporting <b>antimicrobial stewardship</b> and national or WHO reporting.']) +
             H('Where the data come from') + L([
                 'The microbiology laboratory exports its results from <b>WHONET</b> every month.',

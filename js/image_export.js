@@ -88,8 +88,23 @@
         return parts.filter(Boolean).join('   |   ');
     }
 
-    // title + filters above, app name below; u = output pixels per screen pixel
-    function compose(body, cssW, u, item, withTitle) {
+    // the symbol keys and notes the screen shows under the chart, as plain lines of text
+    function noteLines(item) {
+        const c = item.c, el = item.el; let h = '';
+        try {
+            if (c.key) { const ul = document.getElementById('keylist_' + c.key); if (ul && ul.innerHTML.trim()) h += ul.innerHTML.replace(/<\/li>/gi, '\n'); }
+            const nid = c.noteSel ? c.noteSel.slice(1) : (el.id && /_table$/.test(el.id) ? el.id.replace(/_table$/, '_note') : '');
+            const nel = nid ? document.getElementById(nid) : null;
+            if (nel && nel.innerHTML.trim()) h += '\n' + nel.innerHTML;
+            if (c.legendSel) { const lg = document.querySelector(c.legendSel); if (lg && lg.textContent.trim()) h += '\n' + lg.innerHTML; }
+            if (typeof printClean === 'function') h = printClean(h);
+        } catch (e) { return []; }
+        const d = document.createElement('div'); d.innerHTML = h.replace(/<br\s*\/?>|<\/(p|div|li|ul|ol)>/gi, '\n');
+        return (d.textContent || '').split(/\n+/).map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    }
+
+    // title + filters above, notes and app name below; u = output pixels per screen pixel
+    function compose(body, cssW, u, item, withTitle, withNotes) {
         const pad = Math.round(18 * u), bw = body.width, titleSize = 17 * u, subSize = 11.5 * u, footSize = 10 * u;
         const probe = document.createElement('canvas').getContext('2d');
         const family = 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
@@ -100,7 +115,10 @@
             probe.font = '400 ' + subSize + 'px ' + family; sub = ctx ? wrapText(probe, ctx, bw) : [];
             hh = head.length * titleSize * 1.3 + (sub.length ? sub.length * subSize * 1.45 + 6 * u : 0) + 12 * u;
         }
-        const foot = footSize * 1.4 + 10 * u;
+        const noteSize = 10.5 * u; let notes = [];
+        if (withNotes) { probe.font = '400 ' + noteSize + 'px ' + family; noteLines(item).forEach(t => wrapText(probe, t, bw).forEach(l => notes.push(l))); }
+        const nh = notes.length ? notes.length * noteSize * 1.4 + 12 * u : 0;
+        const foot = footSize * 1.4 + 10 * u + nh;
         const W = bw + pad * 2, H = Math.round(pad + hh + body.height + foot + pad * 0.6);
         const c = document.createElement('canvas'); c.width = W; c.height = H;
         const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); g.textBaseline = 'top';
@@ -111,6 +129,7 @@
             y += 6 * u;
         }
         g.drawImage(body, pad, y); y += body.height + 8 * u;
+        if (notes.length) { y += 4 * u; g.fillStyle = '#475569'; g.font = '400 ' + noteSize + 'px ' + family; notes.forEach(t => { g.fillText(t, pad, y); y += noteSize * 1.4; }); y += 8 * u; }
         g.fillStyle = '#94a3b8'; g.font = '400 ' + footSize + 'px ' + family;
         const ver = ((document.getElementById('app_ver') || {}).textContent || 'AMR Trak').trim();
         g.fillText(ver, pad, y);
@@ -123,7 +142,7 @@
     }
 
     // render the picked items one by one; returns File[]
-    async function renderAll(items, targetW, withTitle, onStep) {
+    async function renderAll(items, targetW, withTitle, onStep, withNotes) {
         const files = [], used = {};
         for (let i = 0; i < items.length; i++) {
             const item = items[i]; if (onStep) onStep(i + 1, items.length);
@@ -139,7 +158,7 @@
                 u = Math.min(10, Math.max(1, targetW / (blk.w + pad2)));
                 body = await svgToCanvas(blk, u); cssW = blk.w;
             }
-            let c = compose(body, cssW, u, item, withTitle);
+            let c = compose(body, cssW, u, item, withTitle, withNotes);
             if (c.width * c.height > MAX_PIXELS) { const k = Math.sqrt(MAX_PIXELS / (c.width * c.height)); const s = document.createElement('canvas'); s.width = Math.floor(c.width * k); s.height = Math.floor(c.height * k); s.getContext('2d').drawImage(c, 0, 0, s.width, s.height); c = s; }
             let base = slug(chartTitleOf(item.c.title)); used[base] = (used[base] || 0) + 1; if (used[base] > 1) base += '_' + used[base];
             files.push(await toFile(c, 'AMR_Trak_' + base + '.png'));
@@ -179,6 +198,7 @@
                 <div class="pd-h">Image</div>
                 <div class="pd-grid"><span>Resolution</span><select id="im_size" class="pd-sel">${SIZES.map(o => `<option value="${o[0]}" ${o[0] === (saved.size || '2400') ? 'selected' : ''}>${o[1]}</option>`).join('')}</select></div>
                 <label class="pd-row"><input type="checkbox" id="im_title" ${saved.title !== false ? 'checked' : ''}><span>Title and filters above the image</span></label>
+                <label class="pd-row"><input type="checkbox" id="im_notes" ${saved.notes !== false ? 'checked' : ''}><span>Symbol keys and notes under the image</span></label>
                 <div style="font-size:11px;color:#94a3b8;margin-top:8px;line-height:1.5">Each selected item is saved as its own PNG file.<br>${share ? 'Share sends the images to another app, or to Photos on an iPhone (choose Save Image).' : 'On this device the images are saved to the Downloads folder.'}</div>
             </div>`,
             showCancelButton: true, showDenyButton: share, confirmButtonText: 'Save', denyButtonText: 'Share', cancelButtonText: 'Cancel', width: 'min(92vw, 440px)', buttonsStyling: false, customClass: infoClasses,
@@ -193,14 +213,14 @@
         async function run(mode) {
             const picked = [...document.querySelectorAll('.pd-chart')].filter(c => c.checked).map(c => parseInt(c.value, 10));
             if (!picked.length) { Swal.showValidationMessage('Select at least one item'); return false; }
-            const size = parseInt(document.getElementById('im_size').value, 10), withTitle = document.getElementById('im_title').checked;
-            try { localStorage.setItem('amr_image_opts', JSON.stringify({ size: String(size), title: withTitle })); } catch (e) {}
+            const size = parseInt(document.getElementById('im_size').value, 10), withTitle = document.getElementById('im_title').checked, withNotes = document.getElementById('im_notes').checked;
+            try { localStorage.setItem('amr_image_opts', JSON.stringify({ size: String(size), title: withTitle, notes: withNotes })); } catch (e) {}
             const btn = Swal.getConfirmButton(), btnD = Swal.getDenyButton(), cancel = Swal.getCancelButton();
             [btn, btnD, cancel].forEach(b => b && (b.disabled = true));
             const note = document.createElement('div'); note.style.cssText = 'font-size:12px;color:#0f766e;margin-top:8px;font-weight:600';
             Swal.getHtmlContainer().appendChild(note);
             try {
-                const files = await renderAll(picked.map(i => flat[i]), size, withTitle, (k, n) => { note.textContent = 'Preparing image ' + k + ' of ' + n + '...'; });
+                const files = await renderAll(picked.map(i => flat[i]), size, withTitle, (k, n) => { note.textContent = 'Preparing image ' + k + ' of ' + n + '...'; }, withNotes);
                 if (mode === 'share') {
                     try { await navigator.share({ files, title: 'AMR Trak' }); }
                     catch (e) { if (e && e.name === 'AbortError') { [btn, btnD, cancel].forEach(b => b && (b.disabled = false)); note.remove(); return false; } saveFiles(files); }

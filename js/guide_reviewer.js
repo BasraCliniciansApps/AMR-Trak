@@ -237,7 +237,6 @@
         ['rv_short', 'For reviewer: Monthly Alerts tab', () =>
             P('The Monthly Alerts tab is for early warning, not for reporting resistance percentages. A cumulative antibiogram is required at least once a year [R2, Section 6.3, p. 10]; shorter windows are allowed but have small numbers and seasonal variation. The tab therefore shows alerts only.') +
             H('1. What was removed, and why') + L([
-                'Possible clusters (3 patients within 14 days): no standard gives these numbers. CDC does not give a case count or time window for MDRO clusters; the definition of one state health authority (Oregon) requires epidemiological linkage, which the laboratory file does not contain.',
                 'Comparison with earlier periods, the 8-quarter trend and the Last 3 Months tab: no standard method for monthly comparison; the annual report carries the quarterly trend.',
                 'Blood isolates as possible contaminants: its denominator was isolates, while the contamination rate uses blood cultures [R12]. The correct rate is in the Cultures tab.',
                 'Ward ranking by MDR count: no source; the count depends on how many cultures a ward sends. Ward-level results are available by the unit filter in the antibiogram.',
@@ -307,7 +306,7 @@
                 ['3', 'Surrogate rule (cefoxitin for oxacillin) of M39 Section 6.5.1 is not applied; no separate MRSA-subset row.', 'S. aureus rows list the agents as recorded.', 'MRSA is reported as an indicator.'],
                 ['4', 'The 90% selective-testing threshold comes from ACSQHC, not from CLSI.', 'A different threshold would change which agents are marked &dagger;.', 'Attributed to ACSQHC wherever it appears.'],
                 ['5', 'The agent-level minimum of 30 tested results in the cumulative antibiogram is stricter than M39.', 'Some cells are blank that M39 would allow with a note.', 'Declared as application policy.'],
-                ['6', 'Colour bands, the cluster rule (3 patients in 14 days), the alert list, and the inpatient/outpatient classification are conventions of the application.', 'They affect presentation and screening, not the stored data.', 'Declared in each section.'],
+                ['6', 'Colour bands, the alert list, and the inpatient/outpatient classification are conventions of the application.', 'They affect presentation and screening, not the stored data.', 'Declared in each section.'],
                 ['7', 'No adjustment for multiple comparisons.', 'Some "significant" differences are expected by chance when many cells are compared.', 'Stated on the screen; advised by M39 Appendix H3.'],
                 ['8', 'MDR, XDR and PDR rest on [R3], an interim expert proposal. Routine panels do not test all categories.', 'Confirmed XDR and PDR are minimum estimates; comparison with external studies is limited.', 'Validity condition stated; "possible" label used.'],
                 ['9', 'Interpretive categories are those assigned by the laboratory. The application does not audit them.', 'Results follow the M100 edition used by the laboratory at the time of testing.', 'The laboratory should state the edition. Only staphylococcal vancomycin is re-derived.'],
