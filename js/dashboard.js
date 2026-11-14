@@ -519,7 +519,7 @@ function showLoading(text) {
         el = document.createElement('div'); el.id = 'loadView';
         el.innerHTML = `<div class="ld-card">
             <div class="ld-logo"><img src="img/logo-splash.png?v=1" alt=""></div>
-            <div class="ld-name">AMR Tracker</div>
+            <div class="ld-name">AMR Trak</div>
             <div class="ld-sub">Antimicrobial Resistance Surveillance</div>
             <div class="ld-bar" role="progressbar" aria-label="Loading"><i></i></div>
             <div class="ld-status" id="ldStatus"></div>

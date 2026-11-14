@@ -1347,12 +1347,12 @@ window.downloadBackup = function() {
         const dateSuffix = type === 'all' ? 'All_Data' : (type === 'month' ? document.getElementById('backupMonth').value : (type === 'year' ? document.getElementById('backupYear').value : 'Date_Range'));
         
         if (typeof saveAs !== 'undefined') {
-            saveAs(blob, `AMR_Tracker_Backup_${dateSuffix}.json`);
+            saveAs(blob, `AMR_Trak_Backup_${dateSuffix}.json`);
         } else {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `AMR_Tracker_Backup_${dateSuffix}.json`;
+            a.download = `AMR_Trak_Backup_${dateSuffix}.json`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1551,7 +1551,7 @@ function showAboutModal() {
                 <div class="mx-auto w-16 h-16 bg-blue-50 text-blue-700 rounded-full flex items-center justify-center mb-4 border border-blue-100 shadow-sm">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                 </div>
-                <h3 class="text-xl font-bold text-slate-800">AMR Tracker</h3>
+                <h3 class="text-xl font-bold text-slate-800">AMR Trak</h3>
                 <p class="font-medium text-blue-700">Antimicrobial Resistance Surveillance System</p>
                 <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center text-sm leading-loose mt-4">
                     This platform was designed and developed by a member of the Antibiotic Committee, <b>Clinical Pharmacist Saad Nabeel Al-Hamadi</b>,

@@ -11,7 +11,7 @@
 
     const SECTIONS = [
         ['start', 'Start here: what this dashboard is for', () =>
-            P('The AMR Tracker Dashboard turns the hospital\'s culture and susceptibility results into surveillance information: which organisms cause infection, how resistant they are, whether resistance is changing, and where the problems are.') +
+            P('The AMR Trak Dashboard turns the hospital\'s culture and susceptibility results into surveillance information: which organisms cause infection, how resistant they are, whether resistance is changing, and where the problems are.') +
             H('What it is used for') + L([
                 'Choosing sensible <b>empirical antibiotic therapy</b> from local data (the cumulative antibiogram).',
                 'Following <b>resistance trends</b> over months, quarters and years.',
@@ -271,8 +271,8 @@
         const org = (n, d) => `<div class="gd-org"><div class="gd-org-n">${n}</div><div class="gd-org-d">${d}</div></div>`;
         return `
             <div class="gd-about">
-                <div class="gd-logo"><img src="img/logo-splash.png?v=1" alt="AMR Tracker"></div>
-                <h3>AMR Tracker Dashboard</h3>
+                <div class="gd-logo"><img src="img/logo-splash.png?v=1" alt="AMR Trak"></div>
+                <h3>AMR Trak Dashboard</h3>
                 <p class="gd-sub">Antimicrobial Resistance Surveillance System</p>
                 <div class="gd-card">
                     <div class="gd-card-t">Concept, design and development</div>
