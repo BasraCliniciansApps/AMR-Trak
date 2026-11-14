@@ -21,7 +21,8 @@
             const cs = getComputedStyle(n);
             if (cs.display === 'none') { t.style.display = 'none'; return; }
             PROPS.forEach(p => { const v = cs.getPropertyValue(p); if (v) t.style.setProperty(p, v); });
-            if (/^(TABLE|TH|TD|DIV|SECTION|UL|OL)$/.test(n.tagName)) { const w = n.getBoundingClientRect().width; if (w) t.style.setProperty('width', w + 'px'); }
+            // table cells size themselves again from their text; fixed widths made a column that overflows on screen get cut in the image
+            if (/^(TABLE|DIV|SECTION|UL|OL)$/.test(n.tagName)) { const w = n.getBoundingClientRect().width; if (w) t.style.setProperty('width', w + 'px'); }
         });
         clone.style.margin = '0';
         return clone;
@@ -36,10 +37,15 @@
         const stage = document.createElement('div');
         stage.style.cssText = 'position:fixed;left:-99999px;top:0;visibility:hidden;width:' + w + 'px';
         stage.appendChild(copy); document.body.appendChild(stage);
+        // the copy is measured again after layout: a wider table than the screen showed (or a different font) must not be cut at the right
+        let w2 = w; copy.querySelectorAll('table').forEach(t => { w2 = Math.max(w2, Math.ceil(t.getBoundingClientRect().width - copy.getBoundingClientRect().left + t.getBoundingClientRect().left)); });
+        w2 = Math.max(w2, Math.ceil(copy.scrollWidth));
+        const wf = Math.ceil(w2 * 1.04) + 6;           // small safety margin for font differences inside the image
+        copy.style.width = wf + 'px'; stage.style.width = wf + 'px';
         const h = Math.ceil(Math.max(copy.scrollHeight, copy.getBoundingClientRect().height, 20));
         document.body.removeChild(stage);
         const xml = new XMLSerializer().serializeToString(copy);
-        return { w, h, xml };
+        return { w: wf, h, xml };
     }
     function svgToCanvas(b, u) {
         return new Promise((resolve, reject) => {
