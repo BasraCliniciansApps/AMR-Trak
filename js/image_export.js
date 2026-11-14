@@ -234,5 +234,16 @@
             }
         }
     };
-    window.AMR_IMG = { renderAll };
+    // one HTML block (for example the isolate card in the MDR popup) -> PNG File
+    async function elementToFile(el, o) {
+        const targetW = o.size || 2400, blk = htmlBlock(el), pad2 = 36;
+        const u = Math.min(10, Math.max(1, targetW / (blk.w + pad2)));
+        const body = await svgToCanvas(blk, u);
+        const item = { sec: o.sec, c: { title: o.title || '' }, el };
+        let c = compose(body, blk.w, u, item, !!o.title, false);
+        if (c.width * c.height > MAX_PIXELS) { const k = Math.sqrt(MAX_PIXELS / (c.width * c.height)); const t = document.createElement('canvas'); t.width = Math.floor(c.width * k); t.height = Math.floor(c.height * k); t.getContext('2d').drawImage(c, 0, 0, t.width, t.height); c = t; }
+        return toFile(c, 'AMR_Trak_' + slug(o.name || o.title || 'image') + '.png');
+    }
+    function savedSize() { try { return parseInt((JSON.parse(localStorage.getItem('amr_image_opts')) || {}).size, 10) || 2400; } catch (e) { return 2400; } }
+    window.AMR_IMG = { renderAll, elementToFile, saveFiles, canShareFiles, savedSize };
 })();

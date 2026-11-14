@@ -580,10 +580,22 @@ function openMdrGroup(g) {
     const items = (MDR_DRILL[g] || []).slice().sort((a, b) => rank[a.res.cls] - rank[b.res.cls] || String(a.r['Selective organism']).localeCompare(String(b.r['Selective organism'])));
     if (!items.length) return;
     let i = 0;
-    const nav = () => '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><button type="button" id="mdr_prev" style="font-size:20px;padding:2px 14px;border:1px solid #cbd5e1;border-radius:8px;background:#fff">&#8249;</button><span style="font-size:12px;color:#64748b;font-weight:700">' + (i + 1) + ' / ' + items.length + '</span><button type="button" id="mdr_next" style="font-size:20px;padding:2px 14px;border:1px solid #cbd5e1;border-radius:8px;background:#fff">&#8250;</button></div>';
+    const nav = () => '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><button type="button" id="mdr_prev" style="font-size:20px;padding:2px 14px;border:1px solid #cbd5e1;border-radius:8px;background:#fff">&#8249;</button><span style="font-size:12px;color:#64748b;font-weight:700">' + (i + 1) + ' / ' + items.length + '</span><button type="button" id="mdr_next" style="font-size:20px;padding:2px 14px;border:1px solid #cbd5e1;border-radius:8px;background:#fff">&#8250;</button></div>' + imgBar();
+    const imgBtn = 'font-size:11px;font-weight:700;color:#0f766e;padding:4px 10px;border:1px solid #99f6e4;border-radius:8px;background:#f0fdfa';
+    const imgBar = () => window.AMR_IMG ? '<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:-2px 0 8px"><span id="mdr_img_msg" style="font-size:10px;color:#64748b;margin-right:auto"></span><button type="button" id="mdr_img_save" style="' + imgBtn + '">Save image</button>' + (AMR_IMG.canShareFiles() ? '<button type="button" id="mdr_img_share" style="' + imgBtn + '">Share</button>' : '') + '</div>' : '';
+    const saveImg = async mode => {
+        const body = document.getElementById('mdr_body'), msg = document.getElementById('mdr_img_msg'); if (!body) return;
+        const it = items[i], org = (typeof formatOrgName === 'function' ? formatOrgName(it.r['Selective organism']) : it.r['Selective organism']);
+        if (msg) msg.textContent = 'Preparing...';
+        try {
+            const f = await AMR_IMG.elementToFile(body, { sec: SECTIONS.mdr, title: 'MDR / XDR / PDR: ' + ((typeof MDR_GROUP_NAMES !== 'undefined' && MDR_GROUP_NAMES[g]) || g), name: org + '_' + it.res.cls, size: AMR_IMG.savedSize() });
+            if (mode === 'share') { try { await navigator.share({ files: [f], title: 'AMR Trak' }); } catch (e) { if (!e || e.name !== 'AbortError') AMR_IMG.saveFiles([f]); } } else AMR_IMG.saveFiles([f]);
+            if (msg) msg.textContent = '';
+        } catch (e) { console.error(e); if (msg) { msg.style.color = '#be123c'; msg.textContent = 'The image could not be created.'; } }
+    };
     const paint = () => { const c = Swal.getHtmlContainer(); if (!c) return; c.innerHTML = nav() + '<div id="mdr_body">' + mdrDrillHtml(items, i) + '</div>'; bind(); };
     const step = d => { i = (i + d + items.length) % items.length; paint(); };
-    const bind = () => { const p = document.getElementById('mdr_prev'), n = document.getElementById('mdr_next'); if (p) p.onclick = () => step(-1); if (n) n.onclick = () => step(1); };
+    const bind = () => { const p = document.getElementById('mdr_prev'), n = document.getElementById('mdr_next'); if (p) p.onclick = () => step(-1); if (n) n.onclick = () => step(1); const sv = document.getElementById('mdr_img_save'), sh = document.getElementById('mdr_img_share'); if (sv) sv.onclick = () => saveImg('save'); if (sh) sh.onclick = () => saveImg('share'); };
     const key = e => { if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'ArrowRight') step(1); };
     Swal.fire({
         title: (typeof MDR_GROUP_NAMES !== 'undefined' && MDR_GROUP_NAMES[g]) || g, html: nav() + '<div id="mdr_body">' + mdrDrillHtml(items, 0) + '</div>',
